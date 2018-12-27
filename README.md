@@ -4,6 +4,17 @@ FFAI is still under development and is planned to be updated heavily.
 
 ![FFAI](screenshots/ffai.png?raw=true "FFAI")
 
+Please cite us if you use FFAI in your publications.
+```
+@inproceedings{torrado2018deep,
+  title={Deep Reinforcement Learning for General Video Game AI},
+  author={Torrado, Ruben Rodriguez and Bontrager, Philip and Togelius, Julian and Liu, Jialin and Perez-Liebana, Diego},
+  booktitle={Computational Intelligence and Games (CIG), 2018 IEEE Conference on},
+  year={2018},
+  organization={IEEE}
+}
+```
+
 ## Features
 * Rule implementation of the Living Rulebook 5 with the following limitations:
   * Only skills for the Human and Orc teams have been implemented and tested
