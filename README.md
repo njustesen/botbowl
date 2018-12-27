@@ -33,7 +33,7 @@ FFAI is still under development and is planned to be updated heavily within the 
 ## Plans for Future Releases
 * More documentation
 * AI tournament module
-* Dungeon arenas rules
+* Support for dungeon arenas
 * Support for all skills and teams in LRB6
 * League mode
 * Integration with OBBLM
