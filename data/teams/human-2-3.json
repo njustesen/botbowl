@@ -1,0 +1,87 @@
+{
+  "id": "human-2",
+  "name": "Human Team 2",
+  "race": "Human",
+  "coach" : {
+    "id": 4,
+    "name": "Alice"
+  },
+  "treasury": 0,
+  "apothecary": false,
+  "rerolls": 1,
+  "fan_factor": 3,
+  "ass_coaches": 1,
+  "cheerleaders": 2,
+  "players": [
+    {
+      "id" : "d1",
+      "nr" : 1,
+      "name": "Abschuss, Ziggi",
+      "position": "Blitzer",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
+    },
+    {
+      "id" : "d3",
+      "nr" : 3,
+      "name": "Di Passella, Luigi",
+      "position": "Thrower",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
+    },
+    {
+      "id" : "d5",
+      "nr" : 5,
+      "name": "Headreka, Helmut",
+      "position": "Catcher",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
+    },
+    {
+      "id" : "d6",
+      "nr" : 6,
+      "name": "Himmelstein, Henny",
+      "position": "Lineman",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
+    },
+    {
+      "id" : "d7",
+      "nr" : 7,
+      "name": "Heldman, Dirk Hero",
+      "position": "Lineman",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
+    }
+  ]
+}

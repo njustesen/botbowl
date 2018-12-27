@@ -1,0 +1,792 @@
+html {
+  overflow-y: scroll;
+  height: 100%;
+}
+html body {
+  font-family: 'Varela Round', sans-serif;
+  background: #F2F2F2;
+  font-size: 1.3em;
+  padding-top: 50px;
+  min-width: 904px;
+  margin: auto !important;
+  /* Firefox will set width as auto */
+  /*width:904px;*/
+  /* As IE6 ignores !important it will set width as 904px; */
+}
+.modal-header .close {
+  margin-top: -18px;
+}
+.btn {
+  border-radius: 0px;
+}
+.select {
+  border-radius: 0px;
+}
+.btn-sm {
+  border-radius: 0px;
+}
+.no-padding {
+  padding: 0px;
+}
+a,
+a:focus,
+a:hover {
+  color: #235A9F;
+  outline: none;
+  text-decoration: none;
+}
+.bold {
+  font-weight: bold;
+}
+.form-control {
+  border-radius: 0px;
+}
+.team-name {
+  font-size: 24px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.game {
+  background: #fff;
+  box-shadow: 0px 1px 0px #aaa;
+  margin-bottom: 20px;
+}
+.game .game-footer {
+  margin-top: 1.8em;
+}
+.nav-link {
+  cursor: pointer;
+}
+.dropdown-toggle {
+  cursor: pointer;
+}
+.rerolls {
+  display: inline-block;
+  height: 24px;
+}
+.rerolls .reroll {
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  display: inline-block;
+  opacity: 0.66;
+}
+.rerolls .available {
+  -webkit-animation: fade-in 0.5s linear infinite alternate;
+  -moz-animation: fade-in 0.5s linear infinite alternate;
+  animation: fade-in 0.5s linear infinite alternate;
+}
+@-moz-keyframes fade-in {
+  0% {
+    opacity: .33;
+  }
+  100% {
+    opacity: .66;
+  }
+}
+@-webkit-keyframes fade-in {
+  0% {
+    opacity: .33;
+  }
+  100% {
+    opacity: .66;
+  }
+}
+@keyframes fade-in {
+  0% {
+    opacity: .33;
+  }
+  100% {
+    opacity: .66;
+  }
+}
+.rerolls .home {
+  background-color: blue;
+  margin-right: 4px;
+}
+.rerolls .away {
+  background-color: red;
+  margin-left: 4px;
+}
+.rerolls .used {
+  background-color: #ccc;
+}
+.rerolls .none {
+  opacity: 0.0;
+}
+.game-free {
+  margin-top: 0px;
+  margin-bottom: 1px;
+}
+.game-free .gamelabel {
+  font-size: 0.6em;
+  color: #999;
+}
+.game-free #gamelog {
+  resize: none;
+  cursor: default;
+}
+.game-free #gamelog.disabled {
+  cursor: default;
+}
+.game-free #gamelog:hover {
+  cursor: default;
+}
+.game-free .options {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+}
+.game-free .options a {
+  color: inherit;
+}
+.game-free .options div {
+  display: inline-block;
+  margin-left: 4px;
+}
+.game-free .options .glyphicon {
+  font-size: 20px;
+  cursor: pointer;
+}
+.game-free .scoreboard {
+  color: #222;
+  font-size: 1.6em;
+  background: #fff;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -o-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  padding-top: 12px;
+  padding-bottom: 4px;
+}
+.game-free .scoreboard .scoreboard-content {
+  min-width: 900px;
+  max-width: 900px;
+  margin: auto;
+  padding-bottom: 0px;
+}
+.game-free .scoreboard .scoreboard-content .small-text {
+  padding: 0px;
+  margin: 0px;
+  font-size: 17px;
+  margin-top: 2px;
+}
+.game-free .scoreboard .scoreboard-content .emblem {
+  height: 0px;
+}
+.game-free .scoreboard .scoreboard-content .logo-home {
+  padding-left: 6px;
+  padding-right: 10px;
+}
+.game-free .scoreboard .scoreboard-content .logo-away {
+  padding-right: 0px;
+  padding-left: 0px;
+}
+.game-free .scoreboard .scoreboard-content .team-icons {
+  padding: 0px;
+}
+.game-free .scoreboard .scoreboard-content .team-icons .team-icon {
+  margin: -2px -2px -2px -1px;
+}
+.game-free .scoreboard .scoreboard-content .team-icons .used {
+  opacity: 0.25;
+}
+.game-free .scoreboard .turnpitch {
+  height: 100%;
+}
+.game-free .scoreboard .turnmarker {
+  height: 4px;
+  background-color: #ccc;
+}
+.game-free .scoreboard .turnmarker-home-turn {
+  background-color: rgba(0, 0, 255, 0.66);
+}
+.game-free .scoreboard .turnmarker-away-turn {
+  background-color: rgba(255, 0, 0, 0.66);
+}
+.game-free .scoreboard .proc {
+  background-color: #f5f5f5;
+}
+.game-free .scoreboard .proclabel {
+  font-size: 0.75em;
+  color: #555;
+  line-height: 2em;
+}
+.gamecontent {
+  height: 454px;
+}
+.gamecontent .hint {
+  position: relative;
+  color: #969696;
+  width: 100%;
+  height: 0px;
+  line-height: 21pt;
+}
+.gamecontent .actions {
+  width: 902px;
+  margin: 0 auto;
+  min-height: 40px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px #666;
+}
+.gamecontent .square-row {
+  height: 30px;
+  width: 100%;
+  margin: 0 auto;
+  max-width: 900px;
+}
+.gamecontent .square {
+  width: 30px;
+  height: 30px;
+  float: left;
+  position: relative;
+}
+.gamecontent .square:hover {
+  background-color: rgba(255, 255, 255, 0.33);
+  cursor: pointer;
+}
+.gamecontent .square .player-action-bar {
+  z-index: 100;
+  position: absolute;
+  top: -40px;
+  left: -80px;
+  padding: 2px;
+  width: 191px;
+  background-color: rgba(0, 0, 0, 0.33);
+  border-radius: 16px;
+}
+.gamecontent .square .player-action-bar .action-dot {
+  height: 28px;
+  width: 28px;
+  background-color: #000000;
+  border: 1px solid #000000;
+  padding: 3px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.gamecontent .square .player-action-bar .action-dot.transparent {
+  -webkit-filter: grayscale(100%);
+  /* Safari 6.0 - 9.0 */
+  filter: grayscale(100%);
+}
+.gamecontent .square .player-action-bar .action-dot.active:hover {
+  border: 1px solid black;
+  background-color: #646464;
+  cursor: pointer;
+}
+.gamecontent .square.full-grid {
+  background-image: url("../../img/grid/full.png");
+}
+.gamecontent .square.dot-grid {
+  background-image: url("../../img/grid/corner.png");
+}
+.gamecontent .square.selected {
+  background-color: rgba(255, 255, 255, 0.33);
+}
+.gamecontent .square.disabled {
+  background: none;
+}
+.gamecontent .square.disabled:hover {
+  background: none;
+  cursor: default;
+}
+.gamecontent .square.green {
+  background-color: rgba(0, 255, 0, 0.33);
+}
+.gamecontent .square.green:hover {
+  background-color: #00ff00;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green {
+  background-color: #00ff00;
+}
+.gamecontent .square.selected.green:hover {
+  background-color: #00ff00;
+  cursor: pointer;
+}
+.gamecontent .square.green2 {
+  background-color: rgba(75, 255, 0, 0.33);
+}
+.gamecontent .square.green2:hover {
+  background-color: #4bff00;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green2 {
+  background-color: #4bff00;
+}
+.gamecontent .square.selected.green2:hover {
+  background-color: #4bff00;
+  cursor: pointer;
+}
+.gamecontent .square.green3 {
+  background-color: rgba(150, 250, 0, 0.33);
+}
+.gamecontent .square.green3:hover {
+  background-color: #96fa00;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green3 {
+  background-color: #96fa00;
+}
+.gamecontent .square.selected.green3:hover {
+  background-color: #96fa00;
+  cursor: pointer;
+}
+.gamecontent .square.green4 {
+  background-color: rgba(250, 250, 0, 0.33);
+}
+.gamecontent .square.green4:hover {
+  background-color: #fafa00;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green4 {
+  background-color: #fafa00;
+}
+.gamecontent .square.selected.green4:hover {
+  background-color: #fafa00;
+  cursor: pointer;
+}
+.gamecontent .square.green5 {
+  background-color: rgba(250, 150, 0, 0.33);
+}
+.gamecontent .square.green5:hover {
+  background-color: #fa9600;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green5 {
+  background-color: #fa9600;
+}
+.gamecontent .square.selected.green5:hover {
+  background-color: #fa9600;
+  cursor: pointer;
+}
+.gamecontent .square.green6 {
+  background-color: rgba(250, 0, 0, 0.33);
+}
+.gamecontent .square.green6:hover {
+  background-color: #fa0000;
+  cursor: pointer;
+}
+.gamecontent .square.selected.green6 {
+  background-color: #fa0000;
+}
+.gamecontent .square.selected.green6:hover {
+  background-color: #fa0000;
+  cursor: pointer;
+}
+.gamecontent .square.home.kod {
+  /*background-color: rgb(100, 0, 0);*/
+}
+.gamecontent .square.home.kod:hover {
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.33);
+}
+.gamecontent .square.home.casualties {
+  /*background-color: rgb(75, 0, 0);*/
+}
+.gamecontent .square.home.casualties:hover {
+  background-color: rgba(255, 255, 255, 0.33);
+  cursor: pointer;
+}
+.gamecontent .square.away.kod {
+  /*background-color: rgb(0, 0, 100);*/
+}
+.gamecontent .square.away.kod:hover {
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.33);
+}
+.gamecontent .square.away.casualties {
+  /*background-color: rgb(0, 0, 75);*/
+}
+.gamecontent .square.away.casualties:hover {
+  background-color: rgba(255, 255, 255, 0.33);
+  cursor: pointer;
+}
+.gamecontent .game-info {
+  width: 902px;
+  margin: auto;
+}
+.gamecontent .game-info .player-info {
+  min-height: 64px;
+  margin-bottom: 4px;
+}
+.gamecontent .game-info .player-info .red {
+  background-color: rgba(255, 0, 0, 0.1);
+}
+.gamecontent .game-info .player-info .blue {
+  background-color: rgba(0, 0, 255, 0.1);
+}
+.gamecontent .game-info .player-info .team-box {
+  background-color: white;
+  width: 50%;
+  padding: 4px;
+  height: 100%;
+  min-height: 64px;
+  border: 1px solid #ccc;
+}
+.gamecontent .game-info .player-info .home {
+  float: right;
+}
+.gamecontent .game-info .player-info .away {
+  float: left;
+}
+.gamecontent .game-info .player-info .icon-box {
+  float: left;
+  width: 58px;
+  padding: 4px;
+  border-radius: .25em;
+  border-top-left-radius: 0.25em;
+  border-top-right-radius: 0.25em;
+  border-bottom-right-radius: 0.25em;
+  border-bottom-left-radius: 0.25em;
+}
+.gamecontent .game-info .player-info .stats-box {
+  float: left;
+  margin-left: 4px;
+  font-size: 1.1em;
+  width: 375px;
+}
+.gamecontent .game-info .player-info .stats-box .name-box {
+  padding: 2px;
+  font-weight: normal;
+  font-size: 1.0em;
+  color: black;
+}
+.gamecontent .game-info .player-info .stats-box .attribute {
+  float: left;
+  margin-right: 4px;
+  margin-top: 4px;
+}
+.gamecontent .game-info .player-info .stats-box .attribute .value {
+  width: 16px;
+  font-weight: normal;
+  color: black;
+}
+.gamecontent .game-info .player-info .stats-box .attribute .skill {
+  margin-right: 2px;
+  font-weight: normal;
+  color: black;
+  background-color: rgba(0, 255, 0, 0.4);
+}
+.gamecontent .game-info .action-bar {
+  border-color: #080808;
+  min-height: 34px;
+  color: white;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+.gamecontent .game-info .action-bar .btn {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+.gamecontent .game-info .action-bar .die {
+  background-color: white;
+  padding: 0px;
+  margin: 2px 0px 0px 2px;
+}
+.gamecontent .game-info .action-bar .die img {
+  width: 28px;
+  height: 28px;
+}
+.gamecontent .game-info .action-bar .btn-danger {
+  float: left;
+  margin-right: 2px;
+}
+.gamecontent .game-info .action-bar .btn-primary {
+  float: right;
+  margin-left: 2px;
+}
+.gamecontent .gameboard {
+  width: 904px;
+  margin: auto;
+  height: 100%;
+  box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
+  -webkit-box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
+  -o-box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
+  border: solid 1px #555;
+  /* background-image: url("@{img-url}/arenas/bb_pitch/dots/pitch_good.jpg"); */
+  background-color: #222;
+}
+.gamecontent .gameboard .dugout {
+  width: 60px;
+  height: 100%;
+  float: left;
+  position: relative;
+}
+.gamecontent .gameboard .dugout.away {
+  /*background-color: rgb(125, 0, 0);*/
+  background-image: url("../../img/arenas/bb_pitch/dugouts/dugout-left.jpg");
+}
+.gamecontent .gameboard .dugout.home {
+  /*background-color: rgb(0, 0, 125);*/
+  background-image: url("../../img/arenas/bb_pitch/dugouts/dugout-right.jpg");
+}
+.gamecontent .gameboard .pitch {
+  padding: 0;
+  width: 782px;
+  height: 100%;
+  float: left;
+}
+.gamecontent .gameboard .pitch.swelteringheat {
+  background-image: url("../../img/arenas/pitch/heat.jpg");
+}
+.gamecontent .gameboard .pitch.verysunny {
+  background-image: url("../../img/arenas/pitch/sunny.jpg");
+}
+.gamecontent .gameboard .pitch.blizzard {
+  background-image: url("../../img/arenas/pitch/blizzard.jpg");
+}
+.gamecontent .gameboard .pitch.nice {
+  background-image: url("../../img/arenas/pitch/nice.jpg");
+}
+.gamecontent .gameboard .pitch.pouringrain {
+  background-image: url("../../img/arenas/pitch/rain.jpg");
+}
+.gamecontent .gameboard .playericon {
+  line-height: 28px;
+  position: absolute;
+}
+.gamecontent .gameboard .dice {
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  margin: 4px;
+}
+.gamecontent .gameboard .movedot {
+  position: absolute;
+  margin: 10px 10px;
+  height: 10px;
+  width: 10px;
+  background-color: rgba(0, 0, 0, 0.33);
+  border-radius: 50%;
+  display: inline-block;
+}
+.gamecontent .gameboard .moveline {
+  stroke: rgba(255, 0, 255, 0.5);
+  stroke-width: 3px;
+}
+.gamecontent .gameboard .agi-rolls {
+  z-index: 10;
+  position: absolute;
+}
+.gamecontent .gameboard .agi-rolls .agi {
+  color: white;
+  padding: 1px;
+  padding-left: 2px;
+  padding-right: 2px;
+  float: left;
+  font-size: 6pt;
+  margin-left: 8px;
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.5);
+}
+.gamecontent .gameboard .agi-rolls .agi-2 {
+  margin-left: 1px;
+  margin-top: 8px;
+}
+.gamecontent .gameboard .agi-rolls .agi-3 {
+  margin-left: 1px;
+  margin-top: 1px;
+}
+.gamecontent .gameboard .agi-rolls .agi-4 {
+  margin-left: 1px;
+  margin-top: 1px;
+}
+.gamecontent .gameboard .transparent {
+  opacity: 0.5;
+  filter: alpha(opacity=50);
+  /* For IE8 and earlier */
+}
+.gamecontent .gameboard .ballicon {
+  position: absolute;
+  line-height: 30px;
+}
+.gamecontent .gameboard .stateicon {
+  position: absolute;
+}
+.gamecontent .gameboard.swelteringheat {
+  background-image: url("../../img/arenas/bb_pitch/lines/pitch_heat.jpg");
+}
+.gamecontent .gameboard.verysunny {
+  background-image: url("../../img/arenas/bb_pitch/lines/pitch_sunny.jpg");
+}
+.gamecontent .gameboard.blizzard {
+  background-image: url("../../img/arenas/bb_pitch/lines/pitch_blizzard.jpg");
+}
+.gamecontent .gameboard.nice {
+  background-image: url("../../img/arenas/bb_pitch/lines/pitch_good.jpg");
+}
+.gamecontent .gameboard.pouringrain {
+  background-image: url("../../img/arenas/bb_pitch/lines/pitch_rain.jpg");
+}
+.gamelog {
+  background-color: #bbb;
+  width: 100%;
+  height: 200px;
+  box-shadow: inset 0px 0px 0px #222;
+  overflow: scroll;
+  margin-bottom: 10px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -o-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+}
+.gamelog .report {
+  margin: 4px;
+  padding: 4px;
+  min-height: 35px;
+  background-color: #f9f9f9;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  -o-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  border: 1px solid #999;
+  line-height: 25px;
+  margin-left: 4px;
+  padding-lefT: 8px;
+}
+.gamelog .report .roll {
+  float: right;
+  margin-left: 4px;
+  height: 25px;
+  padding: 1px;
+}
+.gamelog .report .roll .modifiers {
+  color: darkgrey;
+  height: 20px;
+  display: inline-block;
+  position: relative;
+  bottom: 6px;
+  right: 3px;
+  font-size: 16px;
+  line-height: 18px;
+  text-align: center;
+}
+.gamelog .report .roll .die {
+  width: 20px;
+  height: 20px;
+  background-color: #fff;
+  border-radius: .25em;
+  border: 1px solid #333;
+  margin: 2px;
+  background-size: 16px 16px;
+  display: inline-block;
+  background-position: 1px 1px;
+  font-size: 16px;
+  line-height: 18px;
+  text-align: center;
+}
+.gamelog .report .roll .die.BB-attacker_down {
+  background-image: url("../../img/dice/attacker_down.png");
+}
+.gamelog .report .roll .die.BB-both_down {
+  background-image: url("../../img/dice/both_down.png");
+}
+.gamelog .report .roll .die.BB-push {
+  background-image: url("../../img/dice/push.png");
+}
+.gamelog .report .roll .die.BB-defender_stumbles {
+  background-image: url("../../img/dice/defender_stumbles.png");
+}
+.gamelog .report .roll .die.BB-defender_down {
+  background-image: url("../../img/dice/defender_down.png");
+}
+.gamelog .report .roll .die.D6-1 {
+  background-image: url("../../img/dice/1.png");
+}
+.gamelog .report .roll .die.D6-2 {
+  background-image: url("../../img/dice/2.png");
+}
+.gamelog .report .roll .die.D6-3 {
+  background-image: url("../../img/dice/3.png");
+}
+.gamelog .report .roll .die.D6-4 {
+  background-image: url("../../img/dice/4.png");
+}
+.gamelog .report .roll .die.D6-5 {
+  background-image: url("../../img/dice/5.png");
+}
+.gamelog .report .roll .die.D6-6 {
+  background-image: url("../../img/dice/6.png");
+}
+.gamelog .report .roll .die.D8-1 {
+  background-image: url("../../img/dice/d8-1.png");
+}
+.gamelog .report .roll .die.D8-2 {
+  background-image: url("../../img/dice/d8-2.png");
+}
+.gamelog .report .roll .die.D8-3 {
+  background-image: url("../../img/dice/d8-3.png");
+}
+.gamelog .report .roll .die.D8-4 {
+  background-image: url("../../img/dice/d8-4.png");
+}
+.gamelog .report .roll .die.D8-5 {
+  background-image: url("../../img/dice/d8-5.png");
+}
+.gamelog .report .roll .die.D8-6 {
+  background-image: url("../../img/dice/d8-6.png");
+}
+.gamelog .report .roll .die.D8-7 {
+  background-image: url("../../img/dice/d8-7.png");
+}
+.gamelog .report .roll .die.D8-8 {
+  background-image: url("../../img/dice/d8-8.png");
+}
+.gamelog .report .roll .die.D3-1 {
+  background-image: url("../../img/dice/1.png");
+}
+.gamelog .report .roll .die.D3-2 {
+  background-image: url("../../img/dice/2.png");
+}
+.gamelog .report .roll .die.D3-3 {
+  background-image: url("../../img/dice/3.png");
+}
+.gamelog .report.second {
+  background-color: #e0e0e0;
+}
+.post {
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0px 1px 1px #aaa;
+  padding: 3em;
+  margin: 2em auto;
+}
+.post .post-header {
+  margin: 0 0 1.8em;
+}
+.post .post-header .post-title {
+  color: #222;
+  font-size: 1.8em;
+  margin: 0 0 0 0.2em;
+}
+.post .post-header .post-avatar {
+  border-radius: 50%;
+  float: right;
+  margin-left: 1em;
+}
+.post .post-header .post-meta {
+  color: #999;
+  font-size: 90%;
+  margin: 0;
+}
+.post .post-content {
+  color: #344151;
+  font-family: "Source Sans Pro", sans-serif;
+  font-size: 1.15em;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.5em;
+  text-align: justify;
+}
+.post .post-footer {
+  margin-top: 1.8em;
+}
+.btn-primary {
+  background-color: #235A9F;
+  border-color: #104c80;
+}

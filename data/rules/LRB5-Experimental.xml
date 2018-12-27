@@ -1,0 +1,3171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rules>
+    <version>LRB5_EXPERIMENTAL</version>
+    <rosters>
+        <roster>
+            <name>Amazon</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Linewoman</title>
+                    <cost>50000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Pass</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Catcher</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Catch</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Blitzer</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Chaos</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Beastman</title>
+                    <cost>60000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Horns</skill>
+                    </skills>
+                    <normal>GSM</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Chaos Warrior</title>
+                    <cost>100000</cost>
+                    <ma>5</ma>
+                    <st>4</st>
+                    <ag>3</ag>
+                    <av>9</av>
+                    <skills />
+                    <normal>GSM</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Minotaur</title>
+                    <cost>150000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Horns</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Wild Animal</skill>
+                    </skills>
+                    <normal>SM</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Chaos Dwarf</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Hobgoblin</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>6</quantity>
+                    <title>Chaos Dwarf Blocker</title>
+                    <cost>70000</cost>
+                    <ma>4</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Tackle</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>APM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Bull Centaur</title>
+                    <cost>130000</cost>
+                    <ma>6</ma>
+                    <st>4</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Sure Feet</skill>
+                        <skill>Sprint</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Minotaur</title>
+                    <cost>150000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Horns</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Wild Animal</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Chaos Pact</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>12</quantity>
+                    <title>Marauder</title>
+                    <cost>50000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills />
+                    <normal>GSPM</normal>
+                    <double>A</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Goblin Renegade</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Right Stuff</skill>
+                        <skill>Dodge</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>AM</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Skaven Renegade</title>
+                    <cost>50000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>GM</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Dark Elf Renegade</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills />
+                    <normal>GAM</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Chaos Troll</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Always Hungry</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Really Stupid</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Chaos Ogre</title>
+                    <cost>140000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Bone-head</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Minotaur</title>
+                    <cost>150000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Horns</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Wild Animal</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Dark Elf</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills />
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Runner</title>
+                    <cost>80000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dump-Off</skill>
+                    </skills>
+                    <normal>GAP</normal>
+                    <double>S</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Assassin</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Shadowing</skill>
+                        <skill>Stab</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Blitzer</title>
+                    <cost>100000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Witch Elf</title>
+                    <cost>110000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Jump Up</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Dwarf</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Blocker</title>
+                    <cost>70000</cost>
+                    <ma>4</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Tackle</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Runner</title>
+                    <cost>80000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Sure Hands</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitzer</title>
+                    <cost>80000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Troll Slayer</title>
+                    <cost>90000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Dauntless</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Deathroller</title>
+                    <cost>160000</cost>
+                    <ma>4</ma>
+                    <st>7</st>
+                    <ag>1</ag>
+                    <av>10</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Break Tackle</skill>
+                        <skill>Dirty Player</skill>
+                        <skill>Juggernaut</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>No Hands</skill>
+                        <skill>Secret Weapon</skill>
+                        <skill>Stand Firm</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Elf</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>60000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                    </skills>
+                    <normal>GAP</normal>
+                    <double>S</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Catcher</title>
+                    <cost>100000</cost>
+                    <ma>8</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Catch</skill>
+                        <skill>Nerves of Steel</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitzer</title>
+                    <cost>110000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Side Step</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Goblin</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Goblin</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Right Stuff</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Bombardier</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Bombardier</skill>
+                        <skill>Dodge</skill>
+                        <skill>Secret Weapon</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Pogoer</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Leap</skill>
+                        <skill>Stunty</skill>
+                        <skill>Very Long Legs</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Looney</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Chainsaw</skill>
+                        <skill>Secret Weapon</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Fanatic</title>
+                    <cost>70000</cost>
+                    <ma>3</ma>
+                    <st>7</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Ball and Chain</skill>
+                        <skill>No Hands</skill>
+                        <skill>Secret Weapon</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Troll</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Always Hungry</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Really Stupid</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <cheaperBribes>true</cheaperBribes>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Halfling</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Halfling</title>
+                    <cost>30000</cost>
+                    <ma>5</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>6</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Right Stuff</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Treeman</title>
+                    <cost>120000</cost>
+                    <ma>2</ma>
+                    <st>6</st>
+                    <ag>1</ag>
+                    <av>10</av>
+                    <skills>
+                        <skill>Mighty Blow</skill>
+                        <skill>Stand Firm</skill>
+                        <skill>Strong Arm</skill>
+                        <skill>Take Root</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <cheaperChef>true</cheaperChef>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>High Elf</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills />
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Safe Throw</skill>
+                    </skills>
+                    <normal>GAP</normal>
+                    <double>S</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Catcher</title>
+                    <cost>90000</cost>
+                    <ma>8</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Catch</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitzer</title>
+                    <cost>100000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Human</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>50000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills />
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Sure Hands</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Catcher</title>
+                    <cost>70000</cost>
+                    <ma>8</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Catch</skill>
+                        <skill>Dodge</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Blitzer</title>
+                    <cost>90000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Ogre</title>
+                    <cost>140000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Bone-head</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Khemri</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Skeleton</title>
+                    <cost>40000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Regeneration</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thro-Ra</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Sure Hands</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitz-Ra</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Tomb Guardian</title>
+                    <cost>100000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Decay</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>false</apothecary>
+            <stakes>true</stakes>
+        </roster>
+        <roster>
+            <name>Lizardman</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Skink</title>
+                    <cost>60000</cost>
+                    <ma>8</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>6</quantity>
+                    <title>Saurus</title>
+                    <cost>80000</cost>
+                    <ma>6</ma>
+                    <st>4</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills />
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Kroxigor</title>
+                    <cost>140000</cost>
+                    <ma>6</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Bone-head</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Prehensile Tail</skill>
+                        <skill>Thick SKull</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Necromantic</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Zombie</title>
+                    <cost>40000</cost>
+                    <ma>4</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Ghoul</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Wight</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Flesh Golem</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>4</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Regeneration</skill>
+                        <skill>Stand Firm</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Necromantic Werewolf</title>
+                    <cost>120000</cost>
+                    <ma>8</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Claws</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>false</apothecary>
+            <stakes>true</stakes>
+            <raise>Zombie</raise>
+        </roster>
+        <roster>
+            <name>Norse</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>50000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Catcher</title>
+                    <cost>90000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Dauntless</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitzer</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Jump Up</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Norse Werewolf</title>
+                    <cost>110000</cost>
+                    <ma>6</ma>
+                    <st>4</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Frenzy</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Yhetee</title>
+                    <cost>140000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Claws</skill>
+                        <skill>Disturbing Presence</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Wild Animal</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Nurgle</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Rotter</title>
+                    <cost>40000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Decay</skill>
+                        <skill>Nurgles Rot</skill>
+                    </skills>
+                    <normal>GM</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Pestigor</title>
+                    <cost>80000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Horns</skill>
+                        <skill>Nurgles Rot</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GSM</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Nurgle Warrior</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>4</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Disturbing Presence</skill>
+                        <skill>Foul Appearance</skill>
+                        <skill>Nurgles Rot</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GSM</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Beast of Nurgle</title>
+                    <cost>140000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Disturbing Presence</skill>
+                        <skill>Foul Appearance</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Nurgles Rot</skill>
+                        <skill>Really Stupid</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Tentacles</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>false</apothecary>
+            <stakes>false</stakes>
+            <rotter>Rotter</rotter>
+        </roster>
+        <roster>
+            <name>Ogre</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Snotling</title>
+                    <cost>20000</cost>
+                    <ma>5</ma>
+                    <st>1</st>
+                    <ag>3</ag>
+                    <av>5</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                        <skill>Side Step</skill>
+                        <skill>Right Stuff</skill>
+                        <skill>Stunty</skill>
+                        <skill>Titchy</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>6</quantity>
+                    <title>Ogre</title>
+                    <cost>140000</cost>
+                    <ma>5</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Bone-head</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Orc</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>50000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>9</av>
+                    <skills />
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Goblin</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Right Stuff</skill>
+                        <skill>Dodge</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>A</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Sure Hands</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Black Orc Blocker</title>
+                    <cost>80000</cost>
+                    <ma>4</ma>
+                    <st>4</st>
+                    <ag>2</ag>
+                    <av>9</av>
+                    <skills />
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Blitzer</title>
+                    <cost>80000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Troll</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Always Hungry</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Really Stupid</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Skaven</name>
+            <rerollValue>60000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>50000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>G</normal>
+                    <double>ASPM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Sure Hands</skill>
+                    </skills>
+                    <normal>GP</normal>
+                    <double>ASM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Gutter Runner</title>
+                    <cost>80000</cost>
+                    <ma>9</ma>
+                    <st>2</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SPM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Blitzer</title>
+                    <cost>90000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>APM</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Rat Ogre</title>
+                    <cost>150000</cost>
+                    <ma>6</ma>
+                    <st>5</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Frenzy</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Prehensile Tail</skill>
+                        <skill>Wild Animal</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAPM</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Slann</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>60000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Leap</skill>
+                        <skill>Very Long Legs</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Catcher</title>
+                    <cost>80000</cost>
+                    <ma>7</ma>
+                    <st>2</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Leap</skill>
+                        <skill>Diving Catch</skill>
+                        <skill>Very Long Legs</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Blitzer</title>
+                    <cost>110000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Leap</skill>
+                        <skill>Diving Tackle</skill>
+                        <skill>Very Long Legs</skill>
+                        <skill>Jump Up</skill>
+                    </skills>
+                    <normal>GAS</normal>
+                    <double>P</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Kroxigor</title>
+                    <cost>140000</cost>
+                    <ma>6</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Bone-head</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Prehensile Tail</skill>
+                        <skill>Thick SKull</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Undead</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Skeleton</title>
+                    <cost>40000</cost>
+                    <ma>5</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Regeneration</skill>
+                        <skill>Thick Skull</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Zombie</title>
+                    <cost>40000</cost>
+                    <ma>4</ma>
+                    <st>3</st>
+                    <ag>2</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Ghoul</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Dodge</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Wight</title>
+                    <cost>90000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GS</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Mummy</title>
+                    <cost>120000</cost>
+                    <ma>3</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Mighty Blow</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>false</apothecary>
+            <stakes>true</stakes>
+            <raise>Zombie</raise>
+        </roster>
+        <roster>
+            <name>Underworld</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>12</quantity>
+                    <title>Underworld Goblin</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>2</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Right Stuff</skill>
+                        <skill>Dodge</skill>
+                        <skill>Stunty</skill>
+                    </skills>
+                    <normal>AM</normal>
+                    <double>GSP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Skaven Lineman</title>
+                    <cost>50000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>GM</normal>
+                    <double>ASP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Skaven Thrower</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                        <skill>Sure Hands</skill>
+                    </skills>
+                    <normal>GPM</normal>
+                    <double>AS</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Skaven Blitzer</title>
+                    <cost>90000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Block</skill>
+                    </skills>
+                    <normal>GSM</normal>
+                    <double>AP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Warpstone Troll</title>
+                    <cost>110000</cost>
+                    <ma>4</ma>
+                    <st>5</st>
+                    <ag>1</ag>
+                    <av>9</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Always Hungry</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Really Stupid</skill>
+                        <skill>Regeneration</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>SM</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+        <roster>
+            <name>Vampire</name>
+            <rerollValue>70000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Thrall</title>
+                    <cost>40000</cost>
+                    <ma>6</ma>
+                    <st>3</st>
+                    <ag>3</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>G</normal>
+                    <double>ASP</double>
+                    <feeder>true</feeder>
+                </position>
+                <position>
+                    <quantity>6</quantity>
+                    <title>Vampire</title>
+                    <cost>110000</cost>
+                    <ma>6</ma>
+                    <st>4</st>
+                    <ag>4</ag>
+                    <av>8</av>
+                    <skills>
+                        <skill>Blood Lust</skill>
+                        <skill>Hypnotic Gaze</skill>
+                        <skill>Regeneration</skill>
+                    </skills>
+                    <normal>GAS</normal>
+                    <double>P</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>true</stakes>
+        </roster>
+        <roster>
+            <name>Wood Elf</name>
+            <rerollValue>50000</rerollValue>
+            <positions>
+                <position>
+                    <quantity>16</quantity>
+                    <title>Lineman</title>
+                    <cost>70000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills />
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Thrower</title>
+                    <cost>90000</cost>
+                    <ma>7</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Pass</skill>
+                    </skills>
+                    <normal>GAP</normal>
+                    <double>S</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>4</quantity>
+                    <title>Catcher</title>
+                    <cost>90000</cost>
+                    <ma>8</ma>
+                    <st>2</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Catch</skill>
+                        <skill>Dodge</skill>
+                        <skill>Sprint</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>2</quantity>
+                    <title>Wardancer</title>
+                    <cost>120000</cost>
+                    <ma>8</ma>
+                    <st>3</st>
+                    <ag>4</ag>
+                    <av>7</av>
+                    <skills>
+                        <skill>Block</skill>
+                        <skill>Dodge</skill>
+                        <skill>Leap</skill>
+                    </skills>
+                    <normal>GA</normal>
+                    <double>SP</double>
+                    <feeder>false</feeder>
+                </position>
+                <position>
+                    <quantity>1</quantity>
+                    <title>Treeman</title>
+                    <cost>120000</cost>
+                    <ma>2</ma>
+                    <st>6</st>
+                    <ag>1</ag>
+                    <av>10</av>
+                    <skills>
+                        <skill>Loner</skill>
+                        <skill>Mighty Blow</skill>
+                        <skill>Stand Firm</skill>
+                        <skill>Strong Arm</skill>
+                        <skill>Take Root</skill>
+                        <skill>Thick Skull</skill>
+                        <skill>Throw Team-Mate</skill>
+                    </skills>
+                    <normal>S</normal>
+                    <double>GAP</double>
+                    <feeder>false</feeder>
+                </position>
+            </positions>
+            <apothecary>true</apothecary>
+            <stakes>false</stakes>
+        </roster>
+    </rosters>
+    <stars>
+        <star>
+            <name>Barik Farblast</name>
+            <cost>60000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Hail Mary Pass</skill>
+                <skill>Pass</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Strong Arm</skill>
+                <skill>Sure Hands</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dwarf</race>
+            </races>
+        </star>
+        <star>
+            <name>Bertha Bigfist</name>
+            <cost>290000</cost>
+            <ma>6</ma>
+            <st>5</st>
+            <ag>2</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Bone-head</skill>
+                <skill>Break Tackle</skill>
+                <skill>Dodge</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Thick Skull</skill>
+                <skill>Throw Team-Mate</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Halfling</race>
+                <race>Ogre</race>
+            </races>
+        </star>
+        <star>
+            <name>Brick Far’th</name>
+            <cost>290000</cost>
+            <ma>5</ma>
+            <st>5</st>
+            <ag>2</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Bone-head</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Strong Arm</skill>
+                <skill>Thick Skull</skill>
+                <skill>Throw Team-Mate</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos</race>
+                <race>Nurgle</race>
+                <race>Ogre</race>
+            </races>
+            <linked>
+                <name>Grotty</name>
+                <cost>0</cost>
+                <ma>6</ma>
+                <st>2</st>
+                <ag>4</ag>
+                <av>7</av>
+                <skills>
+                    <skill>Loner</skill>
+                    <skill>Dodge</skill>
+                    <skill>Right Stuff</skill>
+                    <skill>Stunty</skill>
+                </skills>
+                <feeder>false</feeder>
+                <races>
+                    <race>Chaos</race>
+                    <race>Nurgle</race>
+                    <race>Ogre</race>
+                </races>
+            </linked>
+        </star>
+        <star>
+            <name>Bomber Dribblesnot</name>
+            <cost>60000</cost>
+            <ma>6</ma>
+            <st>2</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Accurate</skill>
+                <skill>Bombardier</skill>
+                <skill>Dodge</skill>
+                <skill>Right Stuff</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Stunty</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Pact</race>
+                <race>Goblin</race>
+                <race>Ogre</race>
+                <race>Orc</race>
+                <race>Underworld</race>
+            </races>
+        </star>
+        <star>
+            <name>Boomer Eziasson</name>
+            <cost>60000</cost>
+            <ma>4</ma>
+            <st>3</st>
+            <ag>2</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Accurate</skill>
+                <skill>Block</skill>
+                <skill>Bombardier</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dwarf</race>
+                <race>Norse</race>
+            </races>
+        </star>
+        <star>
+            <name>Count Luthor Von Drakenborg</name>
+            <cost>390000</cost>
+            <ma>6</ma>
+            <st>5</st>
+            <ag>4</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Hypnotic Gaze</skill>
+                <skill>Regeneration</skill>
+                <skill>Side Step</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Necromantic</race>
+                <race>Undead</race>
+                <race>Vampire</race>
+            </races>
+        </star>
+        <star>
+            <name>Crazy Igor</name>
+            <cost>120000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dauntless</skill>
+                <skill>Regeneration</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>true</feeder>
+            <races>
+                <race>Chaos Pact</race>
+                <race>Vampire</race>
+            </races>
+        </star>
+        <star>
+            <name>Deeproot Strongbranch</name>
+            <cost>300000</cost>
+            <ma>2</ma>
+            <st>7</st>
+            <ag>1</ag>
+            <av>10</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Stand Firm</skill>
+                <skill>Strong Arm</skill>
+                <skill>Thick Skull</skill>
+                <skill>Throw Team-Mate</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Halfling</race>
+            </races>
+        </star>
+        <star>
+            <name>Dolfar Longstride</name>
+            <cost>150000</cost>
+            <ma>7</ma>
+            <st>3</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Diving Catch</skill>
+                <skill>Hail Mary Pass</skill>
+                <skill>Kick</skill>
+                <skill>Kick-off Return</skill>
+                <skill>Pass Block</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Elf</race>
+                <race>High Elf</race>
+                <race>Wood Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Eldril Sidewinder</name>
+            <cost>200000</cost>
+            <ma>8</ma>
+            <st>3</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Dodge</skill>
+                <skill>Hypnotic Gaze</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Pass Block</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dark Elf</race>
+                <race>Elf</race>
+                <race>High Elf</race>
+                <race>Wood Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Fezglitch</name>
+            <cost>100000</cost>
+            <ma>4</ma>
+            <st>7</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Ball and Chain</skill>
+                <skill>Disturbing Presence</skill>
+                <skill>Foul Appearance</skill>
+                <skill>No Hands</skill>
+                <skill>Secret Weapon</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Skaven</race>
+                <race>Underworld</race>
+            </races>
+        </star>
+        <star>
+            <name>Flint Churnblade</name>
+            <cost>130000</cost>
+            <ma>5</ma>
+            <st>3</st>
+            <ag>2</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Chainsaw</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dwarf</race>
+            </races>
+        </star>
+        <star>
+            <name>Fungus the Loon</name>
+            <cost>80000</cost>
+            <ma>4</ma>
+            <st>7</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Ball and Chain</skill>
+                <skill>Mighty Blow</skill>
+                <skill>No Hands</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Stunty</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Goblin</race>
+            </races>
+        </star>
+        <star>
+            <name>Glart Smashrip Jr.</name>
+            <cost>210000</cost>
+            <ma>7</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Claws</skill>
+                <skill>Juggernaut</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Skaven</race>
+                <race>Underworld</race>
+            </races>
+        </star>
+        <star>
+            <name>Grashnak Blackhoof</name>
+            <cost>310000</cost>
+            <ma>6</ma>
+            <st>6</st>
+            <ag>2</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Frenzy</skill>
+                <skill>Horns</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos</race>
+                <race>Chaos Dwarf</race>
+                <race>Nurgle</race>
+            </races>
+        </star>
+        <star>
+            <name>Griff Oberwald</name>
+            <cost>320000</cost>
+            <ma>7</ma>
+            <st>4</st>
+            <ag>4</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dodge</skill>
+                <skill>Fend</skill>
+                <skill>Sprint</skill>
+                <skill>Sure Feet</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Human</race>
+            </races>
+        </star>
+        <star>
+            <name>Grim Ironjaw</name>
+            <cost>220000</cost>
+            <ma>5</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dauntless</skill>
+                <skill>Frenzy</skill>
+                <skill>Multiple Block</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dwarf</race>
+            </races>
+        </star>
+        <star>
+            <name>Hack Enslash</name>
+            <cost>120000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>2</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Chainsaw</skill>
+                <skill>Regeneration</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Side Step</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Khemri</race>
+                <race>Necromantic</race>
+                <race>Undead</race>
+            </races>
+        </star>
+        <star>
+            <name>Hakflem Skuttlespike</name>
+            <cost>200000</cost>
+            <ma>9</ma>
+            <st>3</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dodge</skill>
+                <skill>Extra Arms</skill>
+                <skill>Prehensile Tail</skill>
+                <skill>Two Heads</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Skaven</race>
+            </races>
+        </star>
+        <star>
+            <name>Headsplitter</name>
+            <cost>340000</cost>
+            <ma>6</ma>
+            <st>6</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Frenzy</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Prehensile Tail</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Skaven</race>
+            </races>
+        </star>
+        <star>
+            <name>Helmut Wulf</name>
+            <cost>110000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Chainsaw</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Stand Firm</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Human</race>
+                <race>Lizardman</race>
+                <race>Norse</race>
+                <race>Slann</race>
+                <race>Vampire</race>
+            </races>
+        </star>
+        <star>
+            <name>Hemlock</name>
+            <cost>170000</cost>
+            <ma>8</ma>
+            <st>2</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dodge</skill>
+                <skill>Side Step</skill>
+                <skill>Jump Up</skill>
+                <skill>Stab</skill>
+                <skill>Stunty</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Lizardman</race>
+                <race>Slann</race>
+            </races>
+        </star>
+        <star>
+            <name>Horkon Heartripper</name>
+            <cost>210000</cost>
+            <ma>7</ma>
+            <st>3</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dodge</skill>
+                <skill>Leap</skill>
+                <skill>Multiple Block</skill>
+                <skill>Shadowing</skill>
+                <skill>Stab</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dark Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Hthark the Unstoppable</name>
+            <cost>330000</cost>
+            <ma>6</ma>
+            <st>5</st>
+            <ag>2</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Break Tackle</skill>
+                <skill>Juggernaut</skill>
+                <skill>Sprint</skill>
+                <skill>Sure Feet</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Dwarf</race>
+            </races>
+        </star>
+        <star>
+            <name>Hubris Rakarth</name>
+            <cost>260000</cost>
+            <ma>7</ma>
+            <st>4</st>
+            <ag>4</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dirty Player</skill>
+                <skill>Jump Up</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Strip Ball</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dark Elf</race>
+                <race>Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Humerus Carpal</name>
+            <cost>130000</cost>
+            <ma>7</ma>
+            <st>2</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Dodge</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Regeneration</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Khemri</race>
+            </races>
+        </star>
+        <star>
+            <name>Icepelt Hammerblow</name>
+            <cost>330000</cost>
+            <ma>5</ma>
+            <st>6</st>
+            <ag>1</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Claws</skill>
+                <skill>Disturbing Presence</skill>
+                <skill>Frenzy</skill>
+                <skill>Regeneration</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Norse</race>
+            </races>
+        </star>
+        <star>
+            <name>Ithaca Benoin</name>
+            <cost>220000</cost>
+            <ma>7</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Accurate</skill>
+                <skill>Dump Off</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Pass</skill>
+                <skill>Regeneration</skill>
+                <skill>Sure Hands</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Dark Elf</race>
+                <race>Khemri</race>
+            </races>
+        </star>
+        <star>
+            <name>J Earlice</name>
+            <cost>180000</cost>
+            <ma>8</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Diving Catch</skill>
+                <skill>Dodge</skill>
+                <skill>Sprint</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Necromantic</race>
+                <race>Undead</race>
+                <race>Vampire</race>
+            </races>
+        </star>
+        <star>
+            <name>Jordell Freshbreeze</name>
+            <cost>260000</cost>
+            <ma>8</ma>
+            <st>3</st>
+            <ag>5</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Diving Catch</skill>
+                <skill>Dodge</skill>
+                <skill>Leap</skill>
+                <skill>Side Step</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Wood Elf</race>
+                <race>Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Lewdgrip Whiparm</name>
+            <cost>150000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Pass</skill>
+                <skill>Strong Arm</skill>
+                <skill>Sure Hands</skill>
+                <skill>Tentacles</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos</race>
+                <race>Chaos Pact</race>
+                <race>Nurgle</race>
+            </races>
+        </star>
+        <star>
+            <name>Lord Borak the Despoiler</name>
+            <cost>300000</cost>
+            <ma>5</ma>
+            <st>5</st>
+            <ag>3</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dirty Player</skill>
+                <skill>Mighty Blow</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos</race>
+                <race>Nurgle</race>
+            </races>
+        </star>
+        <star>
+            <name>Lottabottol</name>
+            <cost>220000</cost>
+            <ma>8</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Diving Tackle</skill>
+                <skill>Jump Up</skill>
+                <skill>Leap</skill>
+                <skill>Pass Block</skill>
+                <skill>Shadowing</skill>
+                <skill>Very Long Legs</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Lizardman</race>
+                <race>Slann</race>
+            </races>
+        </star>
+        <star>
+            <name>Max Spleenripper</name>
+            <cost>130000</cost>
+            <ma>5</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Chainsaw</skill>
+                <skill>Secret Weapon</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos</race>
+                <race>Nurgle</race>
+            </races>
+        </star>
+        <star>
+            <name>Mighty Zug</name>
+            <cost>260000</cost>
+            <ma>4</ma>
+            <st>5</st>
+            <ag>2</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Mighty Blow</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Human</race>
+            </races>
+        </star>
+        <star>
+            <name>Morg ‘n’ Thorg</name>
+            <cost>430000</cost>
+            <ma>6</ma>
+            <st>6</st>
+            <ag>3</ag>
+            <av>10</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Thick Skull</skill>
+                <skill>Throw Team-Mate</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Chaos</race>
+                <race>Chaos Dwarf</race>
+                <race>Chaos Pact</race>
+                <race>Dark Elf</race>
+                <race>Dwarf</race>
+                <race>Elf</race>
+                <race>Goblin</race>
+                <race>Halfling</race>
+                <race>High Elf</race>
+                <race>Human</race>
+                <race>Lizardman</race>
+                <race>Norse</race>
+                <race>Nurgle</race>
+                <race>Ogre</race>
+                <race>Orc</race>
+                <race>Skaven</race>
+                <race>Slann</race>
+                <race>Underworld</race>
+                <race>Vampire</race>
+                <race>Wood Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Nobbla Blackwart</name>
+            <cost>130000</cost>
+            <ma>6</ma>
+            <st>2</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dodge</skill>
+                <skill>Chainsaw</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Stunty</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Dwarf</race>
+                <race>Goblin</race>
+                <race>Ogre</race>
+                <race>Underworld</race>
+            </races>
+        </star>
+        <star>
+            <name>Prince Moranion</name>
+            <cost>230000</cost>
+            <ma>7</ma>
+            <st>4</st>
+            <ag>4</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dauntless</skill>
+                <skill>Tackle</skill>
+                <skill>Wrestle</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Elf</race>
+                <race>High Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Puggy Baconbreath</name>
+            <cost>140000</cost>
+            <ma>5</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>6</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dodge</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Right Stuff</skill>
+                <skill>Stunty</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Halfling</race>
+                <race>Human</race>
+            </races>
+        </star>
+        <star>
+            <name>Quetzal Leap</name>
+            <cost>250000</cost>
+            <ma>8</ma>
+            <st>2</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Diving Catch</skill>
+                <skill>Fend</skill>
+                <skill>Kick-off Return</skill>
+                <skill>Leap</skill>
+                <skill>Nerves of Steel</skill>
+                <skill>Very Long Legs</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Lizardman</race>
+                <race>Slann</race>
+            </races>
+        </star>
+        <star>
+            <name>Ramtut III</name>
+            <cost>380000</cost>
+            <ma>5</ma>
+            <st>6</st>
+            <ag>1</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Break Tackle</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Regeneration</skill>
+                <skill>Wrestle</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Khemri</race>
+                <race>Necromantic</race>
+                <race>Undead</race>
+            </races>
+        </star>
+        <star>
+            <name>Rashnak Backstabber</name>
+            <cost>200000</cost>
+            <ma>7</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dodge</skill>
+                <skill>Side Step</skill>
+                <skill>Sneaky Git</skill>
+                <skill>Stab</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Dwarf</race>
+            </races>
+        </star>
+        <star>
+            <name>Ripper</name>
+            <cost>270000</cost>
+            <ma>4</ma>
+            <st>6</st>
+            <ag>1</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Grab</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Regeneration</skill>
+                <skill>Throw Team-Mate</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Goblin</race>
+                <race>Orc</race>
+            </races>
+        </star>
+        <star>
+            <name>Roxanna Darknail</name>
+            <cost>250000</cost>
+            <ma>8</ma>
+            <st>3</st>
+            <ag>5</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dodge</skill>
+                <skill>Frenzy</skill>
+                <skill>Jump Up</skill>
+                <skill>Juggernaut</skill>
+                <skill>Leap</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Dark Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Scrappa Sorehead</name>
+            <cost>150000</cost>
+            <ma>7</ma>
+            <st>2</st>
+            <ag>3</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dirty Player</skill>
+                <skill>Dodge</skill>
+                <skill>Leap</skill>
+                <skill>Right Stuff</skill>
+                <skill>Sprint</skill>
+                <skill>Stunty</skill>
+                <skill>Sure Feet</skill>
+                <skill>Very Long Legs</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Goblin</race>
+                <race>Ogre</race>
+                <race>Orc</race>
+            </races>
+        </star>
+        <star>
+            <name>Setekh</name>
+            <cost>220000</cost>
+            <ma>6</ma>
+            <st>4</st>
+            <ag>2</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Break Tackle</skill>
+                <skill>Juggernaut</skill>
+                <skill>Regeneration</skill>
+                <skill>Strip Ball</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Khemri</race>
+                <race>Necromantic</race>
+                <race>Undead</race>
+            </races>
+        </star>
+        <star>
+            <name>Slibli</name>
+            <cost>250000</cost>
+            <ma>7</ma>
+            <st>4</st>
+            <ag>1</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Grab</skill>
+                <skill>Guard</skill>
+                <skill>Stand Firm</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Lizardman</race>
+                <race>Slann</race>
+            </races>
+        </star>
+        <star>
+            <name>Sinnedbad</name>
+            <cost>80000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>2</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Jump Up</skill>
+                <skill>Pass Block</skill>
+                <skill>Regeneration</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Side Step</skill>
+                <skill>Stab</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Khemri</race>
+                <race>Undead</race>
+            </races>
+        </star>
+        <star>
+            <name>Skitter Stab-Stab</name>
+            <cost>160000</cost>
+            <ma>9</ma>
+            <st>2</st>
+            <ag>4</ag>
+            <av>7</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dodge</skill>
+                <skill>Prehensile Tail</skill>
+                <skill>Shadowing</skill>
+                <skill>Stab</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Skaven</race>
+                <race>Underworld</race>
+            </races>
+        </star>
+        <star>
+            <name>Soaren Hightower</name>
+            <cost>180000</cost>
+            <ma>6</ma>
+            <st>3</st>
+            <ag>4</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Fend</skill>
+                <skill>Kick-off Return</skill>
+                <skill>Pass</skill>
+                <skill>Safe Throw</skill>
+                <skill>Sure Hands</skill>
+                <skill>Strong Arm</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>High Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Ugroth Bolgrot</name>
+            <cost>100000</cost>
+            <ma>5</ma>
+            <st>3</st>
+            <ag>3</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Chainsaw</skill>
+                <skill>Secret Weapon</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Pact</race>
+                <race>Orc</race>
+            </races>
+        </star>
+        <star>
+            <name>Varag Ghoul-Chewer</name>
+            <cost>290000</cost>
+            <ma>6</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Jump Up</skill>
+                <skill>Mighty Blow</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Orc</race>
+            </races>
+        </star>
+        <star>
+            <name>Wilhelm Chaney</name>
+            <cost>240000</cost>
+            <ma>8</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Catch</skill>
+                <skill>Claws</skill>
+                <skill>Frenzy</skill>
+                <skill>Regeneration</skill>
+                <skill>Wrestle</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Necromantic</race>
+                <race>Norse</race>
+                <race>Vampire</race>
+            </races>
+        </star>
+        <star>
+            <name>Willow Rosebark</name>
+            <cost>150000</cost>
+            <ma>5</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Dauntless</skill>
+                <skill>Side Step</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Halfling</race>
+                <race>Wood Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Zara the Slayer</name>
+            <cost>270000</cost>
+            <ma>6</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>8</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Block</skill>
+                <skill>Dauntless</skill>
+                <skill>Dodge</skill>
+                <skill>Jump Up</skill>
+                <skill>Stab</skill>
+                <skill>Stakes</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Amazon</race>
+                <race>Dwarf</race>
+                <race>Halfling</race>
+                <race>High Elf</race>
+                <race>Human</race>
+                <race>Norse</race>
+                <race>Wood Elf</race>
+            </races>
+        </star>
+        <star>
+            <name>Zzharg Madeye</name>
+            <cost>90000</cost>
+            <ma>4</ma>
+            <st>4</st>
+            <ag>3</ag>
+            <av>9</av>
+            <skills>
+                <skill>Loner</skill>
+                <skill>Hail Mary Pass</skill>
+                <skill>Pass</skill>
+                <skill>Secret Weapon</skill>
+                <skill>Strong Arm</skill>
+                <skill>Sure Hands</skill>
+                <skill>Tackle</skill>
+                <skill>Thick Skull</skill>
+            </skills>
+            <feeder>false</feeder>
+            <races>
+                <race>Chaos Dwarf</race>
+                <race>Chaos Pact</race>
+            </races>
+        </star>
+    </stars>
+    <inducements>
+        <inducement name="BLOODWEISER_BABES" max="2">50000</inducement>
+        <inducement name="BRIBES" max="3" reduced="50000">100000</inducement>
+        <inducement name="EXTRA_TEAM_TRAINING" max="4">100000</inducement>
+        <inducement name="HALFLING_MASTER_CHEFS" max="1" reduced="100000">300000</inducement>
+        <inducement name="IGORS" max="1">100000</inducement>
+        <inducement name="MERCENARIES" max="16" skill="50000">30000</inducement>
+        <inducement name="STAR_PLAYERS" max="2">-1</inducement>
+        <inducement name="WANDERING_APOTHECARIES" max="2">100000</inducement>
+        <inducement name="WIZARDS" max="1">150000</inducement>
+    </inducements>
+    <spp>
+        <action name="COMPLETION">1</action>
+        <action name="TOUCHDOWN">3</action>
+        <action name="INTERCEPTION">2</action>
+        <action name="CASUALTY">2</action>
+        <action name="MOST_VALUABLE_PLAYER">5</action>
+        <level name="Rookie">0</level>
+        <level name="Experienced">6</level>
+        <level name="Veteran">16</level>
+        <level name="Emerging Star">31</level>
+        <level name="Star">51</level>
+        <level name="Super Star">76</level>
+        <level name="Legend">176</level>
+    </spp>
+    <improvements>
+        <improvement name="SIMPLE_SKILL">20000</improvement>
+        <improvement name="DOUBLE_SKILL">30000</improvement>
+        <improvement name="MOVEMENT">30000</improvement>
+        <improvement name="ARMOUR">30000</improvement>
+        <improvement name="AGILITY">40000</improvement>
+        <improvement name="STRENGTH">50000</improvement>
+    </improvements>
+    <spirallingExpenses>
+        <start>1750000</start>
+        <interval>150000</interval>
+        <pace>10000</pace>
+    </spirallingExpenses>
+</rules>
