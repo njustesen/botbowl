@@ -185,7 +185,7 @@ However, the info object returned by the step function contains useful informati
 'touchdowns': {int},
 'opp_touchdowns': {int},
 'half': {int},
-'round': {int},
+'round': {int}
 ```
 These values are commulative, such that 'cas_inflicted' referes to the total number of casualties inflicted by the team.
 
