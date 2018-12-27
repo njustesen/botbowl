@@ -1,6 +1,4 @@
-import numpy as np
-from bb.core.table import *
-from bb.core.model import *
+from ffai.core.model import *
 
 
 class FeatureLayer:

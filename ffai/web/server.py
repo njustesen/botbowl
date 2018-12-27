@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template
-from bb.web import api
-from bb.core.load import *
+from ffai.web import api
+from ffai.core.load import *
 import json
 
 

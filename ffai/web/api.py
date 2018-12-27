@@ -1,7 +1,7 @@
-from bb.web.host import *
-from bb.core.game import *
-from bb.core.load import *
-from bb.ai.bots import RandomBot
+from ffai.web.host import *
+from ffai.core.game import *
+from ffai.core.load import *
+from ffai.ai.bots import RandomBot
 
 # Create a game host
 host = Host()

@@ -1,12 +1,9 @@
-import os
-import numpy as np
-import untangle
-from .model import *
+from ffai.core.model import *
 import json
-from bb.core.util import *
+from ffai.core.util import *
 import glob
-import bb
-import pkg_resources
+import untangle
+
 
 arena_char_map = {
     'C': Tile.CROWD,

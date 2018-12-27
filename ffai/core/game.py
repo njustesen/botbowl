@@ -1,5 +1,5 @@
-from bb.core.procedure import *
-from bb.core.load import *
+from ffai.core.procedure import *
+from ffai.core.load import *
 from copy import deepcopy, copy
 import numpy as np
 

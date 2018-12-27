@@ -1,6 +1,6 @@
 import numpy as np
-from bb.core.model import *
-from bb.core.table import *
+from ffai.core.model import *
+from ffai.core.table import *
 
 
 class Procedure:

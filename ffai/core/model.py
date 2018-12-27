@@ -2,8 +2,8 @@ from copy import copy, deepcopy
 import numpy as np
 import uuid
 from math import sqrt
-from bb.core.util import *
-from bb.core.table import *
+from ffai.core.util import *
+from ffai.core.table import *
 
 
 class Configuration:

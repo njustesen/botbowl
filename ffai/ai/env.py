@@ -1,14 +1,11 @@
-import os
 import gym
 from gym import spaces
-from bb.core.game import *
-from bb.core.load import *
-from bb.ai.bots import RandomBot
-from bb.ai.layers import *
-import bb.web
+from ffai.core.game import *
+from ffai.core.load import *
+from ffai.ai.bots import RandomBot
+from ffai.ai.layers import *
 import uuid
 import tkinter as tk
-from PIL import Image, ImageTk
 import math
 
 

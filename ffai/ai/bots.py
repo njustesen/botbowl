@@ -1,4 +1,4 @@
-from bb.core.model import Agent, ActionType, Action
+from ffai.core.model import Agent, ActionType, Action
 import numpy as np
 
 
@@ -27,12 +27,5 @@ class RandomBot(Agent):
 
     def end_game(self, game):
         pass
-        #winner = game.get_winner()
-        #if winner is None:
-        #    print("It's a draw")
-        #elif winner == self.my_team:
-        #    print("I ({}) won".format(self.name))
-        #else:
-        #    print("I ({}) lost".format(self.name))
-        #print("I took", self.actions_taken, "actions")
+
 
