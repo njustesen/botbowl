@@ -63,14 +63,14 @@ The main page lists active games. For each active game you can click on a team t
 ## Create a Bot
 To make you own bot you must implement the Agent class and its three methods: new_game, act, and end_game which are called by the framework. The act method must return an instance of the Action class. 
 
-Take a look at our example here.
+Take a look at our [bot_example.py](examples/bot_example.py).
 
 Be aware, that you should not modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots.
 
 ## Gym Interface
 FFAI implements the Open AI Gym interace for easy integration of machine learning algorithms. 
 
-Take a look at our example here.
+Take a look at our [gym_example.py](examples/gym_example.py).
 
 ![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
 
