@@ -1,7 +1,6 @@
-from bb.web.api import *
 import gym
 import numpy as np
-
+import ffai.ai
 
 if __name__ == "__main__":
 
@@ -62,6 +61,6 @@ if __name__ == "__main__":
             steps += 1
 
             # Render
-            env.render(feature_layers=False)
+            env.render(feature_layers=True)
 
     print(steps)
