@@ -6,12 +6,10 @@ FFAI is still under development and is planned to be updated heavily.
 
 Please cite us if you use FFAI in your publications.
 ```
-@inproceedings{torrado2018deep,
-  title={Deep Reinforcement Learning for General Video Game AI},
-  author={Torrado, Ruben Rodriguez and Bontrager, Philip and Togelius, Julian and Liu, Jialin and Perez-Liebana, Diego},
-  booktitle={Computational Intelligence and Games (CIG), 2018 IEEE Conference on},
-  year={2018},
-  organization={IEEE}
+@article{justesen2018blood,
+  title={Blood Bowl: The Next Board Game Challenge for AI},
+  author={Justesen, Niels and Risi, Sebastian and Togelius, Julian},
+  year={2018}
 }
 ```
 
