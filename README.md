@@ -16,7 +16,7 @@ FFAI is still under development and will be updated heavily the next six months.
   * Online play
   * Spectators
   * Human vs. bot
-* An AI interface, that allows you to implement and test your own bots
+* An AI interface that allows you to implement and test your own bots
 * Implementation of the Open AI Gym interface, that allows you to train machine learning algorithms
 * Custom pitches (we call these _arenas_). FFAI comes with arenas of four different sizes.
 * Rule configurations are possible from a configuration file, including:
