@@ -75,7 +75,32 @@ Observations are split in two parts, one that consists of (spatial) two-dimensio
 
 ### Action Types
 Actions consists of 44 action types and an optional x and y coordinate.
-
+1. OccupiedLayer()
+2. OwnPlayerLayer()
+3. OppPlayerLayer()
+4. OwnTackleZoneLayer()
+5. OppTackleZoneLayer()
+6. UpLayer()
+7. UsedLayer()
+8. AvailablePlayerLayer()
+9. AvailablePositionLayer()
+10. RollProbabilityLayer()
+11. BlockDiceLayer()
+12. ActivePlayerLayer()
+13. MALayer()
+14. STLayer()
+15. AGLayer()
+16. AVLayer()
+17. MovemenLeftLayer()
+18. BallLayer()
+19. OwnHalfLayer()
+20. OwnTouchdownLayer()
+21. OppTouchdownLayer()
+22. SkillLayer(Skill.BLOCK)
+23. SkillLayer(Skill.DODGE)
+24. SkillLayer(Skill.SURE_HANDS)
+26. SkillLayer(Skill.PASS)
+27. SkillLayer(Skill.BLOCK)
 
 Take a look at our example here.
 
