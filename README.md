@@ -59,7 +59,7 @@ Go to: http://127.0.0.1:5000/
 The home page lists active games. For each active game, you can click on a team to play it. If a team is disabled it is a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
 ## Create a Bot
-To make you own bot you must implement the Agent class and it's three methods: new_game, act, and end_game which are called by the framework. The act method must return an instance of the Action class. 
+To make you own bot you must implement the Agent class and its three methods: new_game, act, and end_game which are called by the framework. The act method must return an instance of the Action class. 
 
 Take a look at our example here.
 
