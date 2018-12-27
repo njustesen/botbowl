@@ -149,22 +149,21 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 14. ActionType.SELECT_DEFENDER_STUMBLES
 15. ActionType.SELECT_DEFENDER_DOWN
 16. ActionType.SELECT_NONE
-17. ActionType.SETUP_FORMATION_WEDGE
-18. ActionType.SETUP_FORMATION_LINE
-19. ActionType.SETUP_FORMATION_SPREAD
-20. ActionType.SETUP_FORMATION_ZONE
-21. ActionType.PLACE_PLAYER<Position>
-22. ActionType.PLACE_BALL<Position>
-23. ActionType.SELECT_SQUARE<Position>
-24. ActionType.INTERCEPTION<Position>
-25. ActionType.SELECT_PLAYER<Position>
-26. ActionType.MOVE<Position>
-27. ActionType.BLOCK<Position>
-28. ActionType.PASS<Position>
-29. ActionType.FOUL<Position>
-30. ActionType.SELECT_SQUARE<Position>
-31. ActionType.HANDOFF<Position>
-```
+17. ActionType.PLACE_PLAYER<Position>
+18. ActionType.PLACE_BALL<Position>
+19. ActionType.PUSH<Position>
+20. ActionType.FOLLOW_UP<Position>
+21. ActionType.INTERCEPTION<Position>
+22. ActionType.SELECT_PLAYER<Position>
+23. ActionType.MOVE<Position>
+24. ActionType.BLOCK<Position>
+25. ActionType.PASS<Position>
+26. ActionType.FOUL<Position>
+27. ActionType.HANDOFF<Position>
+28. ActionType.SETUP_FORMATION_WEDGE
+29. ActionType.SETUP_FORMATION_LINE
+30. ActionType.SETUP_FORMATION_SPREAD
+31. ActionType.SETUP_FORMATION_ZONE
 
 Actions can be instantiated and used like this:
 ```
