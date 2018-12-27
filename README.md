@@ -1,5 +1,5 @@
 # FFAI: Fantasy Football AI
-A highly-extensible modular multi-purpose AI framework for digital fantasy-football board-games.
+A highly-extensible modular AI framework for digital fantasy-football board-games.
 FFAI is still under development and will be updated heavily the next six months.
 
 ## Features
