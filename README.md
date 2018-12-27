@@ -164,6 +164,7 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 29. ActionType.SETUP_FORMATION_LINE
 30. ActionType.SETUP_FORMATION_SPREAD
 31. ActionType.SETUP_FORMATION_ZONE
+```
 
 Actions can be instantiated and used like this:
 ```
