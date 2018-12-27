@@ -74,34 +74,34 @@ Take a look at our example here.
 Observations are split in two parts, one that consists of (spatial) two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
 
 The default layers are these:
-
-1. OccupiedLayer()
-2. OwnPlayerLayer()
-3. OppPlayerLayer()
-4. OwnTackleZoneLayer()
-5. OppTackleZoneLayer()
-6. UpLayer()
-7. UsedLayer()
-8. AvailablePlayerLayer()
-9. AvailablePositionLayer()
-10. RollProbabilityLayer()
-11. BlockDiceLayer()
-12. ActivePlayerLayer()
-13. MALayer()
-14. STLayer()
-15. AGLayer()
-16. AVLayer()
-17. MovemenLeftLayer()
-18. BallLayer()
-19. OwnHalfLayer()
-20. OwnTouchdownLayer()
-21. OppTouchdownLayer()
-22. SkillLayer(Skill.BLOCK)
-23. SkillLayer(Skill.DODGE)
-24. SkillLayer(Skill.SURE_HANDS)
-26. SkillLayer(Skill.PASS)
-27. SkillLayer(Skill.BLOCK)
-
+```
+0. OccupiedLayer()
+1. OwnPlayerLayer()
+2. OppPlayerLayer()
+3. OwnTackleZoneLayer()
+4. OppTackleZoneLayer()
+5. UpLayer()
+6. UsedLayer()
+7. AvailablePlayerLayer()
+8. AvailablePositionLayer()
+9. RollProbabilityLayer()
+1. BlockDiceLayer()
+10. ActivePlayerLayer()
+12. MALayer()
+13. STLayer()
+14. AGLayer()
+15. AVLayer()
+16. MovemenLeftLayer()
+17. BallLayer()
+18. OwnHalfLayer()
+19. OwnTouchdownLayer()
+20. OppTouchdownLayer()
+21. SkillLayer(Skill.BLOCK)
+22. SkillLayer(Skill.DODGE)
+23. SkillLayer(Skill.SURE_HANDS)
+24. SkillLayer(Skill.PASS)
+25. SkillLayer(Skill.BLOCK)
+```
 Custom layers can be implemented like this:
 ```
 from ffai.ai import FeatureLayer
@@ -190,9 +190,4 @@ However, the info object returned by the step function contains useful informati
 These values are commulative, such that 'cas_inflicted' referes to the total number of casualties inflicted by the team.
 
 ### Disclaminers and Copyrighted Art
-
-
-### Custom Feature layers
-
-
-### 
+FFAI is not affiliated with or endoresed by any company and/or trademark. FAAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
