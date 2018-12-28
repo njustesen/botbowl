@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+A few utilities used across the core modules.
+"""
+
 import os
 import ffai
 

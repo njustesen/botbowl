@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains the FFAIEnv class; FFAI implementing the Open AI Gym interface.
+"""
+
 import gym
 from gym import spaces
 from ffai.core.game import *

@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains functions to communicate with a game host to manage games.
+"""
+
 from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *

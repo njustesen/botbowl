@@ -1,6 +1,14 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains the Game class, which is the main class used to interact with a game in FFAI.
+"""
+
 from ffai.core.procedure import *
 from ffai.core.load import *
-from copy import deepcopy, copy
+from copy import deepcopy
 import numpy as np
 
 
@@ -19,6 +27,11 @@ class Game:
         self.rnd = np.random.RandomState(self.seed)
 
     def clone(self):
+        """
+        Clones the Game object but retains references to objects that shouldn't be modified. This should be faster
+        than deepcopy.
+        :return: A clone of the Game object.
+        """
         state = self.state.clone()
         game = Game(game_id=self.game_id,
                     home_team=state.home_team,
@@ -32,35 +45,45 @@ class Game:
                     seed=None)
         game.actor = self.actor
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'game_id': self.game_id,
-            'state': self.state.to_simple(),
+            'state': self.state.to_json(),
             'stack': self.procs(),
-            'home_agent': self.home_agent.to_simple(),
-            'away_agent': self.away_agent.to_simple(),
+            'home_agent': self.home_agent.to_json(),
+            'away_agent': self.away_agent.to_json(),
             'squares_moved': self._squares_moved(),
-            'arena': self.arena.to_simple(),
+            'arena': self.arena.to_json(),
             'ruleset': self.ruleset.name,
             'can_home_team_use_reroll': self.can_use_reroll(self.state.home_team),
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team)
         }
 
     def team_agent(self, team):
+        """
+        :param team:
+        :return: The agent who's controlling the specified team.
+        """
         if team == self.state.home_team:
             return self.home_agent
         return self.away_agent
 
     def _squares_moved(self):
+        """
+        :return: The squares moved by the active player.
+        """
         for proc in self.state.stack.items:
             if isinstance(proc, PlayerAction):
                 out = []
                 for square in proc.squares:
-                    out.append(square.to_simple())
+                    out.append(square.to_json())
                 return out
         return []
 
     def init(self):
+        """
+        Initialized the Game. The START_GAME action must still be called after this.
+        """
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
@@ -74,7 +97,11 @@ class Game:
         self.set_available_actions()
 
     def _is_action_allowed(self, action):
-        #print(action.to_simple())
+        """
+        Checks whether the specified action is allowed by comparing to actions in self.state.available_actions.
+        :param action:
+        :return: True if the specified actions is allowed.
+        """
         if action is None:
             return True
         for action_choice in self.state.available_actions:
@@ -83,10 +110,10 @@ class Game:
                     print("Illegal action type")
                     return False
                 if action.player is not None and not isinstance(action.player, Player):
-                    print("Illegal player", action.action_type, action.player.to_simple())
+                    print("Illegal player", action.action_type, action.player.to_json())
                     return False
                 if action.pos is not None and not isinstance(action.pos, Square):
-                    print("Illegal position", action.pos.to_simple(), action.action_type.name)
+                    print("Illegal position", action.pos.to_json(), action.action_type.name)
                     return False
                 if action.idx is not None and not isinstance(action.idx, int):
                     print("Illegal index")
@@ -97,15 +124,15 @@ class Game:
                 if len(action_choice.positions) > 0 and action.pos not in action_choice.positions:
                     print("Illegal position", action.pos.to_simple(), action.action_type.name)
                     return False
-                break
-        return True
+                return True
+        return False
 
     def step(self, action=None):
-        '''
+        """
         Runs until an action from a human is required. If game requires an action to continue one must be given.
         :param action: Action to perform, can be None if game does not require any.
         :return:
-        '''
+        """
 
         # Ensure player points to player object
         if action is not None:
@@ -214,6 +241,10 @@ class Game:
         return True  # Game needs user input
 
     def set_available_actions(self):
+        """
+        Calls the current procedure's available_actions() method and sets the game's available actions to the returned
+        list.
+        """
         self.state.available_actions = self.state.stack.peek().available_actions()
         self.actor = None
         if len(self.state.available_actions) > 0:
@@ -223,16 +254,26 @@ class Game:
                 self.actor = self.away_agent
 
     def report(self, outcome):
-        #print(outcome.outcome_type.name)
-        #print(json.dumps(outcome.to_simple()))
+        """
+        Adds the outcome to the game's reports.
+        """
         self.state.reports.append(outcome)
 
     def is_team_side(self, pos, team):
+        """
+        :param pos:
+        :param team:
+        :return: Returns True if pos is on team's side of the arena.
+        """
         if team == self.state.home_team:
             return self.arena.board[pos.y][pos.x] in TwoPlayerArena.home_tiles
         return self.arena.board[pos.y][pos.x] in TwoPlayerArena.away_tiles
 
     def get_team_side(self, team):
+        """
+        :param team:
+        :return: a list of squares on team's side of the arena.
+        """
         tiles = []
         for y in range(len(self.arena.board)):
             for x in range(len(self.arena.board[y])):
@@ -241,40 +282,78 @@ class Game:
         return tiles
 
     def is_scrimmage(self, pos):
+        """
+        :param pos:
+        :return: Returns True if pos is on the scrimmage line.
+        """
         return self.arena.board[pos.y][pos.x] in TwoPlayerArena.scrimmage_tiles
 
     def is_wing(self, pos, right):
+        """
+        :param pos:
+        :param right: Whether to check on the right side of the arena. If False, it will check on the left side.
+        :return: True if pos is on the arena's wing and on the specified side.
+        """
         if right:
             return self.arena.board[pos.y][pos.x] in TwoPlayerArena.wing_right_tiles
         return self.arena.board[pos.y][pos.x] in TwoPlayerArena.wing_left_tiles
 
     def remove_balls(self):
+        """
+        Removes all balls from the arena.
+        """
         self.state.pitch.balls.clear()
 
     def is_last_turn(self):
+        """
+        :return: True if this turn is the last turn of the game.
+        """
         return self.get_next_team().state.turn == self.config.rounds and self.state.half == 2
 
     def is_last_round(self):
+        """
+        :return: True if this round is the las round of the game.
+        """
         return self.state.round == self.config.rounds
 
     def get_next_team(self):
+        """
+        :return: The team who's turn it is next.
+        """
         idx = self.state.turn_order.index(self.state.current_team)
         if idx+1 == len(self.state.turn_order):
             return self.state.turn_order[0]
         return self.state.turn_order[idx+1]
 
     def add_or_skip_turn(self, turns):
+        """
+        Adds or removes a number of turns from the current half. This method will raise an assertion error if the turn
+        counter goes to a negative number.
+        :param turns: The number of turns to add (if positive) or remove (if negative). 
+        """
         for team in self.state.teams:
             team.state.turn += turns
             assert team.state.turn >= 0
 
     def get_player(self, player_id):
+        """
+        :param player_id: 
+        :return: Returns the player with player_id
+        """
         return self.state.player_by_id[player_id]
 
     def get_player_at(self, pos):
+        """
+        :param pos: 
+        :return: Returns the player at pos else None.
+        """
         return self.state.pitch.board[pos.y][pos.x]
 
     def set_turn_order_from(self, first_team):
+        """
+        Sets the turn order starting from first_team.
+        :param first_team: The first team to start.
+        """
         before = []
         after = []
         added = False
@@ -290,6 +369,10 @@ class Game:
         self.state.turn_order = after + before
 
     def set_turn_order_after(self, last_team):
+        """
+        Sets the turn order starting after last_team.
+        :param last_team: The last team to start.
+        """
         before = []
         after = []
         added = False
@@ -305,27 +388,56 @@ class Game:
         self.state.turn_order = after + before
 
     def get_turn_order(self):
+        """
+        :return: The list of teams sorted by turn order.
+        """
         return self.state.turn_order
 
     def is_home_team(self, team):
+        """
+        :return: True if team is the home team.
+        """
         return team == self.state.home_team
 
     def get_opp_team(self, team):
+        """
+        :param team: 
+        :return: The opponent team of team.
+        """
         return self.state.home_team if self.state.away_team == team else self.state.away_team
 
     def get_reserves(self, team):
+        """
+        :param team: 
+        :return: The reserves in the dugout of this team.
+        """
         return self.state.get_dugout(team).reserves
 
     def get_kods(self, team):
+        """
+        :param team:
+        :return: The knocked out players in the dugout of this team.
+        """
         return self.state.get_dugout(team).kod
 
     def get_casualties(self, team):
+        """
+        :param team:
+        :return: The badly hurt, injured, and dead players in th dugout of this team.
+        """
         return self.state.get_dugout(team).casualties
 
     def get_dungeon(self, team):
+        """
+        :param team:
+        :return: The ejected players of this team, who's locked to a cell in the dungeon.
+        """
         return self.state.get_dugout(team).dungeon
 
     def current_turn(self):
+        """
+        :return: The top-most Turn procedure in the stack.
+        """
         for i in reversed(range(self.state.stack.size())):
             proc = self.state.stack.items[i]
             if isinstance(proc, Turn):
@@ -333,6 +445,10 @@ class Game:
         return None
 
     def can_use_reroll(self, team):
+        """
+        :param team:
+        :return: True if the team can use reroll right now (i.e. this turn).
+        """
         if not team.state.reroll_used and team.state.rerolls > 0 and self.state.current_team == team:
             current_turn = self.current_turn()
             if current_turn is not None and isinstance(current_turn, Turn):
@@ -340,72 +456,132 @@ class Game:
         return False
 
     def get_kicking_team(self, half=None):
+        """
+        :param half: Set this to None if you want the team who's kicking this drive.
+        :return: The team who's kicking in the specified half. If half is None, the team who's kicking this drive.
+        """
         if half is None:
             return self.state.kicking_this_drive
         return self.state.kicking_first_half if half == 1 else self.state.receiving_first_half
 
     def get_receiving_team(self, half=None):
+        """
+        :param half: Set this to None if you want the team who's receiving this drive.
+        :return: The team who's receiving in the specified half. If half is None, the team who's receiving this drive.
+        """
         if half is None:
             return self.state.receiving_this_drive
         return self.state.receiving_first_half if half == 1 else self.state.kicking_first_half
 
     def get_ball_position(self):
+        """
+        :return: The position of the ball. If no balls are in the arena None is returned. If multiple balls are in the
+        arena, the position of the first ball is return.
+        """
         return self.state.pitch.get_ball_position()
 
     def has_ball(self, player):
+        """
+        :param player:
+        :return: True if player has the ball.
+        """
         ball = self.state.pitch.get_ball_at(player.position)
         return True if ball is not None and ball.is_carried else False
 
     def get_ball_at(self, pos):
+        """
+        :param pos:
+        :return: The ball object at pos or None.
+        """
         return self.state.pitch.get_ball_at(pos)
 
     def is_touchdown(self, player):
+        """
+        :param player:
+        :return: True if player is in the opponent's endzone with the ball.
+        """
         return self.arena.in_opp_endzone(player.position, player.team == self.state.home_team)
 
     def is_out_of_bounds(self, pos):
+        """
+        :param pos:
+        :return: True if pos is out of bounds.
+        """
         return self.state.pitch.is_out_of_bounds(pos)
 
     def is_blitz_available(self):
+        """
+        :return: True if the current team can make a blitz this turn.
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.blitz_available
 
     def is_pass_available(self):
+        """
+        :return: True if the current team can make a pass this turn.
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.pass_available
 
     def is_handoff_available(self):
+        """
+        :return: True if the current team can make a handoff this turn.
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.handoff_available
 
     def is_foul_available(self):
+        """
+        :return: True if the current team can make a foul this turn.
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.foul_available
 
     def is_blitz(self):
+        """
+        :return: True if the current turn is a Blitz!
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.blitz
 
     def is_quick_snap(self):
+        """
+        :return: True if the current turn is a Quick Snap!
+        """
         turn = self.current_turn()
         if turn is not None:
             return turn.quick_snap
 
     def get_players_on_pitch(self, team, used=None, up=None):
+        """
+        :param team: The team of the players.
+        :param used: If specified, filter by ther players used state.
+        :param up: If specified, filter by ther players up state.
+        :return: Players on the pitch who's on team.
+        """
         return [player for player in team.players
                 if player.position is not None and (used is None or used == player.state.used) and
                 (up is None or up == player.state.up)]
 
     def pitch_to_reserves(self, player):
+        """
+        Moves player from the pitch to the reserves section in the dugout.
+        :param player:
+        """
         self.state.pitch.remove(player)
         self.get_reserves(player.team).append(player)
         player.state.used = False
 
     def reserves_to_pitch(self, player, pos):
+        """
+        Moves player from the reserves section in the dugout to the pitch.
+        :param player:
+        """
         self.get_reserves(player.team).remove(player)
         player_at = self.get_player_at(pos)
         if player_at is not None:
@@ -413,16 +589,32 @@ class Game:
         self.state.pitch.put(player, pos)
 
     def pitch_to_kod(self, player):
+        """
+        Moves player from the pitch to the KO section in the dugout.
+        :param player:
+        """
         self.state.pitch.remove(player)
         self.get_kods(player.team).append(player)
         player.state.knocked_out = True
 
     def kod_to_reserves(self, player):
+        """
+        Moves player from the KO section in the dugout to the pitch. This also resets the players knocked_out state.
+        :param player:
+        """
         self.get_kods(player.team).remove(player)
         self.get_reserves(player.team).append(player)
         player.state.knocked_out = False
 
     def pitch_to_casualties(self, player, casualty, effect, apothecary=False):
+        """
+        Moves player from the pitch to the CAS section in the dugout and applies the casualty and effect to the player.
+        :param player:
+        :param casualty:
+        :param effect:
+        :param apothecary: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
+        :return:
+        """
         self.state.pitch.remove(player)
         if apothecary and effect == CasualtyEffect.NONE:
             # Apothecary puts badly hurt players in the reserves
@@ -433,47 +625,130 @@ class Game:
             self.get_casualties(player.team).append(player)
 
     def pitch_to_dungeon(self, player):
+        """
+        Moves player from the pitch to the dungeon and ejects the player from the game.
+        :param player:
+        """
         self.state.pitch.remove(player)
         self.get_dungeon(player.team).append(player)
         player.state.ejected = True
 
     def move_player(self, player, pos):
+        """
+        Moves player from the pitch to pos.
+        :param player: The player on the pitch to move.
+        :param pos: A position on the pitch.
+        """
         self.state.pitch.move(player, pos)
 
     def swap(self, piece_a, piece_b):
+        """
+        Swaps two pieces (e.g. players) on the pitch.
+        :param piece_a:
+        :param piece_b:
+        """
         self.state.pitch.swap(piece_a, piece_b)
 
     def assists(self, player, opp_player, ignore_guard=False):
+        """
+        :param player: The attacker.
+        :param opp_player: The defender.
+        :param ignore_guard: Whether gauard should be ignored (default: False)
+        :return: The players that can assist player when blocking opp_player.
+        """
         return self.state.pitch.assists(player, opp_player, ignore_guard=ignore_guard)
 
     def interceptors(self, passer, pos):
+        """
+        :param passer:
+        :param pos:
+        :return: Possible intercepters when passer attempts a pass to pos.
+        """
         return self.state.pitch.interceptors(passer, pos)
 
     def pass_distance(self, passer, pos):
+        """
+        :param passer:
+        :param pos:
+        :return: The passing distance from passer to pos.
+        """
         return self.state.pitch.pass_distance(passer, pos)
 
     def passes(self, passer):
+        """
+        :param passer:
+        :return: (squares, distances). Squares is a list of squares that passer can attempt to pass to and distances
+        is a list of pass distances; one for each square.
+        """
         return self.state.pitch.passes(passer, self.state.weather)
 
-    def adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False):
-        return self.state.pitch.get_adjacent_squares(pos, manhattan=manhattan, include_out=include_out, exclude_occupied=exclude_occupied)
+    def adjacent_squares(self, pos, diagonal=False, include_out=False, exclude_occupied=False):
+        """
+        :param pos:
+        :param diagonal: Whether to include diagonally adjacent squares.
+        :param include_out: Whether to include squares out of bounds.
+        :param exclude_occupied: Whether to exclude occupied squares.
+        :return: Squares adjacent to pos.
+        """
+        return self.state.pitch.get_adjacent_squares(pos, manhattan=diagonal, include_out=include_out, exclude_occupied=exclude_occupied)
 
-    def adjacent_player_squares(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False):
-        return self.state.pitch.adjacent_player_squares(player, include_own, include_opp, manhattan, only_blockable, only_foulable)
+    def adjacent_player_squares(self, player, include_own=True, include_opp=True, diagonal=False, only_blockable=False, only_foulable=False):
+        """
+        :param player:
+        :param include_own: Whether to include own players.
+        :param include_opp: Whether to include opponent players.
+        :param diagonal: Whether to include diagonally adjacent squares.
+        :param only_blockable: Whether to only include blockable players.
+        :param only_foulable: Whether to only include foulable players.
+        :return: players adjacent to player.
+        """
+        return self.state.pitch.adjacent_player_squares(player, include_own, include_opp, diagonal, only_blockable, only_foulable)
 
     def num_tackle_zones_in(self, player):
+        """
+        :param player:
+        :return: Number of opponent tackle zone player is in.
+        """
         return self.state.pitch.num_tackle_zones_in(player)
 
     def num_tackle_zones_at(self, player, position):
+        """
+        :param player:
+        :param position:
+        :return: Number of opponent tackle zones player would be in, if standing at position.
+        """
         return self.state.pitch.num_tackle_zones_at(player, position)
 
     def tackle_zones_in_detailed(self, player):
+        """
+        The returned list of players who's tackle zone overlap with player is split into:
+        1. tackle_zones: all players,
+        2. tacklers: players with the Tackle skill,
+        3. prehensile_tailers: players with the Prehensile Tail skill,
+        4. diving_tacklers: players with the Diving Tackle skill,
+        5. shadowers: players with the Shadower skill,
+        6: tentaclers: players with the Tentacles skill.
+        :param player:
+        :return: Opponent players who's tackle zones overlap with player split into six lists.
+        """
         return self.state.pitch.tackle_zones_detailed(player)
 
     def push_squares(self, pos_from, pos_to):
+        """
+        :param pos_from: The position of the attacker.
+        :param pos_to: The position of the defender.
+        :return: Possible square to push the player standing on pos_to on to.
+        """
         return self.state.pitch.get_push_squares(pos_from, pos_to)
 
     def is_setup_legal(self, team, tile=None, max_players=11, min_players=3):
+        """
+        :param team:
+        :param tile: The tile area to check.
+        :param max_players: The maximum number of players in the area.
+        :param min_players: The minimum number of players in the area.
+        :return: True if team is setup legally in the specified tile area.
+        """
         cnt = 0
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
@@ -488,12 +763,19 @@ class Game:
         return True
 
     def num_casualties(self, team=None):
+        """
+        :param team: If None, return the sum of both teams casualties.
+        :return: The number of casualties suffered by team.
+        """
         if team is not None:
-            return len(self.get_casualties(self.team))
+            return len(self.get_casualties(team))
         else:
             return len(self.get_casualties(self.state.home_team)) + len(self.get_casualties(self.state.away_team))
 
     def get_winner(self):
+        """
+        :return: The team with most touchdowns, otherwise None.
+        """
         if self.state.home_team.state.score > self.state.away_team.state.score:
             return self.state.home_team
         elif self.state.home_team.state.score < self.state.away_team.state.score:
@@ -501,11 +783,22 @@ class Game:
         return None
 
     def is_setup_legal_scrimmage(self, team, min_players=3):
+        """
+        :param team:
+        :param min_players:
+        :return: True if team is setup legally on scrimmage.
+        """
         if team == self.state.home_team:
             return self.is_setup_legal(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
         return self.is_setup_legal(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
 
     def is_setup_legal_wings(self, team, min_players=0, max_players=2):
+        """
+        :param team:
+        :param min_players:
+        :param max_players:
+        :return: True if team is setup legally on the wings.
+        """
         if team == self.state.home_team:
             return self.is_setup_legal(team, tile=Tile.HOME_WING_LEFT, max_players=max_players, min_players=min_players) and \
                    self.is_setup_legal(team, tile=Tile.HOME_WING_RIGHT, max_players=max_players, min_players=min_players)
@@ -513,6 +806,9 @@ class Game:
                self.is_setup_legal(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
 
     def procs(self):
+        """
+        :return: a list of procedure names in the stack.
+        """
         procs = []
         for proc in self.state.stack.items:
             if isinstance(proc, Turn) and proc.quick_snap:
@@ -524,11 +820,17 @@ class Game:
         return procs
 
     def remove_recursive_refs(self):
+        """
+        Removes recursive references. Must be called before serializing.
+        """
         for team in self.state.teams:
             for player in team.players:
                 player.team = None
 
     def add_recursive_refs(self):
+        """
+        Adds recursive references. Can be called after serializing.
+        """
         for team in self.state.teams:
             for player in team.players:
                 player.team = team

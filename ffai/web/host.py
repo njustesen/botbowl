@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains the Host class that is used to manage games.
+"""
+
 from ffai.core.util import *
 import pickle
 import glob

@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains most of the model classes.
+"""
+
 from copy import copy, deepcopy
 import numpy as np
 import uuid
@@ -203,15 +211,15 @@ class GameState:
             'kicking_this_drive': self.kicking_this_drive.team_id if self.kicking_this_drive is not None else None,
             'receiving_this_drive': self.receiving_this_drive.team_id if self.receiving_this_drive is not None else None,
             'pitch': self.pitch.to_simple(),
-            'home_dugout': self.dugouts[self.home_team.team_id].to_simple(),
-            'away_dugout': self.dugouts[self.away_team.team_id].to_simple(),
-            'home_team': self.home_team.to_simple(),
-            'away_team': self.away_team.to_simple(),
+            'home_dugout': self.dugouts[self.home_team.team_id].to_json(),
+            'away_dugout': self.dugouts[self.away_team.team_id].to_json(),
+            'home_team': self.home_team.to_json(),
+            'away_team': self.away_team.to_json(),
             'game_over': self.game_over,
             'weather': self.weather.name,
             'gentle_gust': self.gentle_gust,
-            'available_actions': [action.to_simple() for action in self.available_actions],
-            'reports': [report.to_simple() for report in self.reports],
+            'available_actions': [action.to_json() for action in self.available_actions],
+            'reports': [report.to_json() for report in self.reports],
             'current_team_id': self.current_team.team_id if self.current_team is not None else None,
             'round': self.round,
             'spectators': self.spectators,
@@ -234,7 +242,7 @@ class Ball:
 
     def to_simple(self):
         return {
-            'position': self.position.to_simple() if self.position is not None else None,
+            'position': self.position.to_json() if self.position is not None else None,
             'on_ground': self.on_ground,
             'is_carried': self.is_carried
         }
@@ -266,7 +274,7 @@ class Pitch:
             board.append(row)
         return {
             'board': board,
-            'balls': [ball.to_simple() for ball in self.balls]
+            'balls': [ball.to_json() for ball in self.balls]
         }
 
     def put(self, piece, pos):
@@ -564,7 +572,7 @@ class ActionChoice:
     def to_simple(self):
         return {
             'action_type': self.action_type.name,
-            'positions': [position.to_simple() if position is not None else None for position in self.positions],
+            'positions': [position.to_json() if position is not None else None for position in self.positions],
             'team_id': self.team.team_id if self.team is not None else None,
             "rolls": self.rolls,
             "block_rolls": self.block_rolls,
@@ -586,7 +594,7 @@ class Action:
     def to_simple(self):
         return {
             'action_type': self.action_type.name,
-            'position': self.pos.to_simple() if self.pos is not None else None,
+            'position': self.pos.to_json() if self.pos is not None else None,
             'player_id': self.player.player_id if self.player is not None else None,
             'dice_result': self.dice_result
         }
@@ -656,7 +664,7 @@ class DiceRoll:
     def to_simple(self):
         dice = []
         for die in self.dice:
-            dice.append(die.to_simple())
+            dice.append(die.to_json())
         return {
             'dice': dice,
             'sum': self.sum,
@@ -884,7 +892,7 @@ class Player(Piece):
             'mng': self.mng,
             'spp': self.spp,
             'state': self.state.to_simple(),
-            'position': self.position.to_simple() if self.position is not None else None
+            'position': self.position.to_json() if self.position is not None else None
         }
 
     def __eq__(self, other):
@@ -967,12 +975,12 @@ class Team:
         players = []
         players_by_id = {}
         for player in self.players:
-            players.append(player.to_simple())
-            players_by_id[player.player_id] = player.to_simple()
+            players.append(player.to_json())
+            players_by_id[player.player_id] = player.to_json()
         return {
             'team_id': self.team_id,
             'name': self.name,
-            'coach': self.coach.to_simple(),
+            'coach': self.coach.to_json(),
             'race': self.race,
             'treasury': self.treasury,
             'apothecary': self.apothecary,
@@ -1003,10 +1011,10 @@ class Outcome:
     def to_simple(self):
         rolls = []
         for roll in self.rolls:
-            rolls.append(roll.to_simple())
+            rolls.append(roll.to_json())
         return {
             'outcome_type': self.outcome_type.name,
-            'pos': self.pos.to_simple() if self.pos is not None else None,
+            'pos': self.pos.to_json() if self.pos is not None else None,
             'player_id': self.player.player_id if self.player is not None else None,
             'opp_player': self.opp_player.player_id if self.opp_player is not None else None,
             'rolls': rolls,

@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains an example bot that takes random actions.
+"""
+
 from ffai.core.model import Agent, ActionType, Action
 import numpy as np
 

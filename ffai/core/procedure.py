@@ -1,4 +1,13 @@
-import numpy as np
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains all the procedures. Procedures contain the core part of the rules in FFAI. Each procedure are
+responsible for an isolated part of the game. Procedures are added to a stack, and the top-most procedure must finish
+before other procedures are run. Procedures can add other procedures to the stack simply by intiating the procedure.
+"""
+
 from ffai.core.model import *
 from ffai.core.table import *
 
@@ -964,9 +973,7 @@ class Kickoff(Procedure):
 
 
 class GetTheRef(Procedure):
-    """
-    Each team receives 1 additional Bribe to use during this game.
-    """
+
     def __init__(self, game):
         super().__init__(game)
 
@@ -981,14 +988,7 @@ class GetTheRef(Procedure):
 
 
 class Riot(Procedure):
-    """
-    The trash talk between two opposing players explodes and rapidly degenerates, involving the rest of the players.
-    If the receiving team's turn marker is on turn 7 for the half, both teams move their turn marker back one space as
-    the referee resets the clock back to before the fight started. If the receiving team has not yet taken a turn this
-    half the referee lets the clock run on during the fight and both teams' turn markers are moved forward one space.
-    Otherwise roll a D6. On a 1-3, both teams' turn markers are moved forward one space. On a 4-6, both team's turn
-    markers are moved back one space.
-    """
+
     def __init__(self, game):
         super().__init__(game)
         self.effect = 0
@@ -1020,12 +1020,7 @@ class Riot(Procedure):
 
 
 class HighKick(Procedure):
-    """
-    High Kick: The ball is kicked very high, allowing a player on the receiving team time to move into the
-    perfect position to catch it. Any one player on the receiving team who is not in an opposing player's
-    tackle zone may be moved into the square where the ball will land no matter what their MA may be, as long
-    as the square is unoccupied.
-    """
+
     def __init__(self, game, ball):
         super().__init__(game)
         self.ball = ball
@@ -1051,11 +1046,7 @@ class HighKick(Procedure):
 
 
 class CheeringFans(Procedure):
-    """
-    Each coach rolls a D3 and adds their team's FAME (see page 18) and the number of cheerleaders on their team to the
-    score. The team with the highest score is inspired by their fans' cheering and gets an extra re-roll this half.
-    If both teams have the same score, then both teams get a re-roll.
-    """
+
     def __init__(self, game):
         super().__init__(game)
 
@@ -1083,11 +1074,7 @@ class CheeringFans(Procedure):
 
 
 class BrilliantCoaching(Procedure):
-    """
-    Each coach rolls a D3 and adds their FAME (see page 18) and the number of assistant coaches on their team to the
-    score. The team with the highest total gets an extra team re-roll this half thanks to the brilliant instruction
-    provided by the coaching staff. In case of a tie both teams get an extra team re-roll.
-    """
+
     def __init__(self, game):
         super().__init__(game)
 
@@ -1116,12 +1103,7 @@ class BrilliantCoaching(Procedure):
 
 
 class ThrowARock(Procedure):
-    """
-    An enraged fan hurls a large rock at one of the players on the opposing team. Each coach rolls a D6 and adds their
-    FAME (see page 18) to the roll. The fans of the team that rolls higher are the ones that threw the rock. In the
-    case of a tie a rock is thrown at each team! Decide randomly which player in the other team was hit (only players
-    on the pitch are eligible) and roll for the effects of the injury straight away. No Armour roll is required.
-    """
+
     def __init__(self, game):
         super().__init__(game)
         self.rolled = False
@@ -1152,10 +1134,7 @@ class ThrowARock(Procedure):
 
 
 class PitchInvasionRoll(Procedure):
-    """
-    ... If a roll is 6 or more after modification then the player is Stunned (players with the Ball & Chain skill are
-    KO'd). A roll of 1 before adding FAME will always have no effect.
-    """
+
     def __init__(self, game, team, player):
         super().__init__(game)
         self.team = team

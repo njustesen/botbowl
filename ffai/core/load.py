@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains the functions used to load data in the /data/ folder.
+"""
+
 from ffai.core.model import *
 import json
 from ffai.core.util import *
@@ -5,6 +13,7 @@ import glob
 import untangle
 
 
+# Tile set mapping
 arena_char_map = {
     'C': Tile.CROWD,
     'A': Tile.AWAY,
@@ -40,6 +49,12 @@ def parse_sc(sc):
 
 
 def get_rule_set(name, debug=False, all_rules=True):
+    """
+    :param name: The filename of the .xml file to load in data/rules/
+    :param debug:
+    :param all_rules: If False, only a small set of the rules are loaded.
+    :return: A ruleset loaded from .xml.
+    """
 
     path = get_data_path('rules/' + name)
 
@@ -121,6 +136,10 @@ def get_rule_set(name, debug=False, all_rules=True):
 
 
 def get_all_teams(ruleset):
+    """
+    :param ruleset:
+    :return: All the teams in data/teams/
+    """
     path = get_data_path('teams/')
     teams = []
     for file in list(glob.glob(path + '/*.json')):
@@ -130,6 +149,11 @@ def get_all_teams(ruleset):
 
 
 def get_team_by_id(team_id, ruleset):
+    """
+    :param team_id:
+    :param ruleset:
+    :return: The team with team_id
+    """
     path = get_data_path('teams/')
     for file in list(glob.glob(path + '/*.json')):
         name = file.split("/")[-1].split(".")[0]
@@ -140,6 +164,11 @@ def get_team_by_id(team_id, ruleset):
 
 
 def get_team(name, ruleset):
+    """
+    :param name:
+    :param ruleset:
+    :return: The team with filename name (without file extension).
+    """
     path = get_data_path('teams/' + name + '.json')
     f = open(path)
     str = f.read()
@@ -157,6 +186,10 @@ def get_team(name, ruleset):
 
 
 def get_arena(name):
+    """
+    :param name: The filename to load.
+    :return: The arena at data/arena/<name>
+    """
     path = get_data_path('arenas/' + name)
     # name = 'Unknown arena'
     dungeon = False
@@ -180,6 +213,10 @@ def get_arena(name):
 
 
 def get_config(name):
+    """
+    :param name: the filename to load.
+    :return: The configuration in data/config/<name>
+    """
     path = get_data_path('config/' + name)
     f = open(path)
     str = f.read()
@@ -207,6 +244,11 @@ def get_config(name):
 
 
 def get_formation(name, size):
+    """
+    :param name: the filename to load.
+    :param size: The number of players on the pitch in the used FFAI variant.
+    :return: The formation in data/formations/<size>/<name>
+    """
     path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
     file = open(path, 'r')

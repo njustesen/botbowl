@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+Run this script to start a Flask server locally. The server will start a Host, which will manage games.
+"""
+
 from flask import Flask, request, render_template
 from ffai.web import api
 from ffai.core.load import *
@@ -22,7 +30,7 @@ def home():
 def create():
     data = json.loads(request.data)
     game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'])
-    return json.dumps(game.to_simple())
+    return json.dumps(game.to_json())
 
 
 @app.route('/game/save', methods=['POST'])
@@ -40,8 +48,8 @@ def save():
 def get_all_games():
     games = api.get_games()
     saved_games = api.get_saved_games()
-    game_list = [game.to_simple() for game in games]
-    saved_game_list = [{'game': save[0].to_simple(), 'name': save[1]} for save in saved_games]
+    game_list = [game.to_json() for game in games]
+    saved_game_list = [{'game': save[0].to_json(), 'name': save[1]} for save in saved_games]
     return json.dumps({
         'games': game_list,
         'saved_games': saved_game_list
@@ -53,7 +61,7 @@ def get_all_teams():
     teams = api.get_teams()
     team_list = []
     for team in teams:
-        team_list.append(team.to_simple())
+        team_list.append(team.to_json())
     return json.dumps(team_list)
 
 
@@ -72,17 +80,17 @@ def step(game_id):
     except Exception as e:
         print(e)
         game = api.get_game(game_id)
-    return json.dumps(game.to_simple())
+    return json.dumps(game.to_json())
 
 
 @app.route('/games/<game_id>', methods=['GET'])
 def get_game(game_id):
-    return json.dumps(api.get_game(game_id).to_simple())
+    return json.dumps(api.get_game(game_id).to_json())
 
 
 @app.route('/game/load/<name>', methods=['GET'])
 def load_game(name):
-    return json.dumps(api.load_game(name).to_simple())
+    return json.dumps(api.load_game(name).to_json())
 
 
 if __name__ == '__main__':

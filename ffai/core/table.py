@@ -1,3 +1,11 @@
+"""
+==========================
+Author: Niels Justesen
+Year: 2018
+==========================
+This module contains enumerations and tables for the rules.
+"""
+
 from enum import Enum
 
 
