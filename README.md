@@ -4,6 +4,15 @@ FFAI is still under development and is planned to be updated heavily.
 
 ![FFAI](screenshots/ffai.png?raw=true "FFAI")
 
+Please cite us if you use FFAI in your publications.
+```
+@article{justesen2018blood,
+  title={Blood Bowl: The Next Board Game Challenge for AI},
+  author={Justesen, Niels and Risi, Sebastian and Togelius, Julian},
+  year={2018}
+}
+```
+
 ## Features
 * Rule implementation of the Living Rulebook 5 with the following limitations:
   * Only skills for the Human and Orc teams have been implemented and tested
