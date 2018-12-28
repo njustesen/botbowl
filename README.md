@@ -38,7 +38,7 @@ Please cite us if you use FFAI in your publications.
   * Kick-off table enabled/disabled
   * Which scatter dice to use
   * ...
-* Premade formations to ease the setup phase. Custom made fomrations can easily be implemented. 
+* Premade formations to ease the setup phase. Custom made formations can easily be implemented. 
 * Games can be saved and loaded
 
 ## Plans for Future Releases
