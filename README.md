@@ -141,7 +141,7 @@ To visualize the feature layers, use the feature_layers option when calling rend
 env.render(feature_layers=True)
 ```
 
-![FFAI Gym Feature Layers](screenshots/layers.png?raw=true "FFAI Gym Feature Layers")
+![FFAI Gym Feature Layers](screenshots/gym_layers.png?raw=true "FFAI Gym Feature Layers")
 
 ### Action Types
 Actions consists of 31 action types. Some action types, denoted by <position> also requires an x and y-coordinate.
@@ -212,7 +212,7 @@ FFAI comes with four environments with various difficulty:
 * FFAI-v1-3: 3 players on a 12x5 pitch
 
 This is how the FFAI-v1-3 environment looks:
-![FFAI Gym GUI](screenshots/3.png?raw=true "FFAI Gym GUI FFAI-3")
+![FFAI Gym GUI](screenshots/gym_3.png?raw=true "FFAI Gym GUI FFAI-3")
 
 ## Disclaminers and Copyrighted Art
 FFAI is not affiliated with or endoresed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
