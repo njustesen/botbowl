@@ -349,7 +349,7 @@ class FFAIEnv(gym.Env):
         if self.root is None:
             self.root = tk.Tk()
             self.root.title("FFAI Gym")
-            self.game_width = self.game.arena.width*FFAIEnv.square_size
+            self.game_width = max(500, self.game.arena.width*FFAIEnv.square_size)
             self.game_height = self.game.arena.height*FFAIEnv.square_size + FFAIEnv.top_bar_height + FFAIEnv.bot_bar_height
             if feature_layers:
                 self.cols = math.floor(math.sqrt(len(self.layers)))

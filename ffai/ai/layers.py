@@ -117,7 +117,7 @@ class UsedLayer(FeatureLayer):
         return out
 
     def name(self):
-        return "ready players"
+        return "used players"
 
 
 class UpLayer(FeatureLayer):
@@ -136,7 +136,7 @@ class UpLayer(FeatureLayer):
         return out
 
     def name(self):
-        return "down players"
+        return "standing players"
 
 
 class StunnedLayer(FeatureLayer):

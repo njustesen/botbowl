@@ -8,7 +8,7 @@
     "pitch_min": 2,
     "scrimmage_min": 3,
     "wing_max": 2,
-    "turns": 6,
+    "turns": 8,
     "kick_off_table": true,
     "fast_mode": true,
     "kick_scatter_dice": "d6",
