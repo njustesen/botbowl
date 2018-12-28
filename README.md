@@ -204,8 +204,18 @@ However, the info object returned by the step function contains useful informati
 ```
 These values are commulative, such that 'cas_inflicted' referes to the total number of casualties inflicted by the team.
 
-### Disclaminers and Copyrighted Art
+### Variants
+FFAI comes with four environments with various difficulty:
+* FFAI-v1: 11 players on a 26x15 pitch (traditional size)
+* FFAI-v1-7: 7 players on a 20x11 pitch
+* FFAI-v1-5: 5 players on a 16x8 pitch
+* FFAI-v1-3: 3 players on a 12x5 pitch
+
+This is how the FFAI-v1-3 environment looks:
+![FFAI Gym GUI](screenshots/3.png?raw=true "FFAI Gym GUI FFAI-3")
+
+## Disclaminers and Copyrighted Art
 FFAI is not affiliated with or endoresed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
 
-### Get Involved
+## Get Involved
 Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Join our [Discord server](https://discord.gg/uXPEgU).
