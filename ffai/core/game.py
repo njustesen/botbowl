@@ -122,7 +122,7 @@ class Game:
                     print("Illegal player", action.action_type, action.player)
                     return False
                 if len(action_choice.positions) > 0 and action.pos not in action_choice.positions:
-                    print("Illegal position", action.pos.to_simple(), action.action_type.name)
+                    print("Illegal position", action.pos.to_json(), action.action_type.name)
                     return False
                 return True
         return False

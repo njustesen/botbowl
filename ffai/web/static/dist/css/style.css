@@ -519,11 +519,11 @@ a:hover {
 }
 .gamecontent .gameboard .dugout.away {
   /*background-color: rgb(125, 0, 0);*/
-  background-image: url("../../img/arenas/bb_pitch/dugouts/dugout-left.jpg");
+  background-image: url("../../img/arenas/dugouts/dugout-left.jpg");
 }
 .gamecontent .gameboard .dugout.home {
   /*background-color: rgb(0, 0, 125);*/
-  background-image: url("../../img/arenas/bb_pitch/dugouts/dugout-right.jpg");
+  background-image: url("../../img/arenas/dugouts/dugout-right.jpg");
 }
 .gamecontent .gameboard .pitch {
   padding: 0;

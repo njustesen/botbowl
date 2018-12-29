@@ -51,7 +51,7 @@ class PlayerState:
         self.casualty_effect = None
         self.casualty_type = None
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'up': self.up,
             'used': self.used,
@@ -85,7 +85,7 @@ class Agent:
         self.name = name
         self.human = human
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'agent_id': self.agent_id,
             'name': self.name,
@@ -119,7 +119,7 @@ class TeamState:
         self.fame = 0
         self.reroll_used = False
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'bribes': self.bribes,
             'babes': self.babes,
@@ -203,14 +203,14 @@ class GameState:
     def get_dugout(self, team):
         return self.dugouts[team.team_id]
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'half': self.half,
             'kicking_first_half': self.kicking_first_half.team_id if self.kicking_first_half is not None else None,
             'receiving_first_half': self.receiving_first_half.team_id if self.receiving_first_half is not None else None,
             'kicking_this_drive': self.kicking_this_drive.team_id if self.kicking_this_drive is not None else None,
             'receiving_this_drive': self.receiving_this_drive.team_id if self.receiving_this_drive is not None else None,
-            'pitch': self.pitch.to_simple(),
+            'pitch': self.pitch.to_json(),
             'home_dugout': self.dugouts[self.home_team.team_id].to_json(),
             'away_dugout': self.dugouts[self.away_team.team_id].to_json(),
             'home_team': self.home_team.to_json(),
@@ -240,7 +240,7 @@ class Ball:
     def move_to(self, pos):
         self.position = Square(pos.x, pos.y)
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'position': self.position.to_json() if self.position is not None else None,
             'on_ground': self.on_ground,
@@ -265,7 +265,7 @@ class Pitch:
         self.height = len(self.board)
         self.width = len(self.board[0])
 
-    def to_simple(self):
+    def to_json(self):
         board = []
         for y in range(len(self.board)):
             row = []
@@ -569,7 +569,7 @@ class ActionChoice:
         self.disabled = disabled
         self.agi_rolls = [] if agi_rolls is None else agi_rolls
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'action_type': self.action_type.name,
             'positions': [position.to_json() if position is not None else None for position in self.positions],
@@ -591,7 +591,7 @@ class Action:
         self.idx = idx
         self.dice_result = dice_result
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'action_type': self.action_type.name,
             'position': self.pos.to_json() if self.pos is not None else None,
@@ -622,7 +622,7 @@ class TwoPlayerArena:
         else:
             return self.board[pos.y][pos.x] == Tile.HOME_TOUCHDOWN
 
-    def to_simple(self):
+    def to_json(self):
         if self.json is not None:
             return self.json
 
@@ -661,7 +661,7 @@ class DiceRoll:
                 else:
                     self.sum += d.get_value()
 
-    def to_simple(self):
+    def to_json(self):
         dice = []
         for die in self.dice:
             dice.append(die.to_json())
@@ -722,7 +722,7 @@ class D3(Die):
     def get_value(self):
         return self.value
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'die_type': 'D3',
             'result': self.value
@@ -737,7 +737,7 @@ class D6(Die):
     def get_value(self):
         return self.value
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'die_type': 'D6',
             'result': self.value
@@ -752,7 +752,7 @@ class D8(Die):
     def get_value(self):
         return self.value
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'die_type': 'D8',
             'result': self.value
@@ -770,7 +770,7 @@ class BBDie(Die):
     def get_value(self):
         return self.value
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'die_type': 'BB',
             'result': self.value.name
@@ -786,7 +786,7 @@ class Dugout:
         self.casualties = []
         self.dungeon = []  # Ejected
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'team_id': self.team.team_id,
             'reserves': [player.player_id for player in self.reserves],
@@ -873,7 +873,7 @@ class Player(Piece):
     def can_assist(self):
         return self.state.up and not self.state.bone_headed and not self.state.hypnotized and not self.state.really_stupid
 
-    def to_simple(self):
+    def to_json(self):
         skills = []
         for skill in self.get_skills():
             skills.append(skill.name)
@@ -891,7 +891,7 @@ class Player(Piece):
             'niggling': self.niggling,
             'mng': self.mng,
             'spp': self.spp,
-            'state': self.state.to_simple(),
+            'state': self.state.to_json(),
             'position': self.position.to_json() if self.position is not None else None
         }
 
@@ -905,7 +905,7 @@ class Square:
         self.x = x
         self.y = y
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'x': self.x,
             'y': self.y
@@ -937,7 +937,7 @@ class Coach:
         self.coach_id = coach_id
         self.name = name
 
-    def to_simple(self):
+    def to_json(self):
         return {
             'coach_id': self.coach_id,
             'name': self.name
@@ -971,7 +971,7 @@ class Team:
         self.cheerleaders = cheerleaders
         self.state = TeamState(self)
 
-    def to_simple(self):
+    def to_json(self):
         players = []
         players_by_id = {}
         for player in self.players:
@@ -989,7 +989,7 @@ class Team:
             'cheerleaders': self.cheerleaders,
             'fan_factor': self.fan_factor,
             'players_by_id': players_by_id,
-            'state': self.state.to_simple()
+            'state': self.state.to_json()
         }
 
     def __eq__(self, other):
@@ -1008,7 +1008,7 @@ class Outcome:
         self.n = n
         self.skill = skill
 
-    def to_simple(self):
+    def to_json(self):
         rolls = []
         for roll in self.rolls:
             rolls.append(roll.to_json())
