@@ -1,6 +1,6 @@
 # FFAI: Fantasy Football AI
 A highly-extensible modular AI framework for digital fantasy-football board-games.
-FFAI is still under development and is planned to be updated heavily.
+FFAI is still under development and is planned to be heavily updated.
 
 ![FFAI](screenshots/ffai.png?raw=true "FFAI")
 
@@ -74,7 +74,7 @@ To make you own bot you must implement the Agent class and its three methods: ne
 
 Take a look at our [bot_example.py](examples/bot_example.py).
 
-Be aware, that you should not modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots.
+Be aware, that you shouldn't modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots. For now, this is up to the user to do.
 
 ## Gym Interface
 FFAI implements the Open AI Gym interace for easy integration of machine learning algorithms. 
@@ -84,7 +84,7 @@ Take a look at our [gym_example.py](examples/gym_example.py).
 ![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
 
 ### Observations
-Observations are split in two parts, one that consists of (spatial) two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
+Observations are split in two parts, one that consists of spatial two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
 
 The default layers are these:
 ```
@@ -131,7 +131,7 @@ class MyCustomLayer(FeatureLayer):
     def name(self):
         return "expensive players"
 ```
-And then added to the environmnet's feature layers:
+and added to the environment's feature layers:
 ```
 env.layers.append(MyCustomLayer())
 ```
@@ -181,7 +181,7 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 31. ActionType.SETUP_FORMATION_ZONE
 ```
 
-Actions can be instantiated and used like this:
+Actions are instantiated and used like this:
 ```
 action = {
     'action-type': 26,
