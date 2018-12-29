@@ -1,6 +1,6 @@
 # FFAI: Fantasy Football AI
 A highly-extensible modular AI framework for digital fantasy-football board-games.
-FFAI is still under development and is planned to be updated heavily.
+FFAI is still under development and is planned to be heavily updated.
 
 ![FFAI](screenshots/ffai.png?raw=true "FFAI")
 
@@ -38,7 +38,7 @@ Please cite us if you use FFAI in your publications.
   * Kick-off table enabled/disabled
   * Which scatter dice to use
   * ...
-* Premade formations to ease the setup phase. Custom made fomrations can easily be implemented. 
+* Premade formations to ease the setup phase. Custom made formations can easily be implemented. 
 * Games can be saved and loaded
 
 ## Plans for Future Releases
@@ -74,7 +74,7 @@ To make you own bot you must implement the Agent class and its three methods: ne
 
 Take a look at our [bot_example.py](examples/bot_example.py).
 
-Be aware, that you should not modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots.
+Be aware, that you shouldn't modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots. For now, this is up to the user to do.
 
 ## Gym Interface
 FFAI implements the Open AI Gym interace for easy integration of machine learning algorithms. 
@@ -84,7 +84,7 @@ Take a look at our [gym_example.py](examples/gym_example.py).
 ![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
 
 ### Observations
-Observations are split in two parts, one that consists of (spatial) two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
+Observations are split in two parts, one that consists of spatial two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
 
 The default layers are these:
 ```
@@ -131,7 +131,7 @@ class MyCustomLayer(FeatureLayer):
     def name(self):
         return "expensive players"
 ```
-And then added to the environmnet's feature layers:
+and added to the environment's feature layers:
 ```
 env.layers.append(MyCustomLayer())
 ```
@@ -181,7 +181,7 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 31. ActionType.SETUP_FORMATION_ZONE
 ```
 
-Actions can be instantiated and used like this:
+Actions are instantiated and used like this:
 ```
 action = {
     'action-type': 26,
@@ -212,6 +212,7 @@ FFAI comes with four environments with various difficulty:
 * FFAI-v1-3: 3 players on a 12x5 pitch
 
 This is how the FFAI-v1-3 environment looks:
+
 ![FFAI Gym GUI](screenshots/gym_3.png?raw=true "FFAI Gym GUI FFAI-3")
 
 ## Disclaminers and Copyrighted Art
