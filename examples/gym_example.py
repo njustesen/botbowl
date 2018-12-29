@@ -5,12 +5,12 @@ import ffai.ai
 if __name__ == "__main__":
 
     # Create environment
-    # env = gym.make("FFAI-v1")
+    env = gym.make("FFAI-v1")
 
     # Smaller variants
     # env = gym.make("FFAI-7-v1")
     # env = gym.make("FFAI-5-v1")
-    env = gym.make("FFAI-3-v1")
+    # env = gym.make("FFAI-3-v1")
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
@@ -37,10 +37,9 @@ if __name__ == "__main__":
         while not done:
 
             # Extract non-spatial features
-            non_spatial = obs["non-spatial"]
-            non_spatial_arr = list(non_spatial.values())
-            spatial = obs["spatial"]
-            spatial_arr = list(spatial.values())
+            state_arr = list(obs['state'].values())
+            board = list(obs['board'].values())
+            procedure = obs['procedure']
 
             # Sample random action type
             action_type = rnd.choice(env.available_action_types())

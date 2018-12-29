@@ -87,6 +87,28 @@ class FFAIEnv(gym.Env):
         ActionType.START_HANDOFF
     ]
 
+    # Procedures that require actions
+    procedures = [
+        StartGame,
+        CoinToss,
+        Setup,
+        PlaceBall,
+        HighKick,
+        Touchback,
+        Turn,
+        PlayerAction,
+        Block,
+        Push,
+        FollowUp,
+        Apothecary,
+        PassAction,
+        Catch,
+        Interception,
+        GFI,
+        Dodge,
+        Pickup
+    ]
+
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.1"
         self.config = config
@@ -134,8 +156,9 @@ class FFAIEnv(gym.Env):
         arena = get_arena(self.config.arena)
 
         self.observation_space = spaces.Dict({
-            'spatial': spaces.Box(low=0, high=1, shape=(arena.height, arena.width, len(self.layers))),
-            'non-spatial': spaces.Box(low=0, high=1, shape=(44,))
+            'board': spaces.Box(low=0, high=1, shape=(arena.height, arena.width, len(self.layers))),
+            'state': spaces.Box(low=0, high=1, shape=(44,)),
+            'procedure':  spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
         })
 
         self.actions = FFAIEnv.simple_action_types + FFAIEnv.positional_action_types + FFAIEnv.formation_action_types
@@ -198,63 +221,72 @@ class FFAIEnv(gym.Env):
 
     def _observation(self, game):
         obs = {
-            'spatial': {},
-            'non-spatial': {}
+            'board': {},
+            'state': {},
+            'procedure': np.zeros(len(FFAIEnv.procedures))
         }
         for layer in self.layers:
-            obs['spatial'][layer.name()] = layer.produce(game)
+            obs['board'][layer.name()] = layer.produce(game)
 
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         opp_team = game.get_opp_team(active_team) if active_team is not None else None
 
-        obs['non-spatial']['half'] = game.state.half - 1.0
-        obs['non-spatial']['round'] = game.state.round / 8.0
-        obs['non-spatial']['sweltering heat'] = 1.0 if game.state.weather == WeatherType.SWELTERING_HEAT else 0.0
-        obs['non-spatial']['very sunny'] = 1.0 if game.state.weather == WeatherType.VERY_SUNNY else 0.0
-        obs['non-spatial']['nice'] = 1.0 if game.state.weather.value == WeatherType.NICE else 0.0
-        obs['non-spatial']['pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
-        obs['non-spatial']['blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
+        # State
+        obs['state']['half'] = game.state.half - 1.0
+        obs['state']['round'] = game.state.round / 8.0
+        obs['state']['sweltering heat'] = 1.0 if game.state.weather == WeatherType.SWELTERING_HEAT else 0.0
+        obs['state']['very sunny'] = 1.0 if game.state.weather == WeatherType.VERY_SUNNY else 0.0
+        obs['state']['nice'] = 1.0 if game.state.weather.value == WeatherType.NICE else 0.0
+        obs['state']['pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
+        obs['state']['blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
 
-        obs['non-spatial']['own turn'] = 1.0 if game.state.current_team == active_team else 0.0
-        obs['non-spatial']['kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
-        obs['non-spatial']['kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
-        obs['non-spatial']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['own kods'] = len(game.get_kods(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['own casualites'] = len(game.get_casualties(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['opp reserves'] = len(game.get_reserves(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['opp kods'] = len(game.get_kods(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['opp casualties'] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
+        obs['state']['own turn'] = 1.0 if game.state.current_team == active_team else 0.0
+        obs['state']['kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
+        obs['state']['kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
+        obs['state']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
+        obs['state']['own kods'] = len(game.get_kods(active_team)) / 16.0 if active_team is not None else 0.0
+        obs['state']['own casualites'] = len(game.get_casualties(active_team)) / 16.0 if active_team is not None else 0.0
+        obs['state']['opp reserves'] = len(game.get_reserves(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
+        obs['state']['opp kods'] = len(game.get_kods(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
+        obs['state']['opp casualties'] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
 
-        obs['non-spatial']['own score'] = active_team.state.score / 16.0 if active_team is not None else 0.0
-        obs['non-spatial']['own turn'] = active_team.state.turn / 8.0 if active_team is not None else 0.0
-        obs['non-spatial']['own starting rerolls'] = active_team.state.rerolls_start / 8.0 if active_team is not None else 0.0
-        obs['non-spatial']['own rerolls left'] = active_team.state.rerolls / 8.0 if active_team is not None else 0.0
-        obs['non-spatial']['own ass coaches'] = active_team.state.ass_coaches / 8.0 if active_team is not None else 0.0
-        obs['non-spatial']['own cheerleaders'] = active_team.state.cheerleaders / 8.0 if active_team is not None else 0.0
-        obs['non-spatial']['own bribes'] = active_team.state.bribes / 4.0 if active_team is not None else 0.0
-        obs['non-spatial']['own babes'] = active_team.state.babes / 4.0 if active_team is not None else 0.0
-        obs['non-spatial']['own apothecary available'] = 1.0 if active_team is not None and active_team.state.apothecary_available else 0.0
-        obs['non-spatial']['own reroll available'] = 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
-        obs['non-spatial']['own fame'] = active_team.state.fame if active_team is not None else 0.0
+        obs['state']['own score'] = active_team.state.score / 16.0 if active_team is not None else 0.0
+        obs['state']['own turn'] = active_team.state.turn / 8.0 if active_team is not None else 0.0
+        obs['state']['own starting rerolls'] = active_team.state.rerolls_start / 8.0 if active_team is not None else 0.0
+        obs['state']['own rerolls left'] = active_team.state.rerolls / 8.0 if active_team is not None else 0.0
+        obs['state']['own ass coaches'] = active_team.state.ass_coaches / 8.0 if active_team is not None else 0.0
+        obs['state']['own cheerleaders'] = active_team.state.cheerleaders / 8.0 if active_team is not None else 0.0
+        obs['state']['own bribes'] = active_team.state.bribes / 4.0 if active_team is not None else 0.0
+        obs['state']['own babes'] = active_team.state.babes / 4.0 if active_team is not None else 0.0
+        obs['state']['own apothecary available'] = 1.0 if active_team is not None and active_team.state.apothecary_available else 0.0
+        obs['state']['own reroll available'] = 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
+        obs['state']['own fame'] = active_team.state.fame if active_team is not None else 0.0
 
-        obs['non-spatial']['opp score'] = opp_team.state.score / 16.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp turn'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp starting rerolls'] = opp_team.state.rerolls_start / 8.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp rerolls left'] = opp_team.state.rerolls / 8.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp ass coaches'] = opp_team.state.ass_coaches / 8.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp cheerleaders'] = opp_team.state.cheerleaders / 8.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp bribes'] = opp_team.state.bribes / 4.0 if opp_team is not None else 0.0
-        obs['non-spatial']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
-        obs['non-spatial']['own apothecary available'] = 1.0 if opp_team is not None and opp_team.state.apothecary_available else 0.0
-        obs['non-spatial']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
-        obs['non-spatial']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
+        obs['state']['opp score'] = opp_team.state.score / 16.0 if opp_team is not None else 0.0
+        obs['state']['opp turn'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp starting rerolls'] = opp_team.state.rerolls_start / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp rerolls left'] = opp_team.state.rerolls / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp ass coaches'] = opp_team.state.ass_coaches / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp cheerleaders'] = opp_team.state.cheerleaders / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp bribes'] = opp_team.state.bribes / 4.0 if opp_team is not None else 0.0
+        obs['state']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
+        obs['state']['own apothecary available'] = 1.0 if opp_team is not None and opp_team.state.apothecary_available else 0.0
+        obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
+        obs['state']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
 
-        obs['non-spatial']['blitz available'] = 1.0 if game.is_blitz_available() else 0.0
-        obs['non-spatial']['pass available'] = 1.0 if game.is_pass_available() else 0.0
-        obs['non-spatial']['handoff available'] = 1.0 if game.is_handoff_available() else 0.0
-        obs['non-spatial']['foul available'] = 1.0 if game.is_foul_available() else 0.0
-        obs['non-spatial']['is blitz'] = 1.0 if game.is_blitz() else 0.0
-        obs['non-spatial']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
+        obs['state']['blitz available'] = 1.0 if game.is_blitz_available() else 0.0
+        obs['state']['pass available'] = 1.0 if game.is_pass_available() else 0.0
+        obs['state']['handoff available'] = 1.0 if game.is_handoff_available() else 0.0
+        obs['state']['foul available'] = 1.0 if game.is_foul_available() else 0.0
+        obs['state']['is blitz'] = 1.0 if game.is_blitz() else 0.0
+        obs['state']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
+
+        # Procedure
+        if game.state.stack.size() > 0:
+            procedure = game.state.stack.peek()
+            assert procedure.__class__ in FFAIEnv.procedures
+            proc_idx = FFAIEnv.procedures.index(procedure.__class__)
+            obs['procedure'][proc_idx] = 1.0
 
         self.last_obs = obs
 
@@ -464,7 +496,7 @@ class FFAIEnv(gym.Env):
         if feature_layers:
             row = 0
             col = 0
-            for name, grid in self.last_obs['spatial'].items():
+            for name, grid in self.last_obs['board'].items():
                 grid_x = col * (len(grid[0]) + 1) * FFAIEnv.square_size_fl + FFAIEnv.square_size_fl
                 grid_y = row * (len(grid) + 1) * FFAIEnv.square_size_fl + self.game_height + FFAIEnv.square_size_fl + ((row+1) * FFAIEnv.layer_text_height)
 
