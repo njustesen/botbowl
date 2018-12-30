@@ -21,7 +21,6 @@ Please cite us if you use FFAI in your publications.
   * No star player points or level up
   * No inducements
   * No timers; Players have unlimited time each turn
-  * Only premade teams
 * A web interface supporting:
   * Hot-seat 
   * Online play
