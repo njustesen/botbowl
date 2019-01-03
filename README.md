@@ -1,5 +1,5 @@
 # FFAI: Fantasy Football AI
-A highly-extensible modular AI framework for digital fantasy-football board-games.
+A highly-extensible python-based AI framework for digital fantasy-football board-games.
 FFAI is still under development and is planned to be heavily updated.
 
 ![FFAI](screenshots/ffai.png?raw=true "FFAI")
@@ -21,7 +21,6 @@ Please cite us if you use FFAI in your publications.
   * No star player points or level up
   * No inducements
   * No timers; Players have unlimited time each turn
-  * Only premade teams
 * A web interface supporting:
   * Hot-seat 
   * Online play
@@ -84,10 +83,14 @@ Take a look at our [gym_example.py](examples/gym_example.py).
 ![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
 
 ### Observations
-Observations are split in two parts, one that consists of spatial two-dimensional feature leayers and a non-spatial vector of normalized values (e.g. turn number, half, scores etc.).
+Observations are split in three parts:
+1. 'board': two-dimensional feature leayers
+2. 'state': a vector of normalized values (e.g. turn number, half, scores etc.) describing the game state
+3. 'procedure' a one-hot vector describing which of 18 procedures the game is in. The game engine is structered as a stack of procedures. The top-most procedure in the stack is active.
 
-The default layers are these:
-```
+#### Observation: 'board'
+The default feature layers in obs['board'] are:
+
 0. OccupiedLayer()
 1. OwnPlayerLayer()
 2. OppPlayerLayer()
@@ -114,7 +117,7 @@ The default layers are these:
 23. SkillLayer(Skill.SURE_HANDS)
 24. SkillLayer(Skill.PASS)
 25. SkillLayer(Skill.BLOCK)
-```
+
 Custom layers can be implemented like this:
 ```
 from ffai.ai import FeatureLayer
@@ -143,10 +146,80 @@ env.render(feature_layers=True)
 
 ![FFAI Gym Feature Layers](screenshots/gym_layers.png?raw=true "FFAI Gym Feature Layers")
 
+
+#### Observation: 'state'
+The 44 default normalized values in obs['state'] are:
+
+0. 'half'
+1. 'round'
+2. 'sweltering heat'
+3. 'very sunny'
+4. 'nice'
+5. 'pouring rain'
+6. 'blizzard'
+7. 'own turn'
+8. 'kicking first half'
+9. 'kicking this drive'
+10. 'own reserves'
+11. 'own kods'
+12. 'own casualites'
+13. 'opp reserves'
+14. 'opp kods'
+15. 'opp casualties'
+16. 'own score'
+17. 'own turn'
+18. 'own starting rerolls'
+19. 'own rerolls left'
+20. 'own ass coaches'
+21. 'own cheerleaders'
+22. 'own bribes'
+23. 'own babes'
+24. 'own apothecary available'
+25. 'own reroll available'
+26. 'own fame'
+27. 'opp score'
+28. 'opp turn'
+29. 'opp starting rerolls'
+30. 'opp rerolls left'
+31. 'opp ass coaches'
+32. 'opp cheerleaders'
+33. 'opp bribes'
+34. 'opp babes'
+35. 'own apothecary available'
+36. 'opp reroll available'
+37. 'opp fame'
+38. 'blitz available'
+39. 'pass available'
+40. 'handoff available'
+41. 'foul available'
+42. 'is blitz'
+43. 'is quick snap'
+
+#### Observation: 'procedure'
+The 18 procedures represented in the one-hot vector obs['procedure'] are:
+
+1. StartGame
+2. CoinToss
+3. Setup
+4. PlaceBall
+5. HighKick
+6. Touchback
+7. Turn
+8. PlayerAction
+9. Block
+10. Push
+11. FollowUp
+12. Apothecary
+13. PassAction
+14. Catch
+15. Interception
+16. GFI
+17. Dodge
+18. Pickup
+
 ### Action Types
 Actions consists of 31 action types. Some action types, denoted by <position> also requires an x and y-coordinate.
 
-```
 0. ActionType.START_GAME
 1. ActionType.HEADS
 2. ActionType.TAILS
@@ -179,7 +252,6 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 29. ActionType.SETUP_FORMATION_LINE
 30. ActionType.SETUP_FORMATION_SPREAD
 31. ActionType.SETUP_FORMATION_ZONE
-```
 
 Actions are instantiated and used like this:
 ```
@@ -219,4 +291,4 @@ This is how the FFAI-v1-3 environment looks:
 FFAI is not affiliated with or endoresed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
 
 ## Get Involved
-Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Join our [Discord server](https://discord.gg/uXPEgU).
+Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Send a request to njustesen at gmail dot com to be invited to our Discord server.
