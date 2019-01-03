@@ -96,7 +96,6 @@ class Stack:
 
 
 def get_data_path(rel_path):
-    bb_dir = ffai.__file__.replace("__init__.py", "")
-    root_dir = os.path.abspath(os.path.join(bb_dir, os.pardir))
+    root_dir = ffai.__file__.replace("__init__.py", "")
     filename = os.path.join(root_dir, "data/" + rel_path)
     return os.path.abspath(os.path.realpath(filename))
