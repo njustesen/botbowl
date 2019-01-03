@@ -49,20 +49,14 @@ Please cite us if you use FFAI in your publications.
 * Integration with OBBLM
 
 ## Installation
-Clone the repository and make sure python 3.6 or newer is installed, together with pip.
-Go to the cloned directory and run the following to install the dependencies: 
+Make sure python 3.6 or newer is installed, together with pip.
 ```
-pip install -e .
+pip install git+https://github.com/njustesen/ffai
 ```
-Or
-```
-pip3 install -e .
-```
-Depending on your setup.
 
 ## Run FFAI's Web Server
 ```
-python ffai/web/server.py
+python -m ffai.web.server
 ```
 Go to: http://127.0.0.1:5000/
 
