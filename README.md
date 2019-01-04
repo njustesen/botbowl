@@ -286,4 +286,5 @@ This is how the FFAI-v1-3 environment looks:
 FFAI is not affiliated with or endoresed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
 
 ## Get Involved
-Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Send a request to njustesen at gmail dot com to be invited to our Discord server.
+Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Join our Discord server using this link: [FFAI Discord Server](https://discord.gg/MTXMuae).
+
