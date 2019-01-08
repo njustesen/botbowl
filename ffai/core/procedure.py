@@ -594,52 +594,54 @@ class Catch(Procedure):
         return []
 
 
-class CoinToss(Procedure):
+class CoinTossFlip(Procedure):
 
     def __init__(self, game):
         super().__init__(game)
-        self.away_won_toss = None
         self.aa = [ActionChoice(ActionType.HEADS, team=self.game.state.away_team),
                    ActionChoice(ActionType.TAILS, team=self.game.state.away_team)]
 
     def step(self, action):
-        if self.away_won_toss is None:
-            self._flip_coin(action)
-            return False
-        elif self.away_won_toss is not None:
-            self._pick(action)
-            return True
-
-    def _flip_coin(self, action):
         if action.action_type == ActionType.HEADS:
             if self.game.rnd.rand(1)[0] >= 0.5:
-                self.away_won_toss = True
+                self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.HEADS_WON))
             else:
-                self.away_won_toss = False
+                self.game.state.coin_toss_winner = self.game.state.home_team
                 self.game.report(Outcome(OutcomeType.TAILS_LOSS))
         elif action.action_type == ActionType.TAILS:
             if self.game.rnd.rand(1)[0] >= 0.5:
-                self.away_won_toss = True
+                self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.TAILS_WON))
             else:
-                self.away_won_toss = False
+                self.game.state.coin_toss_winner = self.game.state.home_team
                 self.game.report(Outcome(OutcomeType.HEADS_LOSS))
 
-        self.aa = [ActionChoice(ActionType.KICK,
-                                team=self.game.state.away_team if self.away_won_toss else self.game.state.home_team),
-                   ActionChoice(ActionType.RECEIVE,
-                                team=self.game.state.away_team if self.away_won_toss else self.game.state.home_team)]
+        CoinTossKickReceive(self.game)
+        return True
 
-    def _pick(self, action):
+    def available_actions(self):
+        return self.aa
+
+
+class CoinTossKickReceive(Procedure):
+
+    def __init__(self, game):
+        super().__init__(game)
+        self.aa = [ActionChoice(ActionType.KICK,
+                                team=self.game.state.coin_toss_winner),
+                   ActionChoice(ActionType.RECEIVE,
+                                team=self.game.state.coin_toss_winner)]
+
+    def step(self, action):
         kicking = None
         receiving = None
         if action.action_type == ActionType.KICK:
-            kicking = self.game.state.away_team if self.away_won_toss else self.game.state.home_team
-            receiving = self.game.state.away_team if not self.away_won_toss else self.game.state.home_team
+            kicking = self.game.state.coin_toss_winner
+            receiving = self.game.get_opp_team(self.game.state.coin_toss_winner)
         elif action.action_type == ActionType.RECEIVE:
-            kicking = self.game.state.away_team if not self.away_won_toss else self.game.state.home_team
-            receiving = self.game.state.away_team if self.away_won_toss else self.game.state.home_team
+            kicking = self.game.get_opp_team(self.game.state.coin_toss_winner)
+            receiving = self.game.state.coin_toss_winner
         self.game.state.kicking_first_half = kicking
         self.game.state.kicking_this_drive = kicking
         self.game.state.receiving_first_half = receiving
@@ -648,6 +650,7 @@ class CoinToss(Procedure):
             self.game.report(Outcome(OutcomeType.HOME_RECEIVE, team=receiving))
         else:
             self.game.report(Outcome(OutcomeType.AWAY_RECEIVE, team=receiving))
+        return True
 
     def available_actions(self):
         return self.aa
@@ -2152,7 +2155,7 @@ class Pregame(Procedure):
 
     def __init__(self, game):
         super().__init__(game)
-        CoinToss(self.game)
+        CoinTossFlip(self.game)
         # self.game.state.stack.push(Inducements(self.game, True))
         # self.game.state.stack.push(Inducements(self.game, False))
         # self.game.state.stack.push(GoldToPettyCash(self.game))
@@ -2669,6 +2672,7 @@ class TurnStunned(Procedure):
         for player in self.team.players:
             if player.state.stunned:
                 player.state.stunned = False
+                player.state.used = True
                 players.append(player)
         self.game.report(Outcome(OutcomeType.STUNNED_TURNED))
         return True

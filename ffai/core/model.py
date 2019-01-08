@@ -150,6 +150,7 @@ class GameState:
         self.reports = []
         self.half = 1
         self.round = 0
+        self.coin_toss_winner = None
         self.kicking_first_half = None
         self.receiving_first_half = None
         self.kicking_this_drive = None
@@ -897,6 +898,9 @@ class Player(Piece):
 
     def __eq__(self, other):
         return isinstance(other, Player) and other.player_id == self.player_id
+
+    def __hash__(self):
+        return self.player_id.__hash__()
 
 
 class Square:

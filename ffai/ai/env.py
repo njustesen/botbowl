@@ -90,7 +90,8 @@ class FFAIEnv(gym.Env):
     # Procedures that require actions
     procedures = [
         StartGame,
-        CoinToss,
+        CoinTossFlip,
+        CoinTossKickReceive,
         Setup,
         PlaceBall,
         HighKick,

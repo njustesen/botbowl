@@ -819,6 +819,12 @@ class Game:
                 procs.append(proc.__class__.__name__)
         return procs
 
+    def get_player_action_type(self, player):
+        proc = self.state.stack.peek()
+        if isinstance(proc, PlayerAction):
+            return proc.player_action_type
+        return None
+
     def remove_recursive_refs(self):
         """
         Removes recursive references. Must be called before serializing.
