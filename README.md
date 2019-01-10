@@ -50,7 +50,7 @@ Please cite us if you use FFAI in your publications.
 * Integration with OBBLM
 
 ## Installation
-Make sure python 3.6 or newer is installed, together with pip.
+[Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
 ```
 pip install git+https://github.com/njustesen/ffai
 ```
@@ -162,7 +162,7 @@ The 44 default normalized values in obs['state'] are:
 14. 'opp kods'
 15. 'opp casualties'
 16. 'own score'
-17. 'own turn'
+17. 'own turns'
 18. 'own starting rerolls'
 19. 'own rerolls left'
 20. 'own ass coaches'
@@ -173,7 +173,7 @@ The 44 default normalized values in obs['state'] are:
 25. 'own reroll available'
 26. 'own fame'
 27. 'opp score'
-28. 'opp turn'
+28. 'opp turns'
 29. 'opp starting rerolls'
 30. 'opp rerolls left'
 31. 'opp ass coaches'
