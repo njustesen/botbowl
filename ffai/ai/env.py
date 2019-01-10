@@ -252,7 +252,7 @@ class FFAIEnv(gym.Env):
         obs['state']['opp casualties'] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
 
         obs['state']['own score'] = active_team.state.score / 16.0 if active_team is not None else 0.0
-        obs['state']['own turn'] = active_team.state.turn / 8.0 if active_team is not None else 0.0
+        obs['state']['own turns'] = active_team.state.turn / 8.0 if active_team is not None else 0.0
         obs['state']['own starting rerolls'] = active_team.state.rerolls_start / 8.0 if active_team is not None else 0.0
         obs['state']['own rerolls left'] = active_team.state.rerolls / 8.0 if active_team is not None else 0.0
         obs['state']['own ass coaches'] = active_team.state.ass_coaches / 8.0 if active_team is not None else 0.0
@@ -264,7 +264,7 @@ class FFAIEnv(gym.Env):
         obs['state']['own fame'] = active_team.state.fame if active_team is not None else 0.0
 
         obs['state']['opp score'] = opp_team.state.score / 16.0 if opp_team is not None else 0.0
-        obs['state']['opp turn'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
+        obs['state']['opp turns'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
         obs['state']['opp starting rerolls'] = opp_team.state.rerolls_start / 8.0 if opp_team is not None else 0.0
         obs['state']['opp rerolls left'] = opp_team.state.rerolls / 8.0 if opp_team is not None else 0.0
         obs['state']['opp ass coaches'] = opp_team.state.ass_coaches / 8.0 if opp_team is not None else 0.0
