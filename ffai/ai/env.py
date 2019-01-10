@@ -241,7 +241,7 @@ class FFAIEnv(gym.Env):
         obs['state']['pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
         obs['state']['blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
 
-        obs['state']['own turn'] = 1.0 if game.state.current_team == active_team else 0.0
+        obs['state']['own active'] = 1.0 if game.state.current_team == active_team else 0.0
         obs['state']['kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
         obs['state']['kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
         obs['state']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
