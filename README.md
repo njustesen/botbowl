@@ -50,7 +50,7 @@ Please cite us if you use FFAI in your publications.
 * Integration with OBBLM
 
 ## Installation
-Make sure python 3.6 or newer is installed, together with pip.
+[Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
 ```
 pip install git+https://github.com/njustesen/ffai
 ```
