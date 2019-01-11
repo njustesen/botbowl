@@ -393,7 +393,7 @@ class Bounce(Procedure):
         y = 0
         if result in [1, 4, 6]:
             x = -1
-        if result in [3, 5, 9]:
+        if result in [3, 5, 8]:
             x = 1
         if result in [1, 2, 3]:
             y = -1
@@ -2369,7 +2369,7 @@ class Scatter(Procedure):
             y = 0
             if roll_scatter.get_sum() in [1, 4, 6]:
                 x = -1
-            if roll_scatter.get_sum() in [3, 5, 9]:
+            if roll_scatter.get_sum() in [3, 5, 8]:
                 x = 1
             if roll_scatter.get_sum() in [1, 2, 3]:
                 y = -1
