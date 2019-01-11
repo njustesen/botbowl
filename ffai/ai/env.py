@@ -162,7 +162,10 @@ class FFAIEnv(gym.Env):
             'procedure':  spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
         })
 
-        self.actions = FFAIEnv.simple_action_types + FFAIEnv.positional_action_types + FFAIEnv.formation_action_types
+        self.actions = (
+            FFAIEnv.simple_action_types + FFAIEnv.positional_action_types +
+            FFAIEnv.formation_action_types + FFAIEnv.player_action_types[3:]
+        )
 
         self.action_space = spaces.Dict({
             'action-type': spaces.Discrete(len(self.actions)),
