@@ -23,7 +23,7 @@ Please cite us if you use FFAI in your publications.
   * No inducements
   * No timers; Players have unlimited time each turn
 * A web interface supporting:
-  * Hot-seat 
+  * Hot-seat
   * Online play
   * Spectators
   * Human vs. bot
@@ -38,7 +38,7 @@ Please cite us if you use FFAI in your publications.
   * Kick-off table enabled/disabled
   * Which scatter dice to use
   * ...
-* Premade formations to ease the setup phase. Custom made formations can easily be implemented. 
+* Premade formations to ease the setup phase. Custom made formations can easily be implemented.
 * Games can be saved and loaded
 
 ## Plans for Future Releases
@@ -64,14 +64,14 @@ Go to: http://127.0.0.1:5000/
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
 ## Create a Bot
-To make you own bot you must implement the Agent class and its three methods: new_game, act, and end_game which are called by the framework. The act method must return an instance of the Action class. 
+To make you own bot you must implement the Agent class and its three methods: new_game, act, and end_game which are called by the framework. The act method must return an instance of the Action class.
 
 Take a look at our [bot_example.py](examples/bot_example.py).
 
 Be aware, that you shouldn't modify instances that comes from the framework such as Square instances as these are shared with the GameState instance in FFAI. In future releases, we plan to release an AI tournament module that will clone the instances before they are handed to the bots. For now, this is up to the user to do.
 
 ## Gym Interface
-FFAI implements the Open AI Gym interace for easy integration of machine learning algorithms. 
+FFAI implements the Open AI Gym interace for easy integration of machine learning algorithms.
 
 Take a look at our [gym_example.py](examples/gym_example.py).
 
@@ -180,7 +180,7 @@ The 44 default normalized values in obs['state'] are:
 32. 'opp cheerleaders'
 33. 'opp bribes'
 34. 'opp babes'
-35. 'own apothecary available'
+35. 'opp apothecary available'
 36. 'opp reroll available'
 37. 'opp fame'
 38. 'blitz available'
