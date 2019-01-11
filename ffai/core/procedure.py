@@ -497,7 +497,7 @@ class Catch(Procedure):
             modifiers += 1
         return modifiers
 
-    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=True):
+    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False):
         super().__init__(game)
         self.player = player
         self.ball = ball
