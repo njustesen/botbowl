@@ -1422,10 +1422,10 @@ class Dodge(Procedure):
             modifiers = 1
             ignore_opp_mods = True
         if player.has_skill(Skill.TITCHY):
-            modifiers -= 1
+            modifiers += 1
             ignore_opp_mods = True
         if player.has_skill(Skill.TWO_HEADS):
-            modifiers -= 1
+            modifiers += 1
 
         if not ignore_opp_mods:
             modifiers -= tackle_zones_to
