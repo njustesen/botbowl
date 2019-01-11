@@ -156,7 +156,7 @@ def get_team_by_id(team_id, ruleset):
     """
     path = get_data_path('teams/')
     for file in list(glob.glob(path + '/*.json')):
-        name = file.split("/")[-1].split("\\")[-1].split(".")[0]
+        name = os.path.split(file)[1].split(".")[0]
         team = get_team(name, ruleset)
         if team.team_id == team_id:
             return team
