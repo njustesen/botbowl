@@ -311,7 +311,7 @@ class FFAIEnv(gym.Env):
         obs['state']['opp cheerleaders'] = opp_team.state.cheerleaders / 8.0 if opp_team is not None else 0.0
         obs['state']['opp bribes'] = opp_team.state.bribes / 4.0 if opp_team is not None else 0.0
         obs['state']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
-        obs['state']['own apothecary available'] = 1.0 if opp_team is not None and opp_team.state.apothecary_available else 0.0
+        obs['state']['opp apothecary available'] = 1.0 if opp_team is not None and opp_team.state.apothecary_available else 0.0
         obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
         obs['state']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
 
