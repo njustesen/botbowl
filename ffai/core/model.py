@@ -370,6 +370,7 @@ class Pitch:
             return squares_empty
         if len(squares_out) > 0:
             return squares_out
+        assert len(squares) > 0
         return squares
 
     def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False):

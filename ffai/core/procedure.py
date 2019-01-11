@@ -1886,9 +1886,6 @@ class PlayerAction(Procedure):
             EndPlayerTurn(self.game, self.player)
             return True
 
-        # Action attributes
-        player_to = self.game.get_player_at(action.pos)
-
         if action.action_type == ActionType.STAND_UP:
 
             StandUp(self.game, self.player, roll=self.player.get_ma() < 3)
@@ -1898,7 +1895,10 @@ class PlayerAction(Procedure):
 
             return False
 
-        elif action.action_type == ActionType.MOVE:
+        # Action attributes
+        player_to = self.game.get_player_at(action.pos)
+
+        if action.action_type == ActionType.MOVE:
 
             # Check GFI
             gfi = self.player.state.moves + 1 > self.player.get_ma()
@@ -1991,9 +1991,7 @@ class PlayerAction(Procedure):
                     agi_rolls.append([4])
                 else:
                     agi_rolls.append([])
-                actions.append(ActionChoice(ActionType.STAND_UP, positions=[self.player.position],
-                                            team=self.player.team,
-                                            agi_rolls=agi_rolls))
+                actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))
                 # TODO: Check if position is necessary here? ^^
             elif (not self.turn.quick_snap
                   and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
@@ -2772,7 +2770,7 @@ class Turn(Procedure):
                 self.game.report(Outcome(OutcomeType.END_OF_QUICK_SNAP, team=self.team))
             else:
                 self.game.report(Outcome(OutcomeType.END_OF_TURN, team=self.team))
-            self.game.state.active_player_id = None
+            self.game.state.active_player = None
             EndTurn(self.game)
             return True
 

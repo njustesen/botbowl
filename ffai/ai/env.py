@@ -34,6 +34,47 @@ class FFAIEnv(gym.Env):
     wing = '#55aa55'
     scrimmage = '#338833'
 
+    actions = [
+        ActionType.START_GAME,
+        ActionType.HEADS,
+        ActionType.TAILS,
+        ActionType.KICK,
+        ActionType.RECEIVE,
+        ActionType.END_SETUP,
+        ActionType.END_PLAYER_TURN,
+        ActionType.USE_REROLL,
+        ActionType.DONT_USE_REROLL,
+        ActionType.END_TURN,
+        ActionType.STAND_UP,
+        ActionType.SELECT_ATTACKER_DOWN,
+        ActionType.SELECT_BOTH_DOWN,
+        ActionType.SELECT_PUSH,
+        ActionType.SELECT_DEFENDER_STUMBLES,
+        ActionType.SELECT_DEFENDER_DOWN,
+        ActionType.SELECT_NONE,
+        ActionType.PLACE_PLAYER,
+        ActionType.PLACE_BALL,
+        ActionType.PUSH,
+        ActionType.FOLLOW_UP,
+        ActionType.INTERCEPTION,
+        ActionType.SELECT_PLAYER,
+        ActionType.MOVE,
+        ActionType.BLOCK,
+        ActionType.PASS,
+        ActionType.FOUL,
+        ActionType.HANDOFF,
+        ActionType.START_MOVE,
+        ActionType.START_BLOCK,
+        ActionType.START_BLITZ,
+        ActionType.START_PASS,
+        ActionType.START_FOUL,
+        ActionType.START_HANDOFF,
+        ActionType.SETUP_FORMATION_WEDGE,
+        ActionType.SETUP_FORMATION_LINE,
+        ActionType.SETUP_FORMATION_SPREAD,
+        ActionType.SETUP_FORMATION_ZONE
+    ]
+
     simple_action_types = [
         ActionType.START_GAME,
         ActionType.HEADS,
@@ -76,7 +117,6 @@ class FFAIEnv(gym.Env):
     ]
 
     player_action_types = [
-        ActionType.PLACE_PLAYER,
         ActionType.INTERCEPTION,
         ActionType.SELECT_PLAYER,
         ActionType.START_MOVE,
@@ -162,7 +202,7 @@ class FFAIEnv(gym.Env):
             'procedure':  spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
         })
 
-        self.actions = FFAIEnv.simple_action_types + FFAIEnv.positional_action_types + FFAIEnv.formation_action_types
+        self.actions = FFAIEnv.actions
 
         self.action_space = spaces.Dict({
             'action-type': spaces.Discrete(len(self.actions)),
@@ -327,6 +367,8 @@ class FFAIEnv(gym.Env):
                 action = a
         if action is None:
             return []
+        if action.action_type == ActionType.PUSH:
+            print("Push")
         if action.action_type in FFAIEnv.player_action_types:
             return [player.position for player in action.players if player.position is not None]
         if action.action_type in FFAIEnv.positional_action_types:

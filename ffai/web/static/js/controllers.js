@@ -365,6 +365,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.available_select_positions = action.positions;
                         }
                     }
+                } else if (action.action_type === "STAND_UP"){
+                    $scope.main_action = action;
+                    let active_player_id = $scope.game.state.active_player_id;
+                    let active_player = $scope.getPlayer(active_player_id);
+                    let stand_up_position = active_player.position;
+                    $scope.available_select_positions = [stand_up_position];
                 }
                 if (action.action_type === "INTERCEPTION") {
                     $scope.available_interception_players = action.player_ids;

@@ -308,8 +308,8 @@ if __name__ == "__main__":
 
     # Play 100 games
     for i in range(100):
-        away_agent = MyScriptedBot("Random Bot 1")
-        home_agent = MyScriptedBot("Random Bot 2")
+        away_agent = MyScriptedBot("Scripted Bot 1")
+        home_agent = MyScriptedBot("Scripted Bot 2")
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
