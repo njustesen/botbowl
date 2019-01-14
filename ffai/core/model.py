@@ -719,7 +719,7 @@ class DiceRoll:
 class D3(Die):
 
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 3)
+        self.value = rnd.randint(1, 4)
 
     def get_value(self):
         return self.value
@@ -734,7 +734,7 @@ class D3(Die):
 class D6(Die):
 
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 6)
+        self.value = rnd.randint(1, 7)
 
     def get_value(self):
         return self.value
@@ -749,7 +749,7 @@ class D6(Die):
 class D8(Die):
 
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 8)
+        self.value = rnd.randint(1, 9)
 
     def get_value(self):
         return self.value
@@ -764,7 +764,7 @@ class D8(Die):
 class BBDie(Die):
 
     def __init__(self, rnd):
-        r = rnd.randint(1, 6)
+        r = rnd.randint(1, 7)
         if r == 6:
             r = 3
         self.value = BBDieResult(r)

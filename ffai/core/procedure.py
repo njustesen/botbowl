@@ -393,7 +393,7 @@ class Bounce(Procedure):
         y = 0
         if result in [1, 4, 6]:
             x = -1
-        if result in [3, 5, 9]:
+        if result in [3, 5, 8]:
             x = 1
         if result in [1, 2, 3]:
             y = -1
@@ -497,7 +497,7 @@ class Catch(Procedure):
             modifiers += 1
         return modifiers
 
-    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=True):
+    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False):
         super().__init__(game)
         self.player = player
         self.ball = ball
@@ -1422,10 +1422,10 @@ class Dodge(Procedure):
             modifiers = 1
             ignore_opp_mods = True
         if player.has_skill(Skill.TITCHY):
-            modifiers -= 1
+            modifiers += 1
             ignore_opp_mods = True
         if player.has_skill(Skill.TWO_HEADS):
-            modifiers -= 1
+            modifiers += 1
 
         if not ignore_opp_mods:
             modifiers -= tackle_zones_to
@@ -2367,7 +2367,7 @@ class Scatter(Procedure):
             y = 0
             if roll_scatter.get_sum() in [1, 4, 6]:
                 x = -1
-            if roll_scatter.get_sum() in [3, 5, 9]:
+            if roll_scatter.get_sum() in [3, 5, 8]:
                 x = 1
             if roll_scatter.get_sum() in [1, 2, 3]:
                 y = -1
