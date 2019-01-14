@@ -367,8 +367,6 @@ class FFAIEnv(gym.Env):
                 action = a
         if action is None:
             return []
-        if action.action_type == ActionType.PUSH:
-            print("Push")
         if action.action_type in FFAIEnv.player_action_types:
             return [player.position for player in action.players if player.position is not None]
         if action.action_type in FFAIEnv.positional_action_types:
