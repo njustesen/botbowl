@@ -1041,7 +1041,7 @@ class HighKick(Procedure):
         if self.game.is_team_side(self.ball.position, self.receiving_team) and \
                 self.game.get_player_at(self.ball.position) is None:
             return [ActionChoice(ActionType.PLACE_PLAYER, team=self.receiving_team,
-                                 players=self.game.get_players_on_pitch(self.receiving_team),
+                                 players=self.game.get_players_on_pitch(self.receiving_team, up=True),
                                  positions=[self.ball.position]),
                     ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
         else:
@@ -1126,9 +1126,11 @@ class ThrowARock(Procedure):
         for i in range(len(self.game.state.teams)):
             team = self.game.state.teams[i]
             if max_cheers >= rocks[i]:
-                player = self.game.rnd.choice(self.game.get_players_on_pitch(team))
-                KnockDown(self.game, player, armor_roll=False)
-                self.game.report(Outcome(OutcomeType.HIT_BY_ROCK, player=player))
+                players = self.game.get_players_on_pitch(team)
+                if len(players) > 0:
+                    player = self.game.rnd.choice(players)
+                    KnockDown(self.game, player, armor_roll=False)
+                    self.game.report(Outcome(OutcomeType.HIT_BY_ROCK, player=player))
 
         return True
 
@@ -2181,6 +2183,7 @@ class PreKickOff(Procedure):
         self.checked = []
 
     def step(self, action):
+        # Check KOed
         for player in self.game.get_kods(self.team):
             if player not in self.checked:
                 roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.KO_READY_ROLL)

@@ -14,12 +14,6 @@ import json
 
 app = Flask(__name__)
 
-'''
-To start server:
-$ export FLASK_DEBUG=1
-$ flask run
-'''
-
 
 @app.route('/', methods=['GET'])
 def home():
@@ -93,7 +87,8 @@ def load_game(name):
     return json.dumps(api.load_game(name).to_json())
 
 
-if __name__ == '__main__':
+def start_server(debug=False, use_reloader=False):
+
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
     jinja_options.update(dict(
@@ -107,4 +102,4 @@ if __name__ == '__main__':
     app.jinja_options = jinja_options
 
     app.config['TEMPLATES_AUTO_RELOAD']=True
-    app.run(debug=True, use_reloader=True)
+    app.run(debug=debug, use_reloader=use_reloader)

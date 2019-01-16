@@ -7,6 +7,7 @@ This module contains an example bot that takes random actions.
 """
 
 from ffai.core.procedure import *
+from ffai.ai.registry import register_bot
 
 
 class RandomBot(Agent):
@@ -34,6 +35,10 @@ class RandomBot(Agent):
 
     def end_game(self, game):
         pass
+
+
+# Register RandomBot
+register_bot('random', RandomBot)
 
 
 class ProcBot(Agent):

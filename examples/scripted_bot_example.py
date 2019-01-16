@@ -1,5 +1,6 @@
 from ffai.web.api import *
 from ffai.ai.bots import ProcBot
+import ffai.ai.registry
 import time
 
 
@@ -65,9 +66,12 @@ class MyScriptedBot(ProcBot):
         Select player to move under the ball.
         """
         ball_pos = game.get_ball_position()
-        for player in game.get_players_on_pitch(self.my_team, up=True):
-            if Skill.BLOCK in player.skills:
-                return Action(ActionType.PLACE_PLAYER, player=player, pos=ball_pos)
+        if game.is_team_side(game.get_ball_position(), self.my_team) and \
+                game.get_player_at(game.get_ball_position()) is None:
+            for player in game.get_players_on_pitch(self.my_team, up=True):
+                if Skill.BLOCK in player.skills:
+                    return Action(ActionType.PLACE_PLAYER, player=player, pos=ball_pos)
+        return Action(ActionType.SELECT_NONE)
 
     def touchback(self, game):
         """
@@ -293,6 +297,9 @@ class MyScriptedBot(ProcBot):
         else:
             print("I ({}) lost".format(self.name))
 
+
+# Register MyScriptedBot
+register_bot('scripted', MyScriptedBot)
 
 if __name__ == "__main__":
 

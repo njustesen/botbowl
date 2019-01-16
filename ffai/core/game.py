@@ -14,7 +14,10 @@ import numpy as np
 
 class Game:
 
-    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config, arena=None, ruleset=None, state=None, seed=None):
+    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config=None, arena=None, ruleset=None, state=None, seed=None):
+        assert config is not None or arena is not None
+        assert config is not None or ruleset is not None
+        assert home_team.team_id != away_team.team_id
         self.game_id = game_id
         self.home_agent = home_agent
         self.away_agent = away_agent
@@ -840,3 +843,11 @@ class Game:
         for team in self.state.teams:
             for player in team.players:
                 player.team = team
+
+    def winner(self):
+        assert self.state.game_over
+        if self.state.home_team.state.score > self.state.away_team.state.score:
+            return self.home_agent
+        elif self.state.home_team.state.score < self.state.away_team.state.score:
+            return self.away_agent
+        return None
