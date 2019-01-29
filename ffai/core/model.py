@@ -14,6 +14,13 @@ from ffai.core.util import *
 from ffai.core.table import *
 
 
+class TimeLimits:
+
+    def __init__(self, turn, opp_choice):
+        self.turn = turn
+        self.opp_choice = opp_choice
+
+
 class Configuration:
 
     def __init__(self):
@@ -29,9 +36,11 @@ class Configuration:
         self.kick_off_table = True
         self.fast_mode = False
         self.debug_mode = False
+        self.competition_mode = False
         self.kick_scatter_distance = "d6"
         self.offensive_formations = []
         self.defensive_formations = []
+        self.time_limits = None
 
 
 class PlayerState:
@@ -175,6 +184,8 @@ class GameState:
         self.active_player = None
         self.game_over = False
         self.available_actions = []
+        self.termination_turn = None
+        self.termination_opp = None
 
     def clone(self):
         state = GameState(deepcopy(self.home_team), deepcopy(self.away_team))

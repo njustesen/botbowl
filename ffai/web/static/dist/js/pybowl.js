@@ -663,13 +663,15 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         $scope.select = function select(square){
             $scope.selected_square = square;
-            if (square.area === 'pitch'){
-                $scope.local_state.board[square.y][square.x].selected = true;
-            } else if (square.area === 'dugout-home'){
-                $scope.local_state.home_dugout[square.y][square.x].selected = true;
-            } else if (square.area === 'dugout-away'){
-                $scope.local_state.away_dugout[square.y][square.x].selected = true;
-            }
+            if (square !== undefined) {
+                if (square.area === 'pitch') {
+                    $scope.local_state.board[square.y][square.x].selected = true;
+                } else if (square.area === 'dugout-home') {
+                    $scope.local_state.home_dugout[square.y][square.x].selected = true;
+                } else if (square.area === 'dugout-away') {
+                    $scope.local_state.away_dugout[square.y][square.x].selected = true;
+                }
+            };
         };
 
         $scope.resetSquares = function resetSquares(deselect){

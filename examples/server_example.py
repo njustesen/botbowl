@@ -6,7 +6,7 @@ from ffai.core.model import Agent
 # Import this to register MyScriptedBot with id 'scripted'
 import examples.scripted_bot_example
 
-# Create two games
+# Create some games
 api.new_game(home_team_id="orc-1",
              away_team_id="human-1",
              home_agent=make_bot("random"),

@@ -153,6 +153,9 @@ class FFAIEnv(gym.Env):
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.1"
         self.config = config
+        self.config.competition_mode = False
+        self.config.fast_mode = True
+        self.config.time_limits = None
         self.game = None
         self.team_id = None
         self.ruleset = get_rule_set(config.ruleset, all_rules=False)

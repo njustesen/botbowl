@@ -10,6 +10,8 @@ import numpy as np
 from ffai.ai.registry import make_bot
 from ffai.core.game import Game
 from ffai.core.table import CasualtyType
+from ffai.core.model import Agent
+from multiprocessing import Process, Pipe
 
 
 class TeamResult:
@@ -96,14 +98,6 @@ class CompetitionResult:
         print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 
-class Competitor:
-
-    def __init__(self, bot_id, team):
-        self.bot_id = bot_id
-        self.team = team
-        self.bot = make_bot(bot_id)
-
-
 class Competition:
 
     def __init__(self, name, competitor_a, competitor_b, config):
@@ -122,12 +116,67 @@ class Competition:
                 result = self._compete(self.name + "_" + str(i+1), home=self.competitor_b, away=self.competitor_a)
             results.append(result)
             result.print()
+        self.competitor_a.close()
+        self.competitor_b.close()
         return CompetitionResult(self.competitor_a, self.competitor_b, results)
 
     def _compete(self, match_id, home, away):
         game = Game(match_id, home_team=deepcopy(home.team), away_team=deepcopy(away.team), home_agent=home.bot, away_agent=away.bot, config=self.config)
         game.config.fast_mode = True
+        game.config.competition_mode = True
         game.init()
         game.step()
         assert game.state.game_over
         return GameResult(game)
+
+
+class Competitor(Agent):
+
+    def __init__(self, bot_id, team):
+        self.bot_id = bot_id
+        self.bot = make_bot(bot_id)
+        self.team = team
+        super(Competitor, self).__init__(self.bot.name, human=False)
+        self.remote, self.work_remote = Pipe()
+        p = Process(target=self.run, args=(self.work_remote, self.remote, self.bot))
+        p.daemon = True  # if the main process crashes, we should not cause things to hang
+        p.start()
+        self.remote.close()
+
+    def new_game(self, game, team):
+        print("sending new_game")
+        self.work_remote.send(['new_game', game])
+        self.remote.recv()
+
+    def end_game(self, game):
+        print("sending end_game")
+        self.work_remote.send(['end_game', game])
+        self.remote.recv()
+
+    def act(self, game):
+        print("sending act")
+        self.work_remote.send(['act', game])
+        action = self.remote.recv()
+        return action
+
+    def close(self):
+        self.work_remote.close()
+
+    def run(self, remote, master_remote, bot):
+        remote.close()
+        while True:
+            if master_remote.poll():
+                cmd, data = master_remote.recv()
+                print("receiving", cmd)
+                if cmd == 'act':
+                    action = bot.act(data)
+                    master_remote.send(action)
+                elif cmd == 'new_game':
+                    bot.new_game(data)
+                    master_remote.send('done')
+                elif cmd == 'end_game':
+                    bot.new_game(data)
+                    master_remote.send('done')
+
+
+

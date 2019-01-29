@@ -307,7 +307,6 @@ class ActionType(Enum):
     SETUP_FORMATION_ZONE = 53
     SETUP_FORMATION_SPREAD = 54
     FOLLOW_UP = 55
-    DONT_FOLLOW_UP = 56
 
 
 class WeatherType(Enum):

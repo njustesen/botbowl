@@ -10,6 +10,7 @@ from ffai.core.procedure import *
 from ffai.core.load import *
 from copy import deepcopy
 import numpy as np
+import multiprocessing
 
 
 class Game:
@@ -147,29 +148,90 @@ class Game:
             done = self._one_step(action)
             if self.state.game_over:
                 if not self.home_agent.human:
-                    self.home_agent.end_game(self)
+                    if self.config.competition_mode:
+                        self._end_game_in_parallel(self.home_agent)
+                    else:
+                        self.home_agent.end_game(self)
                 if not self.away_agent.human:
-                    self.away_agent.end_game(self)
+                    if self.config.competition_mode:
+                        self._end_game_in_parallel(self.away_agent)
+                    else:
+                        self.away_agent.end_game(self)
                 return
             if done:
                 if self.actor.human:
                     return
-                action = self.actor.act(self)
+                if self.config.competition_mode:
+                    action = self._get_action_in_parrallel()
+                else:
+                    action = self.actor.act(self)
             else:
                 if not self.config.fast_mode:
                     return
                 action = None
 
+    def _end_game_in_parallel(self, actor):
+        p = multiprocessing.Process(target=self.actor.end_game(), args=(self,), name=('agent_' + self.actor.name))
+        p.start()
+        action = None
+        t = time.time()
+        while p.is_alive() and time.time() < t + 10:
+            time.sleep(.1)
+        p.terminate()
+        p.join()
+        return action
+
+    def _get_action_in_parrallel(self):
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+        p = multiprocessing.Process(target=self._get_action_worker, args=(return_dict,), name=('agent_' + self.actor.name))
+        p.start()
+        action = None
+        while p.is_alive():
+            if self.state.termination_opp is not None:
+                if time.time() > self.state.termination_opp:
+                    action = self._timeout_action()
+                    p.terminate()
+                    p.join()
+                    break
+            elif self.state.termination_turn is not None:
+                if time.time() > self.state.termination_turn:
+                    action = self._timeout_action()
+                    p.terminate()
+                    p.join()
+                    break
+            time.sleep(.1)
+        else:
+            # We only enter this if we didn't 'break' above
+            p.join()
+            action = return_dict['action']
+        return action
+
+    def _get_action_worker(self, return_dict):
+        action = self.actor.act(self)
+        return_dict['action'] = action
+
+    def _timeout_action(self):
+        # Take first negative action
+        for action_type in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_SETUP, ActionType.HEADS, ActionType.KICK, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY, ActionType.DONT_FOLLOW_UP]:
+            for action in self.state.available_actions:
+                if action.action_type == action_type:
+                    return Action(action_type)
+        # Take random action
+        action_choice = self.rnd.choice(self.state.available_actions)
+        pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+        return Action(action_choice.action_type, pos=pos, player=player)
+
     def _one_step(self, action):
         """
-        Executes one step in the game.
+        Executes one step in the game if it is allowed.
         :param action: Action from agent. Can be None if no action is required.
         :return: True if game requires action or game is over, False if not
         """
 
         # Clear done procs
         while not self.state.stack.is_empty() and self.state.stack.peek().done:
-            #print("--Proc={}".format(self.state.stack.peek()))
             self.state.stack.pop()
 
         # Is game over
@@ -180,29 +242,36 @@ class Game:
         proc = self.state.stack.peek()
 
         # If no action and action is required
-        #self.state.available_actions = proc.available_actions()
         if action is None and len(self.state.available_actions) > 0:
+            if self.config.debug_mode:
+                print("None action is not allowed when actions are available")
             return True  # Game needs user input
 
         # If action but it's not available
         if action is not None:
             if action.action_type == ActionType.CONTINUE:
                 if len(self.state.available_actions) == 0:
-                    # Consider this as no action
+                    # Consider this as a None action
                     action.action_type = None
                 else:
+                    if self.config.debug_mode:
+                        print("CONTINUE action is not allowed when actions are available")
                     return True  # Game needs user input
             else:
                 # Only allow
                 if not self._is_action_allowed(action):
-                    #print("Action not allowed! ", action.action_type)
                     return True  # Game needs user input
+
+        # Reset opp termination time as action is allowed
+        self.state.termination_opp = None
 
         # Run proc
         if self.config.debug_mode:
             print("Proc={}".format(proc))
             print("Action={}".format(action.action_type if action is not None else ""))
+
         proc.done = proc.step(action)
+
         if self.config.debug_mode:
             print("Done={}".format(proc.done))
 
@@ -230,6 +299,11 @@ class Game:
 
         if self.config.debug_mode:
             print("-Proc={}".format(self.state.stack.peek()))
+
+        # Initialize if not
+        if not self.state.stack.peek().initialized:
+            self.state.stack.peek().setup()
+            self.state.stack.peek().initialized = True
 
         # Update available actions
         self.set_available_actions()

@@ -10,6 +10,7 @@ before other procedures are run. Procedures can add other procedures to the stac
 
 from ffai.core.model import *
 from ffai.core.table import *
+import time
 
 
 class Procedure:
@@ -18,6 +19,10 @@ class Procedure:
         self.game = game
         self.game.state.stack.push(self)
         self.done = False
+        self.initialized = False
+
+    def setup(self):
+        pass
 
     def step(self, action):
         pass
@@ -41,6 +46,10 @@ class Apothecary(Procedure):
         self.effect_first = effect
         self.casualty_second = None
         self.effect_second = None
+
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
     def step(self, action):
 
@@ -275,6 +284,11 @@ class Block(Procedure):
 
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
                                      rolls=[self.roll]))
+
+            # Set termination time
+            if self.favor != self.game.state.current_team:
+                if self.game.config.time_limits is not None:
+                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
             return False
 
@@ -558,11 +572,17 @@ class Catch(Procedure):
                     self.catch_used = True
                     self.waiting_for_catch = True
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.CATCH))
+                    if self.player.team != self.game.state.current_team:
+                        if self.game.config.time_limits is not None:
+                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
                     return False
 
                 # Check if reroll available
                 if self.game.can_use_reroll(self.player.team) and not self.catch_used:
                     self.waiting_for_reroll = True
+                    if self.player.team != self.game.state.current_team:
+                        if self.game.config.time_limits is not None:
+                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
                     return False
 
                 Bounce(self.game, self.ball)
@@ -598,8 +618,10 @@ class CoinTossFlip(Procedure):
 
     def __init__(self, game):
         super().__init__(game)
-        self.aa = [ActionChoice(ActionType.HEADS, team=self.game.state.away_team),
-                   ActionChoice(ActionType.TAILS, team=self.game.state.away_team)]
+
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
@@ -621,7 +643,8 @@ class CoinTossFlip(Procedure):
         return True
 
     def available_actions(self):
-        return self.aa
+        return [ActionChoice(ActionType.HEADS, team=self.game.state.away_team),
+                   ActionChoice(ActionType.TAILS, team=self.game.state.away_team)]
 
 
 class CoinTossKickReceive(Procedure):
@@ -632,6 +655,10 @@ class CoinTossKickReceive(Procedure):
                                 team=self.game.state.coin_toss_winner),
                    ActionChoice(ActionType.RECEIVE,
                                 team=self.game.state.coin_toss_winner)]
+
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
     def step(self, action):
         kicking = None
@@ -843,6 +870,10 @@ class Interception(Procedure):
         self.ball = ball
         self.interceptors = interceptors
 
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+
     def step(self, action):
 
         if action.action_type == ActionType.INTERCEPTION:
@@ -866,6 +897,10 @@ class Touchback(Procedure):
     def __init__(self, game, ball):
         super().__init__(game)
         self.ball = ball
+
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
     def step(self, action):
         self.ball.move_to(action.player.position)
@@ -1028,6 +1063,10 @@ class HighKick(Procedure):
         super().__init__(game)
         self.ball = ball
         self.receiving_team = self.game.get_receiving_team()
+
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
 
     def step(self, action):
         if action.action_type == ActionType.PLACE_PLAYER:
@@ -1838,6 +1877,12 @@ class PlaceBall(Procedure):
         self.ball = ball
         self.aa = None
 
+    def setup(self):
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+        self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
+                                positions=self.game.get_team_side(self.game.get_receiving_team()))]
+
     def step(self, action):
         self.game.state.pitch.balls.append(self.ball)
         self.ball.on_ground = False
@@ -1846,9 +1891,6 @@ class PlaceBall(Procedure):
         return True
 
     def available_actions(self):
-        if self.aa is None:
-            self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
-                                    positions=self.game.get_team_side(self.game.get_receiving_team()))]
         return self.aa
 
 
@@ -2283,6 +2325,9 @@ class Push(Procedure):
         # Get possible squares
         if self.squares is None:
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
+            if self.player.has_skill(Skill.SIDE_STEP):
+                if self.game.config.time_limits is not None:
+                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
             return False
 
         # Stand firm
@@ -2487,30 +2532,16 @@ class Setup(Procedure):
         self.selected_player = None
         self.formations = game.config.defensive_formations if team == game.get_kicking_team() \
             else game.config.offensive_formations
+        self.started = False
+        self.aa = []
 
-        if self.reorganize:
-            positions = game.get_team_side(team)
-        else:
-            positions = game.get_team_side(team) + [None]
-        self.aa = [
-            ActionChoice(ActionType.PLACE_PLAYER, team=team,
-                         players=game.get_players_on_pitch(team) if self.reorganize else team.players,
-                         positions=positions),
-            ActionChoice(ActionType.END_SETUP, team=team)
-        ]
-        if not self.reorganize:
-            for formation in self.formations:
-                if formation.name == "wedge":
-                    self.aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=team))
-                if formation.name == "line":
-                    self.aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=team))
-                if formation.name == "spread":
-                    self.aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=team))
-                if formation.name == "zone":
-                    self.aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=team))
+    def setup(self):
+
+        # Set termination time
+        if self.game.config.time_limits is not None:
+            self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
 
     def step(self, action):
-
         formation = None
         if action.action_type == ActionType.SETUP_FORMATION_WEDGE:
             formation = [formation for formation in self.formations if formation.name == "wedge"][0]
@@ -2555,7 +2586,31 @@ class Setup(Procedure):
             return False
 
     def available_actions(self):
-        return self.aa
+        # Set actions
+        if self.reorganize:
+            positions = self.game.get_team_side(self.team)
+        else:
+            positions = self.game.get_team_side(self.team) + [None]
+
+        aa = [
+            ActionChoice(ActionType.PLACE_PLAYER, team=self.team,
+                         players=self.game.get_players_on_pitch(
+                             self.team) if self.reorganize else self.game.get_reserves(self.team),
+                         positions=positions),
+            ActionChoice(ActionType.END_SETUP, team=self.team)
+        ]
+        if not self.reorganize:
+            for formation in self.formations:
+                if formation.name == "wedge":
+                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=self.team))
+                if formation.name == "line":
+                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=self.team))
+                if formation.name == "spread":
+                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=self.team))
+                if formation.name == "zone":
+                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=self.team))
+
+        return aa
 
 
 class ThrowIn(Procedure):
@@ -2755,6 +2810,11 @@ class Turn(Procedure):
         if not self.started:
             self.started = True
             self.game.state.current_team = self.team
+
+            # Reset termination time
+            if self.game.config.time_limits is not None:
+                self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
+
             if self.blitz:
                 self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))
             elif self.quick_snap:

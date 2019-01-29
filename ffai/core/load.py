@@ -236,11 +236,19 @@ def get_config(name):
     config.rounds = data['turns']
     config.kick_off_table = data['kick_off_table']
     config.fast_mode = data['fast_mode']
+    config.debug_mode = data['debug_mode']
+    config.competition_mode = data['competition_mode']
     config.kick_scatter_dice = data['kick_scatter_dice']
     config.defensive_formations = [get_formation(formation, config.pitch_max) for formation in
                                    data['defensive_formations']]
     config.offensive_formations = [get_formation(formation, config.pitch_max) for formation in
                                    data['offensive_formations']]
+    turn = None
+    opp_choice = None
+    if data['time_limits'] is not None:
+        turn = data['time_limits']['turn']
+        opp_choice = data['time_limits']['opp_choice']
+    config.time_limits = TimeLimits(turn=turn, opp_choice=opp_choice)
     return config
 
 

@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = get_config("ff-11.json")
+    #config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
