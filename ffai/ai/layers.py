@@ -7,6 +7,7 @@ This module contains the feature layers used by the gym implementation.
 """
 
 from ffai.core.model import *
+from ffai.core.procedure import *
 
 
 class FeatureLayer:
@@ -171,6 +172,33 @@ class ActivePlayerLayer(FeatureLayer):
 
     def name(self):
         return "active players"
+
+
+class TargetPlayerLayer(FeatureLayer):
+
+    def produce(self, game):
+        out = np.zeros((game.arena.height, game.arena.width))
+        target = None
+        for i in reversed(range(game.state.stack.size())):
+            proc = game.state.stack.items[i]
+            if isinstance(proc, Block):
+                target = proc.defender
+                break
+            if isinstance(proc, PassAction):
+                target = proc.catcher
+                break
+            if isinstance(proc, Handoff):
+                target = proc.catcher
+                break
+            if isinstance(proc, Foul):
+                target = proc.defender
+                break
+        if target is not None:
+            out[target.position.y][target.position.x] = 1.0
+        return out
+
+    def name(self):
+        return "target player"
 
 
 class AvailablePlayerLayer(FeatureLayer):

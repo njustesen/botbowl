@@ -96,22 +96,23 @@ The default feature layers in obs['board'] are:
 7. AvailablePlayerLayer()
 8. AvailablePositionLayer()
 9. RollProbabilityLayer()
-1. BlockDiceLayer()
-10. ActivePlayerLayer()
-12. MALayer()
-13. STLayer()
-14. AGLayer()
-15. AVLayer()
-16. MovemenLeftLayer()
-17. BallLayer()
-18. OwnHalfLayer()
-19. OwnTouchdownLayer()
-20. OppTouchdownLayer()
-21. SkillLayer(Skill.BLOCK)
-22. SkillLayer(Skill.DODGE)
-23. SkillLayer(Skill.SURE_HANDS)
-24. SkillLayer(Skill.PASS)
-25. SkillLayer(Skill.BLOCK)
+10. BlockDiceLayer()
+11. ActivePlayerLayer()
+12. TargetPlayerLayer()
+13. MALayer()
+14. STLayer()
+15. AGLayer()
+16. AVLayer()
+17. MovemenLeftLayer()
+18. BallLayer()
+19. OwnHalfLayer()
+20. OwnTouchdownLayer()
+21. OppTouchdownLayer()
+22. SkillLayer(Skill.BLOCK)
+23. SkillLayer(Skill.DODGE)
+24. SkillLayer(Skill.SURE_HANDS)
+25. SkillLayer(Skill.PASS)
+26. SkillLayer(Skill.BLOCK)
 
 Custom layers can be implemented like this:
 ```
@@ -147,14 +148,14 @@ The 44 default normalized values in obs['state'] are:
 
 0. 'half'
 1. 'round'
-2. 'sweltering heat'
-3. 'very sunny'
-4. 'nice'
-5. 'pouring rain'
-6. 'blizzard'
-7. 'own turn'
-8. 'kicking first half'
-9. 'kicking this drive'
+2. 'is sweltering heat'
+3. 'is very sunny'
+4. 'is nice'
+5. 'is pouring rain'
+6. 'is blizzard'
+7. 'is own turn'
+8. 'is kicking first half'
+9. 'is kicking this drive'
 10. 'own reserves'
 11. 'own kods'
 12. 'own casualites'
@@ -183,12 +184,18 @@ The 44 default normalized values in obs['state'] are:
 35. 'opp apothecary available'
 36. 'opp reroll available'
 37. 'opp fame'
-38. 'blitz available'
-39. 'pass available'
-40. 'handoff available'
-41. 'foul available'
+38. 'is blitz available'
+39. 'is pass available'
+40. 'is handoff available'
+41. 'is foul available'
 42. 'is blitz'
 43. 'is quick snap'
+44. 'is move action'
+45. 'is block action'
+46. 'is blitz action'
+47. 'is pass action'
+48. 'is handoff action'
+49. 'is foul action'
 
 #### Observation: 'procedure'
 The 19 procedures represented in the one-hot vector obs['procedure'] are:
@@ -284,7 +291,7 @@ This is how the FFAI-v1-3 environment looks:
 ![FFAI Gym GUI](screenshots/gym_3.png?raw=true "FFAI Gym GUI FFAI-3")
 
 ## Disclaminers and Copyrighted Art
-FFAI is not affiliated with or endoresed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
+FFAI is not affiliated with or endorsed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
 
 ## Get Involved
 Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Join our Discord server using this link: [FFAI Discord Server](https://discord.gg/MTXMuae).

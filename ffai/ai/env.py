@@ -181,6 +181,7 @@ class FFAIEnv(gym.Env):
             RollProbabilityLayer(),
             BlockDiceLayer(),
             ActivePlayerLayer(),
+            TargetPlayerLayer(),
             MALayer(),
             STLayer(),
             AGLayer(),
@@ -201,7 +202,7 @@ class FFAIEnv(gym.Env):
 
         self.observation_space = spaces.Dict({
             'board': spaces.Box(low=0, high=1, shape=(arena.height, arena.width, len(self.layers))),
-            'state': spaces.Box(low=0, high=1, shape=(44,)),
+            'state': spaces.Box(low=0, high=1, shape=(50,)),
             'procedure':  spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
         })
 
@@ -278,15 +279,15 @@ class FFAIEnv(gym.Env):
         # State
         obs['state']['half'] = game.state.half - 1.0
         obs['state']['round'] = game.state.round / 8.0
-        obs['state']['sweltering heat'] = 1.0 if game.state.weather == WeatherType.SWELTERING_HEAT else 0.0
-        obs['state']['very sunny'] = 1.0 if game.state.weather == WeatherType.VERY_SUNNY else 0.0
-        obs['state']['nice'] = 1.0 if game.state.weather.value == WeatherType.NICE else 0.0
-        obs['state']['pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
-        obs['state']['blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
+        obs['state']['is sweltering heat'] = 1.0 if game.state.weather == WeatherType.SWELTERING_HEAT else 0.0
+        obs['state']['is very sunny'] = 1.0 if game.state.weather == WeatherType.VERY_SUNNY else 0.0
+        obs['state']['is nice'] = 1.0 if game.state.weather.value == WeatherType.NICE else 0.0
+        obs['state']['is pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
+        obs['state']['is blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
 
-        obs['state']['own turn'] = 1.0 if game.state.current_team == active_team else 0.0
-        obs['state']['kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
-        obs['state']['kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
+        obs['state']['is own turn'] = 1.0 if game.state.current_team == active_team else 0.0
+        obs['state']['is kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
+        obs['state']['is kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
         obs['state']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
         obs['state']['own kods'] = len(game.get_kods(active_team)) / 16.0 if active_team is not None else 0.0
         obs['state']['own casualites'] = len(game.get_casualties(active_team)) / 16.0 if active_team is not None else 0.0
@@ -318,12 +319,25 @@ class FFAIEnv(gym.Env):
         obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
         obs['state']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
 
-        obs['state']['blitz available'] = 1.0 if game.is_blitz_available() else 0.0
-        obs['state']['pass available'] = 1.0 if game.is_pass_available() else 0.0
-        obs['state']['handoff available'] = 1.0 if game.is_handoff_available() else 0.0
-        obs['state']['foul available'] = 1.0 if game.is_foul_available() else 0.0
+        obs['state']['is blitz available'] = 1.0 if game.is_blitz_available() else 0.0
+        obs['state']['is pass available'] = 1.0 if game.is_pass_available() else 0.0
+        obs['state']['is handoff available'] = 1.0 if game.is_handoff_available() else 0.0
+        obs['state']['is foul available'] = 1.0 if game.is_foul_available() else 0.0
         obs['state']['is blitz'] = 1.0 if game.is_blitz() else 0.0
         obs['state']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
+
+        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.MOVE else 0.0
+        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.BLOCK else 0.0
+        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.BLITZ else 0.0
+        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.PASS else 0.0
+        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.HANDOFF else 0.0
+        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
+            game.state.active_player) == PlayerActionType.FOUL else 0.0
 
         # Procedure
         if game.state.stack.size() > 0:
