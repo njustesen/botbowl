@@ -57,7 +57,7 @@ pip install git+https://github.com/njustesen/ffai
 
 ## Run FFAI's Web Server
 ```
-python -m ffai.web.server
+python examples/server_example.py
 ```
 Go to: http://127.0.0.1:5000/
 
