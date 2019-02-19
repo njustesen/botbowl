@@ -1,6 +1,7 @@
-"""
+'''
 https://medium.com/@nicholas.w.swift/easy-a-star-pathfinding-7e6689c7f7b2
-"""
+
+Work in Progress
 
 class AStarNode():
     """A node class for A* Pathfinding"""
@@ -98,3 +99,4 @@ def astar(game, player, square):
 
             # Add the child to the open list
             open_list.append(child)
+'''
