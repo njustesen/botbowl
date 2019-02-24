@@ -5,7 +5,10 @@ Year: 2019
 ==========================
 This module contains a generic A* Path Finder, along with a specific test implementation.  Originally written in Java by
 Kevin Glass: http://www.cokeandcode.com/main/tutorials/path-finding/ and converted to Python, with modifications, by
-Peter Moore.
+Peter Moore.  The main modifications,
+    1. Create_paths, which finds solutions to all nodes within search_distance
+    2. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
+    3. Simple class implementations as well as run code that demonstrates the results via main()
 """
 from __future__ import annotations
 import math
@@ -19,18 +22,19 @@ class PathFinder(Interface):
         pass
 
 
-class Mover(Interface):
-    pass
+class Mover:
+    def __init__(self):
+        self.cur_depth: int = -1    # We use this for any dependency on get_cost etc requiring current depth
 
 
 class AStarHeuristic(Interface):
 
     @staticmethod
-    def get_cost(tile_map: TileBasedMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         pass
 
 
-class TileBasedMap(Interface):
+class TileMap(Interface):
 
     def get_width_in_tiles(self) -> int:
         pass
@@ -57,7 +61,6 @@ class Node:
         self._parent: Optional[Node] = None
         self.heuristic: float = 0
         self.depth: int = 0
-        self.path: Optional[Path] = None  # Optionally, we can store a list of paths (solutions) at each node.
 
     @property
     def parent(self: Node):
@@ -153,11 +156,11 @@ class Path:
 
 class AStarPathFinder(implements(PathFinder)):
 
-    def __init__(self, tile_map: TileBasedMap, max_search_distance: int, allow_diag_movement: bool, heuristic: AStarHeuristic):
+    def __init__(self, tile_map: TileMap, max_search_distance: int, allow_diag_movement: bool, heuristic: AStarHeuristic):
         self.heuristic: AStarHeuristic = heuristic
         self.open: SortedList = SortedList(lambda x: x.cost + x.heuristic)
         self.closed: List[Node] = []
-        self.tile_map: TileBasedMap = tile_map
+        self.tile_map: TileMap = tile_map
         self.probability_costs: bool = False
         self.max_search_distance: int = max_search_distance
         self.allow_diag_movement: bool = allow_diag_movement
@@ -216,11 +219,11 @@ class AStarPathFinder(implements(PathFinder)):
                     yp = y + current.y
 
                     if self.is_valid_location(mover, sx, sy, xp, yp):
+                        mover.cur_depth = current.depth
                         if self.probability_costs:
                             next_step_cost = 1.0 - ((1.0 - current.cost) * (1.0 - self.get_movement_cost(mover, current.x, current.y, xp, yp)))
                         else:
                             next_step_cost = current.cost + self.get_movement_cost(mover, current.x, current.y, xp, yp)
-
                         neighbour = self.nodes[xp][yp]
                         self.tile_map.path_finder_visited(xp, yp)
 
@@ -246,24 +249,81 @@ class AStarPathFinder(implements(PathFinder)):
                             max_depth = max(max_depth, neighbour.cost)
                             self.add_to_open(neighbour)
 
-        # since we'e've run out of search
-        # there was no path. Just return null
-
-        if self.nodes[tx][ty].parent is None:
-            return None
-
         # At this point we've definitely found a path so we can uses the parent
         # references of the nodes to find out way from the target location back
         # to the start recording the nodes on the way.
+        return self.create_path(sx, sy, tx, ty)
 
-        path = Path()
+    def create_path(self, sx: int, sy: int, tx: int, ty: int) -> Optional[Path]:
         target = self.nodes[tx][ty]
+        if target.parent is None:
+            return None
+        path = Path()
         while target != self.nodes[sx][sy]:
             path.prepend_step(target.x, target.y)
             target = target.parent
-
         path.prepend_step(sx, sy)
         return path
+
+    def find_paths(self, mover, sx: int, sy: int) -> List[List[Optional[Path]]]:
+        """
+        Find all paths up to self.max_search_distance starting from (sx, sy).
+        :return: 2-D List of either Paths (where a path to the node exists) or None, where no Path exists
+        """
+        self.nodes[sx][sy].cost = 0
+        self.nodes[sx][sy].depth = 0
+        self.closed.clear()
+        self.open.clear()
+        self.open.append(self.nodes[sx][sy])      # Start with starting node.
+
+        while len(self.open) > 0:
+            current = self.get_first_in_open()
+            self.remove_from_open(current)
+            self.add_to_closed(current)
+            if current.depth == self.max_search_distance:
+                continue
+            if current.depth >= self.max_search_distance:
+                current.parent = None
+                continue
+            for x in range(-1, 2):
+                for y in range(-1, 2):
+                    if (x == 0) and (y == 0):
+                        continue
+
+                    xp = x + current.x
+                    yp = y + current.y
+
+                    if self.is_valid_location(mover, sx, sy, xp, yp):
+                        mover.cur_depth = current.depth
+                        if self.probability_costs:
+                            next_step_cost = 1.0 - ((1.0 - current.cost) * (1.0 - self.get_movement_cost(mover, current.x, current.y, xp, yp)))
+                        else:
+                            next_step_cost = current.cost + self.get_movement_cost(mover, current.x, current.y, xp, yp)
+                        neighbour = self.nodes[xp][yp]
+                        self.tile_map.path_finder_visited(xp, yp)
+
+                        if next_step_cost < neighbour.cost:
+                            if self.in_open_list(neighbour):
+                                self.remove_from_open(neighbour)
+
+                            if self.in_closed_list(neighbour):
+                                self.remove_from_closed(neighbour)
+                        if (not self.in_open_list(neighbour)) and (not self.in_closed_list(neighbour)):
+                            neighbour.cost = next_step_cost
+                            #neighbour.heuristic = self.get_heuristic_cost(mover, xp, yp, tx, ty)
+                            neighbour.parent = current
+                            self.add_to_open(neighbour)
+        return self.create_paths(sx, sy)
+
+    def create_paths(self, sx: int, sy: int) -> List[List[Optional[Path]]]:
+        paths = []
+        for x in range(self.tile_map.get_height_in_tiles()):
+            paths_cur = []
+            for y in range(self.tile_map.get_height_in_tiles()):
+                node = self.nodes[x][y]
+                paths_cur.append(self.create_path(sx, sy, x, y))
+            paths.append(paths_cur)
+        return paths
 
     def get_computed_cost(self, ix: int, iy: int) -> float:
         return self.nodes[ix][iy].cost
@@ -305,7 +365,7 @@ class AStarPathFinder(implements(PathFinder)):
 class ClosestHeuristic(implements(AStarHeuristic)):
 
     @staticmethod
-    def get_cost(tile_map: TileBasedMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         dx = tx - x
         dy = ty - y
         cost = math.sqrt(float(dx*dx+dy*dy))
@@ -315,21 +375,21 @@ class ClosestHeuristic(implements(AStarHeuristic)):
 class BruteForceHeuristic(implements(AStarHeuristic)):
 
     @staticmethod
-    def get_cost(tile_map: TileBasedMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         return 0.0
 
 
-class TestMover(implements(Mover)):
+class TestMover(Mover):
 
     TANK = 0
     PLANE = 1
     BOAT = 2
 
-    def __init__(self, type: int):
-        self.type = type
+    def __init__(self, unit: int):
+        self.unit = unit
 
 
-class TestMap(implements(TileBasedMap)):
+class TestMap(implements(TileMap)):
 
     WIDTH = 30
     HEIGHT = 30
@@ -383,7 +443,7 @@ class TestMap(implements(TileBasedMap)):
 
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
 
-        unit: int = mover.type  # For this simple demonstation, ignored.  We could have different terrain types
+        unit: int = mover.unit  # For this simple demonstation, ignored.  We could have different terrain types
                                 # that affect TANK, PLANE or BOAT differently
 
         return self.terrain[x][y] == self.BLOCKED
@@ -432,6 +492,33 @@ class TestMap(implements(TileBasedMap)):
                     print_ln_cur = print_ln_cur + c
             print(print_ln_cur)
 
+    def display_map2(self, start_pos, paths: List[List[Optional[Node]]]):
+
+        t = {
+            self.OPEN: ' ',
+            self.BLOCKED: 'X',
+        }
+
+        has_path: List[List[bool]] = []
+        for x in range(self.get_width_in_tiles()):
+            has_path_cur: List[bool] = []
+            for y in range(self.get_height_in_tiles()):
+                has_path_cur.append(paths[x][y] is not None)
+            has_path.append(has_path_cur)
+
+        for x in range(self.get_width_in_tiles()):
+            print_ln_cur = ''
+            for y in range(self.get_height_in_tiles()):
+                c = t.get(self.terrain[x][y])
+                if x == start_pos.x and y == start_pos.x:
+                    print_ln_cur = print_ln_cur + 'S'
+                elif has_path[x][y]:
+                    print_ln_cur = print_ln_cur + 'o'
+                else:
+                    print_ln_cur = print_ln_cur + c
+            print(print_ln_cur)
+
+
 def main():
     print('Running test path finder!!!')
     print(' ')
@@ -445,5 +532,17 @@ def main():
         test_map.display_map(Node(15, 15), Node(29, 29), path.steps)
     else:
         test_map.display_map(Node(15, 15), Node(29, 29))
+
+    print(' ')
+    nstep = 4
+    print(' Location of all paths within ' + str(nstep) + ' steps')
+    print(' ')
+    heuristic = BruteForceHeuristic()
+    finder = AStarPathFinder(test_map, nstep, True, heuristic)
+    mover = TestMover(TestMover.TANK)
+    paths = finder.find_paths(mover, 15, 15)
+
+    test_map.display_map2(Node(15, 15), paths)
+
 if __name__ == "__main__":
     main()
