@@ -14,17 +14,59 @@ from __future__ import annotations
 import math
 from interface import implements, Interface
 from typing import Optional, List
+import ffai.core.model as m
+
+
+class Mover:
+    def __init__(self):
+        self.cur_depth: int = -1    # We use this for any dependency on get_cost etc requiring current depth
+
+
+class Path:
+
+    def __init__(self):
+        self.steps: List[Step] = []
+
+    def __len__(self: Path) -> int:
+        return len(self.steps)
+
+    def get_step(self: Path, index: int) -> Step:
+        return self.steps[index]
+
+    def get_last_step(self: Path) -> Step:
+        return self.steps[-1]
+
+    def add_steps(self: Path, steps):
+        self.steps.extend(steps)
+
+    def get_x(self: Path, index: int) -> int:
+        step = self.get_step(index)
+        return step.x
+
+    def get_y(self: Path, index: int) -> int:
+        step = self.get_step(index)
+        return step.y
+
+    def append_step(self: Path, x: int, y: int):
+        self.steps.append(Step(x, y))
+
+    def remove_last(self: Path):
+        del self.steps[-1]
+
+    def prepend_step(self: Path, x: int, y: int):
+        self.steps.insert(0, Step(x, y))
+
+    def is_empty(self: Path) -> bool:
+        return len(self) == 0
+
+    def contains(self: Path, x: int, y: int) -> bool:
+        return Step(x, y) in self.steps
 
 
 class PathFinder(Interface):
 
     def find_path(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> Path:
         pass
-
-
-class Mover:
-    def __init__(self):
-        self.cur_depth: int = -1    # We use this for any dependency on get_cost etc requiring current depth
 
 
 class AStarHeuristic(Interface):
@@ -111,47 +153,6 @@ class Step:
 
     def __eq__(self: Step, other: Step) -> bool:
         return (other.x == self.x) and (other.y == self.y)
-
-
-class Path:
-
-    def __init__(self):
-        self.steps: List[Step] = []
-
-    def __len__(self: Path) -> int:
-        return len(self.steps)
-
-    def get_step(self: Path, index: int) -> Step:
-        return self.steps[index]
-
-    def get_last_step(self: Path) -> Step:
-        return self.steps[-1]
-
-    def add_steps(self: Path, steps):
-        self.steps.extend(steps)
-
-    def get_x(self: Path, index: int) -> int:
-        step = self.get_step(index)
-        return step.x
-
-    def get_y(self: Path, index: int) -> int:
-        step = self.get_step(index)
-        return step.y
-
-    def append_step(self: Path, x: int, y: int):
-        self.steps.append(Step(x, y))
-
-    def remove_last(self: Path):
-        del self.steps[-1]
-
-    def prepend_step(self: Path, x: int, y: int):
-        self.steps.insert(0, Step(x, y))
-
-    def is_empty(self: Path) -> bool:
-        return len(self) == 0
-
-    def contains(self: Path, x: int, y: int) -> bool:
-        return Step(x, y) in self.steps
 
 
 class AStarPathFinder(implements(PathFinder)):
@@ -435,9 +436,6 @@ class TestMap(implements(TileMap)):
             for y in range(self.get_height_in_tiles()):
                 self.visited[x][y] = False
 
-    def visited(self, x: int, y: int) -> bool:
-        return self.visited[x][y]
-
     def get_terrain(self, x: int, y: int) -> int:
         return self.terrain[x][y]
 
@@ -519,6 +517,73 @@ class TestMap(implements(TileMap)):
             print(print_ln_cur)
 
 
+class FfMover(Mover):
+
+    def __init__(self, unit: m.Player):
+
+        self.unit: m.Player = unit
+        self.move_allowed: int = unit.move_allowed()
+
+
+class FfTileMap(implements(TileMap)):
+
+    def __init__(self, game_state: m.GameState):
+        self.game_state: m.GameState = game_state
+        self.visited: List[List[bool]] = []
+        self.WIDTH = game_state.pitch.width
+        self.HEIGHT = game_state.pitch.height
+        for x in range(self.WIDTH):
+            visited_cur: List[bool] = []
+            for y in range(self.HEIGHT):
+                visited_cur.append(False)
+            self.visited.append(visited_cur)
+
+    def get_width_in_tiles(self) -> int:
+        return self.game_state.pitch.width
+
+    def get_height_in_tiles(self) -> int:
+        return self.game_state.pitch.height
+
+    def clear_visited(self):
+        for x in range(self.get_width_in_tiles()):
+            for y in range(self.get_height_in_tiles()):
+                self.visited[x][y] = False
+    
+    def path_finder_visited(self, x: int, y: int):
+        self.visited[x][y] = True
+
+    def blocked(self, mover: Mover, x: int, y: int) -> bool:
+        square = self.game_state.pitch.get_square(x,y)
+        return self.game_state.pitch.get_player_at(square) is not None
+
+    def get_cost(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> float:
+        square_from = self.game_state.pitch.get_square(sx, sy)
+        square_to = self.game_state.pitch.get_square(tx, ty)
+        moving_unit = mover.unit
+        agility = moving_unit.get_ag()
+
+        cost = 0.0
+        num_zones_from, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers = self.game_state.pitch.tackle_zones_detailed_at(mover.unit, square_from)
+
+        if num_zones_from > 0:
+            num_zones_to = self.game_state.pitch.num_tackle_zones_at(mover.unit, square_to)
+            if moving_unit.has_skill(m.Skill.STUNTY):
+                num_zones_to = 0
+            num_zones_to = num_zones_to - len(prehensile_tailers) - 2 * len(diving_tacklers)
+            cost = (min(5.0, max(1.0, 5.0 - agility + num_zones_to)) / 6.0)
+            if moving_unit.has_skill(m.Skill.DODGE) and not tacklers:  # Should also check if already dodged
+                cost = cost * cost
+        cur_depth: int = mover.cur_depth  # essentially number of moves already done.
+        if cur_depth != -1 and (cur_depth + 1 > moving_unit.move_allowed(include_gfi=False)):
+            incr_cost = 1.0/6.0
+            if self.game_state.weather == m.WeatherType.BLIZZARD:
+                incr_cost = incr_cost*2
+            if moving_unit.has_skill(m.Skill.SURE_FEET):
+                incr_cost = incr_cost * incr_cost
+            cost = 1 - (1 - cost)*(1 - incr_cost)
+        return cost
+
+
 def main():
     print('Running test path finder!!!')
     print(' ')
@@ -543,6 +608,7 @@ def main():
     paths = finder.find_paths(mover, 15, 15)
 
     test_map.display_map2(Node(15, 15), paths)
+
 
 if __name__ == "__main__":
     main()

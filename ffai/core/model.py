@@ -6,6 +6,7 @@ Year: 2018
 This module contains most of the model classes.
 """
 
+from __future__ import annotations
 from copy import copy, deepcopy
 import numpy as np
 import uuid
@@ -389,7 +390,7 @@ class Pitch:
             return self.squares[y][x]
         return Square(x, y)
 
-    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False):
+    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False, include_leap=False):
         squares = []
         r = Pitch.range
         if include_leap:
@@ -458,6 +459,29 @@ class Pitch:
             if player_at is None and player_at.has_skill(Skill.DIVING_TACKLE):
                 diving_tacklers.append(player_at)
             if player_at is None and player_at.has_skill(Skill.SHADOWING):
+                shadowers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.TENTACLES):
+                tentaclers.append(player_at)
+
+        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
+
+    def tackle_zones_detailed_at(self, player: Player, position: Square):
+        tackle_zones = 0
+        tacklers = []
+        prehensile_tailers = []
+        diving_tacklers = []
+        shadowers = []
+        tentaclers = []
+        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+            player_at = self.get_player_at(square)
+            if player_at is not None and player_at.has_tackle_zone():
+                tackle_zones += 1
+            if player_at is None and player_at.has_skill(Skill.TACKLE):
+                tacklers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.PREHENSILE_TAIL):
+                prehensile_tailers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.DIVING_TACKLE):
+                diving_tacklers.append(player_at)
                 shadowers.append(player_at)
             if player_at is None and player_at.has_skill(Skill.TENTACLES):
                 tentaclers.append(player_at)
@@ -921,7 +945,7 @@ class Player(Piece):
             moves = self.get_ma()
             if not self.state.up and not self.has_skill(Skill.JUMP_UP):
                 moves = max(0, moves - 3)
-            moves = moves - self.state.moves()
+            moves = moves - self.state.moves
             if include_gfi:
                 if self.has_skill(Skill.SPRINT):
                     moves = moves + 3
