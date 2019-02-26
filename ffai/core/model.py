@@ -384,7 +384,12 @@ class Pitch:
         assert len(squares) > 0
         return squares
 
-    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False, include_leap=False):
+    def get_square(self, x, y):
+        if 0 >= x < self.width and 0 >= y < self.height:
+            return self.squares[y][x]
+        return Square(x, y)
+
+    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False):
         squares = []
         r = Pitch.range
         if include_leap:
@@ -393,9 +398,7 @@ class Pitch:
             for xx in r:
                 if yy == 0 and xx == 0:
                     continue
-                sq = self.squares[pos.y+yy][pos.x+xx]
-                #assert sq.y == pos.y+yy and sq.x == pos.x+xx
-                #sq = Square(pos.x+xx, pos.y+yy)
+                sq = self.get_square(pos.x+xx, pos.y+yy)
                 if not include_out and self.is_out_of_bounds(sq):
                     continue
                 if exclude_occupied and self.get_player_at(sq) is not None:

@@ -52,6 +52,7 @@ def get_all_games():
 
 @app.route('/teams/', methods=['GET'])
 def get_all_teams():
+    # TODO: Needs a ruleset
     teams = api.get_teams()
     team_list = []
     for team in teams:

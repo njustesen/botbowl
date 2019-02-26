@@ -6,7 +6,6 @@ Year: 2018
 This module contains the feature layers used by the gym implementation.
 """
 
-from ffai.core.model import *
 from ffai.core.procedure import *
 
 
