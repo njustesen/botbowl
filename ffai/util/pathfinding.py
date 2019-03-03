@@ -15,6 +15,7 @@ import math
 from interface import implements, Interface
 from typing import Optional, List
 import ffai.core.model as m
+import time
 
 
 class Mover:
@@ -24,43 +25,19 @@ class Mover:
 
 class Path:
 
-    def __init__(self):
-        self.steps: List[Step] = []
+    def __init__(self, steps: List[Step], cost: float):
+        self.steps = steps
+        self.cost = cost
+        # Are "Step" necessary?  Can a path be a set of nodes?  Nodes which have depth, and cost etc?
 
     def __len__(self: Path) -> int:
         return len(self.steps)
 
-    def get_step(self: Path, index: int) -> Step:
-        return self.steps[index]
-
     def get_last_step(self: Path) -> Step:
         return self.steps[-1]
 
-    def add_steps(self: Path, steps):
-        self.steps.extend(steps)
-
-    def get_x(self: Path, index: int) -> int:
-        step = self.get_step(index)
-        return step.x
-
-    def get_y(self: Path, index: int) -> int:
-        step = self.get_step(index)
-        return step.y
-
-    def append_step(self: Path, x: int, y: int):
-        self.steps.append(Step(x, y))
-
-    def remove_last(self: Path):
-        del self.steps[-1]
-
-    def prepend_step(self: Path, x: int, y: int):
-        self.steps.insert(0, Step(x, y))
-
     def is_empty(self: Path) -> bool:
         return len(self) == 0
-
-    def contains(self: Path, x: int, y: int) -> bool:
-        return Step(x, y) in self.steps
 
 
 class PathFinder(Interface):
@@ -87,6 +64,9 @@ class TileMap(Interface):
     def path_finder_visited(self, x: int, y: int):
         pass
 
+    def has_visited(self, x: int, y: int):
+        pass
+
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
         pass
 
@@ -100,19 +80,19 @@ class Node:
         self.x: int = x
         self.y: int = y
         self.cost: float = 0
-        self._parent: Optional[Node] = None
+        self.__parent: Optional[Node] = None
         self.heuristic: float = 0
         self.depth: int = 0
 
     @property
     def parent(self: Node):
-        return self._parent
+        return self.__parent
 
     @parent.setter
     def parent(self: Node, parent: Node):
         if parent is not None:
             self.depth = parent.depth + 1
-        self._parent = parent
+        self.__parent = parent
 
     def value(self: Node):
         return self.heuristic + self.cost
@@ -157,12 +137,12 @@ class Step:
 
 class AStarPathFinder(implements(PathFinder)):
 
-    def __init__(self, tile_map: TileMap, max_search_distance: int, allow_diag_movement: bool, heuristic: AStarHeuristic):
+    def __init__(self, tile_map: TileMap, max_search_distance: int, allow_diag_movement: bool, heuristic: AStarHeuristic, probability_costs: bool = False):
         self.heuristic: AStarHeuristic = heuristic
         self.open: SortedList = SortedList(lambda x: x.cost + x.heuristic)
         self.closed: List[Node] = []
         self.tile_map: TileMap = tile_map
-        self.probability_costs: bool = False
+        self.probability_costs: bool = probability_costs
         self.max_search_distance: int = max_search_distance
         self.allow_diag_movement: bool = allow_diag_movement
         self.nodes: List[List[Node]] = []
@@ -171,9 +151,6 @@ class AStarPathFinder(implements(PathFinder)):
             for y in range(tile_map.get_height_in_tiles()):
                 nodes_cur.append(Node(x, y))
             self.nodes.append(nodes_cur)
-
-    def set_costs_to_be_additive(self):
-        self.probability_costs = False
 
     def find_path(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> Optional[Path]:
         # easy first check, if the destination is blocked, we can't get there
@@ -257,20 +234,21 @@ class AStarPathFinder(implements(PathFinder)):
 
     def create_path(self, sx: int, sy: int, tx: int, ty: int) -> Optional[Path]:
         target = self.nodes[tx][ty]
+        target_cost: float = target.cost
         if target.parent is None:
             return None
-        path = Path()
+        path_steps: List[Step] = []
         while target != self.nodes[sx][sy]:
-            path.prepend_step(target.x, target.y)
+            path_steps.insert(0, Step(target.x, target.y))
             target = target.parent
-        path.prepend_step(sx, sy)
-        return path
+        return Path(path_steps, target_cost)
 
-    def find_paths(self, mover, sx: int, sy: int) -> List[List[Optional[Path]]]:
+    def find_paths(self, mover, sx: int, sy: int) -> List[Path]:
         """
         Find all paths up to self.max_search_distance starting from (sx, sy).
         :return: 2-D List of either Paths (where a path to the node exists) or None, where no Path exists
         """
+        t0 = time.time()
         self.nodes[sx][sy].cost = 0
         self.nodes[sx][sy].depth = 0
         self.closed.clear()
@@ -314,16 +292,19 @@ class AStarPathFinder(implements(PathFinder)):
                             #neighbour.heuristic = self.get_heuristic_cost(mover, xp, yp, tx, ty)
                             neighbour.parent = current
                             self.add_to_open(neighbour)
-        return self.create_paths(sx, sy)
 
-    def create_paths(self, sx: int, sy: int) -> List[List[Optional[Path]]]:
+        paths = self.create_paths(sx, sy)
+        return paths
+
+    def create_paths(self, sx: int, sy: int) -> List[Path]:
         paths = []
         for x in range(self.tile_map.get_height_in_tiles()):
-            paths_cur = []
             for y in range(self.tile_map.get_height_in_tiles()):
-                node = self.nodes[x][y]
-                paths_cur.append(self.create_path(sx, sy, x, y))
-            paths.append(paths_cur)
+                if self.tile_map.has_visited(x,y):
+                    node = self.nodes[x][y]
+                    path_cur = self.create_path(sx, sy, x, y)
+                    if path_cur is not None:
+                        paths.append(path_cur)
         return paths
 
     def get_computed_cost(self, ix: int, iy: int) -> float:
@@ -399,19 +380,9 @@ class TestMap(implements(TileMap)):
     BLOCKED = 1
 
     def __init__(self):
-        self.terrain: List[List[int]] = []
-        for x in range(self.WIDTH):
-            terrain_cur: List[int] = []
-            for y in range(self.HEIGHT):
-                terrain_cur.append(0)
-            self.terrain.append(terrain_cur)
 
-        self.visited: List[List[bool]] = []
-        for x in range(self.WIDTH):
-            visited_cur: List[bool] = []
-            for y in range(self.HEIGHT):
-                visited_cur.append(False)
-            self.visited.append(visited_cur)
+        self.terrain: List[List[int]] = [[0 for y in range(self.HEIGHT)] for x in range(self.WIDTH)]
+        self.visited: List[List[bool]] = [[False for y in range(self.HEIGHT)] for x in range(self.WIDTH)]
 
         self.fill_area(0,0,5,5,self.BLOCKED)
         self.fill_area(0,5,3,10,self.BLOCKED)
@@ -458,6 +429,9 @@ class TestMap(implements(TileMap)):
     def path_finder_visited(self, x: int, y: int):
         self.visited[x][y] = True
 
+    def has_visited(self, x: int, y:int) -> bool:
+        return self.visited[x][y]
+
     def display_map(self, start_pos, end_pos, steps=None):
 
         t = {
@@ -490,19 +464,17 @@ class TestMap(implements(TileMap)):
                     print_ln_cur = print_ln_cur + c
             print(print_ln_cur)
 
-    def display_map2(self, start_pos, paths: List[List[Optional[Node]]]):
+    def display_map2(self, start_pos, paths: List[Path]):
 
         t = {
             self.OPEN: ' ',
             self.BLOCKED: 'X',
         }
 
-        has_path: List[List[bool]] = []
-        for x in range(self.get_width_in_tiles()):
-            has_path_cur: List[bool] = []
-            for y in range(self.get_height_in_tiles()):
-                has_path_cur.append(paths[x][y] is not None)
-            has_path.append(has_path_cur)
+        has_path: List[List[bool]] = [[False for y in range(self.get_height_in_tiles())] for x in range(self.get_width_in_tiles())]
+
+        for path in paths:
+            has_path[path.get_last_step().x][path.get_last_step().y] = True
 
         for x in range(self.get_width_in_tiles()):
             print_ln_cur = ''
@@ -529,20 +501,15 @@ class FfTileMap(implements(TileMap)):
 
     def __init__(self, game_state: m.GameState):
         self.game_state: m.GameState = game_state
-        self.visited: List[List[bool]] = []
-        self.WIDTH = game_state.pitch.width
-        self.HEIGHT = game_state.pitch.height
-        for x in range(self.WIDTH):
-            visited_cur: List[bool] = []
-            for y in range(self.HEIGHT):
-                visited_cur.append(False)
-            self.visited.append(visited_cur)
+        self.WIDTH = game_state.pitch.width-2
+        self.HEIGHT = game_state.pitch.height-2
+        self.visited: List[List[bool]] = [[False for y in range(self.HEIGHT)] for x in range(self.WIDTH)]
 
     def get_width_in_tiles(self) -> int:
-        return self.game_state.pitch.width
+        return self.WIDTH
 
     def get_height_in_tiles(self) -> int:
-        return self.game_state.pitch.height
+        return self.HEIGHT
 
     def clear_visited(self):
         for x in range(self.get_width_in_tiles()):
@@ -552,9 +519,13 @@ class FfTileMap(implements(TileMap)):
     def path_finder_visited(self, x: int, y: int):
         self.visited[x][y] = True
 
+    def has_visited(self, x: int, y:int) -> bool:
+        return self.visited[x][y]
+
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
         square = self.game_state.pitch.get_square(x,y)
-        return self.game_state.pitch.get_player_at(square) is not None
+        # Need to ignore the "crowd" squares at 0.
+        return x == 0 or y == 0 or self.game_state.pitch.get_player_at(square) is not None
 
     def get_cost(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> float:
         square_from = self.game_state.pitch.get_square(sx, sy)

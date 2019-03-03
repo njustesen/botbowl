@@ -66,6 +66,10 @@ class ProcBot(Agent):
             return self.high_kick(game)
         if isinstance(proc, Touchback):
             return self.touchback(game)
+        if isinstance(proc, Turn) and proc.quick_snap:
+            return self.quick_snap(game)
+        if isinstance(proc, Turn) and proc.blitz:
+            return self.blitz(game)
         if isinstance(proc, Turn):
             return self.turn(game)
         if isinstance(proc, PlayerAction):
@@ -115,6 +119,12 @@ class ProcBot(Agent):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def turn(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def quick_snap(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def blitz(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def player_action(self, game):
