@@ -12,18 +12,6 @@ import random
 from enum import Enum
 
 
-class ActionStep:
-    ''' Describes an action for the Bot to attempt to pass to the client
-
-    Allows an AI may want to evaulate many moves in advance and queue them up, rather than solely evaluate choices presented
-    by the Game controller.
-    '''
-    def __init__(self, player: m.Player, action_type: t.ActionType, position: m.Square = None):
-        self.player: m.Player = player
-        self.action_type: t.ActionType = action_type
-        self.position: Optional[m.Square, None] = position
-
-
 class GrodBot(bot.ProcBot):
 
     def __init__(self, name):
@@ -109,37 +97,71 @@ class GrodBot(bot.ProcBot):
         :param game:
         '''
         self.current_move = None
-        players_available: set[m.Player] = set()
-        for action_choice in game.state.available_actions:
-            for player in action_choice.players:
-                players_available.add(player)
-
-        # Loop available players
-        ff_map = pf.FfTileMap(game.state)
         all_actions: List[ActionSequence] = []
-        for player in players_available:
-            player_square: m.Square = player.position
-            player_mover = pf.FfMover(player)
-            finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True, heuristic=pf.BruteForceHeuristic())
-            paths = finder.find_paths(player_mover, player_square.x, player_square.y)
-            all_actions.extend(self.potential_move_actions(player, game, paths))
+        for action_choice in game.state.available_actions:
+            if action_choice.action_type == t.ActionType.START_MOVE:
+                players_available: List[m.Player] = action_choice.players
+                ff_map = pf.FfTileMap(game.state)
+                for player in players_available:
+                    player_square: m.Square = player.position
+                    player_mover = pf.FfMover(player)
+                    finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True, heuristic=pf.BruteForceHeuristic())
+                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    all_actions.extend(potential_move_actions(player, game, paths))
+            elif action_choice.action_type == t.ActionType.START_BLITZ:
+                players_available: List[m.Player] = action_choice.players
+                ff_map = pf.FfTileMap(game.state)
+                for player in players_available:
+                    player_square: m.Square = player.position
+                    player_mover = pf.FfMover(player)
+                    # Need 1 square of movement left to execute block after moving
+                    finder = pf.AStarPathFinder(ff_map, player.move_allowed()-1, allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
+                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    all_actions.extend(potential_blitz_actions(player, game, paths))
+            elif action_choice.action_type == t.ActionType.START_FOUL:
+                players_available: List[m.Player] = action_choice.players
+                ff_map = pf.FfTileMap(game.state)
+                for player in players_available:
+                    player_square: m.Square = player.position
+                    player_mover = pf.FfMover(player)
+                    # Need 1 square of movement left to execute block after moving
+                    finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
+                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    all_actions.extend(potential_foul_actions(player, game, paths))
+            elif action_choice.action_type == t.ActionType.START_BLOCK:
+                players_available: List[m.Player] = action_choice.players
+                for player in players_available:
+                    all_actions.extend(potential_block_actions(player, game))
+            elif action_choice.action_type == t.ActionType.START_PASS:
+                players_available: List[m.Player] = action_choice.players
+                ff_map = pf.FfTileMap(game.state)
+                for player in players_available:
+                    player_square: m.Square = player.position
+                    if game.state.pitch.get_ball_position() == player_square:
+                        player_mover = pf.FfMover(player)
+                        # Need 1 square of movement left to execute block after moving
+                        finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,
+                                                    heuristic=pf.BruteForceHeuristic())
+                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        all_actions.extend(potential_pass_actions(player, game, paths))
+            elif action_choice.action_type == t.ActionType.START_HANDOFF:
+                players_available: List[m.Player] = action_choice.players
+                ff_map = pf.FfTileMap(game.state)
+                for player in players_available:
+                    player_square: m.Square = player.position
+                    if game.state.pitch.get_ball_position() == player_square:
+                        player_mover = pf.FfMover(player)
+                        # Need 1 square of movement left to execute block after moving
+                        finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
+                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        all_actions.extend(potential_handoff_actions(player, game, paths))
+            elif action_choice.action_type == t.ActionType.END_TURN:
+                all_actions.extend(potential_end_turn_action(game))
+
         if all_actions:
             all_actions.sort(key = lambda x: x.score, reverse=True)
             self.current_move = all_actions[0]
-
-    def potential_move_actions(self, player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
-        move_actions: List[ActionSequence] = []
-        for path in paths:
-            path_steps = path.steps
-            action_steps: List[ActionStep] = []
-            action_steps.append(ActionStep(player, t.ActionType.START_MOVE))
-            for step in path_steps:
-                # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
-                action_steps.append(ActionStep(player, t.ActionType.MOVE, game.state.pitch.get_square(step.x, step.y)))
-            action_steps.append(ActionStep(player, t.ActionType.END_PLAYER_TURN))
-            move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000, description='Move'))
-            # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
-        return move_actions
+            print(self.current_move.description)
 
     def turn(self, game: g.Game):
         """
@@ -154,13 +176,8 @@ class GrodBot(bot.ProcBot):
         #   Store a representation of this turn internally (for use by player-action) and return the action to begin.
 
         self.set_next_move(game)
-
-        if self.current_move is None:
-            print('end turn')
-            return m.Action(t.ActionType.END_TURN)
-        else:
-            action_step = self.current_move.popleft()
-            return m.Action(action_step.action_type, pos=action_step.position, player=action_step.player)
+        next_action: m.Action = self.current_move.popleft()
+        return next_action
 
     def quick_snap(self, game: g.Game):
 
@@ -174,77 +191,11 @@ class GrodBot(bot.ProcBot):
 
     def player_action(self, game: g.Game):
         """
-        Move, block, pass, handoff or foul with the active player.
+        Take the next action from the current stack and execute
         """
 
         action_step = self.current_move.popleft()
-        if action_step.action_type == t.ActionType.END_PLAYER_TURN:
-            print(action_step.player.name + ' end player turn')
-            return m.Action(action_step.action_type, pos=action_step.position)
-        elif action_step.player != game.state.active_player:
-            print('wrong player?')
-        else:
-            if action_step.position is None:
-                print('stop here')
-            print(action_step.player.name + ' from ' + str(action_step.player.position.x) + ',' + str(action_step.player.position.y) + ' to ' + str(action_step.position.x) + ',' + str(action_step.position.y))
-            for available_action in game.state.available_actions:
-                if available_action == t.ActionType.MOVE:
-                    if action_step.position not in available_action.positions:
-                        print('Bugger')
-            return m.Action(action_step.action_type, pos=action_step.position, player=action_step.player)
-        '''
-        player = game.state.active_player
-
-        # Loop through available actions
-        for action_choice in game.state.available_actions:
-
-            # Move action?
-            if action_choice.action_type == t.ActionType.MOVE:
-
-                # Loop through adjacent empty squares
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-                    if len(agi_rolls) == 0:
-                        return m.Action(t.ActionType.MOVE, pos=position)
-
-            # Block action?
-            if action_choice.action_type == t.ActionType.BLOCK:
-
-                # Loop through available blocks
-                for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
-
-                    # Only do blocks with 1 die if attacker has block
-                    if block_rolls >= 2 or (block_rolls == 1 and m.Skill.BLOCK in player.skills):
-                        opp_player = game.get_player_at(position)
-                        return m.Action(t.ActionType.BLOCK, pos=position)
-
-            # Pass action?
-            if action_choice.action_type == t.ActionType.PASS:
-
-                # Loop through players to pass to
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-
-                    catcher = game.get_player_at(position)
-                    pass_distance = game.pass_distance(player, position)
-
-                    # Don't pass to empty squares or long bombs
-                    if catcher is not None and pass_distance != m.PassDistance.LONG_BOMB:
-                        return m.Action(t.ActionType.PASS, pos=position)
-
-            # Hand-off action
-            if action_choice.action_type == t.ActionType.HANDOFF:
-
-                # Loop through players to hand-off to
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-                    return m.Action(t.ActionType.HANDOFF, pos=position)
-
-            # Foul action
-            if action_choice.action_type == t.ActionType.FOUL:
-
-                # Loop through players to foul
-                for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
-                    return m.Action(t.ActionType.FOUL, pos=position)
-
-        return m.Action(t.ActionType.END_PLAYER_TURN)'''
+        return action_step
 
     def block(self, game: g.Game):
         """
@@ -361,8 +312,8 @@ class ActionSequence():
     ''' Class containing a single possible move of a single player.
     '''
 
-    def __init__(self, action_steps: List[ActionStep], score: float = 0, description: str = ''):
-        ''' Creates a new ActionSequence - an ordered list of sequential ActionSteps to attempt to undertake.
+    def __init__(self, action_steps: List[m.Action], score: float = 0, description: str = ''):
+        ''' Creates a new ActionSequence - an ordered list of sequential m.Actions to attempt to undertake.
         :param action_steps: Sequence of action steps that form this action.
         :param score: A score representing the attractiveness of the move (default: 0)
         :param description: A debug string (defaul: '')
@@ -390,6 +341,182 @@ class ActionSequence():
         val = self.action_steps[0]
         del self.action_steps[0]
         return val
+
+
+def potential_end_turn_action(game: g.Game) -> List[ActionSequence]:
+    ''' Returns a scored end-turn action
+    :param game:
+    :return:
+    '''
+    actions: List[ActionSequence] = []
+    action_steps: List[m.Action] = []
+    action_steps.append(m.Action(t.ActionType.END_TURN))
+    actions.append(ActionSequence(action_steps, score = -1, description='End Turn'))
+    return actions
+
+
+def potential_block_actions(player: m.Player, game: g.Game) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    if not player.state.up:
+        # There is currently a bug in the controlling logic.  Prone players shouldn't be able to block
+        return move_actions
+    blockable_squares: List[m.Player] = game.state.pitch.adjacent_player_squares(player, include_own=False, include_opp=True, manhattan=False, only_blockable=True, only_foulable=False)
+    for blockable_square in blockable_squares:
+        action_steps: List[m.Action] = []
+        action_steps.append(m.Action(t.ActionType.START_BLOCK, player=player))
+        action_steps.append(m.Action(t.ActionType.BLOCK, pos=blockable_square, player=player))
+        action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+        move_actions.append(ActionSequence(action_steps, score = random.randint(1, 100)/20, description='Block ' + player.name + ' to ' + str(blockable_square.x) + ',' + str(blockable_square.y)))
+        # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
+
+
+def potential_blitz_actions(player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    for path in paths:
+        path_steps = path.steps
+        end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
+        blockable_squares = game.state.pitch.adjacent_player_squares_at(player, end_square, include_own=False, include_opp=True, manhattan=False, only_blockable=True, only_foulable=False)
+        for blockable_square in blockable_squares:
+            action_steps: List[m.Action] = []
+            action_steps.append(m.Action(t.ActionType.START_BLITZ, player=player))
+            if not player.state.up:
+                action_steps.append(m.Action(t.ActionType.STAND_UP, player=player))
+            for step in path_steps:
+                # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
+                action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y), player=player))
+            action_steps.append(m.Action(t.ActionType.BLOCK, pos=blockable_square, player=player))
+            action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+            move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/100, description='Blitz ' + player.name + ' to ' + str(blockable_square.x) + ',' + str(blockable_square.y)))
+            # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
+
+
+def potential_pass_actions(player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    for path in paths:
+        path_steps = path.steps
+        end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
+        # Need possible receving players
+        to_squares = game.state.pitch.passes_at(player, game.state.weather, end_square)
+        for to_square in to_squares:
+            action_steps: List[m.Action] = []
+            action_steps.append(m.Action(t.ActionType.START_PASS, player=player))
+            if not player.state.up:
+                action_steps.append(m.Action(t.ActionType.STAND_UP, player=player))
+            for step in path_steps:
+                # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
+                action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y), player=player))
+            action_steps.append(m.Action(t.ActionType.PASS, pos=to_square, player=player))
+            action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+            to_player: m.Player = game.state.pitch.get_player_at(to_square)
+            if player is not None and to_player.state.up and to_player.team == player.team:
+                # Favourable score to pass to a standing player on the same team
+                cur_score = 10
+            else:
+                cur_score = -1
+            move_actions.append(ActionSequence(action_steps, score = cur_score, description='Pass ' + player.name + ' to ' + str(to_square.x) + ',' + str(to_square.y)))
+            # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
+
+
+def potential_handoff_actions(player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    for path in paths:
+        path_steps = path.steps
+        end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
+        handoffable_players = game.state.pitch.adjacent_player_squares_at(player, end_square, include_own=True, include_opp=False, manhattan=False, only_blockable=True, only_foulable=False)
+        for handoffable_player in handoffable_players:
+            action_steps: List[m.Action] = []
+            action_steps.append(m.Action(t.ActionType.START_HANDOFF, player=player))
+            for step in path_steps:
+                # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
+                action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y), player=player))
+            action_steps.append(m.Action(t.ActionType.HANDOFF, pos=handoffable_player.position, player=player))
+            action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+            move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000, description='Handoff ' + player.name + ' to ' + str(handoffable_player.position.x) + ',' + str(handoffable_player.position.y)))
+            # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
+
+
+def potential_foul_actions(player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    for path in paths:
+        path_steps = path.steps
+        end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
+        foulable_squares = game.state.pitch.adjacent_player_squares_at(player, end_square, include_own=False, include_opp=True, manhattan=False, only_blockable=False, only_foulable=True)
+        for foulable_square in foulable_squares:
+            action_steps: List[m.Action] = []
+            action_steps.append(m.Action(t.ActionType.START_FOUL, player=player))
+            if not player.state.up:
+                action_steps.append(m.Action(t.ActionType.STAND_UP, player=player))
+            for step in path_steps:
+                # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
+                action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y)))
+            action_steps.append(m.Action(t.ActionType.FOUL, foulable_square, player=player))
+            action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+            move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/10, description='Foul ' + player.name + ' to ' + str(foulable_square.x) + ',' + str(foulable_square.y)))
+            # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
+
+
+def potential_move_actions(player: m.Player, game: g.Game, paths: List[pf.Path]) -> List[ActionSequence]:
+    ''' Return set of all scored possible "MOVE" actions for given player
+
+    :param player:
+    :param game:
+    :param paths:
+    :return:
+    '''
+    move_actions: List[ActionSequence] = []
+    for path in paths:
+        path_steps = path.steps
+        action_steps: List[m.Action] = []
+        action_steps.append(m.Action(t.ActionType.START_MOVE, player=player))
+        if not player.state.up:
+            action_steps.append(m.Action(t.ActionType.STAND_UP, player=player))
+        for step in path_steps:
+            # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
+            action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y), player=player))
+        action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
+        move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000, description='Move ' + player.name + ' to ' + str(path_steps[-1].x) + ',' + str(path_steps[-1].y)))
+        # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
+    return move_actions
 
 
 # Register MyScriptedBot

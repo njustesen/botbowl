@@ -501,8 +501,8 @@ class FfTileMap(implements(TileMap)):
 
     def __init__(self, game_state: m.GameState):
         self.game_state: m.GameState = game_state
-        self.WIDTH = game_state.pitch.width-2
-        self.HEIGHT = game_state.pitch.height-2
+        self.WIDTH = game_state.pitch.width
+        self.HEIGHT = game_state.pitch.height
         self.visited: List[List[bool]] = [[False for y in range(self.HEIGHT)] for x in range(self.WIDTH)]
 
     def get_width_in_tiles(self) -> int:
@@ -524,8 +524,8 @@ class FfTileMap(implements(TileMap)):
 
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
         square = self.game_state.pitch.get_square(x,y)
-        # Need to ignore the "crowd" squares at 0.
-        return x == 0 or y == 0 or self.game_state.pitch.get_player_at(square) is not None
+        # Need to ignore the "crowd" squares on the boundary by blocking them.
+        return x == 0 or y == 0 or x == self.WIDTH-1 or y == self.HEIGHT - 1 or self.game_state.pitch.get_player_at(square) is not None
 
     def get_cost(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> float:
         square_from = self.game_state.pitch.get_square(sx, sy)
