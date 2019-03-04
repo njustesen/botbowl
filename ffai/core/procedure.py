@@ -1933,7 +1933,7 @@ class PlayerAction(Procedure):
         if action.action_type == ActionType.STAND_UP:
 
             StandUp(self.game, self.player, roll=self.player.get_ma() < 3)
-            self.player.state.moves += 3
+            self.player.state.moves += min(self.player.get_ma(), 3)
             for i in range(3):
                 self.squares.append(self.player.position)
 
@@ -2064,13 +2064,13 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.BLOCK or (self.player_action_type == PlayerActionType.BLITZ
                                                                  and not self.blitz_block):
 
+            can_block = self.player.state.up    # Ignore JUMP_UP for now
             # Check movement left if blitz,
-            can_block = True
             gfi = False
             if self.player_action_type == PlayerActionType.BLITZ:
-                move_needed = 3 if not self.player.state.up else 1
+                move_needed = 1
                 gfi_allowed = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed or move_needed > 1:
+                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed:
                     can_block = False
                 gfi = self.player.state.moves + move_needed > self.player.get_ma()
 
@@ -2894,8 +2894,9 @@ class Turn(Procedure):
                     handoff_players.append(player)
                 if self.foul_available:
                     foul_players.append(player)
-                if not self.quick_snap and not self.blitz:
-                    block_players.append(player)
+                if not self.quick_snap and not self.blitz and player.state.up:
+                    if self.game.state.pitch.adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True):
+                        block_players.append(player)
 
         actions = []
         if len(move_players) > 0:

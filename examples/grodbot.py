@@ -13,7 +13,11 @@ from enum import Enum
 
 
 class GrodBot(bot.ProcBot):
+    ''' A Bot that uses path finding to evaluate all possibilities.
 
+    WIP!!! Hand-offs and Pass actions going a bit funny.
+
+    '''
     def __init__(self, name):
         super().__init__(name)
         self.my_team = None
