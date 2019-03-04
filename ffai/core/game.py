@@ -48,6 +48,7 @@ class Game:
                     state=state,
                     seed=None)
         game.actor = self.actor
+        return game
 
     def to_json(self):
         return {
