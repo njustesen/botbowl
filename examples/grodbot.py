@@ -101,36 +101,44 @@ class GrodBot(bot.ProcBot):
         :param game:
         '''
         self.current_move = None
+
+        # Calculate path-finders
+        ff_map = pf.FfTileMap(game.state)
+        paths_other = dict()
+        paths_blitz = dict()    # Blitz paths need at least 1 square of movement left for the block at the end
+        for action_choice in game.state.available_actions:
+            for player in action_choice.players:
+                if action_choice.action_type == t.ActionType.START_BLITZ:
+                    if player not in paths_blitz:
+                        player_square: m.Square = player.position
+                        player_mover = pf.FfMover(player)
+                        finder = pf.AStarPathFinder(ff_map, player.move_allowed()-1, allow_diag_movement=True, heuristic=pf.BruteForceHeuristic())
+                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        paths_blitz[player] = paths
+                elif action_choice.action_type in (t.ActionType.START_MOVE, t.ActionType.START_PASS, t.ActionType.START_FOUL, t.ActionType.START_HANDOFF):
+                    if player not in paths_other:
+                        player_square: m.Square = player.position
+                        player_mover = pf.FfMover(player)
+                        finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
+                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        paths_other[player] = paths
+
         all_actions: List[ActionSequence] = []
         for action_choice in game.state.available_actions:
             if action_choice.action_type == t.ActionType.START_MOVE:
                 players_available: List[m.Player] = action_choice.players
-                ff_map = pf.FfTileMap(game.state)
                 for player in players_available:
-                    player_square: m.Square = player.position
-                    player_mover = pf.FfMover(player)
-                    finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True, heuristic=pf.BruteForceHeuristic())
-                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    paths = paths_other[player]
                     all_actions.extend(potential_move_actions(player, game, paths))
             elif action_choice.action_type == t.ActionType.START_BLITZ:
                 players_available: List[m.Player] = action_choice.players
-                ff_map = pf.FfTileMap(game.state)
                 for player in players_available:
-                    player_square: m.Square = player.position
-                    player_mover = pf.FfMover(player)
-                    # Need 1 square of movement left to execute block after moving
-                    finder = pf.AStarPathFinder(ff_map, player.move_allowed()-1, allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
-                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    paths = paths_blitz[player]
                     all_actions.extend(potential_blitz_actions(player, game, paths))
             elif action_choice.action_type == t.ActionType.START_FOUL:
                 players_available: List[m.Player] = action_choice.players
-                ff_map = pf.FfTileMap(game.state)
                 for player in players_available:
-                    player_square: m.Square = player.position
-                    player_mover = pf.FfMover(player)
-                    # Need 1 square of movement left to execute block after moving
-                    finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
-                    paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                    paths = paths_other[player]
                     all_actions.extend(potential_foul_actions(player, game, paths))
             elif action_choice.action_type == t.ActionType.START_BLOCK:
                 players_available: List[m.Player] = action_choice.players
@@ -138,26 +146,17 @@ class GrodBot(bot.ProcBot):
                     all_actions.extend(potential_block_actions(player, game))
             elif action_choice.action_type == t.ActionType.START_PASS:
                 players_available: List[m.Player] = action_choice.players
-                ff_map = pf.FfTileMap(game.state)
                 for player in players_available:
                     player_square: m.Square = player.position
                     if game.state.pitch.get_ball_position() == player_square:
-                        player_mover = pf.FfMover(player)
-                        # Need 1 square of movement left to execute block after moving
-                        finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,
-                                                    heuristic=pf.BruteForceHeuristic())
-                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        paths = paths_other[player]
                         all_actions.extend(potential_pass_actions(player, game, paths))
             elif action_choice.action_type == t.ActionType.START_HANDOFF:
                 players_available: List[m.Player] = action_choice.players
-                ff_map = pf.FfTileMap(game.state)
                 for player in players_available:
                     player_square: m.Square = player.position
                     if game.state.pitch.get_ball_position() == player_square:
-                        player_mover = pf.FfMover(player)
-                        # Need 1 square of movement left to execute block after moving
-                        finder = pf.AStarPathFinder(ff_map, player.move_allowed(), allow_diag_movement=True,heuristic=pf.BruteForceHeuristic())
-                        paths = finder.find_paths(player_mover, player_square.x, player_square.y)
+                        paths = paths_other[player]
                         all_actions.extend(potential_handoff_actions(player, game, paths))
             elif action_choice.action_type == t.ActionType.END_TURN:
                 all_actions.extend(potential_end_turn_action(game))
@@ -423,7 +422,7 @@ def potential_pass_actions(player: m.Player, game: g.Game, paths: List[pf.Path])
         path_steps = path.steps
         end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
         # Need possible receving players
-        to_squares = game.state.pitch.passes_at(player, game.state.weather, end_square)
+        to_squares, distances = game.state.pitch.passes_at(player, game.state.weather, end_square)
         for to_square in to_squares:
             action_steps: List[m.Action] = []
             action_steps.append(m.Action(t.ActionType.START_PASS, player=player))
@@ -435,9 +434,9 @@ def potential_pass_actions(player: m.Player, game: g.Game, paths: List[pf.Path])
             action_steps.append(m.Action(t.ActionType.PASS, pos=to_square, player=player))
             action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
             to_player: m.Player = game.state.pitch.get_player_at(to_square)
-            if player is not None and to_player.state.up and to_player.team == player.team:
+            if to_player is not None and to_player.state.up and to_player.team == player.team:
                 # Favourable score to pass to a standing player on the same team
-                cur_score = 10
+                cur_score = 60 + len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000
             else:
                 cur_score = -1
             move_actions.append(ActionSequence(action_steps, score = cur_score, description='Pass ' + player.name + ' to ' + str(to_square.x) + ',' + str(to_square.y)))
@@ -457,16 +456,16 @@ def potential_handoff_actions(player: m.Player, game: g.Game, paths: List[pf.Pat
     for path in paths:
         path_steps = path.steps
         end_square: m.Square = game.state.pitch.get_square(path.steps[-1].x, path.steps[-1].y)
-        handoffable_players = game.state.pitch.adjacent_player_squares_at(player, end_square, include_own=True, include_opp=False, manhattan=False, only_blockable=True, only_foulable=False)
-        for handoffable_player in handoffable_players:
+        handoffable_squares = game.state.pitch.adjacent_player_squares_at(player, end_square, include_own=True, include_opp=False, manhattan=False, only_blockable=True, only_foulable=False)
+        for handoffable_square in handoffable_squares:
             action_steps: List[m.Action] = []
             action_steps.append(m.Action(t.ActionType.START_HANDOFF, player=player))
             for step in path_steps:
                 # Note we need to add 1 to x and y because the outermost layer of squares is not actually reachable
                 action_steps.append(m.Action(t.ActionType.MOVE, pos=game.state.pitch.get_square(step.x, step.y), player=player))
-            action_steps.append(m.Action(t.ActionType.HANDOFF, pos=handoffable_player.position, player=player))
+            action_steps.append(m.Action(t.ActionType.HANDOFF, pos=handoffable_square, player=player))
             action_steps.append(m.Action(t.ActionType.END_PLAYER_TURN, player=player))
-            move_actions.append(ActionSequence(action_steps, score = len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000, description='Handoff ' + player.name + ' to ' + str(handoffable_player.position.x) + ',' + str(handoffable_player.position.y)))
+            move_actions.append(ActionSequence(action_steps, score = 40 + len(path.steps)*(1.0 - path.cost) + random.randint(1,100)/1000, description='Handoff ' + player.name + ' to ' + str(handoffable_square.x) + ',' + str(handoffable_square.y)))
             # potential action -> sequence of steps such as "START_MOVE, MOVE (to square) etc
     return move_actions
 
