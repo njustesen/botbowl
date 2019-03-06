@@ -211,6 +211,7 @@ class GameState:
         state.active_player = self.player_by_id[self.active_player.player_id] if self.active_player is not None else None
         state.game_over = self.game_over
         state.available_actions = copy(self.available_actions)
+        return state
 
     def get_dugout(self, team):
         return self.dugouts[team.team_id]

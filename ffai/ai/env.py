@@ -257,7 +257,7 @@ class FFAIEnv(gym.Env):
 
     def seed(self, seed=None):
         if seed is None:
-            seed = np.random.randint(0, 2**32)
+            seed = np.random.randint(0, 2**31)
         self.rnd = np.random.RandomState(seed)
         if isinstance(self.opp_actor, RandomBot):
             self.opp_actor.rnd = self.rnd
@@ -361,7 +361,7 @@ class FFAIEnv(gym.Env):
             self.team_id = self.away_team.team_id
             home_agent = self.opp_actor
             away_agent = self.actor
-        seed = self.rnd.randint(0, 2**32)
+        seed = self.rnd.randint(0, 2**31)
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=self.home_team,
                          away_team=self.away_team,
