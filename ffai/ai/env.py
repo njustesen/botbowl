@@ -40,7 +40,6 @@ class FFAIEnv(gym.Env):
         ActionType.TAILS,
         ActionType.KICK,
         ActionType.RECEIVE,
-        ActionType.END_SETUP,
         ActionType.END_PLAYER_TURN,
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
