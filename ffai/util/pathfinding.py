@@ -10,7 +10,6 @@ Peter Moore.  The main modifications,
     2. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
     3. Simple class implementations as well as run code that demonstrates the results via main()
 """
-from __future__ import annotations
 import math
 from interface import implements, Interface
 from typing import Optional, List
@@ -25,18 +24,18 @@ class Mover:
 
 class Path:
 
-    def __init__(self, steps: List[Step], cost: float):
+    def __init__(self, steps: List['Step'], cost: float):
         self.steps = steps
         self.cost = cost
         # Are "Step" necessary?  Can a path be a set of nodes?  Nodes which have depth, and cost etc?
 
-    def __len__(self: Path) -> int:
+    def __len__(self: 'Path') -> int:
         return len(self.steps)
 
-    def get_last_step(self: Path) -> Step:
+    def get_last_step(self: 'Path') -> 'Step':
         return self.steps[-1]
 
-    def is_empty(self: Path) -> bool:
+    def is_empty(self: 'Path') -> bool:
         return len(self) == 0
 
 
@@ -49,7 +48,7 @@ class PathFinder(Interface):
 class AStarHeuristic(Interface):
 
     @staticmethod
-    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: 'TileMap', mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         pass
 
 
@@ -85,16 +84,16 @@ class Node:
         self.depth: int = 0
 
     @property
-    def parent(self: Node):
+    def parent(self: 'Node'):
         return self.__parent
 
     @parent.setter
-    def parent(self: Node, parent: Node):
+    def parent(self: 'Node', parent: 'Node'):
         if parent is not None:
             self.depth = parent.depth + 1
         self.__parent = parent
 
-    def value(self: Node):
+    def value(self: 'Node'):
         return self.heuristic + self.cost
 
 
@@ -131,7 +130,7 @@ class Step:
         self.x = x
         self.y = y
 
-    def __eq__(self: Step, other: Step) -> bool:
+    def __eq__(self: 'Step', other: 'Step') -> bool:
         return (other.x == self.x) and (other.y == self.y)
 
 
@@ -347,7 +346,7 @@ class AStarPathFinder(implements(PathFinder)):
 class ClosestHeuristic(implements(AStarHeuristic)):
 
     @staticmethod
-    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: 'TileMap', mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         dx = tx - x
         dy = ty - y
         cost = math.sqrt(float(dx*dx+dy*dy))
@@ -357,7 +356,7 @@ class ClosestHeuristic(implements(AStarHeuristic)):
 class BruteForceHeuristic(implements(AStarHeuristic)):
 
     @staticmethod
-    def get_cost(tile_map: TileMap, mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
+    def get_cost(tile_map: 'TileMap', mover: Mover, x: int, y: int, tx: int, ty: int) -> float:
         return 0.0
 
 

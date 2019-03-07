@@ -9,7 +9,7 @@ setup(name='ffai',
           'Flask',
           'gym',
           'Jinja2',
-          'untangle'
+          'python-interface'
       ],
       packages=find_packages()
 )

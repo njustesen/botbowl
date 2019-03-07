@@ -6,7 +6,6 @@ Year: 2018
 This module contains most of the model classes.
 """
 
-from __future__ import annotations
 from copy import copy, deepcopy
 import numpy as np
 import uuid
@@ -466,7 +465,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def tackle_zones_detailed_at(self, player: Player, position: Square):
+    def tackle_zones_detailed_at(self, player: 'Player', position: 'Square'):
         tackle_zones = 0
         tacklers = []
         prehensile_tailers = []
@@ -489,7 +488,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def players_blockable_at(self, player: Player, position: Square):
+    def players_blockable_at(self, player: 'Player', position: 'Square'):
         blockable = []
         for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
@@ -517,7 +516,7 @@ class Pitch:
                                 assists.append(player_at)
         return assists
 
-    def passes_at(self, passer, weather, position: Square):
+    def passes_at(self, passer, weather, position: 'Square'):
         squares = []
         distances = []
         distances_allowed = [PassDistance.QUICK_PASS,
