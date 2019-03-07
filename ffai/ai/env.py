@@ -40,7 +40,6 @@ class FFAIEnv(gym.Env):
         ActionType.TAILS,
         ActionType.KICK,
         ActionType.RECEIVE,
-        ActionType.END_SETUP,
         ActionType.END_PLAYER_TURN,
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
@@ -240,6 +239,8 @@ class FFAIEnv(gym.Env):
 
     def _step(self, action):
         self.game.step(action)
+        if action.action_type in FFAIEnv.formation_action_types:
+            self.game.step(Action(ActionType.END_SETUP))
         reward = 1 if self.game.get_winner() == self.actor else 0
         team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
         opp_team = self.game.state.home_team if self.team_id != self.home_team.team_id else self.game.state.away_team
