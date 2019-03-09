@@ -115,7 +115,7 @@ class Game:
                     print("Illegal action type")
                     return False
                 if action.player is not None and not isinstance(action.player, Player):
-                    print("Illegal player", action.action_type, action.player.to_json())
+                    print("Illegal player", action.action_type, action.player.to_json(), self.state.stack.peek())
                     return False
                 if action.pos is not None and not isinstance(action.pos, Square):
                     print("ition", action.pos.to_json(), action.action_type.name)
@@ -124,7 +124,7 @@ class Game:
                     print("Illegal index")
                     return False
                 if len(action_choice.players) > 0 and action.player not in action_choice.players:
-                    print("Illegal player", action.action_type, action.player)
+                    print("Illegal player", action.action_type, action.player, self.state.stack.peek())
                     return False
                 if len(action_choice.positions) > 0 and action.pos not in action_choice.positions:
                     print("Illegal position", action.pos.to_json(), action.action_type.name)
@@ -850,7 +850,7 @@ class Game:
         else:
             return len(self.get_casualties(self.state.home_team)) + len(self.get_casualties(self.state.away_team))
 
-    def get_winner(self):
+    def get_winning_team(self):
         """
         :return: The team with most touchdowns, otherwise None.
         """
@@ -858,6 +858,16 @@ class Game:
             return self.state.home_team
         elif self.state.home_team.state.score < self.state.away_team.state.score:
             return self.state.away_team
+        return None
+
+    def get_winner(self):
+        """
+        :return: The agent with most touchdowns, otherwise None.
+        """
+        if self.state.home_team.state.score > self.state.away_team.state.score:
+            return self.state.home_agent
+        elif self.state.home_team.state.score < self.state.away_team.state.score:
+            return self.state.away_agent
         return None
 
     def is_setup_legal_scrimmage(self, team, min_players=3):

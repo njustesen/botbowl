@@ -15,6 +15,7 @@ from ffai.ai.layers import *
 import uuid
 import tkinter as tk
 import math
+from copy import deepcopy
 
 
 class FFAIEnv(gym.Env):
@@ -94,15 +95,17 @@ class FFAIEnv(gym.Env):
         ActionType.SELECT_NONE
     ]
 
-    formation_action_types = [
-        ActionType.SETUP_FORMATION_WEDGE,
-        ActionType.SETUP_FORMATION_LINE,
+    defensive_formation_action_types = [
         ActionType.SETUP_FORMATION_SPREAD,
         ActionType.SETUP_FORMATION_ZONE
     ]
 
+    offensive_formation_action_types = [
+        ActionType.SETUP_FORMATION_WEDGE,
+        ActionType.SETUP_FORMATION_LINE
+    ]
+
     positional_action_types = [
-        ActionType.PLACE_PLAYER,
         ActionType.PLACE_BALL,
         ActionType.PUSH,
         ActionType.FOLLOW_UP,
@@ -116,6 +119,7 @@ class FFAIEnv(gym.Env):
     ]
 
     player_action_types = [
+        ActionType.PLACE_PLAYER,
         ActionType.INTERCEPTION,
         ActionType.SELECT_PLAYER,
         ActionType.START_MOVE,
@@ -239,7 +243,7 @@ class FFAIEnv(gym.Env):
 
     def _step(self, action):
         self.game.step(action)
-        if action.action_type in FFAIEnv.formation_action_types:
+        if action.action_type in FFAIEnv.offensive_formation_action_types or action.action_type in FFAIEnv.defensive_formation_action_types:
             self.game.step(Action(ActionType.END_SETUP))
         reward = 1 if self.game.get_winner() == self.actor else 0
         team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
@@ -352,7 +356,7 @@ class FFAIEnv(gym.Env):
         return obs
 
     def reset(self):
-        if self.rnd.rand(1)[0] >= 0.5:
+        if self.rnd.randint(0, 1) == 0:
             self.team_id = self.home_team.team_id
             home_agent = self.actor
             away_agent = self.opp_actor
@@ -362,8 +366,8 @@ class FFAIEnv(gym.Env):
             away_agent = self.actor
         seed = self.rnd.randint(0, 2**31)
         self.game = Game(game_id=str(uuid.uuid1()),
-                         home_team=self.home_team,
-                         away_team=self.away_team,
+                         home_team=deepcopy(self.home_team),
+                         away_team=deepcopy(self.away_team),
                          home_agent=home_agent,
                          away_agent=away_agent,
                          config=self.config,
@@ -374,8 +378,10 @@ class FFAIEnv(gym.Env):
 
     def available_action_types(self):
         if isinstance(self.game.state.stack.peek(), Setup):
-            return [self.actions.index(action.action_type) for action in self.game.state.available_actions if
-                    action.action_type in self.actions and action.action_type != ActionType.PLACE_PLAYER]
+            if self.game.get_kicking_team().team_id == self.team_id:
+                return [self.actions.index(action_type) for action_type in self.defensive_formation_action_types]
+            else:
+                return [self.actions.index(action_type) for action_type in self.offensive_formation_action_types]
         return [self.actions.index(action.action_type) for action in self.game.state.available_actions if action.action_type in self.actions]
 
     def available_positions(self, action_type):

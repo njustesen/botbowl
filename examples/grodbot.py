@@ -17,11 +17,12 @@ class GrodBot(bot.ProcBot):
     WIP!!! Hand-offs and Pass actions going a bit funny.
 
     '''
-    def __init__(self, name):
+    def __init__(self, name, verbose=False):
         super().__init__(name)
         self.my_team = None
         self.opp_team = None
         self.current_move: Optional[ActionSequence, None] = None
+        self.verbose = verbose
 
     def new_game(self, game: g.Game, team):
         """
@@ -163,7 +164,8 @@ class GrodBot(bot.ProcBot):
         if all_actions:
             all_actions.sort(key = lambda x: x.score, reverse=True)
             self.current_move = all_actions[0]
-            print(self.current_move.description)
+            if self.verbose:
+                print(self.current_move.description)
 
     def turn(self, game: g.Game):
         """
@@ -300,7 +302,7 @@ class GrodBot(bot.ProcBot):
         """
         Called when a game endw.
         """
-        winner = game.get_winner()
+        winner = game.get_winning_team()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
@@ -540,8 +542,8 @@ if __name__ == "__main__":
 
     # Play 100 games
     for i in range(100):
-        away_agent = GrodBot("Scripted Bot 1")
-        home_agent = GrodBot("Scripted Bot 2")
+        away_agent = GrodBot("GrodBot 1")
+        home_agent = GrodBot("GrodBot 2")
         config.debug_mode = False
         game = api.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

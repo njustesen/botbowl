@@ -296,7 +296,7 @@ class MyScriptedBot(ProcBot):
         """
         Called when a game endw.
         """
-        winner = game.get_winner()
+        winner = game.get_winning_team()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
