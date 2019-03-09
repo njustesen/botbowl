@@ -1,3 +1,7 @@
+'''
+Still WiP. Do not expect it work.
+'''
+
 from ffai.ai.competition import Competition, Competitor
 import examples.scripted_bot_example
 from copy import deepcopy

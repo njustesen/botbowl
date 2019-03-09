@@ -390,10 +390,13 @@ class Pitch:
             return self.squares[y][x]
         return Square(x, y)
 
-    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False):
+    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False, include_leap=False):
         squares = []
-        for yy in Pitch.range:
-            for xx in Pitch.range:
+        r = Pitch.range
+        if include_leap:
+            r = range(-2,3)
+        for yy in r:
+            for xx in r:
                 if yy == 0 and xx == 0:
                     continue
                 sq = self.get_square(pos.x+xx, pos.y+yy)
@@ -462,6 +465,38 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
+    def tackle_zones_detailed_at(self, player: 'Player', position: 'Square'):
+        tackle_zones = 0
+        tacklers = []
+        prehensile_tailers = []
+        diving_tacklers = []
+        shadowers = []
+        tentaclers = []
+        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+            player_at = self.get_player_at(square)
+            if player_at is not None and player_at.has_tackle_zone():
+                tackle_zones += 1
+            if player_at is None and player_at.has_skill(Skill.TACKLE):
+                tacklers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.PREHENSILE_TAIL):
+                prehensile_tailers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.DIVING_TACKLE):
+                diving_tacklers.append(player_at)
+                shadowers.append(player_at)
+            if player_at is None and player_at.has_skill(Skill.TENTACLES):
+                tentaclers.append(player_at)
+
+        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
+
+    def players_blockable_at(self, player: 'Player', position: 'Square'):
+        blockable = []
+        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+            player_at = self.get_player_at(square)
+            if player_at is not None and player_at.has_tackle_zone():
+                blockable.append(player_at)
+
+        return blockable
+
     def assists(self, player, opp_player, ignore_guard=False):
         assists = []
         for yy in range(-1, 2, 1):
@@ -480,6 +515,28 @@ class Pitch:
                                 # TODO: Check if attacker has a tackle zone
                                 assists.append(player_at)
         return assists
+
+    def passes_at(self, passer, weather, position: 'Square'):
+        squares = []
+        distances = []
+        distances_allowed = [PassDistance.QUICK_PASS,
+                             PassDistance.SHORT_PASS,
+                             PassDistance.LONG_PASS,
+                             PassDistance.LONG_BOMB,
+                             PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
+            else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
+        if weather == WeatherType.BLIZZARD:
+            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
+        for y in range(len(self.board)):
+            for x in range(len(self.board[y])):
+                to_pos = Square(x, y)
+                if self.is_out_of_bounds(to_pos) or position == to_pos:
+                    continue
+                distance = self.pass_distance(position, to_pos)
+                if distance in distances_allowed:
+                    squares.append(to_pos)
+                    distances.append(distance)
+        return squares, distances
 
     def passes(self, passer, weather):
         squares = []
@@ -504,8 +561,12 @@ class Pitch:
         return squares, distances
 
     def pass_distance(self, passer, pos):
-        distance_x = abs(passer.position.x - pos.x)
-        distance_y = abs(passer.position.y - pos.y)
+        if isinstance(passer, Player):
+            distance_x = abs(passer.position.x - pos.x)
+            distance_y = abs(passer.position.y - pos.y)
+        else:
+            distance_x = abs(passer.x - pos.x)
+            distance_y = abs(passer.y - pos.y)
         if distance_y >= len(Rules.pass_matrix) or distance_x >= len(Rules.pass_matrix[0]):
             return PassDistance.HAIL_MARY
         distance = Rules.pass_matrix[distance_y][distance_x]
@@ -911,6 +972,21 @@ class Player(Piece):
             'state': self.state.to_json(),
             'position': self.position.to_json() if self.position is not None else None
         }
+
+    def move_allowed(self, include_gfi: bool = True) -> int:
+        if self.state.used:
+            moves = 0
+        else:
+            moves = self.get_ma()
+            if not self.state.up and not self.has_skill(Skill.JUMP_UP):
+                moves = max(0, moves - 3)
+            moves = moves - self.state.moves
+            if include_gfi:
+                if self.has_skill(Skill.SPRINT):
+                    moves = moves + 3
+                else:
+                    moves = moves + 2
+        return moves
 
     def __eq__(self, other):
         return isinstance(other, Player) and other.player_id == self.player_id
