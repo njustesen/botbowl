@@ -77,10 +77,12 @@ class MyScriptedBot(ProcBot):
         """
         Select player to give the ball to.
         """
+        p = None
         for player in game.get_players_on_pitch(self.my_team, up=True):
             if Skill.BLOCK in player.skills:
                 return Action(ActionType.SELECT_PLAYER, player=player)
-        return Action(ActionType.SELECT_NONE)
+            p = player
+        return Action(ActionType.SELECT_PLAYER, player=p)
 
     def turn(self, game):
         """
@@ -128,6 +130,12 @@ class MyScriptedBot(ProcBot):
             return Action(ActionType.START_MOVE, player=player)
 
         # End turn
+        return Action(ActionType.END_TURN)
+
+    def quick_snap(self, game):
+        return Action(ActionType.END_TURN)
+
+    def blitz(self, game):
         return Action(ActionType.END_TURN)
 
     def player_action(self, game):
