@@ -114,7 +114,6 @@ The default feature layers in obs['board'] are:
 23. SkillLayer(Skill.DODGE)
 24. SkillLayer(Skill.SURE_HANDS)
 25. SkillLayer(Skill.PASS)
-26. SkillLayer(Skill.BLOCK)
 
 Custom layers can be implemented like this:
 ```

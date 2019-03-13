@@ -192,7 +192,7 @@ class TargetPlayerLayer(FeatureLayer):
             if isinstance(proc, Foul):
                 target = proc.defender
                 break
-        if target is not None:
+        if target is not None and target.position is not None:
             out[target.position.y][target.position.x] = 1.0
         return out
 

@@ -197,8 +197,7 @@ class FFAIEnv(gym.Env):
             SkillLayer(Skill.BLOCK),
             SkillLayer(Skill.DODGE),
             SkillLayer(Skill.SURE_HANDS),
-            SkillLayer(Skill.PASS),
-            SkillLayer(Skill.BLOCK)
+            SkillLayer(Skill.PASS)
         ]
 
         arena = get_arena(self.config.arena)
@@ -226,10 +225,10 @@ class FFAIEnv(gym.Env):
         player = None
         if action_type in self.player_action_types:
             if p is None:
-                print("p is None")
+                raise Exception(f"{action_type.name} requires a position. None was given.")
             player = self.game.get_player_at(p)
             if player is None:
-                print("player is None")
+                raise Exception(f"{action_type.name} requires a position with a player. {p.to_json()} does not point to a player.")
             action = None
             for a in self.game.state.available_actions:
                 if a.action_type == action_type:
