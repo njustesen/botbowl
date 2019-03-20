@@ -865,9 +865,9 @@ class Game:
         :return: The agent with most touchdowns, otherwise None.
         """
         if self.state.home_team.state.score > self.state.away_team.state.score:
-            return self.state.home_agent
+            return self.home_agent
         elif self.state.home_team.state.score < self.state.away_team.state.score:
-            return self.state.away_agent
+            return self.away_agent
         return None
 
     def is_setup_legal_scrimmage(self, team, min_players=3):
