@@ -1069,7 +1069,7 @@ class HighKick(Procedure):
 
     def step(self, action):
         if action.action_type == ActionType.PLACE_PLAYER:
-            self.game.move_player(action.player, action.pos)
+            self.game.move_player(action.player, self.ball.position)
             self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, pos=action.pos, team=self.receiving_team))
         elif action.action_type == ActionType.END_SETUP:
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.receiving_team))
@@ -1079,8 +1079,7 @@ class HighKick(Procedure):
         if self.game.is_team_side(self.ball.position, self.receiving_team) and \
                 self.game.get_player_at(self.ball.position) is None:
             return [ActionChoice(ActionType.PLACE_PLAYER, team=self.receiving_team,
-                                 players=self.game.get_players_on_pitch(self.receiving_team, up=True),
-                                 positions=[self.ball.position]),
+                                 players=self.game.get_players_on_pitch(self.receiving_team, up=True)),
                     ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
         else:
             return [ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
@@ -1932,7 +1931,7 @@ class PlayerAction(Procedure):
         if action.action_type == ActionType.STAND_UP:
 
             StandUp(self.game, self.player, roll=self.player.get_ma() < 3)
-            self.player.state.moves += 3
+            self.player.state.moves += min(self.player.get_ma(), 3)
             for i in range(3):
                 self.squares.append(self.player.position)
 
@@ -2063,13 +2062,13 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.BLOCK or (self.player_action_type == PlayerActionType.BLITZ
                                                                  and not self.blitz_block):
 
+            can_block = self.player.state.up    # Ignore JUMP_UP for now
             # Check movement left if blitz,
-            can_block = True
             gfi = False
             if self.player_action_type == PlayerActionType.BLITZ:
-                move_needed = 3 if not self.player.state.up else 1
+                move_needed = 1
                 gfi_allowed = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed or move_needed > 1:
+                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed:
                     can_block = False
                 gfi = self.player.state.moves + move_needed > self.player.get_ma()
 
@@ -2181,7 +2180,7 @@ class EndGame(Procedure):
     def step(self, action):
         self.game.state.team_turn = None
         self.game.state.game_over = True
-        winner = self.game.get_winner()
+        winner = self.game.get_winning_team()
         if winner is not None:
             self.game.report(Outcome(OutcomeType.END_OF_GAME_WINNER, team=winner))
         else:
@@ -2893,8 +2892,9 @@ class Turn(Procedure):
                     handoff_players.append(player)
                 if self.foul_available:
                     foul_players.append(player)
-                if not self.quick_snap and not self.blitz:
-                    block_players.append(player)
+                if not self.quick_snap and not self.blitz and player.state.up:
+                    if self.game.state.pitch.adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True):
+                        block_players.append(player)
 
         actions = []
         if len(move_players) > 0:
