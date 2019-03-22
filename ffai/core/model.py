@@ -30,7 +30,7 @@ class Configuration:
         self.roster_size = 16
         self.pitch_max = 11
         self.pitch_min = 3
-        self.scrimmage_max = 3
+        self.scrimmage_min = 3
         self.wing_max = 2
         self.rounds = 8
         self.kick_off_table = True
@@ -175,7 +175,8 @@ class GameState:
             for player in team.players:
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
-        self.pitch = Pitch(game.arena.width, game.arena.height)
+        if game:
+            self.pitch = Pitch(game.arena.width, game.arena.height)
         self.dugouts = {team.team_id: Dugout(team) for team in self.teams}
         self.weather = WeatherType.NICE
         self.gentle_gust = False
@@ -188,7 +189,9 @@ class GameState:
         self.termination_opp = None
 
     def clone(self):
-        state = GameState(deepcopy(self.home_team), deepcopy(self.away_team))
+        state = GameState(None,
+             deepcopy(self.home_team),
+             deepcopy(self.away_team))
         state.stack = deepcopy(self.stack)
         state.reports = deepcopy(self.reports)
         state.round = self.round

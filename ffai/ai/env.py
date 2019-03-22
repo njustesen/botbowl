@@ -407,9 +407,9 @@ class FFAIEnv(gym.Env):
 
     def _draw_player(self, player, x, y):
         if player.team == self.game.state.home_team:
-            fill = FFAIEnv.blue
-        else:
             fill = FFAIEnv.red
+        else:
+            fill = FFAIEnv.blue
         width = max(1, player.get_st() - 1)
         if player.has_skill(Skill.BLOCK):
             outline = 'red'
@@ -467,9 +467,9 @@ class FFAIEnv(gym.Env):
                     if self.game.arena.board[y][x] == Tile.CROWD:
                         fill = FFAIEnv.crowd
                     elif self.game.arena.board[y][x] in TwoPlayerArena.home_td_tiles:
-                        fill = FFAIEnv.blue
-                    elif self.game.arena.board[y][x] in TwoPlayerArena.away_td_tiles:
                         fill = FFAIEnv.red
+                    elif self.game.arena.board[y][x] in TwoPlayerArena.away_td_tiles:
+                        fill = FFAIEnv.blue
                     elif self.game.arena.board[y][x] in TwoPlayerArena.wing_left_tiles or self.game.arena.board[y][x] in TwoPlayerArena.wing_right_tiles:
                         fill = FFAIEnv.wing
                     elif self.game.arena.board[y][x] in TwoPlayerArena.scrimmage_tiles:
@@ -490,43 +490,43 @@ class FFAIEnv(gym.Env):
             # Dugouts
             x = 4
             y = self.game.arena.height*FFAIEnv.square_size + FFAIEnv.top_bar_height + 4
-            for player in self.game.get_reserves(self.game.state.away_team):
+            for player in self.game.get_reserves(self.game.state.home_team):
                 self._draw_player(player, x, y)
                 x += FFAIEnv.square_size
             x = 4
             y += FFAIEnv.square_size
-            for player in self.game.get_kods(self.game.state.away_team):
+            for player in self.game.get_kods(self.game.state.home_team):
                 self._draw_player(player, x, y)
                 x += FFAIEnv.square_size
             x = 4
             y += FFAIEnv.square_size
-            for player in self.game.get_casualties(self.game.state.away_team):
+            for player in self.game.get_casualties(self.game.state.home_team):
                 self._draw_player(player, x, y)
                 x += FFAIEnv.square_size
             x = 4
             y += FFAIEnv.square_size
-            for player in self.game.get_dungeon(self.game.state.away_team):
+            for player in self.game.get_dungeon(self.game.state.home_team):
                 self._draw_player(player, x, y)
                 x += FFAIEnv.square_size
 
             x = self.game.arena.width*FFAIEnv.square_size - FFAIEnv.square_size
             y = self.game.arena.height * FFAIEnv.square_size + FFAIEnv.top_bar_height + 4
-            for player in self.game.get_reserves(self.game.state.home_team):
+            for player in self.game.get_reserves(self.game.state.away_team):
                 self._draw_player(player, x, y)
                 x -= FFAIEnv.square_size
             x = self.game.arena.width * FFAIEnv.square_size - FFAIEnv.square_size
             y += FFAIEnv.square_size
-            for player in self.game.get_kods(self.game.state.home_team):
+            for player in self.game.get_kods(self.game.state.away_team):
                 self._draw_player(player, x, y)
                 x -= FFAIEnv.square_size
             x = self.game.arena.width * FFAIEnv.square_size - FFAIEnv.square_size
             y += FFAIEnv.square_size
-            for player in self.game.get_casualties(self.game.state.home_team):
+            for player in self.game.get_casualties(self.game.state.away_team):
                 self._draw_player(player, x, y)
                 x -= FFAIEnv.square_size
             x = self.game.arena.width * FFAIEnv.square_size - FFAIEnv.square_size
             y += FFAIEnv.square_size
-            for player in self.game.get_dungeon(self.game.state.home_team):
+            for player in self.game.get_dungeon(self.game.state.away_team):
                 self._draw_player(player, x, y)
                 x -= FFAIEnv.square_size
 
