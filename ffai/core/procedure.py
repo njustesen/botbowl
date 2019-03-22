@@ -405,15 +405,14 @@ class Bounce(Procedure):
         # Bounce
         x = 0
         y = 0
-        if result in [1, 4, 6]:
-            x = -1
-        if result in [3, 5, 8]:
-            x = 1
-        if result in [1, 2, 3]:
-            y = -1
         if result in [6, 7, 8]:
+            x = -1
+        if result in [2, 3, 4]:
+            x = 1
+        if result in [8, 1, 2]:
+            y = -1
+        if result in [6, 5, 4]:
             y = 1
-
         self.ball.move(x, y)
         self.game.report(Outcome(OutcomeType.BALL_BOUNCED, pos=self.ball.position, rolls=[roll_scatter]))
 
@@ -625,26 +624,26 @@ class CoinTossFlip(Procedure):
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
-            if self.game.rnd.rand(1)[0] >= 0.5:
-                self.game.state.coin_toss_winner = self.game.state.away_team
+            if self.game.rnd.randint(0,1) == 1:
+                self.game.state.coin_toss_winner = self.game.state.home_team
                 self.game.report(Outcome(OutcomeType.HEADS_WON))
             else:
-                self.game.state.coin_toss_winner = self.game.state.home_team
+                self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.TAILS_LOSS))
         elif action.action_type == ActionType.TAILS:
-            if self.game.rnd.rand(1)[0] >= 0.5:
-                self.game.state.coin_toss_winner = self.game.state.away_team
+            if self.game.rnd.randint(0,1) == 1:
+                self.game.state.coin_toss_winner = self.game.state.home_team
                 self.game.report(Outcome(OutcomeType.TAILS_WON))
             else:
-                self.game.state.coin_toss_winner = self.game.state.home_team
+                self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.HEADS_LOSS))
 
         CoinTossKickReceive(self.game)
         return True
 
     def available_actions(self):
-        return [ActionChoice(ActionType.HEADS, team=self.game.state.away_team),
-                   ActionChoice(ActionType.TAILS, team=self.game.state.away_team)]
+        return [ActionChoice(ActionType.HEADS, team=self.game.state.home_team),
+                   ActionChoice(ActionType.TAILS, team=self.game.state.home_team)]
 
 
 class CoinTossKickReceive(Procedure):
@@ -2410,16 +2409,16 @@ class Scatter(Procedure):
                     raise Exception("Unknown kick_roll_distance")
                 roll_distance = DiceRoll([distance_dice], roll_type=RollType.DISTANCE_ROLL)
                 rolls += [roll_distance]
-
+            result = roll_scatter.get_sum()
             x = 0
             y = 0
-            if roll_scatter.get_sum() in [1, 4, 6]:
+            if result in [6, 7, 8]:
                 x = -1
-            if roll_scatter.get_sum() in [3, 5, 8]:
+            if result in [2, 3, 4]:
                 x = 1
-            if roll_scatter.get_sum() in [1, 2, 3]:
+            if result in [8, 1, 2]:
                 y = -1
-            if roll_scatter.get_sum() in [6, 7, 8]:
+            if result in [6, 5, 4]:
                 y = 1
             distance = 1 if not self.kick or self.gentle_gust else roll_distance.get_sum()
 
