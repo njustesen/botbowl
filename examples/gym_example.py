@@ -43,7 +43,8 @@ if __name__ == "__main__":
             procedure = obs['procedure']
 
             # Sample random action type
-            action_type = rnd.choice(env.available_action_types())
+            action_types = env.available_action_types()
+            action_type = rnd.choice(action_types)
 
             # Sample random position - if any
             available_positions = env.available_positions(action_type)
@@ -61,6 +62,6 @@ if __name__ == "__main__":
             steps += 1
 
             # Render
-            env.render(feature_layers=False)
+            # env.render(feature_layers=False)
 
     print(steps)

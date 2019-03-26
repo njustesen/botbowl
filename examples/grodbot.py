@@ -21,6 +21,7 @@ class GrodBot(bot.ProcBot):
     WIP!!! Hand-offs and Pass actions going a bit funny.
 
     '''
+
     BASE_SCORE_BLITZ = 55.0
     BASE_SCORE_FOUL = -50.0
     BASE_SCORE_BLOCK = 65       # For a two dice block
@@ -35,11 +36,12 @@ class GrodBot(bot.ProcBot):
     BASE_SCORE_DEFENSIVE_SCREEN = 0.0
     ADDITIONAL_SCORE_DODGE = 0.0  # Lower this value to dodge more.
 
-    def __init__(self, name):
+    def __init__(self, name, verbose=True):
         super().__init__(name)
         self.my_team = None
         self.opp_team = None
         self.current_move: Optional[ActionSequence, None] = None
+        self.verbose = verbose
 
     def new_game(self, game: g.Game, team):
         """
@@ -256,7 +258,9 @@ class GrodBot(bot.ProcBot):
         if all_actions:
             all_actions.sort(key = lambda x: x.score, reverse=True)
             self.current_move = all_actions[0]
-            print('   Turn=H' + str(game.state.half) + 'R' + str(game.state.round) + ', Team=' + game.state.current_team.name + ', Action=' + self.current_move.description + ', Score=' + str(self.current_move.score))
+
+            if self.verbose:
+                print('   Turn=H' + str(game.state.half) + 'R' + str(game.state.round) + ', Team=' + game.state.current_team.name + ', Action=' + self.current_move.description + ', Score=' + str(self.current_move.score))
 
     def turn(self, game: g.Game) -> m.Action:
         """
@@ -297,27 +301,21 @@ class GrodBot(bot.ProcBot):
         Select block die or reroll.
         """
         # Loop through available dice results
-        actions = set()
+        active_player: m.Player = game.state.active_player
+        attacker: m.Player = game.state.stack.items[-1].attacker
+        defender: m.Player = game.state.stack.items[-1].defender
+
+        actions: List[ActionSequence] = []
         for action_choice in game.state.available_actions:
-            actions.add(action_choice.action_type)
+            action_steps: List[m.Action] = []
+            action_steps.append(m.Action(action_choice.action_type))
 
-        if t.ActionType.SELECT_DEFENDER_DOWN in actions:
-            return m.Action(t.ActionType.SELECT_DEFENDER_DOWN)
+            score = block_favourability(action_choice.action_type, active_player, attacker, defender)
+            actions.append(ActionSequence(action_steps, score=score, description='Block die choice'))
 
-        if t.ActionType.SELECT_DEFENDER_STUMBLES in actions:
-            return m.Action(t.ActionType.SELECT_DEFENDER_STUMBLES)
-
-        if t.ActionType.SELECT_PUSH in actions:
-            return m.Action(t.ActionType.SELECT_PUSH)
-
-        if t.ActionType.SELECT_BOTH_DOWN in actions:
-            return m.Action(t.ActionType.SELECT_BOTH_DOWN)
-
-        if t.ActionType.USE_REROLL in actions:
-            return m.Action(t.ActionType.USE_REROLL)
-
-        if t.ActionType.SELECT_ATTACKER_DOWN in actions:
-            return m.Action(t.ActionType.SELECT_ATTACKER_DOWN)
+        actions.sort(key = lambda x: x.score, reverse=True)
+        current_move = actions[0]
+        return current_move.action_steps[0]
 
     def push(self, game: g.Game):
         """
@@ -393,7 +391,7 @@ class GrodBot(bot.ProcBot):
         """
         Called when a game endw.
         """
-        winner = game.get_winner()
+        winner = game.get_winning_team()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
@@ -401,6 +399,41 @@ class GrodBot(bot.ProcBot):
             print("I ({}) won".format(self.name))
         else:
             print("I ({}) lost".format(self.name))
+
+
+def block_favourability(block_result: m.ActionType, active_player: m.Player, attacker: m.Player, defender: m.Player) -> int:
+
+    if attacker.team == active_player.team:
+        if block_result == t.ActionType.SELECT_DEFENDER_DOWN: return 6
+        elif block_result == t.ActionType.SELECT_DEFENDER_STUMBLES:
+            if defender.has_skill(t.Skill.DODGE) and not attacker.has_skill(t.Skill.TACKLE): return 4       # push back
+            else: return 6
+        elif block_result == t.ActionType.SELECT_PUSH:
+                return 4
+        elif block_result == t.ActionType.SELECT_BOTH_DOWN:
+            if defender.has_skill(t.Skill.BLOCK) and not attacker.has_skill(t.Skill.BLOCK): return 1        # skull
+            elif not attacker.has_skill(t.Skill.BLOCK): return 2;                                           # both down
+            elif attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK): return 3          # nothing happens
+            else: return 5                                                                                  # only defender is down
+        elif block_result == t.ActionType.SELECT_ATTACKER_DOWN:
+            return 1                                                                                        # skull
+    else:
+        if block_result == t.ActionType.SELECT_DEFENDER_DOWN:
+            return 1                                                                                        # least favourable
+        elif block_result == t.ActionType.SELECT_DEFENDER_STUMBLES:
+            if defender.has_skill(t.Skill.DODGE) and not attacker.has_skill(t.Skill.TACKLE): return 3       # not going down, so I like this.
+            else: return 1                                                                                  # splat.  No good.
+        elif block_result == t.ActionType.SELECT_PUSH:
+            return 3
+        elif block_result == t.ActionType.SELECT_BOTH_DOWN:
+            if not attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK): return 6        # Attacker down, I am not.
+            if not attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK): return 5    # Both down is pretty good.
+            if attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK): return 2        # Just I splat
+            else: return 4                                                                                  # Nothing happens (both have block).
+        elif block_result == t.ActionType.SELECT_ATTACKER_DOWN:
+            return 6                                                                                        # most favourable!
+
+    return 0
 
 
 def potential_end_turn_action(game: g.Game) -> List[ActionSequence]:
@@ -1245,8 +1278,8 @@ if __name__ == "__main__":
 
     # Play 100 games
     for i in range(100):
-        away_agent = GrodBot("Scripted Bot 1")
-        home_agent = GrodBot("Scripted Bot 2")
+        away_agent = GrodBot("GrodBot 1")
+        home_agent = GrodBot("GrodBot 2")
         config.debug_mode = False
         game = api.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

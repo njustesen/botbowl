@@ -26,7 +26,7 @@ class MyRandomBot(Agent):
         return action
 
     def end_game(self, game):
-        winner = game.get_winner()
+        winner = game.get_winning_team()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     away = get_team_by_id("human-2", ruleset)
 
     # Play 100 games
-    for i in range(100):
+    for i in range(10):
         away_agent = MyRandomBot("Random Bot 1")
         home_agent = MyRandomBot("Random Bot 2")
         config.debug_mode = False

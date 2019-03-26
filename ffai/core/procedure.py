@@ -1070,7 +1070,7 @@ class HighKick(Procedure):
 
     def step(self, action):
         if action.action_type == ActionType.PLACE_PLAYER:
-            self.game.move_player(action.player, action.pos)
+            self.game.move_player(action.player, self.ball.position)
             self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, pos=action.pos, team=self.receiving_team))
         elif action.action_type == ActionType.END_SETUP:
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.receiving_team))
@@ -1080,8 +1080,7 @@ class HighKick(Procedure):
         if self.game.is_team_side(self.ball.position, self.receiving_team) and \
                 self.game.get_player_at(self.ball.position) is None:
             return [ActionChoice(ActionType.PLACE_PLAYER, team=self.receiving_team,
-                                 players=self.game.get_players_on_pitch(self.receiving_team, up=True),
-                                 positions=[self.ball.position]),
+                                 players=self.game.get_players_on_pitch(self.receiving_team, up=True)),
                     ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
         else:
             return [ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
@@ -2182,7 +2181,7 @@ class EndGame(Procedure):
     def step(self, action):
         self.game.state.team_turn = None
         self.game.state.game_over = True
-        winner = self.game.get_winner()
+        winner = self.game.get_winning_team()
         if winner is not None:
             self.game.report(Outcome(OutcomeType.END_OF_GAME_WINNER, team=winner))
         else:

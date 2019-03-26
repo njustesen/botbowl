@@ -28,6 +28,8 @@ Please cite us if you use FFAI in your publications.
   * Spectators
   * Human vs. bot
 * An AI interface that allows you to implement and test your own bots
+  * Path finding utilities
+  * Examples to get started
 * Implementation of the Open AI Gym interface, that allows you to train machine learning algorithms
 * Custom pitches (we call these _arenas_). FFAI comes with arenas of four different sizes.
 * Rule configurations are possible from a configuration file, including:
@@ -112,7 +114,6 @@ The default feature layers in obs['board'] are:
 23. SkillLayer(Skill.DODGE)
 24. SkillLayer(Skill.SURE_HANDS)
 25. SkillLayer(Skill.PASS)
-26. SkillLayer(Skill.BLOCK)
 
 Custom layers can be implemented like this:
 ```
@@ -228,33 +229,32 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 2. ActionType.TAILS
 3. ActionType.KICK
 4. ActionType.RECEIVE
-5. ActionType.END_SETUP
-6. ActionType.END_PLAYER_TURN
-7. ActionType.USE_REROLL
-8. ActionType.DONT_USE_REROLL
-9. ActionType.END_TURN
-10. ActionType.STAND_UP
-11. ActionType.SELECT_ATTACKER_DOWN
-12. ActionType.SELECT_BOTH_DOWN
-13. ActionType.SELECT_PUSH
-14. ActionType.SELECT_DEFENDER_STUMBLES
-15. ActionType.SELECT_DEFENDER_DOWN
-16. ActionType.SELECT_NONE
-17. ActionType.PLACE_PLAYER<Position>
-18. ActionType.PLACE_BALL<Position>
-19. ActionType.PUSH<Position>
-20. ActionType.FOLLOW_UP<Position>
-21. ActionType.INTERCEPTION<Position>
-22. ActionType.SELECT_PLAYER<Position>
-23. ActionType.MOVE<Position>
-24. ActionType.BLOCK<Position>
-25. ActionType.PASS<Position>
-26. ActionType.FOUL<Position>
-27. ActionType.HANDOFF<Position>
-28. ActionType.SETUP_FORMATION_WEDGE
-29. ActionType.SETUP_FORMATION_LINE
-30. ActionType.SETUP_FORMATION_SPREAD
-31. ActionType.SETUP_FORMATION_ZONE
+5. ActionType.END_PLAYER_TURN
+6. ActionType.USE_REROLL
+7. ActionType.DONT_USE_REROLL
+8. ActionType.END_TURN
+9. ActionType.STAND_UP
+10. ActionType.SELECT_ATTACKER_DOWN
+11. ActionType.SELECT_BOTH_DOWN
+12. ActionType.SELECT_PUSH
+13. ActionType.SELECT_DEFENDER_STUMBLES
+14. ActionType.SELECT_DEFENDER_DOWN
+15. ActionType.SELECT_NONE
+16. ActionType.PLACE_PLAYER<Position> (Only used during high-kick)
+17. ActionType.PLACE_BALL<Position>
+18. ActionType.PUSH<Position>
+19. ActionType.FOLLOW_UP<Position>
+20. ActionType.INTERCEPTION<Position>
+21. ActionType.SELECT_PLAYER<Position>
+22. ActionType.MOVE<Position>
+23. ActionType.BLOCK<Position>
+24. ActionType.PASS<Position>
+25. ActionType.FOUL<Position>
+26. ActionType.HANDOFF<Position>
+27. ActionType.SETUP_FORMATION_WEDGE
+28. ActionType.SETUP_FORMATION_LINE
+29. ActionType.SETUP_FORMATION_SPREAD
+30. ActionType.SETUP_FORMATION_ZONE
 
 Actions are instantiated and used like this:
 ```
