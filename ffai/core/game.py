@@ -85,6 +85,10 @@ class Game:
                 return out
         return []
 
+    def set_seed(self, seed):
+        self.seed = seed
+        self.rnd = np.random.RandomState(self.seed)
+
     def init(self):
         """
         Initialized the Game. The START_GAME action must still be called after this.
@@ -827,6 +831,7 @@ class Game:
         :param min_players: The minimum number of players in the area.
         :return: True if team is setup legally in the specified tile area.
         """
+        min_players_checked = min(min_players, len([player for player in team.players if player.state.up]))
         cnt = 0
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
@@ -836,7 +841,7 @@ class Game:
                     piece = self.state.pitch.board[y][x]
                     if isinstance(piece, Player) and piece.team == team:
                         cnt += 1
-        if cnt > max_players or cnt < min_players:
+        if cnt > max_players or cnt < min_players_checked:
             return False
         return True
 

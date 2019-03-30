@@ -452,9 +452,9 @@ class FFAIEnv(gym.Env):
                 self.rows = math.ceil(math.sqrt(len(self.layers)))
                 self.fl_width = (self.game.arena.width+1) * self.cols * FFAIEnv.square_size_fl + FFAIEnv.square_size_fl
                 self.fl_height = ((self.game.arena.height+1) * FFAIEnv.square_size_fl + FFAIEnv.layer_text_height) * self.rows + FFAIEnv.square_size_fl
-                self.cv = tk.Canvas(width=max(self.game_width, self.fl_width), height=self.fl_height + self.game_height)
+                self.cv = tk.Canvas(width=max(self.game_width, self.fl_width), height=self.fl_height + self.game_height, master=self.root)
             else:
-                self.cv = tk.Canvas(width=self.game_width, height=self.game_height)
+                self.cv = tk.Canvas(width=self.game_width, height=self.game_height, master=self.root)
 
         self.cv.pack(side='top', fill='both', expand='yes')
         self.cv.delete("all")

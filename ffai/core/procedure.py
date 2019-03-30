@@ -511,7 +511,7 @@ class Catch(Procedure):
             modifiers += 1
         return modifiers
 
-    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False):
+    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False, kick=False):
         super().__init__(game)
         self.player = player
         self.ball = ball
@@ -520,6 +520,7 @@ class Catch(Procedure):
         self.rolled = False
         self.reroll_used = False
         self.catch_used = False
+        self.kick = kick
         self.waiting_for_reroll = False
         self.waiting_for_catch = False
         self.interception = interception
@@ -585,7 +586,7 @@ class Catch(Procedure):
                             self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
                     return False
 
-                Bounce(self.game, self.ball)
+                Bounce(self.game, self.ball, kick=self.kick)
                 return True
 
         # If catch used
@@ -603,7 +604,7 @@ class Catch(Procedure):
                 self.rolled = False
                 return self.step(None)
             else:
-                Bounce(self.game, self.ball)
+                Bounce(self.game, self.ball, kick=self.kick)
 
         return True
 
@@ -942,7 +943,7 @@ class LandKick(Procedure):
             self.game.report(Outcome(OutcomeType.BALL_HIT_GROUND, pos=self.ball.position))
             return True
 
-        Catch(self.game, player_at, self.ball)
+        Catch(self.game, player_at, self.ball, kick=True)
         self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, pos=self.ball.position, player=player_at))
 
         return True
@@ -2179,7 +2180,6 @@ class EndGame(Procedure):
         super().__init__(game)
 
     def step(self, action):
-        self.game.state.team_turn = None
         self.game.state.game_over = True
         winner = self.game.get_winning_team()
         if winner is not None:
@@ -2374,7 +2374,7 @@ class Push(Procedure):
             if self.player.has_skill(Skill.SIDE_STEP):
                 actions.append(ActionChoice(ActionType.PUSH, team=self.player.team, positions=self.squares))
             else:
-                actions.append(ActionChoice(ActionType.PUSH, team=self.pusher.team, positions=self.squares))
+                actions.append(ActionChoice(ActionType.PUSH, team=self.game.state.current_team, positions=self.squares))
         return actions
 
 

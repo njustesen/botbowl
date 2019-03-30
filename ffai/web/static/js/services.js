@@ -21,8 +21,8 @@ appServices.factory('GameService', function($http) {
             return $http.put(options.api.base_url + '/game/create', {'game': game});
         },
 
-        save: function(game, name) {
-            return $http.post(options.api.base_url + '/game/save', {'game_id': game, 'name': name});
+        save: function(game, name, team_id) {
+            return $http.post(options.api.base_url + '/game/save', {'game_id': game, 'name': name, 'team_id': team_id});
         },
 
         load: function(name) {
