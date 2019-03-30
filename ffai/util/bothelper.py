@@ -1,7 +1,7 @@
-'''
+"""
 A number of static methods for interpretting the state of the fantasy football pitch that aren't required directly by
 the client
-'''
+"""
 import ffai.core.game as g
 import ffai.core.table as t
 import ffai.core.model as m
@@ -9,16 +9,14 @@ from typing import Optional, List
 import math
 
 
-class ActionSequence():
-    ''' Class containing a single possible move of a single player.
-    '''
+class ActionSequence:
 
     def __init__(self, action_steps: List[m.Action], score: float = 0, description: str = ''):
-        ''' Creates a new ActionSequence - an ordered list of sequential m.Actions to attempt to undertake.
+        """ Creates a new ActionSequence - an ordered list of sequential m.Actions to attempt to undertake.
         :param action_steps: Sequence of action steps that form this action.
         :param score: A score representing the attractiveness of the move (default: 0)
-        :param description: A debug string (defaul: '')
-        '''
+        :param description: A debug string (default: '')
+        """
 
         # Note the intention of this object is that when the object is acting, as steps are completed,
         # they are removed from the move_sequence so the next move is always the top of the move_sequence
@@ -29,13 +27,6 @@ class ActionSequence():
         self.description = description
 
     def is_valid(self, game: g.Game) -> bool:
-        ''' Check if move can be executed given current game state.
-        Checks if the object represents a valid, executable sequence given current game state.  For example, steps must
-        be adjacent, and begin adjacent to players present position.  Player must be available to move (another player
-        is not already moving, player has not already moved) etc.
-        :param game:
-        :return: True if controlling bot program *should* be able to execute the set of steps represented, else False
-        '''
         pass
 
     def popleft(self):
@@ -95,32 +86,29 @@ def get_players(game: g.Game, team: m.Team, include_own: bool = True, include_op
 
 
 def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.Square]:
-    '''
-     * WARNING:  The following 4 methods have yet to be tested properly.
-     *
-     * At it's simplest, a cage requires 4 platers in the North-East, South-East, South-West and North-West
-     * positions, relative to the ball carrier, such that there is no more than 2 squares between the players in
-     * each of those adjacent compass directions.
-     *
-     *   1     2
-     *    xx-xx
-     *    xx-xx
-     *    --o--
-     *    xx-xx
-     *    xx-xx
-     *   3     4
-     *
-     * pitch is 26 long
-     *
-     *
-     * Basically we need one player in each of the corners: 1-4, but spaced such that there is no gap of 3 squares.
-     * If the caging player is in 1-4, but next to ball carrier, he ensures this will automatically be met.
-     *
-     * The only exception to this is when the ball carrier is on, or near, the sideline.  Then return the squares
-     * that can otherwise form the cage.
-     *
 
-    '''
+    # * At it's simplest, a cage requires 4 platers in the North-East, South-East, South-West and North-West
+    # * positions, relative to the ball carrier, such that there is no more than 2 squares between the players in
+    # * each of those adjacent compass directions.
+    # *
+    # *   1     2
+    # *    xx-xx
+    # *    xx-xx
+    # *    --o--
+    # *    xx-xx
+    # *    xx-xx
+    # *   3     4
+    # *
+    # * pitch is 26 long
+    # *
+    # *
+    # * Basically we need one player in each of the corners: 1-4, but spaced such that there is no gap of 3 squares.
+    # * If the caging player is in 1-4, but next to ball carrier, he ensures this will automatically be met.
+    # *
+    # * The only exception to this is when the ball carrier is on, or near, the sideline.  Then return the squares
+    # * that can otherwise form the cage.
+    # *
+
     caging_squares: List[m.Square] = []
     x = protect_square.x
     y = protect_square.y
@@ -138,7 +126,7 @@ def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x + 1, y + 1))
             caging_squares.append(game.state.pitch.get_square(x + 1, y + 2))
             caging_squares.append(game.state.pitch.get_square(x + 2, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y + 2))
+            # caging_squares.append(game.state.pitch.get_square(x + 2, y + 2))
 
     return caging_squares
 
@@ -162,7 +150,7 @@ def caging_squares_north_west(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x - 1, y + 1))
             caging_squares.append(game.state.pitch.get_square(x - 1, y + 2))
             caging_squares.append(game.state.pitch.get_square(x - 2, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y + 2))
+            # caging_squares.append(game.state.pitch.get_square(x - 2, y + 2))
 
     return caging_squares
 
@@ -186,7 +174,7 @@ def caging_squares_south_west(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x - 1, y - 1))
             caging_squares.append(game.state.pitch.get_square(x - 1, y - 2))
             caging_squares.append(game.state.pitch.get_square(x - 2, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y - 2))
+            # caging_squares.append(game.state.pitch.get_square(x - 2, y - 2))
 
     return caging_squares
 
@@ -210,13 +198,13 @@ def caging_squares_south_east(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x + 1, y - 1))
             caging_squares.append(game.state.pitch.get_square(x + 1, y - 2))
             caging_squares.append(game.state.pitch.get_square(x + 2, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y - 2))
+            # caging_squares.append(game.state.pitch.get_square(x + 2, y - 2))
 
     return caging_squares
 
 
 def is_caging_position(game: g.Game, player: m.Player, protect_player: m.Player) -> bool:
-    return player.position.distance(protect_player.position) <= 2 and not is_castle_position_of(player, protect_player)
+    return player.position.distance(protect_player.position) <= 2 and not is_castle_position_of(game, player, protect_player)
 
 
 def has_player_within_n_squares(game: g.Game, units: List[m.Player], square: m.Square, num_squares: int) -> bool:
@@ -248,17 +236,17 @@ def attacker_would_surf(game: g.Game, attacker: m.Player, defender: m.Player) ->
     return direct_surf_squares(game, attacker.position, defender.position)
 
 
-def direct_surf_squares(game: g.Game, attackFrom: m.Square, defendFrom: m.Square) -> bool:
-    defenderOnSideline = on_sideline(game, defendFrom)
-    defenderInEndzone = on_endzone(game, defendFrom)
+def direct_surf_squares(game: g.Game, attack_square: m.Square, defend_square: m.Square) -> bool:
+    defender_on_sideline: bool = on_sideline(game, defend_square)
+    defender_in_endzone: bool = on_endzone(game, defend_square)
 
-    if defenderOnSideline and defendFrom.x == attackFrom.x:
+    if defender_on_sideline and defend_square.x == attack_square.x:
         return True
 
-    if defenderInEndzone and defendFrom.y == attackFrom.y:
+    if defender_in_endzone and defend_square.y == attack_square.y:
         return True
 
-    if defenderInEndzone and defenderOnSideline:
+    if defender_in_endzone and defender_on_sideline:
         return True
 
     return False
@@ -285,28 +273,24 @@ def on_endzone(game: g.Game, square: m.Square) -> bool:
 
 
 def on_los(game: g.Game, team: g.Team, square: m.Square) -> bool:
-    return (reverse_x_for_right(game, team, square.x) == 13) and square.y > 4 and square.y < 21
+    return (reverse_x_for_right(game, team, square.x) == 13) and 4 < square.y < 21
 
 
 def los_squares(game: g.Game, team: g.Team) -> List[m.Square]:
-    squares: List[m.Square] = []
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 5))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 6))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 7))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 8))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 9))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 10))
-    squares.append(game.state.pitch.get_square(reverse_x_for_right(13), 11))
+
+    squares: List[m.Square] = [
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 5),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 6),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 7),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 8),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 9),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 10),
+        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 11)
+    ]
     return squares
 
 
 def distance_to_sideline(game: g.Game, square: m.Square) -> int:
-    '''
-    distance_to_sideline.  0 indicates on sideline.
-    :param game:
-    :param square:
-    :return:
-    '''
     return min(square.y - 1, game.state.pitch.height - square.y - 1)
 
 
@@ -321,13 +305,11 @@ def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
 
 def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Square]:
     squares: List[m.Square] = []
-    x = square.x
-    y = square.y
     for i in range(-distance-1, distance+1):
         for j in range(-distance-1, distance+1):
             cur_square = game.state.pitch.get_square(square.x+i, square.y+i)
             if cur_square != square and not game.state.pitch.is_out_of_bounds(cur_square):
-               squares.append(cur_square)
+                squares.append(cur_square)
     return squares
 
 
@@ -366,40 +348,40 @@ def players_in_scoring_distance(game: g.Game, team: m.Team, include_own: bool = 
 
 def distance_to_nearest_player(game: g.Game, team: m.Team, square: m.Square, include_own: bool = True, include_opp: bool = True, only_used: bool = False, include_used: bool = True, include_stunned: bool = True, only_blockable: bool = False) -> int:
     opps: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, only_used=only_used, include_used=include_used, include_stunned=include_stunned, only_blockable=only_blockable)
-    curMax = 100
+    cur_max = 100
     for opp in opps:
         dist = opp.position.distance(square)
-        curMax = min(curMax, dist)
-    return curMax
+        cur_max = min(cur_max, dist)
+    return cur_max
 
 
-def screening_distance(game: g.Game, from_square: m.Square, to_square : m.Square) -> float:
+def screening_distance(game: g.Game, from_square: m.Square, to_square: m.Square) -> float:
     # Return the "screening distance" between 2 squares.  (To complete)
-    #float dist =math.sqrt(math.pow(square.x - cur.position.x, 2) + math.pow(square.y - cur.position.y, 2))
+    # float dist =math.sqrt(math.pow(square.x - cur.position.x, 2) + math.pow(square.y - cur.position.y, 2))
     return 0
 
 
 def num_opponents_can_reach(game: g.Game, team: m.Team, square: m.Square) -> int:
     opps: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
-    numOppsReach: int = 0
+    num_opps_reach: int = 0
     for cur in opps:
         dist = max(square.x - cur.position.x, square.y - cur.position.y)
         if cur.state.stunned: continue
-        moveAllowed = cur.get_ma() + 2
-        if not cur.state.up: moveAllowed -= 3
-        if dist < moveAllowed: numOppsReach+=1
-    return numOppsReach
+        move_allowed = cur.get_ma() + 2
+        if not cur.state.up: move_allowed -= 3
+        if dist < move_allowed: num_opps_reach += 1
+    return num_opps_reach
 
 
 def num_opponents_on_field(game: g.Game, team: m.Team) -> int:
     opps: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
-    numOpps = 0
+    num_opponents = 0
     for cur in opps:
-        if cur.position is not None: numOpps+=1
-    return numOpps
+        if cur.position is not None: num_opponents += 1
+    return num_opponents
 
 
-def number_opponents_closer_than_to_endzone (game: g.Game, team: g.Team, square: m.Square) -> int:
+def number_opponents_closer_than_to_endzone(game: g.Game, team: g.Team, square: m.Square) -> int:
     opponents: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
     num_opps = 0
     distance_square_endzone = distance_to_defending_endzone(game, team, square)
@@ -411,18 +393,15 @@ def number_opponents_closer_than_to_endzone (game: g.Game, team: g.Team, square:
 
 
 def in_scoring_range(game: g.Game, player: m.Player) -> bool:
-
-    dist_to_endzone = distance_to_scoring_endzone(game, player.team, player.position)
-    ma = player.move_allowed()
-    return player.move_allowed() >= dist_to_endzone
+    return player.move_allowed() <= distance_to_scoring_endzone(game, player.team, player.position)
 
 
 def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, include_opp=True, include_used=True, include_stunned=True) -> List[m.Player]:
     players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned, include_used=include_used)
-    in_scoring_range: List[m.Player] = []
+    close_enough_to_score: List[m.Player] = []
     for player in players:
-        if distance_to_defending_endzone(game, player.team, player.position) <= player.move_allowed(): in_scoring_range.append(player)
-    return in_scoring_range
+        if in_scoring_range(game, player): close_enough_to_score.append(player)
+    return close_enough_to_score
 
 
 def contains_a_player(game: g.Game, team: m.Team, squares: List[m.Square], include_own=True, include_opp=True, include_used=True, include_stunned=True, only_blockable=False) -> bool:
@@ -436,6 +415,7 @@ def contains_a_player(game: g.Game, team: m.Team, squares: List[m.Square], inclu
         if player in allowed_players:
             return True
     return False
+
 
 '''
 
@@ -454,7 +434,7 @@ def ArrayList<Unit> GetListOpponentsStandingToMoveAdjacent(Unit unit)
 def ArrayList<Unit> GetListOpponentsNotStunnedAdjacent(square: m.Square)
     List[m.Square] opponentSquaresAdjacent = GetListOpponentSquaresAdjacent(square)
     units: List[m.Player]Adjacent = new ArrayList<Unit>()
-    for (BoardSquare curSquare : opponentSquaresAdjacent)
+    for (BoardSquare curSquare: opponentSquaresAdjacent)
         if (curSquare.GetHasUnit() and curSquare.GetUnit().GetState() != UnitState.Stunned)
             unitsAdjacent.add(curSquare.GetUnit())
 
@@ -464,7 +444,7 @@ def ArrayList<Unit> GetListOpponentsNotStunnedAdjacent(square: m.Square)
 def ArrayList<Unit> GetListProneOpponentsAdjacent(square: m.Square)
     List[m.Square] opponentSquaresAdjacent = GetListOpponentSquaresAdjacent(square)
     unitsAdjacent: List[m.Player] = new ArrayList<Unit>()
-    for (BoardSquare curSquare : opponentSquaresAdjacent)
+    for (BoardSquare curSquare: opponentSquaresAdjacent)
         if (curSquare.GetHasUnit() and curSquare.GetUnit().GetState() != UnitState.Standing)
             unitsAdjacent.add(curSquare.GetUnit())
 
@@ -486,7 +466,7 @@ def ArrayList<Unit> GetListOpponentsBlockable(Unit unit)
 def ArrayList<Unit> GetListFriendlyWithTackleZoneAdjacent(square: m.Square)
     List[m.Square] friendlySquaresAdjacent = GetListFriendlySquaresAdjacent(square)
     unitsAdjacent: List[m.Player] = new ArrayList<Unit>()
-    for (BoardSquare curSquare : friendlySquaresAdjacent)
+    for (BoardSquare curSquare: friendlySquaresAdjacent)
         if (curSquare.GetHasUnit())
             Unit checkUnit = curSquare.GetUnit()
             if (checkUnit.GetHasTackleZone())
@@ -536,7 +516,7 @@ def List[m.Square] GetListEmptySquaresAdjacent(square: m.Square)
 def ArrayList<Unit> GetListFriendlyPlayersToMove()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and !cur.GetHasMoved())
             listPlayersToMove.add(cur)
 
@@ -547,7 +527,7 @@ def ArrayList<Unit> GetListFriendlyPlayersToMove()
 def ArrayList<Unit> GetListFriendlyPlayersMoved()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetHasMoved())
             listPlayersToMove.add(cur)
 
@@ -559,7 +539,7 @@ def ArrayList<Unit> GetListFriendlyPlayersMoved()
 def ArrayList<Unit> GetListFriendlyPlayersNotStunned()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
             listPlayersToMove.add(cur)
 
@@ -570,7 +550,7 @@ def ArrayList<Unit> GetListFriendlyPlayersNotStunned()
 def ArrayList<Unit> GetListStandingFriendlyPlayersToMove()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and !cur.GetHasMoved() and cur.GetState() == UnitState.Standing)
             listPlayersToMove.add(cur)
 
@@ -581,7 +561,7 @@ def ArrayList<Unit> GetListStandingFriendlyPlayersToMove()
 def ArrayList<Unit> GetListStandingFriendlyPlayers()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
             listPlayersToMove.add(cur)
 
@@ -592,7 +572,7 @@ def ArrayList<Unit> GetListStandingFriendlyPlayers()
 def ArrayList<Unit> GetListFriendlyPlayersStanding()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersStanding = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
             listPlayersStanding.add(cur)
 
@@ -603,7 +583,7 @@ def ArrayList<Unit> GetListFriendlyPlayersStanding()
 def ArrayList<Unit> GetListFriendlyPlayersWithHandsStanding()
     ArrayList<Unit> allUnits = team.GetUnits()
     ArrayList<Unit> listPlayersStanding = new ArrayList<Unit>()
-    for (Unit cur : allUnits)
+    for (Unit cur: allUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing and !cur.HasSkill(Skills.NoHands))
             listPlayersStanding.add(cur)
 
@@ -615,7 +595,7 @@ def ArrayList<Unit> GetListFriendlyPlayersWithHandsStanding()
     ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
     ArrayList<Unit> opponentsInReserves = new ArrayList<Unit>()
 
-    for (Unit cur : allOppUnits)
+    for (Unit cur: allOppUnits)
         if (cur.position instanceof ReserveSquare)
             opponentsInReserves.add(cur)
 
@@ -627,7 +607,7 @@ def ArrayList<Unit> GetListNotStunnedOpponentPlayers()
     ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
     ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
 
-    for (Unit cur : allOppUnits)
+    for (Unit cur: allOppUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
             opponentsOnPitch.add(cur)
 
@@ -639,7 +619,7 @@ def ArrayList<Unit> GetListOpponentPlayersStanding()
     ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
     ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
 
-    for (Unit cur : allOppUnits)
+    for (Unit cur: allOppUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
             opponentsOnPitch.add(cur)
 
@@ -651,7 +631,7 @@ def ArrayList<Unit> GetListOpponentPlayersNotStunned()
     ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
     ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
 
-    for (Unit cur : allOppUnits)
+    for (Unit cur: allOppUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
             opponentsOnPitch.add(cur)
 
@@ -663,7 +643,7 @@ def ArrayList<Unit> GetListOpponentPlayersOnGround()
     ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
     ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
 
-    for (Unit cur : allOppUnits)
+    for (Unit cur: allOppUnits)
         if (gameState.GetBoard().IsOnPitch(cur) and (cur.GetState() == UnitState.Prone or cur.GetState() == UnitState.Stunned))
             opponentsOnPitch.add(cur)
 
