@@ -10,7 +10,8 @@ from flask import Flask, request, render_template
 from ffai.web import api
 from ffai.core.load import *
 import json
-
+import random
+import sys
 
 app = Flask(__name__)
 
@@ -31,8 +32,9 @@ def create():
 def save():
     game_id = json.loads(request.data)['game_id']
     name = json.loads(request.data)['name']
+    team_id = json.loads(request.data)['team_id']
     if len(name) > 2 and len(name) < 40 and not api.save_game_exists(name):
-        api.save_game(game_id, name)
+        api.save_game(game_id, name, team_id)
         return json.dumps("Game was successfully saved")
     else:
         raise Exception("Cannot save this game")
@@ -85,7 +87,13 @@ def get_game(game_id):
 
 @app.route('/game/load/<name>', methods=['GET'])
 def load_game(name):
-    return json.dumps(api.load_game(name).to_json())
+    save = api.load_game(name)
+
+    # Reset seed
+    seed = random.randint(0, 2**32-1)
+    save.game.set_seed(seed)
+
+    return json.dumps(save.to_json())
 
 
 def start_server(debug=False, use_reloader=False):

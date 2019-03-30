@@ -12,6 +12,19 @@ import glob
 import uuid
 
 
+class Save:
+
+    def __init__(self, game, team_id):
+        self.game = game
+        self.team_id = team_id
+
+    def to_json(self):
+        return {
+            'game': self.game.to_json(),
+            'team_id': self.team_id
+        }
+
+
 class Host:
 
     def __init__(self):
@@ -29,26 +42,27 @@ class Host:
     def get_games(self):
         return list(self.games.values())
 
-    def save_game(self, game_id, name):
+    def save_game(self, game_id, name, team_id):
         game = self.get_game(game_id)
         filename = os.path.join(get_data_path("saves/"), name+".ffai")
         print("Saving game")
         pickle.dump(game, open(filename, "wb"))
         game_clone = pickle.load(open(filename, "rb"))
         game_clone.game_id = str(uuid.uuid1())
-        pickle.dump(game_clone, open(filename, "wb"))
+        save = Save(game, team_id=team_id)
+        pickle.dump(save, open(filename, "wb"))
         print("Game saved")
 
     def load_file(self, filename):
         print("Loading game")
-        game = pickle.load(open(filename, "rb"))
+        save = pickle.load(open(filename, "rb"))
         print("Game loaded")
-        return game
+        return save
 
     def load_game(self, name):
-        game = self.load_file(get_data_path("saves/" + name.lower() + ".ffai"))
-        self.games[game.game_id] = game
-        return game
+        save = self.load_file(get_data_path("saves/" + name.lower() + ".ffai"))
+        self.games[save.game.game_id] = save.game
+        return save
 
     def get_savenames(self):
         files = glob.glob(get_data_path("saves/*"))

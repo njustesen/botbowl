@@ -11,7 +11,7 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
 
         $scope.loadGame = function loadGame(name){
             GameService.load(name).success(function(data) {
-                 $window.location.href = '/#/game/play/' + data.game_id
+                 $window.location.href = '/#/game/play/' + data.game.game_id + '/' + data.team_id + '/'
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
@@ -143,7 +143,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.saveGame = function saveGame(name){
             $scope.modelError = false;
             // Get state
-            GameService.save($scope.game.game_id, name).success(function(data) {
+            GameService.save($scope.game.game_id, name, $scope.team_id).success(function(data) {
                 $scope.saved = true;
                 $scope.modalVisible = false;
             }).error(function(status, data) {
