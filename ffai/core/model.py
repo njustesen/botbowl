@@ -279,6 +279,7 @@ class Pitch:
         self.height = len(self.board)
         self.width = len(self.board[0])
 
+
     def to_json(self):
         board = []
         for y in range(len(self.board)):

@@ -5,7 +5,8 @@ the client
 import ffai.core.game as g
 import ffai.core.table as t
 import ffai.core.model as m
-from typing import Optional, List
+import ffai.util.pathfinding as pf
+from typing import Optional, List, Dict
 import math
 
 
@@ -33,6 +34,68 @@ class ActionSequence:
         val = self.action_steps[0]
         del self.action_steps[0]
         return val
+
+    def is_empty(self):
+        return not self.action_steps
+
+
+class FfHeatMap:
+    """ A heat map of a Blood Bowl field.
+
+    A class for analysing zones of control for both teams
+    """
+
+    def __init__(self, game: g.Game, team: g.Team):
+        self.game=game
+        self.team = team
+        # Note that the edges are not on the field, but represent crowd squares
+        self.units_friendly: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
+        self.units_opponent: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
+
+    def add_unit_paths(self, player:m.Player, paths: List[pf.Path]):
+        is_friendly: bool = player.team == self.team
+
+        for path in paths:
+            if is_friendly:
+                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += 1.0 - path.cost
+            else:
+                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += 1.0 - path.cost
+
+    def add_unit_by_paths(self, game: g.Game, paths: Dict[m.Player, List[pf.Path]]):
+        for player in paths.keys():
+            self.add_unit_paths(player, paths[player])
+
+    def add_players_moved(self, game: g.Game, players: List[m.Player]):
+        for player in players:
+            adjacents: List[m.Square] = game.state.pitch.get_adjacent_squares(player.position)
+            self.units_friendly[player.position.x][player.position.y] += 1.0
+            for adjacent in adjacents:
+                self.units_friendly[player.position.x][player.position.y] += 0.5
+
+    def get_ball_move_square_safety_score(self, square: m.Square) -> float:
+        opponent_friendly: float = self.units_friendly[square.x][square.y]
+        opponent_heat: float = self.units_opponent[square.x][square.y]
+        score: float=0.0
+
+        if opponent_heat < 0.25: score += 15.0
+        if opponent_friendly > 3.5: score += 10.0
+        if opponent_friendly > opponent_heat: score += max(30.0, 10.0*(opponent_friendly-opponent_heat))
+        if opponent_heat < 1.5: score += 5
+        if opponent_heat > opponent_friendly: score -= max(40.0, 10.0*(opponent_heat-opponent_friendly))
+
+        return score
+
+    def get_cage_necessity_score(self, square: m.Square) -> float:
+        opponent_friendly: float = self.units_friendly[square.x][square.y]
+        opponent_heat: float = self.units_opponent[square.x][square.y]
+        score: float = 0.0
+
+        if opponent_heat < 0.4: score -= 80.0
+        # if opponent_friendly > opponent_heat: score -= max(30.0, 10.0*(opponent_friendly-opponent_heat))
+        # if opponent_heat <1.5: score -=5
+        # if opponent_heat > opponent_friendly: score += 10.0*(opponent_friendly-opponent_heat)
+
+        return score
 
 
 def blitz_used(game: g.Game) -> bool:
@@ -415,238 +478,3 @@ def contains_a_player(game: g.Game, team: m.Team, squares: List[m.Square], inclu
         if player in allowed_players:
             return True
     return False
-
-
-'''
-
-def ArrayList<Unit> GetListOpponentsStandingToMoveAdjacent(Unit unit)
-
-    ArrayList<Unit> units = GetListOpponentsAdjacent(unit)
-    ArrayList<Unit> unitsRet = new ArrayList<Unit>()
-    for curUnit in units:
-        if (curUnit.GetState() == UnitState.Standing and !curUnit.GetHasMoved())
-            unitsRet.add(curUnit)
-
-
-    return unitsRet
-
-
-def ArrayList<Unit> GetListOpponentsNotStunnedAdjacent(square: m.Square)
-    List[m.Square] opponentSquaresAdjacent = GetListOpponentSquaresAdjacent(square)
-    units: List[m.Player]Adjacent = new ArrayList<Unit>()
-    for (BoardSquare curSquare: opponentSquaresAdjacent)
-        if (curSquare.GetHasUnit() and curSquare.GetUnit().GetState() != UnitState.Stunned)
-            unitsAdjacent.add(curSquare.GetUnit())
-
-    return unitsAdjacent
-
-
-def ArrayList<Unit> GetListProneOpponentsAdjacent(square: m.Square)
-    List[m.Square] opponentSquaresAdjacent = GetListOpponentSquaresAdjacent(square)
-    unitsAdjacent: List[m.Player] = new ArrayList<Unit>()
-    for (BoardSquare curSquare: opponentSquaresAdjacent)
-        if (curSquare.GetHasUnit() and curSquare.GetUnit().GetState() != UnitState.Standing)
-            unitsAdjacent.add(curSquare.GetUnit())
-
-
-    return unitsAdjacent
-
-
-def ArrayList<Unit> GetListOpponentsBlockable(Unit unit)
-    units: List[m.Player] = GetListOpponentsAdjacent(unit)
-    for (Iterator<Unit> iter = units.iterator() iter.hasNext())
-        Unit cur = iter.next()
-        if (cur.GetState() != UnitState.Standing)
-            iter.remove()
-
-
-    return units
-
-
-def ArrayList<Unit> GetListFriendlyWithTackleZoneAdjacent(square: m.Square)
-    List[m.Square] friendlySquaresAdjacent = GetListFriendlySquaresAdjacent(square)
-    unitsAdjacent: List[m.Player] = new ArrayList<Unit>()
-    for (BoardSquare curSquare: friendlySquaresAdjacent)
-        if (curSquare.GetHasUnit())
-            Unit checkUnit = curSquare.GetUnit()
-            if (checkUnit.GetHasTackleZone())
-                unitsAdjacent.add(checkUnit)
-
-
-
-    return unitsAdjacent
-
-
-
-
-def ArrayList<Unit> GetListOpponentsWithTackleAndTackleZoneAdjacent(Unit unit)
-    units: List[m.Player] = GetListOpponentsAdjacent(unit)
-    for (Iterator<Unit> iter = units.iterator() iter.hasNext())
-        Unit cur = iter.next()
-        if (not (cur.GetHasTackleZone()) and cur.HasSkill(Skills.Tackle))
-            iter.remove()
-
-
-    return units
-
-
-def ArrayList<Unit> GetListOpponentsWithTackleAndTackleZoneAdjacent(square: m.Square)
-    units: List[m.Player] = GetListOpponentsAdjacent(square)
-    for (Iterator<Unit> iter = units.iterator() iter.hasNext())
-        Unit cur = iter.next()
-        if (not (cur.GetHasTackleZone()) and cur.HasSkill(Skills.Tackle))
-            iter.remove()
-
-
-    return units
-
-
-def List[m.Square] GetListEmptySquaresAdjacent(square: m.Square)
-    List[m.Square] squares = game.state.pitch.get_adjacent_squares(square)
-    for (Iterator<BoardSquare> iter = squares.iterator() iter.hasNext())
-        BoardSquare cur = iter.next()
-        if (cur.GetHasUnit())
-            iter.remove()
-
-
-    return squares
-
-
-
-def ArrayList<Unit> GetListFriendlyPlayersToMove()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and !cur.GetHasMoved())
-            listPlayersToMove.add(cur)
-
-
-    return listPlayersToMove
-
-
-def ArrayList<Unit> GetListFriendlyPlayersMoved()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetHasMoved())
-            listPlayersToMove.add(cur)
-
-
-    return listPlayersToMove
-
-
-
-def ArrayList<Unit> GetListFriendlyPlayersNotStunned()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
-            listPlayersToMove.add(cur)
-
-
-    return listPlayersToMove
-
-
-def ArrayList<Unit> GetListStandingFriendlyPlayersToMove()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and !cur.GetHasMoved() and cur.GetState() == UnitState.Standing)
-            listPlayersToMove.add(cur)
-
-
-    return listPlayersToMove
-
-
-def ArrayList<Unit> GetListStandingFriendlyPlayers()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersToMove = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
-            listPlayersToMove.add(cur)
-
-
-    return listPlayersToMove
-
-
-def ArrayList<Unit> GetListFriendlyPlayersStanding()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersStanding = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
-            listPlayersStanding.add(cur)
-
-
-    return listPlayersStanding
-
-
-def ArrayList<Unit> GetListFriendlyPlayersWithHandsStanding()
-    ArrayList<Unit> allUnits = team.GetUnits()
-    ArrayList<Unit> listPlayersStanding = new ArrayList<Unit>()
-    for (Unit cur: allUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing and !cur.HasSkill(Skills.NoHands))
-            listPlayersStanding.add(cur)
-
-
-    return listPlayersStanding
-
-
- def ArrayList<Unit> GetListOpponentPlayersInReserves()
-    ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
-    ArrayList<Unit> opponentsInReserves = new ArrayList<Unit>()
-
-    for (Unit cur: allOppUnits)
-        if (cur.position instanceof ReserveSquare)
-            opponentsInReserves.add(cur)
-
-
-    return opponentsInReserves
-
-
-def ArrayList<Unit> GetListNotStunnedOpponentPlayers()
-    ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
-    ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
-
-    for (Unit cur: allOppUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
-            opponentsOnPitch.add(cur)
-
-
-    return opponentsOnPitch
-
-
-def ArrayList<Unit> GetListOpponentPlayersStanding()
-    ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
-    ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
-
-    for (Unit cur: allOppUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() == UnitState.Standing)
-            opponentsOnPitch.add(cur)
-
-
-    return opponentsOnPitch
-
-
-def ArrayList<Unit> GetListOpponentPlayersNotStunned()
-    ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
-    ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
-
-    for (Unit cur: allOppUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and cur.GetState() != UnitState.Stunned)
-            opponentsOnPitch.add(cur)
-
-
-    return opponentsOnPitch
-
-
-def ArrayList<Unit> GetListOpponentPlayersOnGround()
-    ArrayList<Unit> allOppUnits = opponentTeam.GetUnits()
-    ArrayList<Unit> opponentsOnPitch = new ArrayList<Unit>()
-
-    for (Unit cur: allOppUnits)
-        if (gameState.GetBoard().IsOnPitch(cur) and (cur.GetState() == UnitState.Prone or cur.GetState() == UnitState.Stunned))
-            opponentsOnPitch.add(cur)
-
-
-    return opponentsOnPitch
-'''
