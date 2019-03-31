@@ -466,4 +466,4 @@ class CrowdLayer(FeatureLayer):
         return out
 
     def name(self):
-        return "opp touchdown"
+        return "opp crowd"

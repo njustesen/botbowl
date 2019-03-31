@@ -154,7 +154,7 @@ class FFAIEnv(gym.Env):
     ]
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
-        self.__version__ = "0.0.1"
+        self.__version__ = "0.0.2"
         self.config = config
         self.config.competition_mode = False
         self.config.fast_mode = True
@@ -166,6 +166,7 @@ class FFAIEnv(gym.Env):
         self.away_team = away_team
         self.actor = Agent("Gym Learner", human=True)
         self.opp_actor = opp_actor if opp_actor is not None else RandomBot("Random")
+        self._seed = None
         self.seed()
         self.root = None
         self.cv = None
@@ -178,6 +179,7 @@ class FFAIEnv(gym.Env):
             OwnTackleZoneLayer(),
             OppTackleZoneLayer(),
             UpLayer(),
+            StunnedLayer(),
             UsedLayer(),
             AvailablePlayerLayer(),
             AvailablePositionLayer(),
@@ -197,6 +199,7 @@ class FFAIEnv(gym.Env):
             SkillLayer(Skill.BLOCK),
             SkillLayer(Skill.DODGE),
             SkillLayer(Skill.SURE_HANDS),
+            SkillLayer(Skill.CATCH),
             SkillLayer(Skill.PASS)
         ]
 
@@ -259,11 +262,14 @@ class FFAIEnv(gym.Env):
 
     def seed(self, seed=None):
         if seed is None:
-            seed = np.random.randint(0, 2**31)
-        self.rnd = np.random.RandomState(seed)
+            self._seed = np.random.randint(0, 2**31)
+        self.rnd = np.random.RandomState(self._seed)
         if isinstance(self.opp_actor, RandomBot):
             self.opp_actor.rnd = self.rnd
-        return seed
+        return self._seed
+
+    def get_seed(self):
+        return self._seed
 
     def get_game(self):
         return self.game
