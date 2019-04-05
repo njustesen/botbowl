@@ -79,8 +79,8 @@ if __name__ == "__main__":
 
         renderer = Renderer()
 
-        nenvs = 2
-        envs = [gym.make("FFAI-v1") for _ in range(nenvs)]
+        nenvs = 8
+        envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]
         for i in range(len(envs)):
             seed = envs[i].seed()
 

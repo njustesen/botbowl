@@ -913,6 +913,8 @@ class Game:
         return procs
 
     def get_player_action_type(self, player):
+        if self.state.game_over:
+            return None
         proc = self.state.stack.peek()
         if isinstance(proc, PlayerAction):
             return proc.player_action_type
