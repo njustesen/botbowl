@@ -5,6 +5,7 @@ the client
 import ffai.core.game as g
 import ffai.core.table as t
 import ffai.core.model as m
+import ffai.core.procedure as p
 import ffai.util.pathfinding as pf
 from typing import Optional, List, Dict
 import math
@@ -57,9 +58,9 @@ class FfHeatMap:
 
         for path in paths:
             if is_friendly:
-                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += 1.0 - path.cost
+                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += (1.0 - path.cost)*(1.0 - path.cost)
             else:
-                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += 1.0 - path.cost
+                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += (1.0 - path.cost)*(1.0 - path.cost)
 
     def add_unit_by_paths(self, game: g.Game, paths: Dict[m.Player, List[pf.Path]]):
         for player in paths.keys():
@@ -73,15 +74,17 @@ class FfHeatMap:
                 self.units_friendly[player.position.x][player.position.y] += 0.5
 
     def get_ball_move_square_safety_score(self, square: m.Square) -> float:
+
+        # Basic idea - identify safe regions to move the ball towards
         opponent_friendly: float = self.units_friendly[square.x][square.y]
         opponent_heat: float = self.units_opponent[square.x][square.y]
         score: float=0.0
 
         if opponent_heat < 0.25: score += 15.0
-        if opponent_friendly > 3.5: score += 10.0
-        if opponent_friendly > opponent_heat: score += max(30.0, 10.0*(opponent_friendly-opponent_heat))
+        if opponent_heat < 0.05: score += 15.0
         if opponent_heat < 1.5: score += 5
-        if opponent_heat > opponent_friendly: score -= max(40.0, 10.0*(opponent_heat-opponent_friendly))
+        if opponent_friendly > 3.5: score += 10.0
+        score += max(30.0, 5.0*(opponent_friendly-opponent_heat))
 
         return score
 
@@ -361,6 +364,14 @@ def is_endzone(game, square: m.Square) -> bool:
     return square.x == 1 or square.x == game.state.pitch.width - 1
 
 
+def last_block_proc(game) -> Optional[p.Block]:
+    for i in range(len(game.state.stack.items) - 1, -1, -1):
+        if isinstance(game.state.stack.items[i], p.Block):
+            block_proc = game.state.stack.items[i]
+            return block_proc
+    return None
+
+
 def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
     ball_square = game.state.pitch.get_ball_position()
     return ball_square is not None and ball_square.is_adjacent(square)
@@ -368,8 +379,8 @@ def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
 
 def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Square]:
     squares: List[m.Square] = []
-    for i in range(-distance-1, distance+1):
-        for j in range(-distance-1, distance+1):
+    for i in range(-distance, distance+1):
+        for j in range(-distance, distance+1):
             cur_square = game.state.pitch.get_square(square.x+i, square.y+i)
             if cur_square != square and not game.state.pitch.is_out_of_bounds(cur_square):
                 squares.append(cur_square)
@@ -450,13 +461,13 @@ def number_opponents_closer_than_to_endzone(game: g.Game, team: g.Team, square: 
     distance_square_endzone = distance_to_defending_endzone(game, team, square)
 
     for opponent in opponents:
-        distance_opponenent_endzone = distance_to_defending_endzone(game, team, opponent.position)
-        if distance_opponenent_endzone < distance_square_endzone: num_opps += 1
+        distance_opponent_endzone = distance_to_defending_endzone(game, team, opponent.position)
+        if distance_opponent_endzone < distance_square_endzone: num_opps += 1
     return num_opps
 
 
 def in_scoring_range(game: g.Game, player: m.Player) -> bool:
-    return player.move_allowed() <= distance_to_scoring_endzone(game, player.team, player.position)
+    return player.move_allowed() >= distance_to_scoring_endzone(game, player.team, player.position)
 
 
 def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, include_opp=True, include_used=True, include_stunned=True) -> List[m.Player]:
@@ -467,14 +478,14 @@ def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, inclu
     return close_enough_to_score
 
 
-def contains_a_player(game: g.Game, team: m.Team, squares: List[m.Square], include_own=True, include_opp=True, include_used=True, include_stunned=True, only_blockable=False) -> bool:
+def players_in(game: g.Game, team: m.Team, squares: List[m.Square], include_own=True, include_opp=True, include_used=True, include_stunned=True, only_blockable=False) -> List[m.Player]:
 
     allowed_players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_used=include_used, include_stunned=include_stunned, only_blockable=only_blockable)
 
     for square in squares:
-        player: Optional[None, m.Player] = game.state.pitch.get_player_at(square)
+        player: Optional[m.Player] = game.state.pitch.get_player_at(square)
         if player is None:
             continue
         if player in allowed_players:
-            return True
-    return False
+            allowed_players.append((player))
+    return allowed_players
