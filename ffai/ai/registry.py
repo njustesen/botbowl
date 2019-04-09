@@ -13,14 +13,14 @@ class BotRegistry:
         self.bots = {}
 
     def register(self, id, cls):
-        if id in self.bots:
-            raise Exception('Bot with ID {} already registered.'.format(id))
-        self.bots[id] = cls
+        if id.lower() in self.bots:
+            raise Exception('Bot with ID {} already registered.'.format(id.lower()))
+        self.bots[id.lower()] = cls
 
     def make(self, id):
-        if id not in self.bots:
-            raise Exception('Bot with ID {} not registered.'.format(id))
-        return self.bots[id](id)
+        if id.lower() not in self.bots:
+            raise Exception('Bot with ID {} not registered.'.format(id.lower()))
+        return self.bots[id.lower()](id.lower())
 
 
 # Have a global registry

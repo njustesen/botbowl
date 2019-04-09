@@ -551,6 +551,5 @@ if __name__ == "__main__":
         print("Starting game", (i + 1))
         start = time.time()
         game.init()
-        game.step()
         end = time.time()
         print(end - start)

@@ -258,8 +258,8 @@ class Block(Procedure):
             # Check if player was not pushed out of bounds
             if self.defender.position is None:
                 return True
-            self.game.report(Outcome(OutcomeType.FRENZY_USED, player=self.attacker, opp_player=self.defender,
-                                     team=self.attacker.team))
+            #self.game.report(Outcome(OutcomeType.FRENZY_USED, player=self.attacker, opp_player=self.defender,
+            #                         team=self.attacker.team))
             self.frenzy_check = True
 
         # Roll
@@ -294,7 +294,7 @@ class Block(Procedure):
 
         elif self.waiting_wrestle_defender:
 
-            self.wrestle = action.action_type == ActionType.USE_WRESTLE
+            #self.wrestle = action.action_type == ActionType.USE_WRESTLE
             self.waiting_wrestle_defender = False
             self.selected_die = BBDieResult.BOTH_DOWN
 
@@ -2206,6 +2206,7 @@ class EndGame(Procedure):
             self.game.report(Outcome(OutcomeType.END_OF_GAME_WINNER, team=winner))
         else:
             self.game.report(Outcome(OutcomeType.END_OF_GAME_DRAW))
+        self.end_time = time.time()
         return True
 
     def available_actions(self):
@@ -2334,12 +2335,14 @@ class Push(Procedure):
             return True
 
         # Use stand firm
+        '''
         if self.waiting_stand_firm:
             if action.action_type == ActionType.USE_STAND_FIRM:
                 return True
             else:
                 self.waiting_stand_firm = False
                 self.stand_firm_used = True
+        '''
 
         # Get possible squares
         if self.squares is None:

@@ -16,10 +16,11 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, turn, opp_choice):
+    def __init__(self, game, turn, opp_choice, disqualification_limit):
+        self.game = game
         self.turn = turn
         self.opp_choice = opp_choice
-
+        self.disqualification_limit = disqualification_limit
 
 class Configuration:
 
@@ -127,6 +128,7 @@ class TeamState:
         self.cheerleaders = team.cheerleaders
         self.fame = 0
         self.reroll_used = False
+        self.time_violation = 0
 
     def to_json(self):
         return {
@@ -141,7 +143,8 @@ class TeamState:
             'ass_coaches': self.ass_coaches,
             'cheerleaders': self.cheerleaders,
             'fame': self.fame,
-            'reroll_used': self.reroll_used
+            'reroll_used': self.reroll_used,
+            'time_violation': self.time_violation
         }
 
     def reset_turn(self):
@@ -186,32 +189,8 @@ class GameState:
         self.available_actions = []
         self.termination_turn = None
         self.termination_opp = None
-
-    def clone(self):
-        state = GameState(deepcopy(self.home_team), deepcopy(self.away_team))
-        state.stack = deepcopy(self.stack)
-        state.reports = deepcopy(self.reports)
-        state.round = self.round
-        state.kicking_first_half = self.kicking_first_half
-        state.receiving_first_half = self.receiving_first_half
-        state.kicking_this_drive = self.kicking_this_drive
-        state.receiving_this_drive = self.receiving_this_drive
-        state.current_team = None if state.current_team is None else state.home_team if state.current_team.team_id == state.home_team.team_id else state.away_team
-        state.pitch = Pitch(self.pitch.width, self.pitch.height)
-        for player in state.home_team.players:
-            if player.position is not None:
-                state.pitch.board[player.position.y][player.position.x] = player
-        for player in state.away_team.players:
-            if player.position is not None:
-                state.pitch.board[player.position.y][player.position.x] = player
-        state.weather = self.weather
-        state.gentle_gust = self.gentle_gust
-        state.turn_order = [self.team_by_id[team.team_id] for team in self.turn_order]
-        state.spectators = self.spectators
-        state.active_player = self.player_by_id[self.active_player.player_id] if self.active_player is not None else None
-        state.game_over = self.game_over
-        state.available_actions = copy(self.available_actions)
-        return state
+        self.home_time_violation = 0
+        self.away_time_violation = 0
 
     def get_dugout(self, team):
         return self.dugouts[team.team_id]

@@ -12,6 +12,8 @@ __pycache__/
 # IDEA
 .idea/
 .idea/*
+.vscode/
+.vscode/*
 
 # Distribution / packaging
 .Python

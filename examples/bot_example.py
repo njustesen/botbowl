@@ -60,7 +60,6 @@ if __name__ == "__main__":
 
         print("Starting game", (i+1))
         start = time.time()
-        game.init()
-        game.step()
+        game.init()  # This will run the game until it's over
         end = time.time()
         print(end - start)
