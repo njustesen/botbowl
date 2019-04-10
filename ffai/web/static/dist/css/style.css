@@ -167,6 +167,27 @@ a:hover {
   margin: auto;
   padding-bottom: 0px;
 }
+.game-free .scoreboard .scoreboard-content .clock-left {
+  position: absolute;
+  left: 0px;
+  top: 206px;
+  width: 300px;
+  zoom: 0.5;
+}
+.game-free .scoreboard .scoreboard-content .clock-left .flip-clock-label {
+  visibility: hidden;
+}
+.game-free .scoreboard .scoreboard-content .clock-right {
+  position: absolute;
+  top: 206px;
+  right: 0px;
+  width: 300px;
+  zoom: 0.5;
+  -moz-transform: scale(0.5);
+}
+.game-free .scoreboard .scoreboard-content .clock-right .flip-clock-label {
+  visibility: hidden;
+}
 .game-free .scoreboard .scoreboard-content .small-text {
   padding: 0px;
   margin: 0px;

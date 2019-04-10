@@ -190,6 +190,31 @@ a, a:focus, a:hover {
             margin: auto;
             padding-bottom: 0px;
 
+            .clock-left {
+                position: absolute;
+                left: 0px;
+                top: 206px;
+                width: 300px;
+                zoom: 0.5;
+
+                .flip-clock-label{
+                    visibility: hidden;
+                }
+            }
+
+            .clock-right {
+                position: absolute;
+                top: 206px;
+                right: 0px;
+                width: 300px;
+                zoom: 0.5;
+                -moz-transform: scale(0.5);
+
+                .flip-clock-label{
+                    visibility: hidden;
+                }
+            }
+
             .small-text {
                 padding: 0px;
                 margin: 0px;

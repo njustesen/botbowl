@@ -67,7 +67,9 @@ class Game:
             'arena': self.arena.to_json(),
             'ruleset': self.ruleset.name,
             'can_home_team_use_reroll': self.can_use_reroll(self.state.home_team),
-            'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team)
+            'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
+            'actor_id': self.actor.agent_id if self.actor is not None else None,
+            'termination': self.action_termination_time() 
         }
 
     def team_agent(self, team):

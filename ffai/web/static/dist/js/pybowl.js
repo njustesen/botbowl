@@ -958,6 +958,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
+                $scope.updateClock();
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
@@ -1058,6 +1059,30 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             });
         };
 
+        $scope.updateClock = function(){
+            if ($scope.termination == undefined || $scope.termination != $scope.game.termination){
+                if ($scope.game.actor_id == undefined || $scope.game.termination == null){
+                    return;
+                }
+                $scope.termination = $scope.game.termination;
+                $('.clock-right').empty();
+                $('.clock-left').empty();
+                var seconds = new Date() / 1000;
+                var time_left = Math.floor($scope.termination - seconds);
+                if ($scope.game.actor_id == $scope.game.home_agent.agent_id){
+                    var clock = $('.clock-right').FlipClock(time_left, {
+                        clockFace: 'MinuteCounter',
+                        countdown: true
+                    });
+                } else if ($scope.game.actor_id == $scope.game.away_agent.agent_id){
+                    var clock = $('.clock-left').FlipClock(time_left, {
+                        clockFace: 'MinuteCounter',
+                        countdown: true
+                    });
+                }
+            }
+        };
+
         // Get game-state when document is ready
         $( document ).ready(function() {
             GameService.get(id).success(function (data) {
@@ -1066,6 +1091,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
+                $(document).ready(function() {
+                    setTimeout(function() {
+                        $scope.updateClock();
+                   }, 200);
+                });
                 //$scope.updateMoveLines();
                 $scope.loading = false;
                 console.log(data);
