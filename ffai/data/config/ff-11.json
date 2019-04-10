@@ -20,6 +20,7 @@
         "game": 15360,
         "turn": 240,
         "opp_choice": 10,
-        "disqualification_limit": 2
+        "violation_limit": 2,
+        "init": 10
     }
 }

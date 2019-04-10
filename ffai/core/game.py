@@ -172,13 +172,9 @@ class Game:
         # Update game
         while True:
 
-            # Save game?
-            if self.auto_save:
-                self._auto_save()
-
-            # Time out?
+            # Timed out?
             now = time.time()
-            if self.start_time is not None and self.config.time_limits is not None and now - self.start_time > self.config.time_limits.game:
+            if self.timed_out():
                 self.end_time = now
                 return
 
@@ -187,12 +183,16 @@ class Game:
 
             # Clone game if in a competition
             game = self if not self.config.competition_mode else self
+            # TODO: Clone it!
             
             # Game over
             if self.state.game_over:
+
                 if not self.home_agent.human:
+                    self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
                     self.home_agent.end_game(game)
                 if not self.away_agent.human:
+                    self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
                     self.away_agent.end_game(game)
                 return
             
@@ -210,9 +210,9 @@ class Game:
                 termination = self.action_termination_time()
                 action = self.actor.act(game)
                 
-                # Check if time is violated
+                # Check if time limit was violated
                 now = time.time()
-                if self.config.time_limits is not None and now > termination + self.config.time_limits.disqualification_limit:
+                if self.config.time_limits is not None and now > termination + self.config.time_limits.violation_limit:
 
                     # Add violation
                     violation = now - termination
@@ -245,13 +245,6 @@ class Game:
                 
                 # Else continue proecedure with no action
                 action = None
-
-    def _auto_save(self):
-        '''
-        Auto-saves the game. Agents should NOT call this private function.
-        '''
-        filename = os.path.join(get_data_path("auto/"), self.game_id+".ffai")
-        pickle.dump(self, open(filename, "wb"))
 
     def _timeout_action(self):
         '''
@@ -998,22 +991,23 @@ class Game:
         """
         returns the winning agent of the game if it over or timed out.
         """
-        if self.state.game_over:
-            if self.state.home_team.state.score > self.state.away_team.state.score:
-                return self.home_agent
-            elif self.state.home_team.state.score < self.state.away_team.state.score:
-                return self.away_agent
-        elif self.timed_out():
+        if self.timed_out():
+            # Loser is the agent with most volations or the current player
             if self.state.home_team.state.time_violation > self.state.away_team.state.time_violation:
                 return self.away_agent
             elif self.state.home_team.state.time_violation < self.state.away_team.state.time_violation:
                 return self.home_agent
             elif self.actor is not None:
                 if self.home_agent == self.actor:
-                    return self.home_agent
-                else:
                     return self.away_agent
+                else:
+                    return self.home_agent
                 return None
+        elif self.state.game_over:
+            if self.state.home_team.state.score > self.state.away_team.state.score:
+                return self.home_agent
+            elif self.state.home_team.state.score < self.state.away_team.state.score:
+                return self.away_agent
         return None
 
     def other_agent(self, agent):

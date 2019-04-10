@@ -8,6 +8,7 @@ This module contains an example bot that takes random actions.
 
 from ffai.core.procedure import *
 from ffai.ai.registry import register_bot
+import time
 
 
 class RandomBot(Agent):
@@ -37,8 +38,85 @@ class RandomBot(Agent):
         pass
 
 
-# Register RandomBot
+class IdleBot(Agent):
+
+    def __init__(self, name, seed=None):
+        super().__init__(name)
+        
+    def new_game(self, game, team):
+        pass
+        
+    def act(self, game):
+        time.sleep(1000000)
+        return None
+
+    def end_game(self, game):
+        pass
+
+
+class ViolatorBot(Agent):
+
+    def __init__(self, name, seed=None):
+        super().__init__(name)
+        self.my_team = None
+        self.rnd = np.random.RandomState(seed)
+        
+    def new_game(self, game, team):
+        pass
+        
+    def act(self, game):
+        while time.time() < game.action_termination_time() + game.config.time_limits.violation_limit:
+            time.sleep(1)
+        while True:
+            action_choice = self.rnd.choice(game.state.available_actions)
+            if action_choice.action_type != ActionType.PLACE_PLAYER:
+                break
+        pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+        action = Action(action_choice.action_type, pos=pos, player=player)
+        return action
+
+    def end_game(self, game):
+        pass
+
+
+class ChrashBot(Agent):
+
+    def __init__(self, name, seed=None):
+        super().__init__(name)
+        
+    def new_game(self, game, team):
+        pass
+        
+    def act(self, game):
+        v = 1 / 0
+        return None
+
+    def end_game(self, game):
+        pass
+
+
+class InitCrashBot(Agent):
+
+    def __init__(self, name, seed=None):
+        super().__init__(name)
+        v = 1 / 0
+        
+    def new_game(self, game, team):
+        pass
+        
+    def act(self, game):
+        return None
+
+    def end_game(self, game):
+        pass
+
+# Register bots
 register_bot('random', RandomBot)
+register_bot('crash', ChrashBot)
+register_bot('idle', IdleBot)
+register_bot('violator', ViolatorBot)
+register_bot('init-crash', InitCrashBot)
 
 
 class ProcBot(Agent):
@@ -52,8 +130,6 @@ class ProcBot(Agent):
         proc = game.state.stack.peek()
 
         # Call private function
-        if isinstance(proc, StartGame):
-            return self.start_game(game)
         if isinstance(proc, CoinTossFlip):
             return self.coin_toss_flip(game)
         if isinstance(proc, CoinTossKickReceive):
@@ -96,9 +172,6 @@ class ProcBot(Agent):
             return self.pickup(game)
 
         raise Exception("Unknown procedure")
-
-    def start_game(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def coin_toss_flip(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")

@@ -16,11 +16,12 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, game, turn, opp_choice, disqualification_limit):
+    def __init__(self, game, turn, opp_choice, violation_limit, init):
         self.game = game
         self.turn = turn
         self.opp_choice = opp_choice
-        self.disqualification_limit = disqualification_limit
+        self.violation_limit = violation_limit
+        self.init = init
 
 class Configuration:
 
