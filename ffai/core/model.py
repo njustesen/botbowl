@@ -16,12 +16,12 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, game, turn, opp_choice, violation_limit, init):
-        self.game = game
-        self.turn = turn
-        self.opp_choice = opp_choice
-        self.violation_limit = violation_limit
-        self.init = init
+    def __init__(self, game_time_limit, turn_time_limit, opp_time_limit, violation_threshold, init_time_limit):
+        self.game_time_limit = game_time_limit
+        self.turn_time_limit = turn_time_limit
+        self.opp_time_limit = opp_time_limit
+        self.violation_threshold = violation_threshold
+        self.init_time_limit = init_time_limit
 
 class Configuration:
 
@@ -1139,35 +1139,35 @@ class Formation:
         self.name = name
         self.formation = formation
 
-    def _get_player(self, players, type):
-        if type == 's':
+    def _get_player(self, players, t):
+        if t == 's':
             idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) for player in players])
             return players[idx]
-        if type == 'm':
+        if t == 'm':
             idx = np.argmax([player.get_ma() for player in players])
             return players[idx]
-        if type == 'a':
+        if t == 'a':
             idx = np.argmax([player.get_ag() for player in players])
             return players[idx]
-        if type == 'v':
+        if t == 'v':
             idx = np.argmax([player.get_av() for player in players])
             return players[idx]
-        if type == 'p':
+        if t == 'p':
             idx = np.argmax([1 if player.has_skill(Skill.PASS) else 0 for player in players])
             return players[idx]
-        if type == 'c':
+        if t == 'c':
             idx = np.argmax([1 if player.has_skill(Skill.CATCH) else 0 for player in players])
             return players[idx]
-        if type == 'b':
+        if t == 'b':
             idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else 0 for player in players])
             return players[idx]
-        if type == 'd':
+        if t == 'd':
             idx = np.argmax([1 if player.has_skill(Skill.DODGE) else 0 for player in players])
             return players[idx]
-        if type == '0':
+        if t == '0':
             idx = np.argmin([len(player.get_skills()) for player in players])
             return players[idx]
-        if type == 'x':
+        if t == 'x':
             idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else (0 if player.has_skill(Skill.PASS) or player.has_skill(Skill.CATCH) else 0.5) for player in players])
             return players[idx]
         return players[0]
@@ -1187,12 +1187,12 @@ class Formation:
             for x in reversed(range(len(self.formation[0]))):
                 if len(players) == 0:
                     return actions
-                type = self.formation[y][x]
-                if type == '-':
+                t = self.formation[y][x]
+                if t == '-':
                     continue
                 yy = y + 1
                 xx = x + 1 if not home else game.arena.width - x - 2
-                player = self._get_player(players, type)
+                player = self._get_player(players, t)
                 players.remove(player)
                 actions.append(Action(ActionType.PLACE_PLAYER, pos=Square(xx, yy), player=player))
         return actions

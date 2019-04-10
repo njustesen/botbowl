@@ -243,17 +243,17 @@ def get_config(name):
                                    data['defensive_formations']]
     config.offensive_formations = [get_formation(formation, config.pitch_max) for formation in
                                    data['offensive_formations']]
-    game = None
-    violation_limit = None
-    turn = None
-    opp_choice = None
+    game_time_limit = None
+    violation_threshold = None
+    turn_time_limit = None
+    opp_time_limit = None
     if data['time_limits'] is not None:
-        game = data['time_limits']['game']
-        turn = data['time_limits']['turn']
-        opp_choice = data['time_limits']['opp_choice']
-        violation_limit = data['time_limits']['violation_limit']
-        init = data['time_limits']['init']
-    config.time_limits = TimeLimits(game=game, turn=turn, opp_choice=opp_choice, violation_limit=violation_limit, init=init)
+        game_time_limit = data['time_limits']['game_time_limit']
+        turn_time_limit = data['time_limits']['turn_time_limit']
+        opp_time_limit = data['time_limits']['opp_time_limit']
+        violation_threshold = data['time_limits']['violation_threshold']
+        init_time_limit = data['time_limits']['init_time_limit']
+    config.time_limits = TimeLimits(game_time_limit=game_time_limit, turn_time_limit=turn_time_limit, opp_time_limit=opp_time_limit, violation_threshold=violation_threshold, init_time_limit=init_time_limit)
     return config
 
 

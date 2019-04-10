@@ -49,7 +49,7 @@ class Apothecary(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
     def step(self, action):
 
@@ -288,7 +288,7 @@ class Block(Procedure):
             # Set termination time
             if self.favor != self.game.state.current_team:
                 if self.game.config.time_limits is not None:
-                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
             return False
 
@@ -575,7 +575,7 @@ class Catch(Procedure):
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.CATCH))
                     if self.player.team != self.game.state.current_team:
                         if self.game.config.time_limits is not None:
-                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
                     return False
 
                 # Check if reroll available
@@ -583,7 +583,7 @@ class Catch(Procedure):
                     self.waiting_for_reroll = True
                     if self.player.team != self.game.state.current_team:
                         if self.game.config.time_limits is not None:
-                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
                     return False
 
                 Bounce(self.game, self.ball, kick=self.kick)
@@ -622,7 +622,7 @@ class CoinTossFlip(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
@@ -659,7 +659,7 @@ class CoinTossKickReceive(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
     def step(self, action):
         kicking = None
@@ -873,7 +873,7 @@ class Interception(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
     def step(self, action):
 
@@ -901,7 +901,7 @@ class Touchback(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
 
         self.players_on_pitch_standing = self.game.get_players_on_pitch(self.game.state.receiving_this_drive, up=True)
 
@@ -1082,7 +1082,7 @@ class HighKick(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
         self.standing_players = self.game.get_players_on_pitch(self.receiving_team, up=True)
 
     def step(self, action):
@@ -1899,7 +1899,7 @@ class PlaceBall(Procedure):
 
     def setup(self):
         if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
         self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
                                 positions=self.game.get_team_side(self.game.get_receiving_team()))]
 
@@ -2349,7 +2349,7 @@ class Push(Procedure):
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
             if self.player.has_skill(Skill.SIDE_STEP):
                 if self.game.config.time_limits is not None:
-                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_choice
+                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp_time_limit
             return False
 
         # Stand firm
@@ -2561,7 +2561,7 @@ class Setup(Procedure):
 
         # Set termination time
         if self.game.config.time_limits is not None:
-            self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
+            self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn_time_limit
 
     def step(self, action):
         formation = None
@@ -2575,7 +2575,8 @@ class Setup(Procedure):
             formation = [formation for formation in self.formations if formation.name == "spread"][0]
 
         if formation is not None:
-            for action in formation.actions(self.game, self.team):
+            actions = formation.actions(self.game, self.team)
+            for action in actions:
                 self.step(action)
             return False
 
@@ -2835,7 +2836,7 @@ class Turn(Procedure):
 
             # Reset termination time
             if self.game.config.time_limits is not None:
-                self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
+                self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn_time_limit
 
             if self.blitz:
                 self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))

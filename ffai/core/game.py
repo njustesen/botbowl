@@ -181,19 +181,21 @@ class Game:
             # Perform game step
             done = self._one_step(action)
 
-            # Clone game if in a competition
-            game = self if not self.config.competition_mode else self
-            # TODO: Clone it!
-            
             # Game over
             if self.state.game_over:
 
                 if not self.home_agent.human:
                     self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
-                    self.home_agent.end_game(game)
+                    if self.config.competition_mode:
+                        self.home_agent.end_game(deepcopy(self))
+                    else:
+                        self.home_agent.end_game(self)
                 if not self.away_agent.human:
                     self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
-                    self.away_agent.end_game(game)
+                    if self.config.competition_mode:
+                        self.away_agent.end_game(deepcopy(self))
+                    else:
+                        self.away_agent.end_game(self)
                 return
             
             # if procedure is done - request agent
@@ -208,11 +210,11 @@ class Game:
                 actor_team = self.agent_team(actor) 
                 self.last_action_requested_time = time.time()
                 termination = self.action_termination_time()
-                action = self.actor.act(game)
+                action = self._safe_act()
                 
                 # Check if time limit was violated
                 now = time.time()
-                if self.config.time_limits is not None and now > termination + self.config.time_limits.violation_limit:
+                if self.config.time_limits is not None and now > termination + self.config.time_limits.violation_threshold:
 
                     # Add violation
                     violation = now - termination
@@ -245,6 +247,16 @@ class Game:
                 
                 # Else continue proecedure with no action
                 action = None
+
+    def _safe_act(self):
+        if self.config.competition_mode:
+            action = self.actor.act(deepcopy(self))
+            # Correct player object
+            if action.player is not None:
+                action.player = self.state.player_by_id[action.player_id]
+            return action
+        return self.actor.act(self)
+
 
     def _timeout_action(self):
         '''
@@ -985,7 +997,7 @@ class Game:
             return True
         if self.end_time is None or self.start_time is None:
             return False
-        return self.end_time - self.start_time > self.config.time_limits.game
+        return self.end_time - self.start_time > self.config.time_limits.game_time_limit
 
     def winner(self):
         """

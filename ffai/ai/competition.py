@@ -189,7 +189,7 @@ class Competition:
         results = []
         for i in range(num_games):
             print(f"Setting up bots for game {i+1}")
-            init_time = int(self.config.time_limits.init + self.config.time_limits.violation_limit)
+            init_time = int(self.config.time_limits.init_time_limit + self.config.time_limits.violation_threshold)
             competitor_a = self._get_competitor(self.competitor_a_name, init_time)
             if competitor_a is None:
                 self.disqualified = self.competitor_a_name
@@ -233,7 +233,7 @@ class Competition:
         game.config.fast_mode = True
         game.config.competition_mode = True
         try:
-            with self.time_limit(int(self.config.time_limits.game)):
+            with self.time_limit(int(self.config.time_limits.game_time_limit)):
                 game.init()
         except TimeoutException:
             print("Game timed out!")
