@@ -20,7 +20,7 @@ def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, confi
     assert home_agent is not None
     config = get_config(config_name)
     config.fast_mode = False
-    config.competition_mode = True
+    # config.competition_mode = True
     ruleset = get_rule_set(config.ruleset, all_rules=False)
     home = get_team_by_id(home_team_id, ruleset)
     away = get_team_by_id(away_team_id, ruleset)

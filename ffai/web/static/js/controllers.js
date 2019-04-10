@@ -911,7 +911,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
-                $scope.updateClock();
+                //$scope.updateClock();
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
@@ -1044,11 +1044,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
+                /*
                 $(document).ready(function() {
                     setTimeout(function() {
                         $scope.updateClock();
                    }, 200);
                 });
+                */
                 //$scope.updateMoveLines();
                 $scope.loading = false;
                 console.log(data);
