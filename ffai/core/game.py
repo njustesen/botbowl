@@ -1011,7 +1011,7 @@ class Game:
         
         # If the game is over the player with most TDs wins
         if self.state.game_over:
-            return self.get_winning_team()
+            return self.team_agent(self.get_winning_team())
         
         return None
 

@@ -41,7 +41,7 @@ config.time_limits.game = 60  # 60 second time limit per game
 config.time_limits.turn = 1  # 1 second time limit per turn
 config.time_limits.opp = 1  # 1 second time limit per opponent choice
 config.time_limits.disqualification = 1  # 1 violation threshold 
-config.time_limits.init_time_limit = 20  # 2 init limit 
+config.time_limits.init = 20  # 2 init limit 
 competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='init-crash', config=config)
 results = competition.run(num_games=2)
 results.print()
