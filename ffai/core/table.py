@@ -184,6 +184,7 @@ class OutcomeType(Enum):
     END_OF_GAME_DRAW = 133
     PLAYER_HEATED = 134
     PLAYER_NOT_HEATED = 135
+    END_OF_GAME_DISQUALIFICATION = 136
 
 
 class PlayerActionType(Enum):

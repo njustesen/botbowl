@@ -16,12 +16,12 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, game_time_limit, turn_time_limit, opp_time_limit, violation_threshold, init_time_limit):
-        self.game_time_limit = game_time_limit
-        self.turn_time_limit = turn_time_limit
-        self.opp_time_limit = opp_time_limit
-        self.violation_threshold = violation_threshold
-        self.init_time_limit = init_time_limit
+    def __init__(self, game, turn, opp, disqualification, init):
+        self.game = game
+        self.turn = turn
+        self.opp = opp
+        self.disqualification = disqualification
+        self.init = init
 
 class Configuration:
 
@@ -188,10 +188,8 @@ class GameState:
         self.active_player = None
         self.game_over = False
         self.available_actions = []
-        self.termination_turn = None
-        self.termination_opp = None
-        self.home_time_violation = 0
-        self.away_time_violation = 0
+        self.termination_turn = None  # Unix time in seconds when this turn terminates
+        self.termination_opp = None  # Unix time in seconds when this the opponent's oppertunity to act terminates
 
     def get_dugout(self, team):
         return self.dugouts[team.team_id]

@@ -33,6 +33,7 @@ class Game:
         self.rnd = np.random.RandomState(self.seed)
         self.start_time = None
         self.end_time = None
+        self.disqualified_agent = None
         self.last_action_requested_time = None
 
     def clone(self):
@@ -84,7 +85,7 @@ class Game:
     def agent_team(self, agent):
         """
         :param team:
-        :return: The agent who's controlling the specified team.
+        :return: The team controlled by the specified agent.
         """
         if agent == self.home_agent:
             return self.state.home_team
@@ -177,6 +178,7 @@ class Game:
             # Timed out?
             now = time.time()
             if self.timed_out():
+                self.game_over = True
                 self.end_time = now
                 return
 
@@ -208,30 +210,30 @@ class Game:
                     return
                 
                 # Query agent for action
-                actor = self.actor
-                actor_team = self.agent_team(actor) 
+                actor_team = self.agent_team(self.actor) 
                 self.last_action_requested_time = time.time()
                 termination = self.action_termination_time()
                 action = self._safe_act()
                 
                 # Check if time limit was violated
                 now = time.time()
-                if self.config.time_limits is not None and now > termination + self.config.time_limits.violation_threshold:
+                if self.config.time_limits is not None and now > termination:
 
-                    # Add violation
-                    violation = now - termination
-                    if self.actor == self.home_agent:
-                        self.state.home_team.state.time_violation += violation
-                    else:
-                        self.state.away_team.state.time_violation += violation
-                    
-                    # End turn if actors turn
+                    # Disqualification? Relevant for hanging bots
+                    if now > termination + self.config.time_limits.disqualification:
+                        self.game_over = True
+                        self.disqualified_agent = self.actor
+                        self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=actor_team))
+                        self.end_time = now
+                        return
+
+                    # End current procedures randomly and end the turn
                     while self.state.current_team == actor_team:
                         
                         # Request timout action
                         if done:
                             action = self._timeout_action()
-                            print(f"Time out forcing action: {action.to_json()}")
+                            print(f"Forced action: {action.to_json()}")
                         else:
                             action = None
                         
@@ -255,7 +257,7 @@ class Game:
             action = self.actor.act(deepcopy(self))
             # Correct player object
             if action.player is not None:
-                action.player = self.state.player_by_id[action.player_id]
+                action.player = self.state.player_by_id[action.player.player_id]
             return action
         return self.actor.act(self)
 
@@ -912,16 +914,6 @@ class Game:
             return self.state.away_team
         return None
 
-    def get_winner(self):
-        """
-        :return: The agent with most touchdowns, otherwise None.
-        """
-        if self.state.home_team.state.score > self.state.away_team.state.score:
-            return self.home_agent
-        elif self.state.home_team.state.score < self.state.away_team.state.score:
-            return self.away_agent
-        return None
-
     def is_setup_legal_scrimmage(self, team, min_players=3):
         """
         :param team:
@@ -993,35 +985,34 @@ class Game:
 
     def timed_out(self):
         """
-        Returns true if game time out which includes any time violations.
+        Returns true if the game timed out - i.e. it was longer than the allowed self.config.time_limits.game.
         """
-        if self.state.home_team.state.time_violation + self.state.away_team.state.time_violation > 0:
-            return True
         if self.end_time is None or self.start_time is None:
             return False
-        return self.end_time - self.start_time > self.config.time_limits.game_time_limit
+        return self.end_time - self.start_time > self.config.time_limits.game
 
-    def winner(self):
+    def get_winner(self):
         """
-        returns the winning agent of the game if it over or timed out.
+        returns the winning agent of the game. None if it's a draw.
+        If the game timed out the current player loses.
+        A disqualified player will lose.
+        If the game is over, the team with most TDs win.
         """
+        # Disqualified players lose
+        if self.disqualified_agent is not None:
+            return self.other_agent(self.disqualified_agent)
+        
+        # If game timed out the current player lost
         if self.timed_out():
-            # Loser is the agent with most volations or the current player
-            if self.state.home_team.state.time_violation > self.state.away_team.state.time_violation:
+            if self.home_agent == self.actor:
                 return self.away_agent
-            elif self.state.home_team.state.time_violation < self.state.away_team.state.time_violation:
+            elif self.away_agent == self.actor:
                 return self.home_agent
-            elif self.actor is not None:
-                if self.home_agent == self.actor:
-                    return self.away_agent
-                else:
-                    return self.home_agent
-                return None
-        elif self.state.game_over:
-            if self.state.home_team.state.score > self.state.away_team.state.score:
-                return self.home_agent
-            elif self.state.home_team.state.score < self.state.away_team.state.score:
-                return self.away_agent
+        
+        # If the game is over the player with most TDs wins
+        if self.state.game_over:
+            return self.get_winning_team()
+        
         return None
 
     def other_agent(self, agent):

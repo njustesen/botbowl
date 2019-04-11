@@ -17,10 +17,10 @@
     "defensive_formations": ["def_spread.txt"],
     "offensive_formations": ["off_wedge.txt"],
     "time_limits": {
-        "game_time_limit": 15360,
-        "turn_time_limit": 120,
-        "opp_time_limit": 10,
-        "violation_threshold": 2,
-        "init_time_limit": 10
+        "game": 15360,
+        "turn": 120,
+        "opp": 10,
+        "disqualification": 5,
+        "init": 10
     }
 }

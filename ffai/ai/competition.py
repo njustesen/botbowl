@@ -59,7 +59,8 @@ class GameResult:
         self.away_agent_name = game.away_agent.name
         self.timed_out = game.timed_out()
         self.crashed = crashed
-        self.winner = game.winner()
+        self.winner = game.get_winner()
+        self.disqualified_agent = game.disqualified_agent
 
         # If game crashed award the non-acting player
         if crashed:
@@ -73,8 +74,6 @@ class GameResult:
         self.tds = self.home_result.tds + self.away_result.tds
         self.cas_inflicted = self.home_result.cas_inflicted == self.away_result.cas_inflicted
         self.kills = self.home_result.kills_inflicted == self.away_result.kills_inflicted
-        self.home_time_violation = game.state.home_team.state.time_violation
-        self.away_time_violation = game.state.away_team.state.time_violation
         
 
     def print(self):
@@ -85,14 +84,14 @@ class GameResult:
         print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.cas_inflicted, self.home_result.cas_inflicted, self.home_agent_name))
         print("Kills inflicted:")
         print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.kills_inflicted, self.home_result.kills_inflicted, self.home_agent_name))
-        print("Time violation:")
-        print("- {} {} - {} {}".format(self.away_agent_name, self.away_time_violation, self.home_time_violation, self.home_agent_name))
         print("Result:")
         if self.winner is not None:
             if self.crashed and self.winner.name == self.home_agent_name:
                 print(f"- {self.away_agent_name} chrashed!")
             if self.crashed and self.winner.name == self.away_agent_name:
                 print(f"- {self.home_agent_name} chrashed!")
+            if self.disqualified_agent is not None:
+                print(f"- {self.disqualified_agent.name} was disqualified!")
             if self.timed_out and self.winner.name == self.home_agent_name:
                 print(f"- {self.away_agent_name} timed out!")
             if self.timed_out and self.winner.name == self.away_agent_name:
@@ -189,7 +188,7 @@ class Competition:
         results = []
         for i in range(num_games):
             print(f"Setting up bots for game {i+1}")
-            init_time = int(self.config.time_limits.init_time_limit + self.config.time_limits.violation_threshold)
+            init_time = int(self.config.time_limits.init + self.config.time_limits.disqualification)
             competitor_a = self._get_competitor(self.competitor_a_name, init_time)
             if competitor_a is None:
                 self.disqualified = self.competitor_a_name
@@ -233,14 +232,12 @@ class Competition:
         game.config.fast_mode = True
         game.config.competition_mode = True
         try:
-            with self.time_limit(int(self.config.time_limits.game_time_limit)):
+            with self.time_limit(int(self.config.time_limits.game)):
                 game.init()
         except TimeoutException:
             print("Game timed out!")
-            # Load from autosave
-            #data_path = get_data_path(rel_path=f"auto/{game.game_id}.ffai")
-            #game = pickle.load(open(data_path, "rb"))
             game.end_time = time.time()
+            game.game_over = True
             return GameResult(game)
         except Exception as e:
             print(f"Game crashed by {game.actor.name if game.actor is not None else 'the framework'}: ", e)
