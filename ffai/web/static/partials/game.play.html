@@ -68,6 +68,7 @@
     <div class="scoreboard">
         <div class="row scoreboard-content">
             <div>
+                <div class="clock-left"></div>
                 <div class="emblem col-xs-4 text-right">
                     <div class="gamelabel">
                         Away
@@ -109,6 +110,7 @@
                         <div ng-repeat="n in [] | range:8" title="{{ $index < game.state.home_team.state.rerolls ? 'Reroll' : ($index < game.state.home_team.state.rerolls_start ? 'Reroll used' : '') }}" class="reroll home {{ $index < game.state.home_team.state.rerolls ? 'notused' : ($index < game.state.home_team.state.rerolls_start ? 'used' : 'none') }} {{ ($index == game.state.home_team.state.rerolls-1 && game.can_home_team_use_reroll ? 'available' : '') }}"> </div>
                     </div>
                 </div>
+                <div class="clock-right"></div>
             </div>
         </div>
         <div class="row scoreboard-content">

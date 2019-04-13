@@ -1,18 +1,54 @@
-'''
-Still WiP. Do not expect it work.
-'''
-
-from ffai.ai.competition import Competition, Competitor
+from ffai.ai.competition import Competition
 import examples.scripted_bot_example
+import examples.grodbot
 from copy import deepcopy
 from ffai.core.load import get_team, get_rule_set, get_config
 
 config = get_config('ff-11.json')
-ruleset = get_rule_set(config.ruleset)
-team1 = get_team('human-1', ruleset)
-team2 = get_team('human-2', ruleset)
-competitor_random = Competitor('random', deepcopy(team1))
-competitor_scripted = Competitor('scripted', deepcopy(team2))
-competition = Competition('MyCompetition', competitor_random, competitor_scripted, config=config)
-results = competition.run(num_games=20)
+
+# Random vs. random
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='random', config=config)
+results = competition.run(num_games=2)
+results.print()
+
+# Random vs. idle
+config.time_limits.game = 10  # 10 second time limit per game
+config.time_limits.turn = 1  # 1 second time limit per turn
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='idle', config=config)
+results = competition.run(num_games=2)
+results.print()
+
+# Random vs. violator
+config.time_limits.game = 60  # 60 second time limit per game
+config.time_limits.turn_ = 1  # 1 second time limit per turn
+config.time_limits.opp = 1  # 1 second time limit per opponent choice
+config.time_limits.disqualification = 1  # 1 violation limit 
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='violator', config=config)
+results = competition.run(num_games=2)
+results.print()
+
+# Random vs. just-in-time
+config.time_limits.game = 60  # 60 second time limit per game
+config.time_limits.turn = 1  # 1 second time limit per turn
+config.time_limits.opp = 1  # 1 second time limit per opponent choice
+config.time_limits.disqualification = 1  # 1 violation limit 
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='just-in-time', config=config)
+results = competition.run(num_games=2)
+results.print()
+
+# Random vs. init crash
+config.time_limits.game = 60  # 60 second time limit per game
+config.time_limits.turn = 1  # 1 second time limit per turn
+config.time_limits.opp = 1  # 1 second time limit per opponent choice
+config.time_limits.disqualification = 1  # 1 violation threshold 
+config.time_limits.init = 20  # 2 init limit 
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='init-crash', config=config)
+results = competition.run(num_games=2)
+results.print()
+
+# Random vs. crash
+config.time_limits.game = 32  # 32 second time limit per game
+config.time_limits.turn = 1  # 1 second time limit per turn
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='crash', config=config)
+results = competition.run(num_games=2)
 results.print()

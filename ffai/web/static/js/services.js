@@ -167,9 +167,8 @@ appServices.factory('GameLogService', function() {
             "THROW_IN": "The ball was thrown back in by the fans.",
             "BLITZ_START": "<team> makes a <b>blitz</b>.",
             "QUICK_SNAP": "<team> makes a <b>quick snap</b>.",
-            "TEAM_SPECTATORS": "<team> has <b><n> fans</b> cheering for them."
-
-
+            "TEAM_SPECTATORS": "<team> has <b><n> fans</b> cheering for them.",
+            "END_OF_GAME_DISQUALIFICATION": "<team> was <b>disqualified</b>."
         }
     };
 });

@@ -3,9 +3,9 @@ import ffai.web.api as api
 from ffai.ai.registry import make_bot
 from ffai.core.model import Agent
 
-# Import this to register MyScriptedBot with id 'scripted'
-import examples.scripted_bot_example
-import examples.grodbot
+# Import this to register bots
+import scripted_bot_example
+import grodbot
 
 # Create some games
 api.new_game(home_team_id="orc-1",
@@ -34,4 +34,4 @@ api.new_game(home_team_id="orc-1",
              away_agent=make_bot("GrodBot"))
 
 # Run server
-server.start_server(debug=True, use_reloader=True)
+server.start_server(debug=True, use_reloader=False)

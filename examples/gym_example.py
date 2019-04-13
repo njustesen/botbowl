@@ -6,12 +6,12 @@ from ffai.ai.env import FFAIEnv
 if __name__ == "__main__":
 
     # Create environment
-    env = gym.make("FFAI-v1")
+    # env = gym.make("FFAI-v1")
 
     # Smaller variants
     # env = gym.make("FFAI-7-v1")
     # env = gym.make("FFAI-5-v1")
-    # env = gym.make("FFAI-3-v1")
+    env = gym.make("FFAI-3-v1")
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     # Play 10 games
     steps = 0
-    for i in range(10):
+    for i in range(100):
 
         # Reset environment
         obs = env.reset()

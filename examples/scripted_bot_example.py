@@ -18,12 +18,6 @@ class MyScriptedBot(ProcBot):
         self.my_team = team
         self.opp_team = game.get_opp_team(team)
 
-    def start_game(self, game):
-        """
-        Just start the game.
-        """
-        return Action(ActionType.START_GAME)
-
     def coin_toss_flip(self, game):
         """
         Select heads/tails and/or kick/receive

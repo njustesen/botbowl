@@ -53,12 +53,6 @@ class GrodBot(bot.ProcBot):
         self.my_team = team
         self.opp_team = game.get_opp_team(team)
 
-    def start_game(self, game: g.Game):
-        """
-        Just start the game.
-        """
-        return m.Action(t.ActionType.START_GAME)
-
     def coin_toss_flip(self, game: g.Game):
         """
         Select heads/tails and/or kick/receive
@@ -1409,7 +1403,6 @@ def main():
         print("Starting game", (i + 1))
         start = time.time()
         game.init()
-        game.step()
         end = time.time()
         print(end - start)
 

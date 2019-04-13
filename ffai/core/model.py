@@ -17,10 +17,12 @@ from typing import Optional, List
 
 class TimeLimits:
 
-    def __init__(self, turn, opp_choice):
+    def __init__(self, game, turn, opp, disqualification, init):
+        self.game = game
         self.turn = turn
-        self.opp_choice = opp_choice
-
+        self.opp = opp
+        self.disqualification = disqualification
+        self.init = init
 
 class Configuration:
 
@@ -128,6 +130,7 @@ class TeamState:
         self.cheerleaders = team.cheerleaders
         self.fame = 0
         self.reroll_used = False
+        self.time_violation = 0
 
     def to_json(self):
         return {
@@ -142,7 +145,8 @@ class TeamState:
             'ass_coaches': self.ass_coaches,
             'cheerleaders': self.cheerleaders,
             'fame': self.fame,
-            'reroll_used': self.reroll_used
+            'reroll_used': self.reroll_used,
+            'time_violation': self.time_violation
         }
 
     def reset_turn(self):
@@ -185,34 +189,8 @@ class GameState:
         self.active_player = None
         self.game_over = False
         self.available_actions = []
-        self.termination_turn = None
-        self.termination_opp = None
-
-    def clone(self):
-        state = GameState(deepcopy(self.home_team), deepcopy(self.away_team))
-        state.stack = deepcopy(self.stack)
-        state.reports = deepcopy(self.reports)
-        state.round = self.round
-        state.kicking_first_half = self.kicking_first_half
-        state.receiving_first_half = self.receiving_first_half
-        state.kicking_this_drive = self.kicking_this_drive
-        state.receiving_this_drive = self.receiving_this_drive
-        state.current_team = None if state.current_team is None else state.home_team if state.current_team.team_id == state.home_team.team_id else state.away_team
-        state.pitch = Pitch(self.pitch.width, self.pitch.height)
-        for player in state.home_team.players:
-            if player.position is not None:
-                state.pitch.board[player.position.y][player.position.x] = player
-        for player in state.away_team.players:
-            if player.position is not None:
-                state.pitch.board[player.position.y][player.position.x] = player
-        state.weather = self.weather
-        state.gentle_gust = self.gentle_gust
-        state.turn_order = [self.team_by_id[team.team_id] for team in self.turn_order]
-        state.spectators = self.spectators
-        state.active_player = self.player_by_id[self.active_player.player_id] if self.active_player is not None else None
-        state.game_over = self.game_over
-        state.available_actions = copy(self.available_actions)
-        return state
+        self.termination_turn = None  # Unix time in seconds when this turn terminates
+        self.termination_opp = None  # Unix time in seconds when this the opponent's oppertunity to act terminates
 
     def get_dugout(self, team):
         return self.dugouts[team.team_id]
@@ -1299,35 +1277,35 @@ class Formation:
         self.name = name
         self.formation = formation
 
-    def _get_player(self, players, type):
-        if type == 's':
+    def _get_player(self, players, t):
+        if t == 's':
             idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) for player in players])
             return players[idx]
-        if type == 'm':
+        if t == 'm':
             idx = np.argmax([player.get_ma() for player in players])
             return players[idx]
-        if type == 'a':
+        if t == 'a':
             idx = np.argmax([player.get_ag() for player in players])
             return players[idx]
-        if type == 'v':
+        if t == 'v':
             idx = np.argmax([player.get_av() for player in players])
             return players[idx]
-        if type == 'p':
+        if t == 'p':
             idx = np.argmax([1 if player.has_skill(Skill.PASS) else 0 for player in players])
             return players[idx]
-        if type == 'c':
+        if t == 'c':
             idx = np.argmax([1 if player.has_skill(Skill.CATCH) else 0 for player in players])
             return players[idx]
-        if type == 'b':
+        if t == 'b':
             idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else 0 for player in players])
             return players[idx]
-        if type == 'd':
+        if t == 'd':
             idx = np.argmax([1 if player.has_skill(Skill.DODGE) else 0 for player in players])
             return players[idx]
-        if type == '0':
+        if t == '0':
             idx = np.argmin([len(player.get_skills()) for player in players])
             return players[idx]
-        if type == 'x':
+        if t == 'x':
             idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else (0 if player.has_skill(Skill.PASS) or player.has_skill(Skill.CATCH) else 0.5) for player in players])
             return players[idx]
         return players[0]
@@ -1347,12 +1325,12 @@ class Formation:
             for x in reversed(range(len(self.formation[0]))):
                 if len(players) == 0:
                     return actions
-                type = self.formation[y][x]
-                if type == '-':
+                t = self.formation[y][x]
+                if t == '-':
                     continue
                 yy = y + 1
                 xx = x + 1 if not home else game.arena.width - x - 2
-                player = self._get_player(players, type)
+                player = self._get_player(players, t)
                 players.remove(player)
                 actions.append(Action(ActionType.PLACE_PLAYER, pos=Square(xx, yy), player=player))
         return actions
