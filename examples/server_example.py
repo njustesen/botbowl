@@ -26,12 +26,12 @@ api.new_game(home_team_id="human-1",
 api.new_game(home_team_id="orc-1",
              away_team_id="human-1",
              home_agent=make_bot("GrodBot"),
-             away_agent=make_bot("GrodBot"))
+             away_agent=make_bot("random"))
 
 api.new_game(home_team_id="orc-1",
              away_team_id="human-1",
              home_agent=make_bot("GrodBot"),
-             away_agent=make_bot("random"))
+             away_agent=make_bot("GrodBot"))
 
 # Run server
 server.start_server(debug=True, use_reloader=True)

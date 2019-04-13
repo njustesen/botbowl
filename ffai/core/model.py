@@ -351,14 +351,14 @@ class Pitch:
             return ball.position
         return None
 
-    def get_ball_team(self) -> 'Team':
+    def get_ball_team(self):
         ball_carrier = self.get_ball_carrier()
         if ball_carrier is None:
             return None
         else:
             return ball_carrier.team
 
-    def get_ball_carrier(self)-> 'Player':
+    def get_ball_carrier(self):
         ball_pos: Square = self.get_ball_position()
         if ball_pos is None:
             return None
@@ -444,14 +444,14 @@ class Pitch:
                         squares.append(square)
         return squares
 
-    def adjacent_players_at(self, player_or_team, position: 'Square', include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+    def adjacent_players_at(self, player_or_team, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
         players = []
         if isinstance(player_or_team, Team):
             team = player_or_team
         else:
             team = player_or_team.team
         for square in self.get_adjacent_squares(position, manhattan=manhattan):
-            player_at: Optional['Player', None] = self.get_player_at(square)
+            player_at = self.get_player_at(square)
             if player_at is None:
                 continue
             if not include_stunned and player_at.state.stunned:
@@ -508,7 +508,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def tackle_zones_detailed_at(self, player: 'Player', position: 'Square'):
+    def tackle_zones_detailed_at(self, player, position):
         tackle_zones = 0
         tacklers = []
         prehensile_tailers = []
@@ -531,7 +531,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def players_blockable_at(self, player: 'Player', position: 'Square'):
+    def players_blockable_at(self, player, position):
         blockable = []
         for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
@@ -562,7 +562,7 @@ class Pitch:
     def num_block_dice(self, player, opp_player, blitz=False, dauntless_success=False):
         return self.num_block_dice_at(player, opp_player, player.position, blitz, dauntless_success)
 
-    def num_block_dice_at(self, player, opp_player, position: 'Square', blitz=False, dauntless_success=False):
+    def num_block_dice_at(self, player, opp_player, position, blitz=False, dauntless_success=False):
 
         # Determine dice and favor
         st_for = player.get_st()
@@ -594,7 +594,7 @@ class Pitch:
         elif st_for < st_against:
             return -2
 
-    def num_assists_at(self, player: 'Player', opp_player: 'Player', position: 'Square', ignore_guard: bool = False) -> (int, int):
+    def num_assists_at(self, player, opp_player, position, ignore_guard: bool = False):
         '''
         Return net assists for a block of player on opp_player when player has moved to position first.  Required for
         calculating assists after moving in a Blitz action.
@@ -656,7 +656,7 @@ class Pitch:
                     n_assists_for += 1
         return (n_assists_for, n_assist_against)
 
-    def passes_at(self, passer, weather, position: 'Square'):
+    def passes_at(self, passer, weather, position):
         squares = []
         distances = []
         distances_allowed = [PassDistance.QUICK_PASS,
@@ -1113,7 +1113,7 @@ class Player(Piece):
             'position': self.position.to_json() if self.position is not None else None
         }
 
-    def move_allowed(self, include_gfi: bool = True) -> int:
+    def move_allowed(self, include_gfi: bool = True):
         if self.state.used or self.state.stunned:
             moves = 0
         else:
