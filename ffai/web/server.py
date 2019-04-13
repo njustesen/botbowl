@@ -97,7 +97,7 @@ def load_game(name):
 
 
 def start_server(debug=False, use_reloader=False):
-
+    
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
     jinja_options.update(dict(

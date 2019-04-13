@@ -48,7 +48,7 @@ class Apothecary(Procedure):
         self.effect_second = None
 
     def setup(self):
-        if self.game.config.time_limits is not None:
+        if self.game.state.current_team != self.player.team:
             self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
     def step(self, action):
@@ -287,7 +287,7 @@ class Block(Procedure):
 
             # Set termination time
             if self.favor != self.game.state.current_team:
-                if self.game.config.time_limits is not None:
+                if self.game.state.current_team != self.favor:
                     self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
             return False
@@ -574,16 +574,14 @@ class Catch(Procedure):
                     self.waiting_for_catch = True
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.CATCH))
                     if self.player.team != self.game.state.current_team:
-                        if self.game.config.time_limits is not None:
-                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+                        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
                     return False
 
                 # Check if reroll available
                 if self.game.can_use_reroll(self.player.team) and not self.catch_used:
                     self.waiting_for_reroll = True
                     if self.player.team != self.game.state.current_team:
-                        if self.game.config.time_limits is not None:
-                            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+                        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
                     return False
 
                 Bounce(self.game, self.ball, kick=self.kick)
@@ -621,8 +619,7 @@ class CoinTossFlip(Procedure):
         super().__init__(game)
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
@@ -658,8 +655,7 @@ class CoinTossKickReceive(Procedure):
                                 team=self.game.state.coin_toss_winner)]
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
     def step(self, action):
         kicking = None
@@ -872,8 +868,7 @@ class Interception(Procedure):
         self.interceptors = interceptors
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
     def step(self, action):
 
@@ -900,8 +895,7 @@ class Touchback(Procedure):
         self.ball = ball
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
 
         self.players_on_pitch_standing = self.game.get_players_on_pitch(self.game.state.receiving_this_drive, up=True)
 
@@ -1081,8 +1075,7 @@ class HighKick(Procedure):
         self.receiving_team = self.game.get_receiving_team()
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
         self.standing_players = self.game.get_players_on_pitch(self.receiving_team, up=True)
 
     def step(self, action):
@@ -1898,8 +1891,7 @@ class PlaceBall(Procedure):
         self.aa = None
 
     def setup(self):
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
         self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
                                 positions=self.game.get_team_side(self.game.get_receiving_team()))]
 
@@ -2187,6 +2179,7 @@ class StartGame(Procedure):
         for team in self.game.state.teams:
             for player in team.players:
                 self.game.get_reserves(team).append(player)
+        self.game.start_time = time.time()
         self.game.report(Outcome(OutcomeType.GAME_STARTED))
         return True
 
@@ -2206,7 +2199,6 @@ class EndGame(Procedure):
             self.game.report(Outcome(OutcomeType.END_OF_GAME_WINNER, team=winner))
         else:
             self.game.report(Outcome(OutcomeType.END_OF_GAME_DRAW))
-        self.end_time = time.time()
         return True
 
     def available_actions(self):
@@ -2348,8 +2340,7 @@ class Push(Procedure):
         if self.squares is None:
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
             if self.player.has_skill(Skill.SIDE_STEP):
-                if self.game.config.time_limits is not None:
-                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+                self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
             return False
 
         # Stand firm
@@ -2562,6 +2553,8 @@ class Setup(Procedure):
         # Set termination time
         if self.game.config.time_limits is not None:
             self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
+        # Set current team
+        self.game.state.current_team = self.team
 
     def step(self, action):
         formation = None
@@ -2591,6 +2584,7 @@ class Setup(Procedure):
             elif not self.game.is_setup_legal_wings(self.team, max_players=self.game.config.wing_max):
                 self.game.report(Outcome(OutcomeType.ILLEGAL_SETUP_WINGS, team=self.team))
                 return False
+            self.game.state.current_team = None
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.team))
             return True
 
@@ -2820,6 +2814,9 @@ class Turn(Procedure):
         self.handoff_available = not quick_snap
         self.foul_available = not quick_snap
 
+    def setup(self):
+        self.game.state.current_team = self.team
+
     def start_player_action(self, outcome_type, player_action_type, player):
 
         # Start action
@@ -2832,7 +2829,6 @@ class Turn(Procedure):
         # Update state
         if not self.started:
             self.started = True
-            self.game.state.current_team = self.team
 
             # Reset termination time
             if self.game.config.time_limits is not None:

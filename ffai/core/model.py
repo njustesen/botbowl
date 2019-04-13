@@ -16,12 +16,23 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, game, turn, opp, disqualification, init):
+    def __init__(self, game, turn, opp, disqualification, init, end):
         self.game = game
         self.turn = turn
         self.opp = opp
         self.disqualification = disqualification
         self.init = init
+        self.end = end
+
+    def to_json(self):
+         return {
+            'game': self.game,
+            'turn': self.turn,
+            'opp': self.opp,
+            'disqualification': self.disqualification,
+            'init': self.init,
+            'end': self.end
+        }
 
 class Configuration:
 
@@ -214,7 +225,9 @@ class GameState:
             'current_team_id': self.current_team.team_id if self.current_team is not None else None,
             'round': self.round,
             'spectators': self.spectators,
-            'active_player_id': self.active_player.player_id if self.active_player is not None else None
+            'active_player_id': self.active_player.player_id if self.active_player is not None else None,
+            'termination_turn': self.termination_turn,
+            'termination_opp': self.termination_opp
         }
 
 
@@ -351,10 +364,10 @@ class Pitch:
                     include = True
             #print("Include: ", include)
             if include:
-                if self.get_player_at(square) is None:
-                    squares_empty.append(square)
                 if self.is_out_of_bounds(square):
                     squares_out.append(square)
+                elif self.get_player_at(square) is None:
+                    squares_empty.append(square)
                 squares.append(square)
         if len(squares_empty) > 0:
             return squares_empty

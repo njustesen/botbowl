@@ -1,6 +1,6 @@
 from ffai.web.api import *
 from ffai.ai.bots import ProcBot
-import ffai.ai.registry
+from ffai.ai.registry import register_bot, make_bot
 import time
 
 
@@ -317,9 +317,11 @@ if __name__ == "__main__":
     away = get_team_by_id("human-2", ruleset)
 
     # Play 100 games
-    for i in range(100):
-        away_agent = MyScriptedBot("Scripted Bot 1")
-        home_agent = MyScriptedBot("Scripted Bot 2")
+    for i in range(1):
+        away_agent = make_bot('scripted')
+        away_agent.name = "Scripted Bot 1"
+        home_agent = make_bot('scripted')
+        home_agent.name = "Scripted Bot 2"
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
@@ -327,6 +329,5 @@ if __name__ == "__main__":
         print("Starting game", (i+1))
         start = time.time()
         game.init()
-        game.step()
         end = time.time()
         print(end - start)

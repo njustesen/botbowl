@@ -34,32 +34,15 @@ class Game:
         self.start_time = None
         self.end_time = None
         self.disqualified_agent = None
-        self.last_action_requested_time = None
-
-    def clone(self):
-        """
-        Clones the Game object but retains references to objects that shouldn't be modified. This should be faster
-        than deepcopy.
-        :return: A clone of the Game object.
-        """
-        state = self.state.clone()
-        game = Game(game_id=self.game_id,
-                    home_team=state.home_team,
-                    away_team=state.away_team,
-                    home_agent=self.home_agent,
-                    away_agent=self.away_agent,
-                    config=self.config,
-                    ruleset=self.ruleset,
-                    arena=self.arena,
-                    state=state,
-                    seed=None,
-                    auto_save=self.auto_save)
-        game.actor = self.actor
-        return game
+        self.last_request_time = None
+        self.last_action_time = None
+        self.forced_action = None
 
     def to_json(self):
         return {
             'game_id': self.game_id,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
             'state': self.state.to_json(),
             'stack': self.procs(),
             'home_agent': self.home_agent.to_json(),
@@ -70,48 +53,14 @@ class Game:
             'can_home_team_use_reroll': self.can_use_reroll(self.state.home_team),
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
-            'termination': self.action_termination_time() 
+            'disqualified_agent': self.disqualified_agent.name if self.disqualified_agent is not None else None,
+            'time_limits': self.config.time_limits.to_json()
         }
-
-    def team_agent(self, team):
-        """
-        :param team:
-        :return: The agent who's controlling the specified team.
-        """
-        if team == self.state.home_team:
-            return self.home_agent
-        return self.away_agent
-
-    def agent_team(self, agent):
-        """
-        :param team:
-        :return: The team controlled by the specified agent.
-        """
-        if agent == self.home_agent:
-            return self.state.home_team
-        return self.state.away_team
-
-    def _squares_moved(self):
-        """
-        :return: The squares moved by the active player.
-        """
-        for proc in self.state.stack.items:
-            if isinstance(proc, PlayerAction):
-                out = []
-                for square in proc.squares:
-                    out.append(square.to_json())
-                return out
-        return []
-
-    def set_seed(self, seed):
-        self.seed = seed
-        self.rnd = np.random.RandomState(self.seed)
 
     def init(self):
         """
         Initialized the Game. The START_GAME action must still be called after this if humans are in the game.
         """
-        self.start_time = time.time()
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
@@ -128,6 +77,149 @@ class Game:
             self.step(Action(ActionType.START_GAME))
         else:
             self.set_available_actions()
+
+    def step(self, action=None):
+        """
+        Runs until an action from a human is required. If game requires an action to continue one must be given.
+        :param action: Action to perform, can be None if game does not require any.
+        :return:
+        """
+
+        # Ensure player points to player object
+        if action is not None:
+            action.player = self.get_player(action.player.player_id) if action.player is not None else None
+            action.pos = Square(action.pos.x, action.pos.y) if action.pos is not None else None
+
+        # Update game
+        while True:
+
+            # Perform game step
+            done = self._one_step(action)
+
+            # Game over
+            if self.state.game_over:
+                self._end_game()
+                return
+            
+            # if procedure is done - request agent
+            if done:
+
+                # If human player - wait for input
+                if self.actor.human:
+                    return
+                
+                # Query agent for action
+                self.last_request_time = time.time()
+                action = self._safe_act()
+                
+                # Check if time limit was violated
+                self.last_action_time = time.time()
+                self.check_termination()
+                
+                # Did the game terminate?
+                if self.state.game_over:
+                    return
+
+                # Did the game force a slow agent to end its turn?
+                if self.forced_action is not None:
+                    action = self.forced_action
+                    self.forced_action = None
+                
+            else:
+
+                # If not in fast mode - wait for input before continuing
+                if not self.config.fast_mode:
+                    return
+                
+                # Else continue proecedure with no action
+                action = None
+
+    def check_termination(self):
+        '''
+        Checks if the agent's oppertunity to act has terminated.
+        '''
+        print("Cheking termination")
+        if not self.config.competition_mode or self.config.time_limits is None:
+            return
+
+        # Timed out?
+        now = time.time()
+        if self.timed_out():
+            print("Game timed out")
+            self.disqualified_agent = self.actor
+            self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
+            self.state.game_over = True
+            self.end_time = now
+            self._end_game()
+            return
+
+        now = time.time()
+        termination = self.termination_time()
+        if termination is None:
+            print("No termination point")
+            return
+        
+        # Agent too slow?
+        actor = self.actor
+        if now > termination:
+            print("Agent too slow")
+
+            # Disqualification? Relevant for hanging bots
+            if now > termination + self.config.time_limits.disqualification:
+                print("Agent disqualified")
+                self.state.game_over = True
+                self.disqualified_agent = self.actor
+                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(actor)))
+                self.end_time = now
+                self._end_game()
+                return
+
+            # End current procedures randomly and end the turn
+            done = True
+            while self.termination_time() == termination:
+                
+                # Request timout action
+                if done:
+                    action = self._timeout_action()
+                    print(f"Forced action: {action.to_json()}")
+                else:
+                    action = None
+                
+                # Take action if it doesn't end the turn
+                if action not in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN]:
+                    done = self._one_step(action)
+                else:
+                    self.forced_action = action
+                    break
+
+    def _end_game(self):
+        '''
+        End the game
+        '''
+        # Game ended when the last action was received - to avoid timout during finishing procedures
+        self.end_time = self.last_action_time
+
+        # Let agents know that the game ended
+        if not self.home_agent.human:
+            self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
+            now = time.time()
+            if self.config.competition_mode:
+                self.home_agent.end_game(deepcopy(self))
+            else:
+                self.home_agent.end_game(self)
+            # Disqualify if too long
+            if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
+                self.disqualified_agent = self.home_agent
+        if not self.away_agent.human:
+            self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
+            now = time.time()
+            if self.config.competition_mode:
+                self.away_agent.end_game(deepcopy(self))
+            else:
+                self.away_agent.end_game(self)
+            # Disqualify if too long
+            if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
+                self.disqualified_agent = self.home_agent
 
     def _is_action_allowed(self, action):
         """
@@ -160,99 +252,10 @@ class Game:
                 return True
         return False
 
-    def step(self, action=None):
-        """
-        Runs until an action from a human is required. If game requires an action to continue one must be given.
-        :param action: Action to perform, can be None if game does not require any.
-        :return:
-        """
-
-        # Ensure player points to player object
-        if action is not None:
-            action.player = self.get_player(action.player.player_id) if action.player is not None else None
-            action.pos = Square(action.pos.x, action.pos.y) if action.pos is not None else None
-
-        # Update game
-        while True:
-
-            # Timed out?
-            now = time.time()
-            if self.timed_out():
-                self.game_over = True
-                self.end_time = now
-                return
-
-            # Perform game step
-            done = self._one_step(action)
-
-            # Game over
-            if self.state.game_over:
-
-                if not self.home_agent.human:
-                    self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
-                    if self.config.competition_mode:
-                        self.home_agent.end_game(deepcopy(self))
-                    else:
-                        self.home_agent.end_game(self)
-                if not self.away_agent.human:
-                    self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
-                    if self.config.competition_mode:
-                        self.away_agent.end_game(deepcopy(self))
-                    else:
-                        self.away_agent.end_game(self)
-                return
-            
-            # if procedure is done - request agent
-            if done:
-
-                # If human player - wait for input
-                if self.actor.human:
-                    return
-                
-                # Query agent for action
-                actor_team = self.agent_team(self.actor) 
-                self.last_action_requested_time = time.time()
-                termination = self.action_termination_time()
-                action = self._safe_act()
-                
-                # Check if time limit was violated
-                now = time.time()
-                if self.config.time_limits is not None and now > termination:
-
-                    # Disqualification? Relevant for hanging bots
-                    if now > termination + self.config.time_limits.disqualification:
-                        self.game_over = True
-                        self.disqualified_agent = self.actor
-                        self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=actor_team))
-                        self.end_time = now
-                        return
-
-                    # End current procedures randomly and end the turn
-                    while self.state.current_team == actor_team:
-                        
-                        # Request timout action
-                        if done:
-                            action = self._timeout_action()
-                            print(f"Forced action: {action.to_json()}")
-                        else:
-                            action = None
-                        
-                        # Take action if it doesn't end the turn
-                        if action not in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN]:
-                            done = self._one_step(action)
-                        else:
-                            break
-            
-            else:
-
-                # If not in fast mode - wait for input before continuing
-                if not self.config.fast_mode:
-                    return
-                
-                # Else continue proecedure with no action
-                action = None
-
     def _safe_act(self):
+        '''
+        Clone the game before requesting an action so agent can't manipulate it.
+        '''
         if self.config.competition_mode:
             action = self.actor.act(deepcopy(self))
             # Correct player object
@@ -261,13 +264,12 @@ class Game:
             return action
         return self.actor.act(self)
 
-
     def _timeout_action(self):
         '''
         Return action that prioritize to end the player's turn.
         '''
         # Take first negative action
-        for action_type in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN, ActionType.SELECT_PLAYER, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
+        for action_type in [ActionType.END_TURN, ActionType.END_PLAYER_TURN, ActionType.SELECT_PLAYER, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
                 if action.action_type == action_type:
                     return Action(action_type)
@@ -276,6 +278,19 @@ class Game:
         pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
         return Action(action_choice.action_type, pos=pos, player=player)
+
+    
+    def _squares_moved(self):
+        """
+        :return: The squares moved by the active player.
+        """
+        for proc in self.state.stack.items:
+            if isinstance(proc, PlayerAction):
+                out = []
+                for square in proc.squares:
+                    out.append(square.to_json())
+                return out
+        return []
 
     def _one_step(self, action):
         """
@@ -370,6 +385,35 @@ class Game:
             return False  # We can continue without user input
 
         return True  # Game needs user input
+
+    def team_agent(self, team):
+        """
+        :param team:
+        :return: The agent who's controlling the specified team.
+        """
+        if team is None:
+            return None
+        if team == self.state.home_team:
+            return self.home_agent
+        return self.away_agent
+
+    def agent_team(self, agent):
+        """
+        :param team:
+        :return: The team controlled by the specified agent.
+        """
+        if agent is None:
+            return None
+        if agent == self.home_agent:
+            return self.state.home_team
+        return self.state.away_team
+
+    def set_seed(self, seed):
+        '''
+        Sets the random seed of the game.
+        '''
+        self.seed = seed
+        self.rnd = np.random.RandomState(self.seed)
 
     def set_available_actions(self):
         """
@@ -975,9 +1019,9 @@ class Game:
             for player in team.players:
                 player.team = team
 
-    def action_termination_time(self):
+    def termination_time(self):
         """
-        The time at which an action must be terminated.
+        The time at which the current turn must be terminated - or the opponent's action choice (like selecting block die).
         """
         if self.state.termination_opp is not None:
             return self.state.termination_opp
@@ -985,8 +1029,10 @@ class Game:
 
     def timed_out(self):
         """
-        Returns true if the game timed out - i.e. it was longer than the allowed self.config.time_limits.game.
+        Returns true if the game timed out - i.e. it was longer than the allowed self.config.time_limits.game - only if in competition mode.
         """
+        if not self.config.competition_mode:
+            return
         if self.end_time is None or self.start_time is None:
             return False
         return self.end_time - self.start_time > self.config.time_limits.game
@@ -1019,6 +1065,8 @@ class Game:
         """
         Returns the other agent in the game.
         """
+        if agent is None:
+            return None
         if agent == self.home_agent:
             return self.away_agent
         return self.home_agent

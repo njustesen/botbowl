@@ -9,6 +9,7 @@ import time
 import ffai.core.game as g
 import random
 from enum import Enum
+from ffai.ai.registry import register_bot, make_bot
 
 
 class GrodBot(bot.ProcBot):
@@ -518,7 +519,7 @@ def potential_move_actions(player: m.Player, game: g.Game, paths: List[pf.Path])
 
 
 # Register MyScriptedBot
-api.register_bot('GrodBot', GrodBot)
+register_bot('GrodBot', GrodBot)
 
 
 if __name__ == "__main__":
@@ -536,8 +537,10 @@ if __name__ == "__main__":
 
     # Play 100 games
     for i in range(100):
-        away_agent = GrodBot("GrodBot 1")
-        home_agent = GrodBot("GrodBot 2")
+        away_agent = make_bot('grodbot')
+        away_agent.name = "GrodBot 1"
+        home_agent = make_bot('grodbot')
+        home_agent.name = "GrodBot 2"
         config.debug_mode = False
         game = api.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

@@ -253,7 +253,8 @@ def get_config(name):
         opp = data['time_limits']['opp']
         disqualification = data['time_limits']['disqualification']
         init = data['time_limits']['init']
-    config.time_limits = TimeLimits(game=game, turn=turn, opp=opp, disqualification=disqualification, init=init)
+        end = data['time_limits']['end']
+    config.time_limits = TimeLimits(game=game, turn=turn, opp=opp, disqualification=disqualification, init=init, end=end)
     return config
 
 

@@ -68,7 +68,6 @@
     <div class="scoreboard">
         <div class="row scoreboard-content">
             <div>
-                <div class="clock-left"></div>
                 <div class="emblem col-xs-4 text-right">
                     <div class="gamelabel">
                         Away
@@ -110,7 +109,6 @@
                         <div ng-repeat="n in [] | range:8" title="{{ $index < game.state.home_team.state.rerolls ? 'Reroll' : ($index < game.state.home_team.state.rerolls_start ? 'Reroll used' : '') }}" class="reroll home {{ $index < game.state.home_team.state.rerolls ? 'notused' : ($index < game.state.home_team.state.rerolls_start ? 'used' : 'none') }} {{ ($index == game.state.home_team.state.rerolls-1 && game.can_home_team_use_reroll ? 'available' : '') }}"> </div>
                     </div>
                 </div>
-                <div class="clock-right"></div>
             </div>
         </div>
         <div class="row scoreboard-content">
@@ -142,9 +140,13 @@
                 </div>
             </div>
         </div>
-        <div class="">
-            <div class="col-sm-6 turnmarker {{ game.state.away_team.team_id === game.state.current_team_id ? 'turnmarker-away-turn' : 'turnmarker-away' }}"></div>
-            <div class="col-sm-6 turnmarker {{ game.state.home_team.team_id === game.state.current_team_id ? 'turnmarker-home-turn' : 'turnmarker-home' }}"></div>
+        <div>
+            <div class="turnmarker left">
+                <div id="turnmarker-away" class="turnmarker {{ game.state.away_team.team_id === game.state.current_team_id || game.actor_id == game.away_agent.agent_id ? 'turnmarker-away-turn' : 'turnmarker-away' }}"></div>
+            </div>
+            <div class="turnmarker right">
+                <div id="turnmarker-home" class="turnmarker {{ game.state.home_team.team_id === game.state.current_team_id || game.actor_id == game.home_agent.agent_id ? 'turnmarker-home-turn' : 'turnmarker-home' }}"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -154,8 +156,11 @@
     <div class="gamecontent">
 
         <div class="square-row">
-            <div class="hint text-center" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
-            <div class="hint text-center" ng-if="passHint && passOptions">Press Ctrl to show move actions.</div>
+            <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
+            <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to show move actions.</div>
+            <div class="text-center clock" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
+            <div class="text-center" ng-class="buzzer" ng-if="game.disqualified_agent" ng-bind="game.disqualified_agent"></div>
+            <div class="hint text-center" ng-if="get">Press Ctrl to show move actions.</div>
             <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
         </div>
 
@@ -304,7 +309,7 @@
                             </div>
                             <div class="attribute">
                                 <div class="gamelabel">Skills</div>
-                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.home_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
+                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.away_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
                             </div>
                         </div>
                     </div>
@@ -341,7 +346,7 @@
                             </div>
                             <div class="attribute">
                                 <div class="gamelabel">Skills</div>
-                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.away_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
+                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.home_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
                             </div>
                         </div>
                     </div>

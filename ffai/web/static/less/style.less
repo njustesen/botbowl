@@ -28,6 +28,13 @@ html {
 	}
 }
 
+.left {
+    float: left;
+}
+
+.right {
+    float: right;
+}
 
 .modal-header .close {
     margin-top: -18px;
@@ -190,31 +197,6 @@ a, a:focus, a:hover {
             margin: auto;
             padding-bottom: 0px;
 
-            .clock-left {
-                position: absolute;
-                left: 0px;
-                top: 206px;
-                width: 300px;
-                zoom: 0.5;
-
-                .flip-clock-label{
-                    visibility: hidden;
-                }
-            }
-
-            .clock-right {
-                position: absolute;
-                top: 206px;
-                right: 0px;
-                width: 300px;
-                zoom: 0.5;
-                -moz-transform: scale(0.5);
-
-                .flip-clock-label{
-                    visibility: hidden;
-                }
-            }
-
             .small-text {
                 padding: 0px;
                 margin: 0px;
@@ -256,23 +238,23 @@ a, a:focus, a:hover {
         }
 
         .turnmarker {
+            width: 50%;
             height: 4px;
+            padding: 0px;
+            margin: 0px;
             background-color: #ccc;
         }
 
-        .turnmarker-home {
-
-        }
-
-        .turnmarker-away {
-	    }
-
 	    .turnmarker-home-turn {
+            width: 100%;
             background-color: rgba(0,0,255,0.66);
+            float: left;
         }
 
         .turnmarker-away-turn {
+            width: 100%;
             background-color: rgba(255,0,0,0.66);
+            float: right;
 	    }
 
         .proc {
@@ -299,6 +281,19 @@ a, a:focus, a:hover {
         width: 100%;
         height: 0px;
         line-height: 21pt;
+    }
+
+    .clock {
+        position: relative;
+        color: rgb(100,100,100);
+        width: 100%;
+        height: 0px;
+        line-height: 22pt;
+        font-size: 15px;
+    }
+
+    .buzzer {
+        color:red;
     }
 
     .actions {

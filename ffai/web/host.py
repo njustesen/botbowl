@@ -3,7 +3,8 @@
 Author: Niels Justesen
 Year: 2018
 ==========================
-This module contains the Host class that is used to manage games.
+This module contains the Host class that is used to manage games in memory. 
+A similar host could be implemented that uses a persistent database instead.
 """
 
 from ffai.core.util import *
@@ -25,7 +26,7 @@ class Save:
         }
 
 
-class Host:
+class InMemoryHost:
 
     def __init__(self):
         self.games = {}
