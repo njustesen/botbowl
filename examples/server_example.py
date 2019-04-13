@@ -4,8 +4,8 @@ from ffai.ai.registry import make_bot
 from ffai.core.model import Agent
 
 # Import this to register bots
-import scripted_bot_example
-import grodbot
+import examples.scripted_bot_example
+import examples.grodbot
 
 # Create some games
 api.new_game(home_team_id="orc-1",
