@@ -158,8 +158,8 @@
         <div class="square-row">
             <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
             <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to show move actions.</div>
-            <div class="text-center clock" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
-            <div class="text-center" ng-class="buzzer" ng-if="game.disqualified_agent" ng-bind="game.disqualified_agent"></div>
+            <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
+            <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
             <div class="hint text-center" ng-if="get">Press Ctrl to show move actions.</div>
             <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
         </div>

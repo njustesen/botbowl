@@ -128,7 +128,7 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
 
 appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService',
     function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService) {
-        $scope.RELOAD_TIME = 200
+        $scope.RELOAD_TIME = 20
         $scope.game = {};
         $scope.reportsLimit = 20;
         $scope.saved = false;
@@ -675,6 +675,24 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return $scope.game.home_agent;
             } else if (team.team_id == $scope.game.state.away_team.team_id){
                 return $scope.game.away_agent;
+            }
+            return null;
+        };
+
+        $scope.agentTeam = function agentTeam(agent){
+            if (agent.agent_id == $scope.game.home_agent.agent_id){
+                return $scope.game,state.home_team;
+            } else if (agent.agent_id == $scope.game.away_agent.agent_id){
+                return $scope.game,state.agent_team;
+            }
+            return null;
+        };
+
+        $scope.agentIdTeam = function agentIdTeam(agent_id){
+            if (agent_id == $scope.game.home_agent.agent_id){
+                return $scope.game,state.home_team;
+            } else if (agent_id == $scope.game.away_agent.agent_id){
+                return $scope.game,state.agent_team;
             }
             return null;
         };

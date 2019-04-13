@@ -53,7 +53,7 @@ class Game:
             'can_home_team_use_reroll': self.can_use_reroll(self.state.home_team),
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
-            'disqualified_agent': self.disqualified_agent.name if self.disqualified_agent is not None else None,
+            'disqualified_agent_id': self.disqualified_agent.agent_id if self.disqualified_agent is not None else None,
             'time_limits': self.config.time_limits.to_json()
         }
 
@@ -371,8 +371,9 @@ class Game:
 
         # Initialize if not
         if not self.state.stack.peek().initialized:
-            self.state.stack.peek().setup()
-            self.state.stack.peek().initialized = True
+            proc = self.state.stack.peek()
+            proc.setup()
+            proc.initialized = True
 
         # Update available actions
         self.set_available_actions()
