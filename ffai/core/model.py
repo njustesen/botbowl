@@ -12,7 +12,6 @@ import uuid
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
-from typing import Optional, List
 
 
 class TimeLimits:
