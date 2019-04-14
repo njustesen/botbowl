@@ -62,11 +62,11 @@ class ViolatorBot(Agent):
         self.rnd = np.random.RandomState(seed)
         
     def new_game(self, game, team):
-        pass
+        self.my_team = team
         
     def act(self, game):
-        while time.time() < game.action_termination_time() + game.config.time_limits.disqualification:
-            time.sleep(1)
+        seconds_left = game.seconds_left(self.my_team)
+        time.sleep(seconds_left + game.config.time_limits.disqualification)
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)
             if action_choice.action_type != ActionType.PLACE_PLAYER:
@@ -88,10 +88,10 @@ class JustInTimeBot(Agent):
         self.rnd = np.random.RandomState(seed)
         
     def new_game(self, game, team):
-        pass
+        self.my_team = team
         
     def act(self, game):
-        while time.time() < game.action_termination_time():
+        while time.time() < game.seconds_left(self.my_team):
             time.sleep(0.01)
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)

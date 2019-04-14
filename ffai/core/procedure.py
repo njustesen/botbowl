@@ -49,7 +49,7 @@ class Apothecary(Procedure):
 
     def setup(self):
         if self.game.state.current_team != self.player.team:
-            self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+            self.game.add_opp_clock(self.player.team)
 
     def step(self, action):
 
@@ -230,7 +230,7 @@ class Block(Procedure):
         super().__init__(game)
         self.attacker = attacker
         self.defender = defender
-        self.reroll_used = False
+        self.reroll_decision_made = False
         self.roll = None
         self.blitz = blitz
         self.gfi = gfi
@@ -285,10 +285,11 @@ class Block(Procedure):
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
                                      rolls=[self.roll]))
 
-            # Set termination time
-            if self.favor != self.game.state.current_team:
-                if self.game.state.current_team != self.favor:
-                    self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+            # Add secondary clock if opponent has the favor
+            if not self.game.can_use_reroll(self.attacker.team):
+                if self.favor != self.game.state.current_team:
+                    if self.game.state.current_team != self.favor:
+                        self.game.add_secondary_clock(self.favor)
 
             return False
 
@@ -301,7 +302,7 @@ class Block(Procedure):
         elif action.action_type == ActionType.USE_REROLL:
 
             # Roll again
-            self.reroll_used = True
+            self.reroll_decision_made = True
             self.attacker.team.state.use_reroll()
             self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.attacker.team))
             self.roll = None
@@ -309,7 +310,12 @@ class Block(Procedure):
 
         elif action.action_type == ActionType.DONT_USE_REROLL:
             # Roll again
-            self.reroll_used = True
+            self.reroll_decision_made = True
+
+            # Add secondary clock if opponent has the favor
+            if self.favor != self.game.state.current_team:
+                if self.game.state.current_team != self.favor:
+                    self.game.add_secondary_clock(self.favor)
 
         #elif action.action_type == ActionType.USE_JUGGERNAUT:
         #    self.selected_die = BBDieResult.PUSH
@@ -325,6 +331,10 @@ class Block(Procedure):
             self.selected_die = BBDieResult.DEFENDER_STUMBLES
         elif action.action_type == ActionType.SELECT_DEFENDER_DOWN:
             self.selected_die = BBDieResult.DEFENDER_DOWN
+
+        # Remove secondary clocks
+        if self.selected_die is not None:
+            self.game.remove_secondary_clocks()
 
         # Dice result
         if self.selected_die == BBDieResult.ATTACKER_DOWN:
@@ -365,7 +375,7 @@ class Block(Procedure):
 
         if self.roll is not None and self.selected_die is None:
             disable_dice_pick = False
-            if self.game.can_use_reroll(self.attacker.team) and not self.reroll_used:
+            if self.game.can_use_reroll(self.attacker.team) and not self.reroll_decision_made:
                 actions.append(ActionChoice(ActionType.USE_REROLL, self.attacker.team))
                 if self.favor != self.attacker.team:
                     actions.append(ActionChoice(ActionType.DONT_USE_REROLL, self.attacker.team))
@@ -573,15 +583,13 @@ class Catch(Procedure):
                     self.catch_used = True
                     self.waiting_for_catch = True
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.CATCH))
-                    if self.player.team != self.game.state.current_team:
-                        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
                     return False
 
                 # Check if reroll available
                 if self.game.can_use_reroll(self.player.team) and not self.catch_used:
                     self.waiting_for_reroll = True
                     if self.player.team != self.game.state.current_team:
-                        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+                        self.game.add_secondary_clock(self.player.team)
                     return False
 
                 Bounce(self.game, self.ball, kick=self.kick)
@@ -595,6 +603,8 @@ class Catch(Procedure):
 
         # If re-roll used
         if self.waiting_for_reroll:
+            if self.player.team != self.game.state.current_team:
+                self.game.remove_secondary_clocks()
             if action.action_type == ActionType.USE_REROLL:
                 self.reroll_used = True
                 self.player.team.state.use_reroll()
@@ -619,7 +629,7 @@ class CoinTossFlip(Procedure):
         super().__init__(game)
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.add_secondary_clock(self.game.state.away_team)
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
@@ -638,6 +648,7 @@ class CoinTossFlip(Procedure):
                 self.game.report(Outcome(OutcomeType.HEADS_LOSS))
 
         CoinTossKickReceive(self.game)
+        self.game.remove_clocks()
         return True
 
     def available_actions(self):
@@ -655,7 +666,7 @@ class CoinTossKickReceive(Procedure):
                                 team=self.game.state.coin_toss_winner)]
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.add_secondary_clock(self.game.state.coin_toss_winner)
 
     def step(self, action):
         kicking = None
@@ -674,6 +685,7 @@ class CoinTossKickReceive(Procedure):
             self.game.report(Outcome(OutcomeType.HOME_RECEIVE, team=receiving))
         else:
             self.game.report(Outcome(OutcomeType.AWAY_RECEIVE, team=receiving))
+        self.game.remove_clocks()
         return True
 
     def available_actions(self):
@@ -868,7 +880,7 @@ class Interception(Procedure):
         self.interceptors = interceptors
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.add_secondary_clock(self.team)
 
     def step(self, action):
 
@@ -876,6 +888,7 @@ class Interception(Procedure):
             self.ball.move_to(action.player.position)
             Catch(self.game, action.player, self.ball, interception=True)
 
+        self.game.remove_secondary_clocks()
         return True
 
     def available_actions(self):
@@ -895,8 +908,7 @@ class Touchback(Procedure):
         self.ball = ball
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
-
+        self.game.add_secondary_clock(self.game.state.receiving_this_drive)
         self.players_on_pitch_standing = self.game.get_players_on_pitch(self.game.state.receiving_this_drive, up=True)
 
     def step(self, action):
@@ -913,7 +925,7 @@ class Touchback(Procedure):
         self.ball.move_to(position)
         self.ball.on_ground = True
         self.game.report(Outcome(OutcomeType.TOUCHBACK_BALL_PLACED, player=player, pos=position))
-
+        self.game.remove_secondary_clocks()
         return True
 
     def available_actions(self):
@@ -1075,10 +1087,11 @@ class HighKick(Procedure):
         self.receiving_team = self.game.get_receiving_team()
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.add_secondary_clock(self.receiving_team)
         self.standing_players = self.game.get_players_on_pitch(self.receiving_team, up=True)
 
     def step(self, action):
+        self.game.remove_secondary_clocks()
         if len(self.standing_players) == 0:
             return True
         if action.action_type == ActionType.PLACE_PLAYER:
@@ -1891,7 +1904,7 @@ class PlaceBall(Procedure):
         self.aa = None
 
     def setup(self):
-        self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+        self.game.add_secondary_clock(self.game.get_kicking_team())
         self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
                                 positions=self.game.get_team_side(self.game.get_receiving_team()))]
 
@@ -1900,6 +1913,7 @@ class PlaceBall(Procedure):
         self.ball.on_ground = False
         self.ball.move_to(action.pos)
         self.game.report(Outcome(OutcomeType.BALL_PLACED, pos=action.pos, team=self.game.get_kicking_team()))
+        self.game.remove_secondary_clocks()
         return True
 
     def available_actions(self):
@@ -2301,6 +2315,9 @@ class Push(Procedure):
         # When proceeding pushes are over, move player(s)
         if self.waiting_for_move:
 
+            # Stop secondary clocks
+            self.game.remove_secondary_clocks()
+
             # Move pushed player
             self.game.move_player(self.player, self.push_to)
 
@@ -2340,7 +2357,8 @@ class Push(Procedure):
         if self.squares is None:
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
             if self.player.has_skill(Skill.SIDE_STEP):
-                self.game.state.termination_opp = time.time() + self.game.config.time_limits.opp
+                if self.player.team != self.game.state.current_team:
+                    self.game.add_secondary_clock(self.player.team)
             return False
 
         # Stand firm
@@ -2549,12 +2567,10 @@ class Setup(Procedure):
         self.aa = []
 
     def setup(self):
-
-        # Set termination time
-        if self.game.config.time_limits is not None:
-            self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
         # Set current team
         self.game.state.current_team = self.team
+        # Add clock
+        self.game.add_primary_clock(self.team)
 
     def step(self, action):
         formation = None
@@ -2585,6 +2601,7 @@ class Setup(Procedure):
                 self.game.report(Outcome(OutcomeType.ILLEGAL_SETUP_WINGS, team=self.team))
                 return False
             self.game.state.current_team = None
+            self.game.remove_clocks()
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.team))
             return True
 
@@ -2794,6 +2811,9 @@ class EndTurn(Procedure):
             ClearBoard(self.game)
 
         self.game.state.current_team = None
+        self.game.remove_clocks()
+
+        return True
 
     def available_actions(self):
         return []
@@ -2829,10 +2849,7 @@ class Turn(Procedure):
         # Update state
         if not self.started:
             self.started = True
-
-            # Reset termination time
-            if self.game.config.time_limits is not None:
-                self.game.state.termination_turn = time.time() + self.game.config.time_limits.turn
+            self.game.add_primary_clock(self.team)
 
             if self.blitz:
                 self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))
@@ -2854,6 +2871,7 @@ class Turn(Procedure):
                 self.game.report(Outcome(OutcomeType.END_OF_TURN, team=self.team))
             self.game.state.active_player = None
             EndTurn(self.game)
+            
             return True
 
         # Start movement action

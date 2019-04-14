@@ -6,6 +6,7 @@ Year: 2018
 This module contains the Game class, which is the main class used to interact with a game in FFAI.
 """
 
+from ffai.core.model import *
 from ffai.core.procedure import *
 from ffai.core.load import *
 from copy import deepcopy
@@ -31,6 +32,7 @@ class Game:
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.seed = seed
         self.rnd = np.random.RandomState(self.seed)
+
         self.start_time = None
         self.end_time = None
         self.disqualified_agent = None
@@ -101,20 +103,22 @@ class Game:
                 self._end_game()
                 return
             
-            # if procedure is done - request agent
+            # if procedure is ready for input
             if done:
 
                 # If human player - wait for input
+                if self.actor is None:
+                    print("Bug")
                 if self.actor.human:
                     return
-                
+
                 # Query agent for action
                 self.last_request_time = time.time()
                 action = self._safe_act()
                 
                 # Check if time limit was violated
                 self.last_action_time = time.time()
-                self.check_termination()
+                self.check_clocks()
                 
                 # Did the game terminate?
                 if self.state.game_over:
@@ -134,70 +138,68 @@ class Game:
                 # Else continue proecedure with no action
                 action = None
 
-    def check_termination(self):
+    def check_clocks(self):
         '''
-        Checks if the agent's oppertunity to act has terminated.
+        Checks if clocks are done.
         '''
-        print("Cheking termination")
-        if not self.config.competition_mode or self.config.time_limits is None:
+        # Only use clocks in competition mode
+        if not self.config.competition_mode:
             return
 
         # Timed out?
-        now = time.time()
         if self.timed_out():
             print("Game timed out")
             self.disqualified_agent = self.actor
             self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
             self.state.game_over = True
-            self.end_time = now
             self._end_game()
             return
 
-        now = time.time()
-        termination = self.termination_time()
-        if termination is None:
-            print("No termination point")
+        # No time limit for this action
+        if not self.has_agent_clock(self.actor):
             return
-        
-        # Agent too slow?
-        actor = self.actor
-        if now > termination:
-            print("Agent too slow")
 
-            # Disqualification? Relevant for hanging bots
-            if now > termination + self.config.time_limits.disqualification:
-                print("Agent disqualified")
+        # Agent too slow?
+        clock = self.get_agent_clock(self.actor)
+        if clock.is_done():
+            
+            # Disqualification? Relevant for hanging bots in competitions
+            if clock.running_time() > clock.seconds + self.config.time_limits.disqualification:
                 self.state.game_over = True
                 self.disqualified_agent = self.actor
-                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(actor)))
-                self.end_time = now
+                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
                 self._end_game()
                 return
 
-            # End current procedures randomly and end the turn
+            # End the actor's turn
             done = True
-            while self.termination_time() == termination:
+            actor = self.actor
+            clock = self.get_agent_clock(actor)
+            while clock in self.state.clocks:
                 
                 # Request timout action
                 if done:
-                    action = self._timeout_action()
-                    print(f"Forced action: {action.to_json()}")
+                    action = self._forced_action()
                 else:
                     action = None
                 
                 # Take action if it doesn't end the turn
-                if action not in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN]:
+                if action is None or action.action_type not in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN]:
+                    if self.config.debug_mode:
+                        print(f"forcing action: {action}")
                     done = self._one_step(action)
                 else:
+                    if self.config.debug_mode:
+                        print(f"forcing action: {action}")
                     self.forced_action = action
                     break
-
+            
     def _end_game(self):
         '''
         End the game
         '''
         # Game ended when the last action was received - to avoid timout during finishing procedures
-        self.end_time = self.last_action_time
+        self.state.end_time = self.last_action_time
 
         # Let agents know that the game ended
         if not self.home_agent.human:
@@ -264,12 +266,12 @@ class Game:
             return action
         return self.actor.act(self)
 
-    def _timeout_action(self):
+    def _forced_action(self):
         '''
         Return action that prioritize to end the player's turn.
         '''
         # Take first negative action
-        for action_type in [ActionType.END_TURN, ActionType.END_PLAYER_TURN, ActionType.SELECT_PLAYER, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
+        for action_type in [ActionType.END_TURN, ActionType.END_PLAYER_TURN, ActionType.SELECT_NONE, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
                 if action.action_type == action_type:
                     return Action(action_type)
@@ -278,7 +280,6 @@ class Game:
         pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
         return Action(action_choice.action_type, pos=pos, player=player)
-
     
     def _squares_moved(self):
         """
@@ -331,9 +332,6 @@ class Game:
                 if not self._is_action_allowed(action):
                     return True  # Game needs user input
 
-        # Reset opp termination time as action is allowed
-        self.state.termination_opp = None
-
         # Run proc
         if self.config.debug_mode:
             print("Proc={}".format(proc))
@@ -344,7 +342,7 @@ class Game:
         if self.config.debug_mode:
             print("Done={}".format(proc.done))
 
-        # Enable if cloning happens
+        # Used if players was accidently cloned
         if self.config.debug_mode:
             for y in range(len(self.state.pitch.board)):
                 for x in range(len(self.state.pitch.board)):
@@ -380,13 +378,102 @@ class Game:
         if len(self.state.available_actions) == 0:
             return False  # Can continue without user input
 
+        if self.config.debug_mode:
+            print(f"{len(self.state.available_actions)} available actions")
+
         # End player turn if only action available
         if len(self.state.available_actions) == 1 and self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:
             self._one_step(Action(ActionType.END_PLAYER_TURN))
             return False  # We can continue without user input
 
         return True  # Game needs user input
+    
+    def remove_clocks(self):
+        '''
+        Remove all clocks.
+        '''
+        self.state.clocks.clear()
 
+    def remove_secondary_clocks(self):
+        '''
+        Remove all secondary clocks and resume the primary clock - if any.
+        '''
+        self.state.clocks = [clock for clock in self.state.clocks if clock.is_primary]
+        for clock in self.state.clocks:
+            if not clock.is_running():
+                clock.resume()
+
+    def get_clock(self, team):
+        '''
+        Returns the clock belonging to the given team.
+        '''
+        for clock in self.state.clocks:
+            if clock.team == team:
+                return clock
+        return None
+
+    def get_agent_clock(self, agent):
+        '''
+        Returns the clock belonging to the given agent's team.
+        '''
+        for clock in self.state.clocks:
+            if clock.team == self.agent_team(agent):
+                return clock
+        return None
+
+    def has_clock(self, team):
+        '''
+        Returns true if the given team has a clock.
+        '''
+        for clock in self.state.clocks:
+            if clock.team == team:
+                return True
+        return False
+
+    def has_agent_clock(self, agent):
+        '''
+        Returns true if the given agent's team has a clock.
+        '''
+        for clock in self.state.clocks:
+            if clock.team == self.agent_team(agent):
+                return True
+        return False
+
+    def pause_clocks(self):
+        '''
+        Pauses all clocks.
+        '''
+        for clock in self.state.clocks:
+            if clock.is_running():
+                clock.pause()
+
+    def add_secondary_clock(self, team):
+        '''
+        Adds a secondary clock for quick decisions.
+        '''
+        self.pause_clocks()
+        assert team is not None and type(team) == Team
+        clock = Clock(team, self.config.time_limits.secondary)
+        self.state.clocks.append(clock)
+
+    def add_primary_clock(self, team):
+        '''
+        Adds a primary clock that will be paused if secondary clocks are added.
+        '''
+        self.state.clocks.clear()
+        assert team is not None and type(team) == Team
+        clock = Clock(team, self.config.time_limits.turn, is_primary=True)
+        self.state.clocks.append(clock)
+
+    def seconds_left(self, team):
+        '''
+        Returns the number of seconds left on the clock for the given team and None if the given team has no clock.
+        '''
+        for clock in self.state.clocks:
+            if clock.team == team:
+                return clock.seconds_left()
+        return None
+        
     def team_agent(self, team):
         """
         :param team:
@@ -428,7 +515,7 @@ class Game:
                 self.actor = self.home_agent
             elif self.state.available_actions[0].team == self.state.away_team:
                 self.actor = self.away_agent
-
+    
     def report(self, outcome):
         """
         Adds the outcome to the game's reports.
@@ -582,33 +669,36 @@ class Game:
         """
         return self.state.home_team if self.state.away_team == team else self.state.away_team
 
+    def get_dugout(self, team):
+        return self.state.dugouts[team.team_id]
+
     def get_reserves(self, team):
         """
         :param team: 
         :return: The reserves in the dugout of this team.
         """
-        return self.state.get_dugout(team).reserves
+        return self.get_dugout(team).reserves
 
     def get_kods(self, team):
         """
         :param team:
         :return: The knocked out players in the dugout of this team.
         """
-        return self.state.get_dugout(team).kod
+        return self.get_dugout(team).kod
 
     def get_casualties(self, team):
         """
         :param team:
         :return: The badly hurt, injured, and dead players in th dugout of this team.
         """
-        return self.state.get_dugout(team).casualties
+        return self.get_dugout(team).casualties
 
     def get_dungeon(self, team):
         """
         :param team:
         :return: The ejected players of this team, who's locked to a cell in the dungeon.
         """
-        return self.state.get_dugout(team).dungeon
+        return self.get_dugout(team).dungeon
 
     def current_turn(self):
         """

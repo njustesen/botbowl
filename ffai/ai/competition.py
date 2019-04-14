@@ -9,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 from ffai.ai.registry import make_bot
 from ffai.core.game import Game
-from ffai.core.table import CasualtyType
+from ffai.core.table import CasualtyType, OutcomeType
 from ffai.core.model import Agent
 from multiprocessing import Process, Pipe
 from ffai.core.load import get_team, get_rule_set, get_config
@@ -29,9 +29,19 @@ class TeamResult:
         self.loss = not (self.win or self.draw)
         self.tds = team.state.score
         self.cas = len(game.get_casualties(team))
-        self.cas_inflicted = len(game.get_casualties(game.get_opp_team(team)))
+        self.cas_inflicted = 0
         self.kills = len([player for player in game.get_casualties(team) if player.state.casualty_type == CasualtyType.DEAD])
-        self.kills_inflicted = len([player for player in game.get_casualties(game.get_opp_team(team)) if player.state.casualty_type == CasualtyType.DEAD])
+        self.kills_inflicted = 0
+        # Count inflicted casualties and kills from reports
+        for report in game.state.reports:
+            if report.outcome_type == OutcomeType.BADLY_HURT or report.outcome_type == OutcomeType.MISS_NEXT_GAME:
+                attacker = report.opp_player
+                if attacker is not None and attacker.team == team:
+                    self.cas_inflicted += 1
+            if report.outcome_type == OutcomeType.DEAD:
+                attacker = report.opp_player
+                if attacker is not None and attacker.team == team:
+                    self.kills_inflicted += 1
         self.timed_out_win = timed_out and self.win
         self.timed_out_loss = timed_out and not self.win and not self.draw
         self.crashed_win = crashed and self.win
@@ -72,8 +82,8 @@ class GameResult:
 
         self.draw = self.winner is None
         self.tds = self.home_result.tds + self.away_result.tds
-        self.cas_inflicted = self.home_result.cas_inflicted == self.away_result.cas_inflicted
-        self.kills = self.home_result.kills_inflicted == self.away_result.kills_inflicted
+        self.cas_inflicted = self.home_result.cas_inflicted + self.away_result.cas_inflicted
+        self.kills = self.home_result.kills_inflicted + self.away_result.kills_inflicted
         
 
     def print(self):
@@ -108,9 +118,9 @@ class GameResult:
 
 class CompetitionResult:
 
-    def __init__(self, competitor_a_name, competitor_b_name, game_results, disquilified=None):
+    def __init__(self, competitor_a_name, competitor_b_name, game_results, disqualified=None):
         self.game_results = game_results
-        self.disquilified = disquilified
+        self.disqualified = disqualified
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
         self.wins = {
@@ -122,9 +132,9 @@ class CompetitionResult:
         self.crashes = len([result for result in game_results if result.crashed])
         self.a_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name != self.competitor_a_name])
         self.b_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name != self.competitor_b_name])
-        self.timed_out = len([result for result in game_results if result.timed_out])
-        self.a_timed_out = len([result for result in game_results if result.timed_out and result.winner is not None and result.winner.name != self.competitor_a_name])
-        self.b_timed_out = len([result for result in game_results if result.timed_out and result.winner is not None and result.winner.name != self.competitor_b_name])
+        self.a_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and result.disqualified_agent.name == competitor_a_name])
+        self.b_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and  result.disqualified_agent.name == competitor_b_name])
+        self.disquiaifications = self.a_disqualifications + self.b_disqualifications
         self.tds = {
             competitor_a_name: [result.home_result.tds if result.home_agent_name == competitor_a_name else result.away_result.tds for result in game_results],
             competitor_b_name: [result.home_result.tds if result.home_agent_name == competitor_b_name else result.away_result.tds for result in game_results]
@@ -140,8 +150,8 @@ class CompetitionResult:
 
     def print(self):
         print("%%%%%%%%% COMPETITION RESULTS %%%%%%%%%")
-        if self.disquilified is not None:
-            print(f"{self.disquilified} WAS DISQULIFIED!")
+        if self.disqualified is not None:
+            print(f"{self.disqualified} WAS DISQULIFIED!")
         if len(self.game_results) == 0:
             print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
             return
@@ -153,10 +163,9 @@ class CompetitionResult:
         if self.crashes > 0:
             print(f"- {self.competitor_a_name}: {self.a_crashes}")
             print(f"- {self.competitor_b_name}: {self.b_crashes}")
-        print(f"Timed out: {self.timed_out}")
-        if self.timed_out > 0:
-            print(f"- {self.competitor_a_name}: {self.a_timed_out}")
-            print(f"- {self.competitor_b_name}: {self.b_timed_out}")
+        print(f"Disqualification:")
+        print(f"- {self.competitor_a_name}: {self.a_disqualifications}")
+        print(f"- {self.competitor_b_name}: {self.b_disqualifications}")
         print("TDs:")
         print("- {}: {} (avg. {})".format(self.competitor_a_name, np.sum(self.tds[self.competitor_a_name]), np.mean(self.tds[self.competitor_a_name])))
         print("- {}: {} (avg. {})".format(self.competitor_b_name, np.sum(self.tds[self.competitor_b_name]), np.mean(self.tds[self.competitor_b_name])))
@@ -174,6 +183,8 @@ class TimeoutException(Exception): pass
 class Competition:
 
     def __init__(self, name, competitor_a_team_id, competitor_b_team_id, competitor_a_name, competitor_b_name, config):
+        assert competitor_a_name != competitor_b_name
+        assert competitor_a_team_id != competitor_b_team_id
         self.name = name
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
@@ -192,10 +203,10 @@ class Competition:
             competitor_a = self._get_competitor(self.competitor_a_name, init_time)
             if competitor_a is None:
                 self.disqualified = self.competitor_a_name
-                return CompetitionResult(self.competitor_a_name, self.competitor_b_name, results, disquilified=self.competitor_a_name)
+                return CompetitionResult(self.competitor_a_name, self.competitor_b_name, results, disqualified=self.competitor_a_name)
             competitor_b = self._get_competitor(self.competitor_b_name, init_time)
             if competitor_b is None:
-                return CompetitionResult(self.competitor_a_name, self.competitor_b_name, results, disquilified=self.competitor_b_name)
+                return CompetitionResult(self.competitor_a_name, self.competitor_b_name, results, disqualified=self.competitor_b_name)
             print(f"Starting game {i+1}")
             match_id = self.name + "_" + str(i+1)
             if i%2==0:

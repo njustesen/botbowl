@@ -9,6 +9,7 @@ This module contains most of the model classes.
 from copy import copy, deepcopy
 import numpy as np
 import uuid
+import time
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
@@ -16,10 +17,10 @@ from ffai.core.table import *
 
 class TimeLimits:
 
-    def __init__(self, game, turn, opp, disqualification, init, end):
+    def __init__(self, game, turn, secondary, disqualification, init, end):
         self.game = game
         self.turn = turn
-        self.opp = opp
+        self.secondary = secondary
         self.disqualification = disqualification
         self.init = init
         self.end = end
@@ -28,7 +29,7 @@ class TimeLimits:
          return {
             'game': self.game,
             'turn': self.turn,
-            'opp': self.opp,
+            'secondary': self.secondary,
             'disqualification': self.disqualification,
             'init': self.init,
             'end': self.end
@@ -166,6 +167,59 @@ class TeamState:
         self.rerolls -= 1
         self.reroll_used = True
 
+class Clock:
+
+    def __init__(self, team, seconds, is_primary=False):
+        self.seconds = seconds
+        self.started_at = time.time()
+        self.paused_at = None
+        self.paused_seconds = 0
+        self.is_primary = is_primary
+        self.team = team
+
+    def is_running(self):
+        return self.paused_at is None
+
+    def pause(self):
+        assert self.paused_at is None
+        self.paused_at = time.time()
+
+    def resume(self):
+        assert self.paused_at is not None
+        now = time.time()
+        self.paused_seconds += now - self.paused_at
+        self.paused_at = None
+
+    def running_time(self):
+        now = time.time()
+        if self.is_running():
+            return now - self.started_at - self.paused_seconds
+        else:
+            return self.paused_at - self.started_at - self.paused_seconds
+
+    def ratio_done(self):
+        return self.running_time() / self.seconds
+
+    def seconds_left(self):
+        return self.seconds - self.running_time()
+
+    def is_done(self):
+        return self.is_running() and self.running_time() > self.seconds
+
+    def to_json(self):
+        return {
+            'is_running': self.is_running(),
+            'running_time': self.running_time(),
+            'ratio_done': self.ratio_done(),
+            'is_done': self.is_done(),
+            'seconds': self.seconds,
+            'seconds_left': self.seconds_left(),
+            'is_primary': self.is_primary,
+            'team_id': self.team.team_id,
+            'paused_seconds': self.paused_seconds,
+            'started_at': self.started_at
+        }
+
 
 class GameState:
 
@@ -199,11 +253,7 @@ class GameState:
         self.active_player = None
         self.game_over = False
         self.available_actions = []
-        self.termination_turn = None  # Unix time in seconds when this turn terminates
-        self.termination_opp = None  # Unix time in seconds when this the opponent's oppertunity to act terminates
-
-    def get_dugout(self, team):
-        return self.dugouts[team.team_id]
+        self.clocks = []
 
     def to_json(self):
         return {
@@ -226,8 +276,7 @@ class GameState:
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'termination_turn': self.termination_turn,
-            'termination_opp': self.termination_opp
+            'clocks': [ clock.to_json() for clock in self.clocks ]
         }
 
 

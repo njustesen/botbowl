@@ -615,14 +615,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return my_string;
         }
 
-        $scope.secondsLeft = function secondsLeft(termination){
-            if (termination != undefined){
-                var seconds = new Date() / 1000;
-                return termination - seconds;
-            }
-            return null;
-        };
-
         $scope.teamAgent = function teamAgent(team){
             if (team.team_id == $scope.game.state.home_team.team_id){
                 return $scope.game.home_agent;
@@ -650,58 +642,69 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return null;
         };
 
-        $scope.timeLeft = function timeLeft(team, ratio){
-            if ($scope.game.start_time == null){
-                return null;
-            }
-            if ($scope.game.state.current_team_id == team.team_id){
-                var secondsLeft = $scope.secondsLeft($scope.game.state.termination_turn);
-                if (ratio){
-                    return secondsLeft / $scope.game.time_limits.turn;
+        $scope.getTeamClock = function getTeamClock(team){
+            for (var i=0; i < $scope.game.state.clocks.length; i++){
+                let clock = $scope.game.state.clocks[i];
+                if (team.team_id == clock.team_id){
+                    return clock;
                 }
-                return secondsLeft;
-            }
-            if ($scope.game.actor_id == $scope.teamAgent(team).agent_id){
-                if ($scope.game.state.termination_opp != null){
-                    var secondsLeft = $scope.secondsLeft($scope.game.state.termination_opp);
-                    if (ratio){
-                        return secondsLeft / $scope.game.time_limits.opp;
-                    }
-                    return secondsLeft;
-                }
-            }
-            return 0;
-        };
-
-        $scope.actorTimeLeft = function activeTimeLeft(){
-            if ($scope.game.state.termination_opp != null){
-                return $scope.secondsLeft($scope.game.state.termination_opp);
-            } else if ($scope.game.state.termination_turn != null){
-                return $scope.secondsLeft($scope.game.state.termination_turn);
             }
             return null;
+        };
+
+        $scope.getActiveClock = function getActiveClock(){
+            let out = null;
+            for (var i=0; i < $scope.game.state.clocks.length; i++){
+                let c = $scope.game.state.clocks[i];
+                if (!c.is_primary){
+                     return c;
+                } else {
+                    out = c;
+                }
+            }
+            return out;
+        };
+
+        $scope.getSecondsLeft = function getSecondsLeft(clock, ratio){
+            let now = new Date() / 1000;
+            let runningTime = clock.running_time;
+            if (clock.is_running){
+                // Calculate running time
+                runningTime = now - clock.started_at - clock.paused_seconds;
+            }
+            let secondsLeft = clock.seconds - runningTime;
+            if (ratio){
+                return runningTime / clock.seconds;
+            }
+            return secondsLeft;
         };
 
         $scope.setClock = function setClock(){
 
             // Set width of turnmarkers
-            var away_time_ratio = $scope.timeLeft($scope.game.state.away_team, true);
-            if (away_time_ratio != null){
-                $('#turnmarker-away').width((away_time_ratio * 100) + '%');
+            let clock = $scope.getTeamClock($scope.game.state.away_team);
+            if (clock != null){
+                let awayTimeRatio = 1 - $scope.getSecondsLeft(clock, true);
+                if (awayTimeRatio != null){
+                    $('#turnmarker-away').width((awayTimeRatio * 100) + '%');
+                }
             }
-            var home_time_ratio = $scope.timeLeft($scope.game.state.home_team, true);
-            if (home_time_ratio != null){
-                $('#turnmarker-home').width((home_time_ratio * 100) + '%');
+            clock = $scope.getTeamClock($scope.game.state.home_team);
+            if (clock != null){
+                let homeTimeRatio = 1 - $scope.getSecondsLeft(clock, true);
+                if (homeTimeRatio != null){
+                    $('#turnmarker-home').width((homeTimeRatio * 100) + '%');
+                }
             }
 
             // Set clock to actor's time left
-            seconds_left = $scope.actorTimeLeft();
+            let activeClock = $scope.getActiveClock();
 
             // Update clock
-            if (seconds_left != null){
-                var seconds_left = Math.max(0, seconds_left);
-                var m = Math.floor(seconds_left / 60);
-                var s = Math.floor(seconds_left % 60);
+            if (activeClock != null){
+                let secondsLeft = Math.max(0, $scope.getSecondsLeft(activeClock, false));
+                var m = Math.floor(secondsLeft / 60);
+                var s = Math.floor(secondsLeft % 60);
                 $scope.$apply(function(){
                     $scope.clock = $scope.padWithZeroes(m, 2) + ":" + $scope.padWithZeroes(s, 2);
                 });
@@ -716,7 +719,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             if ($scope.available_positions.length === 0 && !$scope.game.state.game_over){
                 setTimeout(function(){
                     if (!$scope.loading && !$scope.refreshing){
-                        if ($scope.game.state.available_actions.length === 0 || $scope.opp_turn){
+                        if ($scope.opp_turn){
+                            // It's opponent's turn
                             $scope.act($scope.newAction('CONTINUE'));
                         }
                     }
@@ -999,7 +1003,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.opp_turn = true;
             for (let idx in $scope.game.state.available_actions) {
                 let action = $scope.game.state.available_actions[idx];
-                if ($scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
+                if (action.disabled || $scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
                     action.disabled = true;
                     continue;
                 }
@@ -1132,9 +1136,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
             setTimeout(function(){
                 $scope.setClock();
-                var seconds_left = $scope.actorTimeLeft();
-                if (seconds_left != null){
-                    if (seconds_left < 0 && !$scope.refreshing){
+                var clock = $scope.getActiveClock();
+                if (clock != null){
+                    if ($scope.getSecondsLeft(clock, false) < 0 && !$scope.refreshing){
                         $scope.reload();
                     } else {
                         $scope.runTimeLoop(time);

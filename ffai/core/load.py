@@ -250,11 +250,11 @@ def get_config(name):
     if data['time_limits'] is not None:
         game = data['time_limits']['game']
         turn = data['time_limits']['turn']
-        opp = data['time_limits']['opp']
+        secondary = data['time_limits']['secondary']
         disqualification = data['time_limits']['disqualification']
         init = data['time_limits']['init']
         end = data['time_limits']['end']
-    config.time_limits = TimeLimits(game=game, turn=turn, opp=opp, disqualification=disqualification, init=init, end=end)
+    config.time_limits = TimeLimits(game=game, turn=turn, secondary=secondary, disqualification=disqualification, init=init, end=end)
     return config
 
 

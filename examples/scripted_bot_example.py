@@ -317,7 +317,7 @@ if __name__ == "__main__":
     away = get_team_by_id("human-2", ruleset)
 
     # Play 100 games
-    for i in range(1):
+    for i in range(10):
         away_agent = make_bot('scripted')
         away_agent.name = "Scripted Bot 1"
         home_agent = make_bot('scripted')

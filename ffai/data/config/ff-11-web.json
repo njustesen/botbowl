@@ -19,7 +19,7 @@
     "time_limits": {
         "game": 15360,
         "turn": 240,
-        "opp": 20,
+        "secondary": 20,
         "disqualification": 1000,
         "init": 10,
         "end": 10
