@@ -249,9 +249,11 @@ class Competition:
             print("Game timed out!")
             game.end_time = time.time()
             game.game_over = True
+            game.disqualified_agent = game.actor
             return GameResult(game)
         except Exception as e:
             print(f"Game crashed by {game.actor.name if game.actor is not None else 'the framework'}: ", e)
+            game.disqualified_agent = game.actor
             return GameResult(game, crashed=True)
         return GameResult(game)
         

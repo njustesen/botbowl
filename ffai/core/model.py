@@ -103,8 +103,11 @@ class PlayerState:
 
 class Agent:
 
-    def __init__(self, name, human=False):
-        self.agent_id = str(uuid.uuid1())
+    def __init__(self, name, human=False, agent_id=None):
+        if agent_id is not None:
+            self.agent_id = agent_id
+        else:
+            self.agent_id = str(uuid.uuid1())
         self.name = name
         self.human = human
 
@@ -114,6 +117,14 @@ class Agent:
             'name': self.name,
             'human': self.human
         }
+
+    def __eq__(self, other):
+        if other is None or self is None:
+            return False
+        return self.agent_id == other.agent_id
+
+    def __hash__(self):
+        return self.agent_id
 
     def new_game(self, game, team):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
@@ -1130,6 +1141,9 @@ class Team:
 
     def __eq__(self, other):
         return other is not None and other.team_id == self.team_id
+
+    def __hash__(self):
+        return self.team_id
 
 
 class Outcome:

@@ -15,22 +15,29 @@ class MyRandomBot(Agent):
         self.actions_taken = 0
 
     def act(self, game):
+        # Get time left in seconds to return an action
+        seconds_left = game.seconds_left(self.my_team)
+
+        # Select random action type - but no place player
         while True:
             action_choice = np.random.choice(game.state.available_actions)
             if action_choice.action_type != ActionType.PLACE_PLAYER:
                 break
+
+        # Select random position and player
         pos = np.random.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = np.random.choice(action_choice.players) if len(action_choice.players) > 0 else None
         action = Action(action_choice.action_type, pos=pos, player=player)
         self.actions_taken += 1
+
         return action
 
     def end_game(self, game):
-        winner = game.get_winning_team()
+        winner = game.get_winner()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
-        elif winner == self.my_team:
+        elif winner == self:
             print("I ({}) won".format(self.name))
         else:
             print("I ({}) lost".format(self.name))
@@ -50,7 +57,7 @@ if __name__ == "__main__":
     home = get_team_by_id("human-1", ruleset)
     away = get_team_by_id("human-2", ruleset)
 
-    # Play 100 games
+    # Play 10 games
     for i in range(10):
         away_agent = MyRandomBot("Random Bot 1")
         home_agent = MyRandomBot("Random Bot 2")
@@ -61,6 +68,5 @@ if __name__ == "__main__":
         print("Starting game", (i+1))
         start = time.time()
         game.init()
-        game.step()
         end = time.time()
         print(end - start)

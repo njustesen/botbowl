@@ -59,6 +59,17 @@ class Game:
             'time_limits': self.config.time_limits.to_json()
         }
 
+    def _safe_clone(self):
+        # Make dummy agents for the clone
+        home_agent = self.home_agent
+        away_agent = self.away_agent
+        self.home_agent = Agent(home_agent.name, agent_id=home_agent.agent_id)
+        self.away_agent = Agent(away_agent.name, agent_id=away_agent.agent_id)
+        clone = deepcopy(self)
+        self.home_agent = home_agent
+        self.away_agent = away_agent
+        return clone
+
     def init(self):
         """
         Initialized the Game. The START_GAME action must still be called after this if humans are in the game.
@@ -206,7 +217,7 @@ class Game:
             self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
             now = time.time()
             if self.config.competition_mode:
-                self.home_agent.end_game(deepcopy(self))
+                self.home_agent.end_game(self._safe_clone())
             else:
                 self.home_agent.end_game(self)
             # Disqualify if too long
@@ -216,7 +227,7 @@ class Game:
             self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
             now = time.time()
             if self.config.competition_mode:
-                self.away_agent.end_game(deepcopy(self))
+                self.away_agent.end_game(self._safe_clone())
             else:
                 self.away_agent.end_game(self)
             # Disqualify if too long
@@ -259,7 +270,7 @@ class Game:
         Clone the game before requesting an action so agent can't manipulate it.
         '''
         if self.config.competition_mode:
-            action = self.actor.act(deepcopy(self))
+            action = self.actor.act(self._safe_clone())
             # Correct player object
             if action.player is not None:
                 action.player = self.state.player_by_id[action.player.player_id]
