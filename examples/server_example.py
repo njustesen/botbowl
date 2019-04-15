@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import ffai.web.server as server
 import ffai.web.api as api
 from ffai.ai.registry import make_bot
@@ -22,6 +24,11 @@ api.new_game(home_team_id="human-1",
              away_team_id="human-2",
              home_agent=Agent("Player 1", human=True),
              away_agent=Agent("Player 2", human=True))
+
+api.new_game(home_team_id="orc-1",
+             away_team_id="human-1",
+             home_agent=make_bot("GrodBot"),
+             away_agent=make_bot("random"))
 
 api.new_game(home_team_id="orc-1",
              away_team_id="human-1",

@@ -329,6 +329,7 @@ class Pitch:
         self.height = len(self.board)
         self.width = len(self.board[0])
 
+
     def to_json(self):
         board = []
         for y in range(len(self.board)):
@@ -400,6 +401,20 @@ class Pitch:
             return ball.position
         return None
 
+    def get_ball_team(self):
+        ball_carrier = self.get_ball_carrier()
+        if ball_carrier is None:
+            return None
+        else:
+            return ball_carrier.team
+
+    def get_ball_carrier(self):
+        ball_pos: Square = self.get_ball_position()
+        if ball_pos is None:
+            return None
+        else:
+            return self.get_player_at(ball_pos)
+
     def is_out_of_bounds(self, pos):
         return pos.x < 1 or pos.x >= self.width-1 or pos.y < 1 or pos.y >= self.height-1
 
@@ -461,20 +476,47 @@ class Pitch:
                     squares.append(sq)
         return squares
 
-    def adjacent_player_squares_at(self, player, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False):
+    def adjacent_player_squares_at(self, player_or_team, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
         squares = []
+        if isinstance(player_or_team, Team):
+            team = player_or_team
+        else:
+            team = player_or_team.team
         for square in self.get_adjacent_squares(position, manhattan=manhattan):
             player_at = self.get_player_at(square)
             if player_at is None:
                 continue
-            if include_own and player_at.team == player.team or include_opp and not player_at.team == player.team:
+            if not include_stunned and player_at.state.stunned:
+                continue
+            if include_own and player_at.team == team or include_opp and not player_at.team == team:
                 if not only_blockable or player_at.state.up:
                     if not only_foulable or not player_at.state.up:
                         squares.append(square)
         return squares
 
-    def adjacent_player_squares(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False):
-        return self.adjacent_player_squares_at(player, player.position, include_own, include_opp, manhattan, only_blockable, only_foulable)
+    def adjacent_players_at(self, player_or_team, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+        players = []
+        if isinstance(player_or_team, Team):
+            team = player_or_team
+        else:
+            team = player_or_team.team
+        for square in self.get_adjacent_squares(position, manhattan=manhattan):
+            player_at = self.get_player_at(square)
+            if player_at is None:
+                continue
+            if not include_stunned and player_at.state.stunned:
+                continue
+            if include_own and player_at.team == team or include_opp and not player_at.team == team:
+                if not only_blockable or player_at.state.up:
+                    if not only_foulable or not player_at.state.up:
+                        players.append(player_at)
+        return players
+
+    def adjacent_players(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+        return self.adjacent_players_at(player, player.position, include_own=include_own, include_opp=include_opp, manhattan=manhattan, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
+
+    def adjacent_player_squares(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+        return self.adjacent_player_squares_at(player, player.position, include_own=include_own, include_opp=include_opp, manhattan=manhattan, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
 
     def num_tackle_zones_at(self, player, position):
         tackle_zones = 0
@@ -516,7 +558,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def tackle_zones_detailed_at(self, player: 'Player', position: 'Square'):
+    def tackle_zones_detailed_at(self, player, position):
         tackle_zones = 0
         tacklers = []
         prehensile_tailers = []
@@ -539,7 +581,7 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def players_blockable_at(self, player: 'Player', position: 'Square'):
+    def players_blockable_at(self, player, position):
         blockable = []
         for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
@@ -567,7 +609,104 @@ class Pitch:
                                 assists.append(player_at)
         return assists
 
-    def passes_at(self, passer, weather, position: 'Square'):
+    def num_block_dice(self, player, opp_player, blitz=False, dauntless_success=False):
+        return self.num_block_dice_at(player, opp_player, player.position, blitz, dauntless_success)
+
+    def num_block_dice_at(self, player, opp_player, position, blitz=False, dauntless_success=False):
+
+        # Determine dice and favor
+        st_for = player.get_st()
+        st_against = opp_player.get_st()
+
+        # Horns
+        if blitz and player.has_skill(Skill.HORNS):
+            st_for += 1
+
+        # Dauntless
+        if dauntless_success:
+            st_for = max(st_for, st_against)
+
+        # Find assists
+        assists_for, assists_against = self.num_assists_at(player, opp_player, position, ignore_guard=False)
+
+        st_for = st_for + assists_for
+        st_against = st_against + assists_against
+
+        # Determine dice and favor
+        if st_for > 2 * st_against:
+            return 2
+        elif st_for > st_against:
+            return 2
+        elif st_for == st_against:
+            return 1
+        elif st_for < 2*st_against:
+            return -3
+        elif st_for < st_against:
+            return -2
+
+    def num_assists_at(self, player, opp_player, position, ignore_guard: bool = False):
+        '''
+        Return net assists for a block of player on opp_player when player has moved to position first.  Required for
+        calculating assists after moving in a Blitz action.
+        :param player: Player
+        :param opp_player: Player
+        :param position: Square
+        :param ignore_guard: bool
+        :return: int - Net # of assists
+        '''
+
+        # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
+        # Assists against
+        opp_assist_squares = self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True, only_blockable=True)
+        n_assist_against: int = 0
+        for opp_assist_square in opp_assist_squares:
+            # For each opponent, check if they can assist
+            assister: Player = self.get_player_at(opp_assist_square)
+            if assister == opp_player:
+                continue
+            elif assister.has_skill(Skill.GUARD) and not ignore_guard:
+                n_assist_against += 1
+            elif not assister.can_assist():
+                continue
+            else:
+                # Check if in a tackle zone of anyone besides player (at either original square, or "position")
+                adjacent_to_assister_squares = self.adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
+                found_adjacent = False
+                for adjacent_to_assister_square in adjacent_to_assister_squares:
+                    player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
+                    # Need to make sure we take into account the blocking/blitzing player may be in a different square than currently represented on the board.
+                    if adjacent_to_assister_square == position or adjacent_to_assister_square == player.position or not player_adjacent_to_assister.can_assist():
+                        continue
+                    else:
+                        found_adjacent = True
+                        break
+                if not found_adjacent:
+                    n_assist_against += 1
+        # Assists for
+        assist_squares = self.adjacent_player_squares(opp_player, include_own=False, include_opp=True, only_blockable=True)
+        n_assists_for: int = 0
+        for assist_square in assist_squares:
+            # For each opponent, check if they can assist
+            assister: Player = self.get_player_at(assist_square)
+            if assister.has_skill(Skill.GUARD) and not ignore_guard:
+                n_assists_for += 1
+            elif not assister.can_assist():
+                continue
+            else:
+                adjacent_to_assister_squares = self.adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
+                found_adjacent = False
+                for adjacent_to_assister_square in adjacent_to_assister_squares:
+                    player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
+                    if not player_adjacent_to_assister.can_assist():
+                        continue
+                    else:
+                        found_adjacent = True
+                        break
+                if not found_adjacent:
+                    n_assists_for += 1
+        return (n_assists_for, n_assist_against)
+
+    def passes_at(self, passer, weather, position):
         squares = []
         distances = []
         distances_allowed = [PassDistance.QUICK_PASS,
@@ -1024,8 +1163,8 @@ class Player(Piece):
             'position': self.position.to_json() if self.position is not None else None
         }
 
-    def move_allowed(self, include_gfi: bool = True) -> int:
-        if self.state.used:
+    def move_allowed(self, include_gfi: bool = True):
+        if self.state.used or self.state.stunned:
             moves = 0
         else:
             moves = self.get_ma()

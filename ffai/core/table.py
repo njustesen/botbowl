@@ -399,6 +399,8 @@ class Skill(Enum):
     STRIP_BALL = 67
     GRAB = 68
     STAKES = 69
+    ANIMOSITY = 70
+    PILING_ON = 71
 
 
 class PassDistance(Enum):

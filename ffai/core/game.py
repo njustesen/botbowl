@@ -176,6 +176,7 @@ class Game:
             
             # Disqualification? Relevant for hanging bots in competitions
             if clock.running_time() > clock.seconds + self.config.time_limits.disqualification:
+                print(f"Time violation. {self.actor.name} will be disqualified!")
                 self.state.game_over = True
                 self.disqualified_agent = self.actor
                 self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
@@ -194,14 +195,16 @@ class Game:
                 else:
                     action = None
                 
+                print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
+
                 # Take action if it doesn't end the turn
-                if action is None or action.action_type not in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN]:
+                if action is None or action.action_type not in [ActionType.END_TURN, ActionType.END_SETUP]:
                     if self.config.debug_mode:
-                        print(f"forcing action: {action}")
+                        print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
                     done = self._one_step(action)
                 else:
                     if self.config.debug_mode:
-                        print(f"forcing action: {action}")
+                        print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
                     self.forced_action = action
                     break
             
@@ -294,13 +297,17 @@ class Game:
     
     def _squares_moved(self):
         """
-        :return: The squares moved by the active player.
+        :return: The squares moved by the active player in json - used by the web app.
         """
         for proc in self.state.stack.items:
             if isinstance(proc, PlayerAction):
                 out = []
                 for square in proc.squares:
-                    out.append(square.to_json())
+                    out.append(square)
+                if proc.player is not None and proc.player.position is not None:
+                    if len(out) > 0 and out[-1] != proc.player.position:
+                        out = out[:-1]
+                out = [sq.to_json() for sq in out]
                 return out
         return []
 

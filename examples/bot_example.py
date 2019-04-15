@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from ffai.web.api import *
 import numpy as np
 import time
@@ -48,7 +50,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = get_config("ff-11.json")
-    #config.competition_mode = False
+    # config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
