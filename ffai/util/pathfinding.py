@@ -265,7 +265,7 @@ class AStarPathFinder(implements(PathFinder)):
                 continue
             for x in range(-1, 2):
                 for y in range(-1, 2):
-                    if (x == 0) and (y == 0):
+                    if x == 0 and y == 0:
                         continue
 
                     xp = x + current.x
@@ -274,7 +274,7 @@ class AStarPathFinder(implements(PathFinder)):
                     if self.is_valid_location(mover, sx, sy, xp, yp):
                         mover.cur_depth = current.depth
                         if self.probability_costs:
-                            next_step_cost = 1.0 - ((1.0 - current.cost) * (1.0 - self.get_movement_cost(mover, current.x, current.y, xp, yp)))
+                            next_step_cost = 1.0 - (1.0 - current.cost) * (1.0 - self.get_movement_cost(mover, current.x, current.y, xp, yp))
                         else:
                             next_step_cost = current.cost + self.get_movement_cost(mover, current.x, current.y, xp, yp)
                         neighbour = self.nodes[xp][yp]
@@ -304,6 +304,7 @@ class AStarPathFinder(implements(PathFinder)):
                     path_cur = self.create_path(sx, sy, x, y)
                     if path_cur is not None:
                         paths.append(path_cur)
+        #l = [len(path) for path in paths]
         return paths
 
     def get_computed_cost(self, ix: int, iy: int) -> float:
@@ -551,6 +552,9 @@ class FfTileMap(implements(TileMap)):
             if moving_unit.has_skill(m.Skill.SURE_FEET):
                 incr_cost = incr_cost * incr_cost
             cost = 1 - (1 - cost)*(1 - incr_cost)
+
+        #assert 0 <= cost <= 1
+
         return cost
 
 
