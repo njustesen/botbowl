@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import ffai.web.api as api
 import ffai.ai.bots as bot
 import ffai.core.model as m

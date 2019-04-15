@@ -1,11 +1,13 @@
+#!/usr/bin/env python3
+
 import ffai.web.server as server
 import ffai.web.api as api
 from ffai.ai.registry import make_bot
 from ffai.core.model import Agent
 
 # Import this to register bots
-import examples.scripted_bot_example
-import examples.grodbot
+import scripted_bot_example
+import grodbot
 
 # Create some games
 api.new_game(home_team_id="orc-1",

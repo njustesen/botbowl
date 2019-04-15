@@ -297,13 +297,17 @@ class Game:
     
     def _squares_moved(self):
         """
-        :return: The squares moved by the active player.
+        :return: The squares moved by the active player in json - used by the web app.
         """
         for proc in self.state.stack.items:
             if isinstance(proc, PlayerAction):
                 out = []
                 for square in proc.squares:
-                    out.append(square.to_json())
+                    out.append(square)
+                if proc.player is not None and proc.player.position is not None:
+                    if len(out) > 0 and out[-1] != proc.player.position:
+                        out = out[:-1]
+                out = [sq.to_json() for sq in out]
                 return out
         return []
 
