@@ -56,7 +56,8 @@ class Game:
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
             'disqualified_agent_id': self.disqualified_agent.agent_id if self.disqualified_agent is not None else None,
-            'time_limits': self.config.time_limits.to_json()
+            'time_limits': self.config.time_limits.to_json(),
+            'active_other_player_id': self.active_other_player_id()
         }
 
     def _safe_clone(self):
@@ -1179,3 +1180,22 @@ class Game:
         if agent == self.home_agent:
             return self.away_agent
         return self.home_agent
+
+    def active_other_player_id(self):
+        """
+        Returns the player id of the other player involved in current procedures - if any.
+        """
+        for proc in self.state.stack.items:
+            if isinstance(proc, Block):
+                if proc.defender is not None:
+                    return proc.defender.player_id
+            if isinstance(proc, PassAction):
+                if proc.catcher is not None:
+                    return proc.catcher.player_id
+            if isinstance(proc, Handoff):
+                if proc.catcher is not None:
+                    return proc.catcher.player_id
+            if isinstance(proc, Push):
+                if proc.catcher is not None:
+                    return proc.player.player_id
+        return None

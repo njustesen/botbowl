@@ -14,7 +14,6 @@ from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
 
-
 class TimeLimits:
 
     def __init__(self, game, turn, secondary, disqualification, init, end):

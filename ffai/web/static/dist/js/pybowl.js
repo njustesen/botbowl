@@ -261,12 +261,16 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return null;
         };
 
+        $scope.isPlayerActive = function isPlayerActive(player){
+            return player.player_id === $scope.game.state.active_player_id || player.player_id === $scope.game.active_other_player_id;
+        };
+
         $scope.playerIcon = function playerIcon(player){
             let team = $scope.teamOfPlayer(player);
             let icon_base = IconService.playerIcons[team.race][player.role];
             let icon_num = "1";
             let team_letter = player.team_id === $scope.game.state.home_team.team_id ? "b" : "";
-            let angle = player.player_id === $scope.game.state.active_player_id ? "an" : "";
+            let angle = $scope.isPlayerActive(player) ? "an" : "";
             return icon_base + icon_num + team_letter + angle + ".gif";
         };
 
