@@ -163,7 +163,7 @@ class CompetitionResult:
         if self.crashes > 0:
             print(f"- {self.competitor_a_name}: {self.a_crashes}")
             print(f"- {self.competitor_b_name}: {self.b_crashes}")
-        print(f"Disqualification:")
+        print(f"Disqualifications:")
         print(f"- {self.competitor_a_name}: {self.a_disqualifications}")
         print(f"- {self.competitor_b_name}: {self.b_disqualifications}")
         print("TDs:")
