@@ -21,7 +21,6 @@ Please cite us if you use FFAI in your publications.
   * No league or tournament play
   * No star player points or level up
   * No inducements
-  * No timers; Players have unlimited time each turn
 * A web interface supporting:
   * Hot-seat
   * Online play
@@ -39,13 +38,12 @@ Please cite us if you use FFAI in your publications.
   * Number of turns
   * Kick-off table enabled/disabled
   * Which scatter dice to use
+  * Time management
   * ...
 * Premade formations to ease the setup phase. Custom made formations can easily be implemented.
 * Games can be saved and loaded
 
 ## Plans for Future Releases
-* More documentation
-* AI tournament module
 * Support for dungeon arenas
 * Support for all skills and teams in LRB6
 * League mode
