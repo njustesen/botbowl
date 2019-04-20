@@ -40,6 +40,8 @@ class Game:
         self.last_action_time = None
         self.forced_action = None
 
+        self.action = None
+
     def to_json(self):
         return {
             'game_id': self.game_id,
@@ -104,11 +106,14 @@ class Game:
             action.player = self.get_player(action.player.player_id) if action.player is not None else None
             action.pos = Square(action.pos.x, action.pos.y) if action.pos is not None else None
 
+        # Set action as a property so other methods can access it
+        self.action = action
+
         # Update game
         while True:
 
             # Perform game step
-            done = self._one_step(action)
+            done = self._one_step(self.action)
 
             # Game over
             if self.state.game_over:
@@ -119,27 +124,20 @@ class Game:
             if done:
 
                 # If human player - wait for input
-                if self.actor is None:
-                    print("Bug")
                 if self.actor.human:
                     return
 
                 # Query agent for action
                 self.last_request_time = time.time()
-                action = self._safe_act()
+                self.action = self._safe_act()
                 
                 # Check if time limit was violated
                 self.last_action_time = time.time()
-                self.check_clocks()
-                
+                self.check_clocks()  # Might modify the action if clock was violated
+
                 # Did the game terminate?
                 if self.state.game_over:
                     return
-
-                # Did the game force a slow agent to end its turn?
-                if self.forced_action is not None:
-                    action = self.forced_action
-                    self.forced_action = None
                 
             else:
 
@@ -147,13 +145,22 @@ class Game:
                 if not self.config.fast_mode:
                     return
                 
-                # Else continue proecedure with no action
-                action = None
+                # Else continue procedure with no action
+                self.action = None
+
+    def refresh(self):
+        """
+        Checks clocks and runs forced actions. Can be called in human games.
+        """
+        self.action = None
+        self.check_clocks()
+        if self.action is not None:
+            self.step(self.action)
 
     def check_clocks(self):
-        '''
+        """
         Checks if clocks are done.
-        '''
+        """
         # Only use clocks in competition mode
         if not self.config.competition_mode:
             return
@@ -161,6 +168,8 @@ class Game:
         # Timed out?
         if self.timed_out():
             print("Game timed out")
+            self.action = None
+            self.remove_clocks()
             self.disqualified_agent = self.actor
             self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
             self.state.game_over = True
@@ -178,6 +187,8 @@ class Game:
             # Disqualification? Relevant for hanging bots in competitions
             if clock.running_time() > clock.seconds + self.config.time_limits.disqualification:
                 print(f"Time violation. {self.actor.name} will be disqualified!")
+                self.action = None
+                self.remove_clocks()
                 self.state.game_over = True
                 self.disqualified_agent = self.actor
                 self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
@@ -195,18 +206,16 @@ class Game:
                     action = self._forced_action()
                 else:
                     action = None
-                
-                print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
 
                 # Take action if it doesn't end the turn
-                if action is None or action.action_type not in [ActionType.END_TURN, ActionType.END_SETUP]:
+                if self.action is None or self.action.action_type not in [ActionType.END_TURN, ActionType.END_SETUP]:
                     if self.config.debug_mode:
-                        print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
+                        print("Forced step action")
                     done = self._one_step(action)
                 else:
                     if self.config.debug_mode:
-                        print(f"Forcing action: {action.to_json() if action is not None else 'None'}")
-                    self.forced_action = action
+                        print(f"Forcing action: {self.action.to_json() if self.action is not None else 'None'}")
+                    self.action = action
                     break
             
     def _end_game(self):
@@ -286,8 +295,10 @@ class Game:
         Return action that prioritize to end the player's turn.
         '''
         # Take first negative action
-        for action_type in [ActionType.END_TURN, ActionType.END_PLAYER_TURN, ActionType.SELECT_NONE, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
+        for action_type in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN, ActionType.SELECT_NONE, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
+                if action_type == ActionType.END_SETUP and not self.is_setup_legal(self.agent_team(self.actor)):
+                    continue
                 if action.action_type == action_type:
                     return Action(action_type)
         # Take random action
@@ -341,25 +352,28 @@ class Game:
             if action.action_type == ActionType.CONTINUE:
                 if len(self.state.available_actions) == 0:
                     # Consider this as a None action
-                    action.action_type = None
+                    action = None
                 else:
                     if self.config.debug_mode:
                         print("CONTINUE action is not allowed when actions are available")
                     return True  # Game needs user input
             else:
-                # Only allow
+                # Only allowed actions
                 if not self._is_action_allowed(action):
+                    if self.config.debug_mode:
+                        print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
                     return True  # Game needs user input
 
         # Run proc
         if self.config.debug_mode:
             print("Proc={}".format(proc))
-            print("Action={}".format(action.action_type if action is not None else ""))
+            print("Action={}".format(action.action_type if action is not None else "None"))
 
         proc.done = proc.step(action)
 
         if self.config.debug_mode:
             print("Done={}".format(proc.done))
+            print(f"DONE={self.state.stack.peek().done}")
 
         # Used if players was accidently cloned
         if self.config.debug_mode:
@@ -394,11 +408,12 @@ class Game:
 
         # Update available actions
         self.set_available_actions()
-        if len(self.state.available_actions) == 0:
-            return False  # Can continue without user input
 
         if self.config.debug_mode:
             print(f"{len(self.state.available_actions)} available actions")
+
+        if len(self.state.available_actions) == 0:
+            return False  # Can continue without user input
 
         # End player turn if only action available
         if len(self.state.available_actions) == 1 and self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:

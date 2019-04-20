@@ -25,6 +25,12 @@ html body {
 .btn {
   border-radius: 0px;
 }
+.btn-team {
+  width: 180px;
+}
+.btn-team .glyphicon {
+  float: left;
+}
 .select {
   border-radius: 0px;
 }

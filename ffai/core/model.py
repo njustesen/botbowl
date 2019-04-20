@@ -1352,7 +1352,7 @@ class Formation:
         self.formation = formation
 
     def _get_player(self, players, t):
-        if t == 's':
+        if t == 'S':
             idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) for player in players])
             return players[idx]
         if t == 'm':
@@ -1363,6 +1363,9 @@ class Formation:
             return players[idx]
         if t == 'v':
             idx = np.argmax([player.get_av() for player in players])
+            return players[idx]
+        if t == 's':
+            idx = np.argmax([1 if player.has_skill(Skill.SURE_HANDS) else 0 for player in players])
             return players[idx]
         if t == 'p':
             idx = np.argmax([1 if player.has_skill(Skill.PASS) else 0 for player in players])
@@ -1395,16 +1398,17 @@ class Formation:
                 player_on_pitch.append(player)
         # Go through formation from scrimmage to touchdown zone
         players = [player for player in game.get_reserves(team) + player_on_pitch]
-        for y in range(len(self.formation)):
-            for x in reversed(range(len(self.formation[0]))):
-                if len(players) == 0:
-                    return actions
-                t = self.formation[y][x]
-                if t == '-':
-                    continue
-                yy = y + 1
-                xx = x + 1 if not home else game.arena.width - x - 2
-                player = self._get_player(players, t)
-                players.remove(player)
-                actions.append(Action(ActionType.PLACE_PLAYER, pos=Square(xx, yy), player=player))
+        for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
+            for y in range(len(self.formation)):
+                for x in reversed(range(len(self.formation[0]))):
+                    if len(players) == 0:
+                        return actions
+                    tp = self.formation[y][x]
+                    if tp == '-' or tp != t:
+                        continue
+                    yy = y + 1
+                    xx = x + 1 if not home else game.arena.width - x - 2
+                    player = self._get_player(players, t)
+                    players.remove(player)
+                    actions.append(Action(ActionType.PLACE_PLAYER, pos=Square(xx, yy), player=player))
         return actions

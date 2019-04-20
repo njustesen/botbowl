@@ -7,19 +7,32 @@ import time
 
 class MyRandomBot(Agent):
 
+    mean_actions_available = []
+    steps = []
+
     def __init__(self, name):
         super().__init__(name)
         self.my_team = None
-        self.actions_taken = 0
+        self.actions_available = []
 
     def new_game(self, game, team):
         self.my_team = team
+        self.actions_available = []
         self.actions_taken = 0
 
     def act(self, game):
         # Get time left in seconds to return an action
         seconds_left = game.seconds_left(self.my_team)
-
+        available = 0
+        for action_choice in game.state.available_actions:
+            if len(action_choice.positions) == 0 and len(action_choice.players) == 0:
+                available += 1
+            elif len(action_choice.positions) > 0:
+                available += len(action_choice.positions)
+            else:
+                available += len(action_choice.players)
+        self.actions_available.append(available)
+        
         # Select random action type - but no place player
         while True:
             action_choice = np.random.choice(game.state.available_actions)
@@ -35,6 +48,10 @@ class MyRandomBot(Agent):
         return action
 
     def end_game(self, game):
+        print("Num steps:", len(self.actions_available))
+        print("Avg. branching factor:", np.mean(self.actions_available))
+        MyRandomBot.steps.append(len(self.actions_available))
+        MyRandomBot.mean_actions_available.append(np.mean(self.actions_available))
         winner = game.get_winner()
         print("Casualties: ", game.num_casualties())
         if winner is None:
@@ -50,7 +67,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = get_config("ff-11.json")
-    # config.competition_mode = False
+    config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
@@ -60,7 +77,7 @@ if __name__ == "__main__":
     away = get_team_by_id("human-2", ruleset)
 
     # Play 10 games
-    for i in range(10):
+    for i in range(100):
         away_agent = MyRandomBot("Random Bot 1")
         home_agent = MyRandomBot("Random Bot 2")
         config.debug_mode = False
@@ -72,3 +89,6 @@ if __name__ == "__main__":
         game.init()
         end = time.time()
         print(end - start)
+
+    print("Avg. num. steps:", np.mean(MyRandomBot.steps))
+    print("Avg. branching factor:", np.mean(MyRandomBot.mean_actions_available))

@@ -242,6 +242,7 @@ class Competition:
         game = Game(match_id, home_team=deepcopy(home_team), away_team=deepcopy(away_team), home_agent=home_agent, away_agent=away_agent, config=self.config)
         game.config.fast_mode = True
         game.config.competition_mode = True
+        print("Starting new match")
         try:
             with self.time_limit(int(self.config.time_limits.game)):
                 game.init()
@@ -256,5 +257,3 @@ class Competition:
             game.disqualified_agent = game.actor
             return GameResult(game, crashed=True)
         return GameResult(game)
-        
-    

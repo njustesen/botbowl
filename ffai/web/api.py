@@ -53,7 +53,7 @@ def save_game(game_id, name, team_id):
 def get_game(game_id):
     game = host.get_game(game_id)
     if game is not None and game.actor is not None and game.actor.human:
-        game.check_clocks()
+        game.refresh()
     return game
 
 

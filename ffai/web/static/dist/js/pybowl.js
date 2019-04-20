@@ -154,7 +154,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             player_positions: {}
         };
 
-        var id = $routeParams.id;
+        $scope.game_id = $routeParams.id;
         $scope.team_id = $routeParams.team_id;
         $scope.spectating = window.location.href.indexOf('/spectate/') >= 0;
 
@@ -739,6 +739,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (awayTimeRatio != null){
                     $('#turnmarker-away').width((awayTimeRatio * 100) + '%');
                 }
+            } else {
+                $('#turnmarker-away').width('0%');
             }
             clock = $scope.getTeamClock($scope.game.state.home_team);
             if (clock != null){
@@ -746,6 +748,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (homeTimeRatio != null){
                     $('#turnmarker-home').width((homeTimeRatio * 100) + '%');
                 }
+            } else {
+                $('#turnmarker-home').width('0%');
             }
 
             // Set clock to actor's time left
@@ -1181,28 +1185,32 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             });
         };
         
-        $scope.runTimeLoop = function runTimeLoop(time){
+        $scope.runTimeLoop = function runTimeLoop(time, game_id){
             if ($scope.game.state.game_over){
+                $scope.setClock();
                 return;
             }
             setTimeout(function(){
+                if (!window.location.href.includes(game_id)){
+                    return;
+                }
                 $scope.setClock();
                 var clock = $scope.getActiveClock();
                 if (clock != null){
                     if ($scope.getSecondsLeft(clock, false) < 0 && !$scope.refreshing){
                         $scope.reload();
                     } else {
-                        $scope.runTimeLoop(time);
+                        $scope.runTimeLoop(time, game_id);
                     }
                 } else {
-                    $scope.runTimeLoop(time);
+                    $scope.runTimeLoop(time, game_id);
                 }
             }, time);
         };
 
         $scope.reload = function reload(){
             $scope.refreshing = true;
-            GameService.get(id).success(function (data) {
+            GameService.get($scope.game_id).success(function (data) {
                 $scope.game = data;
                 $scope.disableOppActions();
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
@@ -1215,7 +1223,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.checkForReload(2500);
                 $scope.saved = false;
                 $scope.blocked = false;
-                $scope.runTimeLoop(0.1);
+                $scope.runTimeLoop(20, data.game_id);
             }).error(function (status, data) {
                 $location.path("/#/");
             });
