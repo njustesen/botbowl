@@ -58,7 +58,9 @@ class Apothecary(Procedure):
             if action.action_type == ActionType.USE_APOTHECARY:
 
                 # Player is moved to reserves
-                self.game.pitch_to_reserves(self.player)
+                self.player.team.state.apothecary_available = False
+                self.player.state.stunned = True
+                self.player.state.up = False
                 self.game.report(Outcome(OutcomeType.APOTHECARY_USED_KO, player=self.player, team=self.player.team))
 
             else:
@@ -349,7 +351,7 @@ class Block(Procedure):
             return True
 
         if self.selected_die == BBDieResult.DEFENDER_STUMBLES:
-            Push(self.game, self.attacker, self.defender, knock_down=not self.defender.has_skill(Skill.DODGE),
+            Push(self.game, self.attacker, self.defender, knock_down=(not self.defender.has_skill(Skill.DODGE)) or self.attacker.has_skill(Skill.TACKLE),
                  blitz=self.blitz)
             return True
 
@@ -1498,6 +1500,8 @@ class Dodge(Procedure):
             # Calculate target
             roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos)
 
+            tacklers = self.game.tackle_zones_in_detailed(self.player)[1]
+
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
             if self.player.has_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_st():
@@ -1517,8 +1521,8 @@ class Dodge(Procedure):
                 # Fail
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, pos=self.pos, rolls=[roll]))
 
-                # Check if sure feet
-                if self.player.has_skill(Skill.DODGE) and not self.dodge_used:
+                # Check if dodge
+                if self.player.has_skill(Skill.DODGE) and (not self.dodge_used) and (not tacklers):
                     self.dodge_used = True
                     self.awaiting_dodge = True
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.DODGE))
@@ -2200,8 +2204,8 @@ class Pregame(Procedure):
         # self.game.state.stack.push(Inducements(self.game, True))
         # self.game.state.stack.push(Inducements(self.game, False))
         # self.game.state.stack.push(GoldToPettyCash(self.game))
-        WeatherTable(self.game)
         Fans(self.game)
+        WeatherTable(self.game)
         StartGame(self.game)
 
     def step(self, action):
@@ -2594,7 +2598,8 @@ class Setup(Procedure):
         aa = [
             ActionChoice(ActionType.PLACE_PLAYER, team=self.team,
                          players=self.game.get_players_on_pitch(
-                             self.team) if self.reorganize else self.game.get_reserves(self.team),
+                             self.team) if self.reorganize else self.game.get_players_on_pitch(
+                             self.team) +self.game.get_reserves(self.team),
                          positions=positions),
             ActionChoice(ActionType.END_SETUP, team=self.team)
         ]
