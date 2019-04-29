@@ -66,11 +66,7 @@ class MyRandomBot(Agent):
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = get_config("ff-11.json")
-    config.competition_mode = False
-    # config = get_config("ff-7.json")
-    # config = get_config("ff-5.json")
-    # config = get_config("ff-3.json")
+    config = get_config("ff-11-bot-bowl-i.json")
     ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = get_arena(config.arena)
     home = get_team_by_id("human-1", ruleset)

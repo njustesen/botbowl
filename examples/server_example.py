@@ -19,6 +19,11 @@ api.new_game(home_team_id="orc-1",
              away_team_id="human-1",
              home_agent=make_bot("scripted"),
              away_agent=Agent("Player 2", human=True))
+
+api.new_game(home_team_id="orc-1",
+             away_team_id="human-1",
+             home_agent=make_bot("grodbot"),
+             away_agent=Agent("Player 2", human=True))
     
 api.new_game(home_team_id="human-1",
              away_team_id="human-2",
@@ -33,7 +38,7 @@ api.new_game(home_team_id="human-1",
 api.new_game(home_team_id="human-1",
              away_team_id="human-2",
              home_agent=make_bot("GrodBot"),
-             away_agent=make_bot("GrodBot"))
+             away_agent=make_bot("scripted"))
 
 # Run server
 server.start_server(debug=True, use_reloader=False)

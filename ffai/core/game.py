@@ -13,6 +13,7 @@ from copy import deepcopy
 import numpy as np
 import multiprocessing
 import pickle
+import random
 
 
 class Game:
@@ -30,7 +31,7 @@ class Game:
         self.config = config
         self.ruleset = get_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
-        self.seed = seed
+        self.seed = random.seed(a=seed, version=2)
         self.rnd = np.random.RandomState(self.seed)
 
         self.start_time = None
@@ -80,12 +81,14 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            #game_copy_away = deepcopy(self)
-            game_copy_away = self
+            game_copy_away = self._safe_clone()
+            self.actor = self.away_agent
             self.away_agent.new_game(game_copy_away, game_copy_away.state.away_team)
+            self.actor = None
         if not self.home_agent.human:
-            #game_copy_home = deepcopy(self)
-            game_copy_home = self
+            self.actor = self.home_agent
+            game_copy_home = self._safe_clone()
+            self.actor = None
             self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
         # Start game if no humans
         if not self.away_agent.human and not self.home_agent.human:
@@ -129,7 +132,8 @@ class Game:
 
                 # Query agent for action
                 self.last_request_time = time.time()
-                self.action = self._safe_act()
+                self.action = self._checksum_act()
+                # self.action = self._safe_act()
                 
                 # Check if time limit was violated
                 self.last_action_time = time.time()
@@ -172,7 +176,6 @@ class Game:
             self.remove_clocks()
             self.disqualified_agent = self.actor
             self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
-            self.state.game_over = True
             self._end_game()
             return
 
@@ -189,7 +192,6 @@ class Game:
                 print(f"Time violation. {self.actor.name} will be disqualified!")
                 self.action = None
                 self.remove_clocks()
-                self.state.game_over = True
                 self.disqualified_agent = self.actor
                 self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
                 self._end_game()
@@ -224,13 +226,16 @@ class Game:
         '''
         # Game ended when the last action was received - to avoid timout during finishing procedures
         self.state.end_time = self.last_action_time
+        self.state.game_over = True
 
         # Let agents know that the game ended
         if not self.home_agent.human:
             self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
             now = time.time()
             if self.config.competition_mode:
+                self.actor = self.home_agent
                 self.home_agent.end_game(self._safe_clone())
+                self.actor = None
             else:
                 self.home_agent.end_game(self)
             # Disqualify if too long
@@ -240,7 +245,9 @@ class Game:
             self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
             now = time.time()
             if self.config.competition_mode:
+                self.actor = self.away_agent
                 self.away_agent.end_game(self._safe_clone())
+                self.actor = None
             else:
                 self.away_agent.end_game(self)
             # Disqualify if too long
@@ -284,6 +291,43 @@ class Game:
         '''
         if self.config.competition_mode:
             action = self.actor.act(self._safe_clone())
+            # Correct player object
+            if action.player is not None:
+                action.player = self.state.player_by_id[action.player.player_id]
+            return action
+        return self.actor.act(self)
+
+    def _checksum_act(self):
+        '''
+        Compare json-values before and after sending the game instance so agents get disqualified if they manipulated the game object.
+        '''
+        if self.config.competition_mode:
+            # Hide agents
+            actor = self.actor
+            home_agent = self.home_agent
+            away_agent = self.away_agent
+            self.actor = Agent(actor.name, agent_id=actor.agent_id)
+            self.home_agent = Agent(home_agent.name, agent_id=home_agent.agent_id)
+            self.away_agent = Agent(away_agent.name, agent_id=away_agent.agent_id)
+
+            id_before = id(self)
+            checksum_before = self.to_json()
+            checksum_before['state']['clocks'] = None
+            action = actor.act(self)
+            checksum_after = self.to_json()
+            checksum_after['state']['clocks'] = None
+            id_after = id(self)
+
+            self.actor = actor
+            self.home_agent = home_agent
+            self.away_agent = away_agent
+
+            # If game instance was manipulated
+            if not (checksum_after.__eq__(checksum_before) and id_after == id_before):
+                self.disqualified_agent = self.actor
+                self._end_game()
+                return None
+
             # Correct player object
             if action.player is not None:
                 action.player = self.state.player_by_id[action.player.player_id]
@@ -864,9 +908,13 @@ class Game:
         :param up: If specified, filter by ther players up state.
         :return: Players on the pitch who's on team.
         """
-        return [player for player in team.players
-                if player.position is not None and (used is None or used == player.state.used) and
-                (up is None or up == player.state.up)]
+        players = []
+        for y in range(len(self.state.pitch.board)):
+            for x in range(len(self.state.pitch.board[y])):
+                player = self.state.pitch.board[y][x]
+                if player is not None and player.team == team and (used is None or used == player.state.used) and (up is None or up == player.state.up):
+                    players.append(player)
+        return players
 
     def pitch_to_reserves(self, player):
         """
@@ -1161,6 +1209,12 @@ class Game:
         if self.end_time is None or self.start_time is None:
             return False
         return self.end_time - self.start_time > self.config.time_limits.game
+
+    def team_by_id(self, team_id):
+        if self.state.home_team.team_id == team_id:
+            return self.state.home_team
+        if self.state.away_team.team_id == team_id:
+            return self.state.away_team
 
     def get_winner(self):
         """

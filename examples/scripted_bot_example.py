@@ -309,7 +309,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = get_config("ff-11.json")
-    config.competition_mode = False
+    config.competition_mode = True
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
@@ -320,10 +320,10 @@ if __name__ == "__main__":
 
     # Play 100 games
     for i in range(10):
-        away_agent = make_bot('scripted')
-        away_agent.name = "Scripted Bot 1"
         home_agent = make_bot('scripted')
-        home_agent.name = "Scripted Bot 2"
+        home_agent.name = "Scripted Bot 1"
+        away_agent = make_bot('scripted')
+        away_agent.name = "Scripted Bot 2"
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

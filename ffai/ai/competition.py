@@ -47,7 +47,6 @@ class TeamResult:
         self.crashed_win = crashed and self.win
         self.crashed_loss = crashed and not self.win and not self.draw
 
-
     def print(self):
         print("-- {}".format(self.name))
         print("Result: {}".format("Win" if self.win else ("Draw" if self.draw else "Loss")))
@@ -84,7 +83,6 @@ class GameResult:
         self.tds = self.home_result.tds + self.away_result.tds
         self.cas_inflicted = self.home_result.cas_inflicted + self.away_result.cas_inflicted
         self.kills = self.home_result.kills_inflicted + self.away_result.kills_inflicted
-        
 
     def print(self):
         print("############ GAME RESULTS ###########")

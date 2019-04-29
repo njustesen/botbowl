@@ -15,11 +15,10 @@ from ffai.ai.bots import *
 host = InMemoryHost()
 
 
-def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11-web.json", competition_mode=True):
+def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11-web.json"):
     assert away_agent is not None
     assert home_agent is not None
     config = get_config(config_name)
-    config.competition_mode = competition_mode
     # config.competition_mode = True
     ruleset = get_rule_set(config.ruleset, all_rules=False)
     home = get_team_by_id(home_team_id, ruleset)

@@ -80,6 +80,40 @@ class ViolatorBot(Agent):
         pass
 
 
+class ManipulatorBot(Agent):
+
+    def __init__(self, name, seed=None):
+        super().__init__(name)
+        self.rnd = np.random.RandomState(seed)
+
+    def new_game(self, game, team):
+        if game.home_agent == self:
+            game.state.home_team.state.score = 1000
+        elif game.away_agent == self:
+            game.state.away_team.state.score = 1000
+
+    def act(self, game):
+        if game.home_agent == self:
+            game.state.home_team.state.score = 1000
+        elif game.away_agent == self:
+            game.state.away_team.state.score = 1000
+        while True:
+            action_choice = self.rnd.choice(game.state.available_actions)
+            if action_choice.action_type != ActionType.PLACE_PLAYER:
+                break
+        pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+        action = Action(action_choice.action_type, pos=pos, player=player)
+        return action
+
+    def end_game(self, game):
+        if game.home_agent == self:
+            game.state.home_team.state.score = 1000
+        elif game.away_agent == self:
+            game.state.away_team.state.score = 1000
+        pass
+
+
 class JustInTimeBot(Agent):
 
     def __init__(self, name, seed=None):
@@ -144,6 +178,7 @@ register_bot('idle', IdleBot)
 register_bot('violator', ViolatorBot)
 register_bot('init-crash', InitCrashBot)
 register_bot('just-in-time', JustInTimeBot)
+register_bot('manipulator', ManipulatorBot)
 
 
 class ProcBot(Agent):
@@ -259,3 +294,5 @@ class ProcBot(Agent):
 
     def pickup(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+
