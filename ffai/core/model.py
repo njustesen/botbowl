@@ -540,19 +540,19 @@ class Pitch:
         diving_tacklers = []
         shadowers = []
         tentaclers = []
-        for square in self.adjacent_player_squares(player.position, include_own=False, include_opp=True):
+        for square in self.adjacent_player_squares(player, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
             if player_at is not None and player_at.has_tackle_zone():
                 tackle_zones += 1
-            if player_at is None and player_at.has_skill(Skill.TACKLE):
+            if player_at is not None and player_at.has_skill(Skill.TACKLE):
                 tacklers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.PREHENSILE_TAIL):
+            if player_at is not None and player_at.has_skill(Skill.PREHENSILE_TAIL):
                 prehensile_tailers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.DIVING_TACKLE):
+            if player_at is not None and player_at.has_skill(Skill.DIVING_TACKLE):
                 diving_tacklers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.SHADOWING):
+            if player_at is not None and player_at.has_skill(Skill.SHADOWING):
                 shadowers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.TENTACLES):
+            if player_at is not None and player_at.has_skill(Skill.TENTACLES):
                 tentaclers.append(player_at)
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
@@ -805,7 +805,7 @@ class Pitch:
                     continue
                 if player_at.team == passer.team:
                     continue
-                if player_at.can_catch():
+                if not player_at.can_catch():
                     continue
                 if player_at.has_skill(Skill.NO_HANDS):
                     continue
