@@ -145,7 +145,7 @@ env.render(feature_layers=True)
 
 
 #### Observation: 'state'
-The 44 default normalized values in obs['state'] are:
+The 50 default normalized values in obs['state'] are:
 
 0. 'half'
 1. 'round'
@@ -201,25 +201,25 @@ The 44 default normalized values in obs['state'] are:
 #### Observation: 'procedure'
 The 19 procedures represented in the one-hot vector obs['procedure'] are:
 
-1. StartGame
-2. CoinTossFlip
+0. StartGame
+1. CoinTossFlip
 2. CoinTossKickReceive
-4. Setup
-5. PlaceBall
-6. HighKick
-7. Touchback
-8. Turn
-9. PlayerAction
-10. Block
-11. Push
-12. FollowUp
-13. Apothecary
-14. PassAction
-15. Catch
-16. Interception
-17. GFI
-18. Dodge
-19. Pickup
+3. Setup
+4. PlaceBall
+5. HighKick
+6. Touchback
+7. Turn
+8. PlayerAction
+9. Block
+10. Push
+11. FollowUp
+12. Apothecary
+13. PassAction
+14. Catch
+15. Interception
+16. GFI
+17. Dodge
+18. Pickup
 
 ### Action Types
 Actions consists of 31 action types. Some action types, denoted by <position> also requires an x and y-coordinate.
