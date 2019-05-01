@@ -222,7 +222,7 @@ The 19 procedures represented in the one-hot vector obs['procedure'] are:
 18. Pickup
 
 ### Action Types
-Actions consists of 31 action types. Some action types, denoted by <position> also requires an x and y-coordinate.
+Actions consists of 31 action types. Some action types, denoted by `<position>` also requires an x and y-coordinate.
 
 0. ActionType.START_GAME
 1. ActionType.HEADS
@@ -240,17 +240,17 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 13. ActionType.SELECT_DEFENDER_STUMBLES
 14. ActionType.SELECT_DEFENDER_DOWN
 15. ActionType.SELECT_NONE
-16. ActionType.PLACE_PLAYER<Position> (Only used during high-kick)
-17. ActionType.PLACE_BALL<Position>
-18. ActionType.PUSH<Position>
-19. ActionType.FOLLOW_UP<Position>
-20. ActionType.INTERCEPTION<Position>
-21. ActionType.SELECT_PLAYER<Position>
-22. ActionType.MOVE<Position>
-23. ActionType.BLOCK<Position>
-24. ActionType.PASS<Position>
-25. ActionType.FOUL<Position>
-26. ActionType.HANDOFF<Position>
+16. ActionType.PLACE_PLAYER`<Position>` (Only used during high-kick)
+17. ActionType.PLACE_BALL`<Position>`
+18. ActionType.PUSH`<Position>`
+19. ActionType.FOLLOW_UP`<Position>`
+20. ActionType.INTERCEPTION`<Position>`
+21. ActionType.SELECT_PLAYER`<Position>`
+22. ActionType.MOVE`<Position>`
+23. ActionType.BLOCK`<Position>`
+24. ActionType.PASS`<Position>`
+25. ActionType.FOUL`<Position>`
+26. ActionType.HANDOFF`<Position>`
 27. ActionType.SETUP_FORMATION_WEDGE
 28. ActionType.SETUP_FORMATION_LINE
 29. ActionType.SETUP_FORMATION_SPREAD
