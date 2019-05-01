@@ -280,11 +280,12 @@ However, the info object returned by the step function contains useful informati
 These values are commulative, such that 'cas_inflicted' referes to the total number of casualties inflicted by the team.
 
 ### Variants
-FFAI comes with four environments with various difficulty:
+FFAI comes with five environments with various difficulty:
 * FFAI-v1: 11 players on a 26x15 pitch (traditional size)
 * FFAI-v1-7: 7 players on a 20x11 pitch
 * FFAI-v1-5: 5 players on a 16x8 pitch
 * FFAI-v1-3: 3 players on a 12x5 pitch
+* FFAI-v1-3: 1 player on a 4x3 pitch
 
 This is how the FFAI-v1-3 environment looks:
 
