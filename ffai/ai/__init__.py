@@ -38,3 +38,12 @@ register(
             'away_team': get_team('human-2-3', ruleset)
             }
 )
+
+register(
+    id='FFAI-1-v1',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': get_config("ff-1.json"),
+            'home_team': get_team('human-1-1', ruleset),
+            'away_team': get_team('human-2-1', ruleset)
+            }
+)

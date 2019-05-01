@@ -1097,7 +1097,7 @@ class Game:
         :param min_players: The minimum number of players in the area.
         :return: True if team is setup legally in the specified tile area.
         """
-        min_players_checked = min(min_players, len([player for player in team.players if player.state.up]))
+        min_players_checked = min(min_players, len(self.get_reserves(team)) + len(self.get_players_on_pitch(team)))
         cnt = 0
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):

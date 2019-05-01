@@ -13,7 +13,8 @@ if __name__ == "__main__":
     # Smaller variants
     # env = gym.make("FFAI-7-v1")
     # env = gym.make("FFAI-5-v1")
-    env = gym.make("FFAI-3-v1")
+    # env = gym.make("FFAI-3-v1")
+    env = gym.make("FFAI-1-v1")
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
