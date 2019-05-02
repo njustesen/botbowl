@@ -9,10 +9,10 @@ from ffai.core.load import get_team, get_rule_set, get_config
 # Load competition configuration for the bot bowl
 config = get_config('ff-11-bot-bowl-i.json')
 
-'''
-# Random vs. random
-competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='scripted', config=config)
-results = competition.run(num_games=2)
+
+# scripted vs. random
+competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='scripted', competitor_b_name='random', config=config)
+results = competition.run(num_games=20)
 results.print()
 
 # Random vs. idle
@@ -70,10 +70,10 @@ config = get_config('ff-11-bot-bowl-i.json')
 competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='scripted', competitor_b_name='grodbot', config=config)
 results = competition.run(num_games=2)
 results.print()
-'''
+
 
 # Scripted vs. grodbot
 config = get_config('ff-11-bot-bowl-i.json')
 competition = Competition('MyCompetition', competitor_a_team_id='human-1', competitor_b_team_id='human-2', competitor_a_name='random', competitor_b_name='grodbot', config=config)
-results = competition.run(num_games=10)
+results = competition.run(num_games=2)
 results.print()

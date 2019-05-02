@@ -246,7 +246,9 @@ class FFAIEnv(gym.Env):
         self.game.step(action)
         if action.action_type in FFAIEnv.offensive_formation_action_types or action.action_type in FFAIEnv.defensive_formation_action_types:
             self.game.step(Action(ActionType.END_SETUP))
-        reward = 1 if self.game.get_winner() == self.actor else 0
+        reward = 0
+        if self.game.get_winner() is not None:
+            reward = 1 if self.game.get_winner() == self.actor else -1
         team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
         opp_team = self.game.state.home_team if self.team_id != self.home_team.team_id else self.game.state.away_team
         info = {

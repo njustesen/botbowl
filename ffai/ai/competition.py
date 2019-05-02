@@ -29,19 +29,10 @@ class TeamResult:
         self.loss = not (self.win or self.draw)
         self.tds = team.state.score
         self.cas = len(game.get_casualties(team))
-        self.cas_inflicted = 0
+        self.cas_inflicted = len(game.get_casualties(game.get_opp_team(team)))
         self.kills = len([player for player in game.get_casualties(team) if player.state.casualty_type == CasualtyType.DEAD])
-        self.kills_inflicted = 0
+        self.kills_inflicted = len([player for player in game.get_casualties(game.get_opp_team(team)) if player.state.casualty_type == CasualtyType.DEAD])
         # Count inflicted casualties and kills from reports
-        for report in game.state.reports:
-            if report.outcome_type == OutcomeType.BADLY_HURT or report.outcome_type == OutcomeType.MISS_NEXT_GAME:
-                attacker = report.opp_player
-                if attacker is not None and attacker.team == team:
-                    self.cas_inflicted += 1
-            if report.outcome_type == OutcomeType.DEAD:
-                attacker = report.opp_player
-                if attacker is not None and attacker.team == team:
-                    self.kills_inflicted += 1
         self.timed_out_win = timed_out and self.win
         self.timed_out_loss = timed_out and not self.win and not self.draw
         self.crashed_win = crashed and self.win

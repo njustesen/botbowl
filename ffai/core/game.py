@@ -299,7 +299,7 @@ class Game:
 
     def _checksum_act(self):
         '''
-        Compare json-values before and after sending the game instance so agents get disqualified if they manipulated the game object.
+        If in competition_mode, compare json-values before and after sending the game instance so agents get disqualified if they manipulated the game object.
         '''
         if self.config.competition_mode:
             # Hide agents
