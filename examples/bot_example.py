@@ -71,7 +71,7 @@ if __name__ == "__main__":
     arena = get_arena(config.arena)
     home = get_team_by_id("human-1", ruleset)
     away = get_team_by_id("human-2", ruleset)
-    #config.competition_mode = False
+    config.competition_mode = False
 
     # Play 100 games
     game_times = []

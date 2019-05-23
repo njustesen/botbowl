@@ -2794,11 +2794,12 @@ class EndTurn(Procedure):
             self.game.state.stack.pop()
 
         # Reset turn
-        self.game.state.current_team.state.reset_turn()
-        for player in self.game.state.current_team.players:
-            player.state.moves = 0
-            if player.state.used:
-                player.state.used = False
+        if self.game.state.current_team is not None:
+            self.game.state.current_team.state.reset_turn()
+            for player in self.game.state.current_team.players:
+                player.state.moves = 0
+                if player.state.used:
+                    player.state.used = False
 
         # Add kickoff procedure - if there are more turns left
         if self.kickoff and self.game.get_opp_team(self.game.state.current_team).state.turn < self.game.config.rounds:

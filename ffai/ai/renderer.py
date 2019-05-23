@@ -194,14 +194,14 @@ class Renderer:
 
         self.cvs[idx].create_text(10, 10, text='Half: {}, Weather: {}'.format(int(obs['state']['half'])+1, weather), fill='black', anchor=W)
         self.cvs[idx].create_text(10, 34, text='TD: {}, Turn: {}, RR: {}/{}, Bribes: {}'.format(
-            int(obs['state']['own score'] * 8),
+            int(obs['state']['own score'] * 16),
             int(obs['state']['own turns'] * 8) + 1,
             int(obs['state']['own starting rerolls'] * 8),
             int(obs['state']['own rerolls left'] * 8),
             int(obs['state']['own bribes'] * 8)), fill='blue', anchor=W)
         self.cvs[idx].create_text(10, 22,
                             text='TD: {}, Turn: {}, RR: {}/{}, Bribes: {}'.format(
-                                int(obs['state']['opp score'] * 8),
+                                int(obs['state']['opp score'] * 16),
                                 int(obs['state']['opp turns'] * 8) + 1,
                                 int(obs['state']['opp starting rerolls'] * 8),
                                 int(obs['state']['opp rerolls left'] * 8),
