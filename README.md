@@ -145,7 +145,7 @@ env.render(feature_layers=True)
 
 
 #### Observation: 'state'
-The 44 default normalized values in obs['state'] are:
+The 50 default normalized values in obs['state'] are:
 
 0. 'half'
 1. 'round'
@@ -201,28 +201,28 @@ The 44 default normalized values in obs['state'] are:
 #### Observation: 'procedure'
 The 19 procedures represented in the one-hot vector obs['procedure'] are:
 
-1. StartGame
-2. CoinTossFlip
+0. StartGame
+1. CoinTossFlip
 2. CoinTossKickReceive
-4. Setup
-5. PlaceBall
-6. HighKick
-7. Touchback
-8. Turn
-9. PlayerAction
-10. Block
-11. Push
-12. FollowUp
-13. Apothecary
-14. PassAction
-15. Catch
-16. Interception
-17. GFI
-18. Dodge
-19. Pickup
+3. Setup
+4. PlaceBall
+5. HighKick
+6. Touchback
+7. Turn
+8. PlayerAction
+9. Block
+10. Push
+11. FollowUp
+12. Apothecary
+13. PassAction
+14. Catch
+15. Interception
+16. GFI
+17. Dodge
+18. Pickup
 
 ### Action Types
-Actions consists of 31 action types. Some action types, denoted by <position> also requires an x and y-coordinate.
+Actions consists of 31 action types. Some action types, denoted by `<position>` also requires an x and y-coordinate.
 
 0. ActionType.START_GAME
 1. ActionType.HEADS
@@ -240,21 +240,27 @@ Actions consists of 31 action types. Some action types, denoted by <position> al
 13. ActionType.SELECT_DEFENDER_STUMBLES
 14. ActionType.SELECT_DEFENDER_DOWN
 15. ActionType.SELECT_NONE
-16. ActionType.PLACE_PLAYER<Position> (Only used during high-kick)
-17. ActionType.PLACE_BALL<Position>
-18. ActionType.PUSH<Position>
-19. ActionType.FOLLOW_UP<Position>
-20. ActionType.INTERCEPTION<Position>
-21. ActionType.SELECT_PLAYER<Position>
-22. ActionType.MOVE<Position>
-23. ActionType.BLOCK<Position>
-24. ActionType.PASS<Position>
-25. ActionType.FOUL<Position>
-26. ActionType.HANDOFF<Position>
-27. ActionType.SETUP_FORMATION_WEDGE
-28. ActionType.SETUP_FORMATION_LINE
-29. ActionType.SETUP_FORMATION_SPREAD
-30. ActionType.SETUP_FORMATION_ZONE
+16. ActionType.PLACE_PLAYER`<Position>` (Only used during high-kick)
+17. ActionType.PLACE_BALL`<Position>`
+18. ActionType.PUSH`<Position>`
+19. ActionType.FOLLOW_UP`<Position>` 
+20. ActionType.INTERCEPTION`<Position>` (position of the player)
+21. ActionType.SELECT_PLAYER`<Position>` (position of the player)
+22. ActionType.MOVE`<Position>`
+23. ActionType.BLOCK`<Position>`
+24. ActionType.PASS`<Position>`
+25. ActionType.FOUL`<Position>`
+26. ActionType.HANDOFF`<Position>`
+27. ActionType.START_MOVE`<Position>` (position of the player)
+28. ActionType.START_BLOCK`<Position>` (position of the player)
+29. ActionType.START_BLITZ`<Position>` (position of the player)
+30. ActionType.START_PASS`<Position>` (position of the player)
+31. ActionType.START_FOUL`<Position>` (position of the player)
+32. ActionType.START_HANDOFF`<Position>` (position of the player)
+33. ActionType.SETUP_FORMATION_WEDGE
+34. ActionType.SETUP_FORMATION_LINE
+35. ActionType.SETUP_FORMATION_SPREAD
+36. ActionType.SETUP_FORMATION_ZONE
 
 Actions are instantiated and used like this:
 ```
@@ -280,11 +286,12 @@ However, the info object returned by the step function contains useful informati
 These values are commulative, such that 'cas_inflicted' referes to the total number of casualties inflicted by the team.
 
 ### Variants
-FFAI comes with four environments with various difficulty:
+FFAI comes with five environments with various difficulty:
 * FFAI-v1: 11 players on a 26x15 pitch (traditional size)
 * FFAI-v1-7: 7 players on a 20x11 pitch
 * FFAI-v1-5: 5 players on a 16x8 pitch
 * FFAI-v1-3: 3 players on a 12x5 pitch
+* FFAI-v1-3: 1 player on a 4x3 pitch
 
 This is how the FFAI-v1-3 environment looks:
 

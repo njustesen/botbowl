@@ -71,8 +71,10 @@ if __name__ == "__main__":
     arena = get_arena(config.arena)
     home = get_team_by_id("human-1", ruleset)
     away = get_team_by_id("human-2", ruleset)
+    config.competition_mode = False
 
-    # Play 10 games
+    # Play 100 games
+    game_times = []
     for i in range(100):
         away_agent = MyRandomBot("Random Bot 1")
         home_agent = MyRandomBot("Random Bot 2")
@@ -84,7 +86,10 @@ if __name__ == "__main__":
         start = time.time()
         game.init()
         end = time.time()
-        print(end - start)
+        game_time = (end - start)
+        game_times.append(game_time)
+        print(game_time)
 
     print("Avg. num. steps:", np.mean(MyRandomBot.steps))
     print("Avg. branching factor:", np.mean(MyRandomBot.mean_actions_available))
+    print("Avg. game time:", np.mean(game_times))

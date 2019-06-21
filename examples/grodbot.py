@@ -16,15 +16,19 @@ from ffai.ai.registry import register_bot, make_bot
 import ffai.util.bothelper as helper
 from ffai.util.bothelper import ActionSequence
 # from operator import itemgetter
+from ffai.core.procedure import *
 
 
-class GrodBot(bot.ProcBot):
+class GrodBot(Agent):
     """
     A Bot that uses path finding to evaluate all possibilities.
 
     WIP!!! Hand-offs and Pass actions going a bit funny.
 
     """
+
+    mean_actions_available = []
+    steps = []
 
     BASE_SCORE_BLITZ = 55.0
     BASE_SCORE_FOUL = -50.0
@@ -48,6 +52,66 @@ class GrodBot(bot.ProcBot):
         self.current_move: Optional[ActionSequence] = None
         self.verbose = verbose
         self.heat_map: Optional[helper.FfHeatMap] = None
+        self.actions_available = []
+
+    def act(self, game):
+
+        available = 0
+        for action_choice in game.state.available_actions:
+            if len(action_choice.positions) == 0 and len(action_choice.players) == 0:
+                available += 1
+            elif len(action_choice.positions) > 0:
+                available += len(action_choice.positions)
+            else:
+                available += len(action_choice.players)
+        self.actions_available.append(available)
+
+        # Get current procedure
+        proc = game.state.stack.peek()
+
+        # Call private function
+        if isinstance(proc, CoinTossFlip):
+            return self.coin_toss_flip(game)
+        if isinstance(proc, CoinTossKickReceive):
+            return self.coin_toss_kick_receive(game)
+        if isinstance(proc, Setup):
+            return self.setup(game)
+        if isinstance(proc, PlaceBall):
+            return self.place_ball(game)
+        if isinstance(proc, HighKick):
+            return self.high_kick(game)
+        if isinstance(proc, Touchback):
+            return self.touchback(game)
+        if isinstance(proc, Turn) and proc.quick_snap:
+            return self.quick_snap(game)
+        if isinstance(proc, Turn) and proc.blitz:
+            return self.blitz(game)
+        if isinstance(proc, Turn):
+            return self.turn(game)
+        if isinstance(proc, PlayerAction):
+            return self.player_action(game)
+        if isinstance(proc, Block):
+            return self.block(game)
+        if isinstance(proc, Push):
+            return self.push(game)
+        if isinstance(proc, FollowUp):
+            return self.follow_up(game)
+        if isinstance(proc, Apothecary):
+            return self.apothecary(game)
+        if isinstance(proc, PassAction):
+            return self.pass_action(game)
+        if isinstance(proc, Catch):
+            return self.catch(game)
+        if isinstance(proc, Interception):
+            return self.interception(game)
+        if isinstance(proc, GFI):
+            return self.gfi(game)
+        if isinstance(proc, Dodge):
+            return self.dodge(game)
+        if isinstance(proc, Pickup):
+            return self.pickup(game)
+
+        raise Exception("Unknown procedure")
 
     def new_game(self, game: g.Game, team):
         """
@@ -55,6 +119,7 @@ class GrodBot(bot.ProcBot):
         """
         self.my_team = team
         self.opp_team = game.get_opp_team(team)
+        self.actions_available = []
 
     def coin_toss_flip(self, game: g.Game):
         """
@@ -458,6 +523,12 @@ class GrodBot(bot.ProcBot):
         """
         Called when a game end.
         """
+        print("Num steps:", len(self.actions_available))
+        print("Avg. branching factor:", np.mean(self.actions_available))
+        GrodBot.steps.append(len(self.actions_available))
+        GrodBot.mean_actions_available.append(np.mean(self.actions_available))
+        print("Avg. Num steps:", np.mean(GrodBot.steps))
+        print("Avg. overall branching factor:", np.mean(GrodBot.mean_actions_available))
         winner = game.get_winner()
         print("Casualties: ", game.num_casualties())
         print("Score: " + self.my_team.name + "->" + str(self.my_team.state.score) + " ... " + self.opp_team.name + "->" + str(self.opp_team.state.score))
@@ -1389,10 +1460,11 @@ def main():
     ruleset = api.get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = api.get_arena(config.arena)
     home = api.get_team_by_id("human-1", ruleset)
-    away = api.get_team_by_id("orc-1", ruleset)
+    away = api.get_team_by_id("human-2", ruleset)
+    config.competition_mode = False
 
     # Play 100 games
-    for i in range(100):
+    for i in range(10):
         away_agent = make_bot('grodbot')
         away_agent.name = "GrodBot 1"
         home_agent = make_bot('grodbot')
