@@ -32,9 +32,10 @@ class ActionSequence:
         pass
 
     def popleft(self):
-        val = self.action_steps[0]
-        del self.action_steps[0]
-        return val
+        return self.action_steps.pop(0)
+        #val = self.action_steps[0]
+        #del self.action_steps[0]
+        #return val
 
     def is_empty(self):
         return not self.action_steps
@@ -52,6 +53,7 @@ class FfHeatMap:
         # Note that the edges are not on the field, but represent crowd squares
         self.units_friendly: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
         self.units_opponent: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
+
 
     def add_unit_paths(self, player:m.Player, paths: List[pf.Path]):
         is_friendly: bool = player.team == self.team
@@ -76,15 +78,18 @@ class FfHeatMap:
     def get_ball_move_square_safety_score(self, square: m.Square) -> float:
 
         # Basic idea - identify safe regions to move the ball towards
-        opponent_friendly: float = self.units_friendly[square.x][square.y]
+        friendly_heat: float = self.units_friendly[square.x][square.y]
         opponent_heat: float = self.units_opponent[square.x][square.y]
-        score: float=0.0
 
-        if opponent_heat < 0.25: score += 15.0
-        if opponent_heat < 0.05: score += 15.0
-        if opponent_heat < 1.5: score += 5
-        if opponent_friendly > 3.5: score += 10.0
-        score += max(30.0, 5.0*(opponent_friendly-opponent_heat))
+        score: float = 30.0 * max(0.0, (1.0 - opponent_heat/2))
+        return score
+
+        #score: float=0.0
+        #if opponent_heat < 0.25: score += 15.0
+        #if opponent_heat < 0.05: score += 15.0
+        #if opponent_heat < 1.5: score += 5
+        #if friendly_heat > 3.5: score += 10.0
+        #score += max(30.0, 5.0*(friendly_heat-opponent_heat))
 
         return score
 
@@ -320,15 +325,17 @@ def direct_surf_squares(game: g.Game, attack_square: m.Square, defend_square: m.
 
 def reverse_x_for_right(game: g.Game, team: m.Team, x: int) -> int:
     if not game.is_team_side(m.Square(13, 3), team):
-        x = game.state.pitch.width - 1 - x
-    return x
-
+        res = game.state.pitch.width - 1 - x
+    else:
+        res = x
+    return res
 
 def reverse_x_for_left(game: g.Game, team: m.Team, x: int) -> int:
     if game.is_team_side(m.Square(13, 3), team):
-        x = game.state.pitch.width - 1 - x
-    return x
-
+        res = game.state.pitch.width - 1 - x
+    else:
+        res = x
+    return res
 
 def on_sideline(game: g.Game, square: m.Square) -> bool:
     return square.y == 1 or square.y == game.state.pitch.height - 1
@@ -357,7 +364,7 @@ def los_squares(game: g.Game, team: g.Team) -> List[m.Square]:
 
 
 def distance_to_sideline(game: g.Game, square: m.Square) -> int:
-    return min(square.y - 1, game.state.pitch.height - square.y - 1)
+    return min(square.y - 1, game.state.pitch.height - square.y - 2)
 
 
 def is_endzone(game, square: m.Square) -> bool:
@@ -388,28 +395,26 @@ def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Squa
 
 
 def distance_to_defending_endzone(game: g.Game, team: m.Team, position: m.Square) -> int:
-    return reverse_x_for_right(game, team, position.x) - 1
+    res = reverse_x_for_right(game, team, position.x) - 1
+    return res
 
 
 def distance_to_scoring_endzone(game: g.Game, team: m.Team, position: m.Square) -> int:
-    return game.state.pitch.width - 1 - reverse_x_for_right(game, team, position.x)
+    res =  reverse_x_for_left(game, team, position.x) - 1
+    return res
+    #return game.state.pitch.width - 1 - reverse_x_for_right(game, team, position.x)
 
 
 def players_in_scoring_endzone(game: g.Game, team: m.Team, include_own: bool = True, include_opp: bool = False) -> List[m.Player]:
-    players: List[m.Player] = []
-    for cur_team in game.state.teams:
-        if cur_team == team and not include_own:
-            break
-        if cur_team != team and not include_opp:
-            break
-        for cur_player in team.players:
-            if in_scoring_endzone(game, cur_player.team, cur_player.position):
-                players.append(cur_player)
-    return players
+    players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp)
+    selected_players: List[m.Player] = []
+    for player in players:
+        if in_scoring_endzone(game, team, player.position): selected_players.append(player)
+    return selected_players
 
 
 def in_scoring_endzone(game: g.Game, team: m.Team, square: m.Square) -> bool:
-    return reverse_x_for_right(game, team, square.x) == game.state.pitch.width - 1
+    return reverse_x_for_left(game, team, square.x) == 1
 
 
 def players_in_scoring_distance(game: g.Game, team: m.Team, include_own: bool = True, include_opp: bool = True, include_stunned: bool = False) -> List[m.Player]:
@@ -432,7 +437,7 @@ def distance_to_nearest_player(game: g.Game, team: m.Team, square: m.Square, inc
 def screening_distance(game: g.Game, from_square: m.Square, to_square: m.Square) -> float:
     # Return the "screening distance" between 2 squares.  (To complete)
     # float dist =math.sqrt(math.pow(square.x - cur.position.x, 2) + math.pow(square.y - cur.position.y, 2))
-    return 0
+    return 0.0
 
 
 def num_opponents_can_reach(game: g.Game, team: m.Team, square: m.Square) -> int:
@@ -472,20 +477,21 @@ def in_scoring_range(game: g.Game, player: m.Player) -> bool:
 
 def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, include_opp=True, include_used=True, include_stunned=True) -> List[m.Player]:
     players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned, include_used=include_used)
-    close_enough_to_score: List[m.Player] = []
+    res: List[m.Player] = []
     for player in players:
-        if in_scoring_range(game, player): close_enough_to_score.append(player)
-    return close_enough_to_score
+        if in_scoring_range(game, player): res.append(player)
+    return res
 
 
 def players_in(game: g.Game, team: m.Team, squares: List[m.Square], include_own=True, include_opp=True, include_used=True, include_stunned=True, only_blockable=False) -> List[m.Player]:
 
     allowed_players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_used=include_used, include_stunned=include_stunned, only_blockable=only_blockable)
+    res: List[m.Player] = []
 
     for square in squares:
         player: Optional[m.Player] = game.state.pitch.get_player_at(square)
         if player is None:
             continue
         if player in allowed_players:
-            allowed_players.append((player))
-    return allowed_players
+            res.append(player)
+    return res
