@@ -294,7 +294,6 @@ class ActionType(Enum):
     SELECT_PLAYER = 37
     SELECT_NONE = 38
     DONT_USE_APOTHECARY = 40
-    SELECT_ROLL = 41
     DONT_USE_REROLL = 42
     STAND_UP = 43
     PUSH = 44
@@ -308,6 +307,8 @@ class ActionType(Enum):
     SETUP_FORMATION_ZONE = 53
     SETUP_FORMATION_SPREAD = 54
     FOLLOW_UP = 55
+    SELECT_FIRST_ROLL = 41
+    SELECT_SECOND_ROLL = 42
 
 
 class WeatherType(Enum):

@@ -851,19 +851,16 @@ class ActionChoice:
 
 class Action:
 
-    def __init__(self, action_type, pos=None, player=None, idx=0, dice_result=None):
+    def __init__(self, action_type, pos=None, player=None):
         self.action_type = action_type
         self.pos = pos
         self.player = player
-        self.idx = idx
-        self.dice_result = dice_result
 
     def to_json(self):
         return {
             'action_type': self.action_type.name,
             'position': self.pos.to_json() if self.pos is not None else None,
-            'player_id': self.player.player_id if self.player is not None else None,
-            'dice_result': self.dice_result
+            'player_id': self.player.player_id if self.player is not None else None
         }
 
 

@@ -87,11 +87,11 @@ class Apothecary(Procedure):
 
                 return False
 
-            if action.action_type == ActionType.SELECT_ROLL:
+            if action.action_type == ActionType.SELECT_FIRST_ROLL or ActionType.SELECT_SECOND_ROLL:
 
-                effect = self.effect_first if action.idx == 0 else self.effect_second
-                casualty = self.casualty_first if action.idx == 0 else self.casualty_second
-                roll = self.roll_first if action.idx == 0 else self.roll_second
+                effect = self.effect_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.effect_second
+                casualty = self.casualty_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.casualty_second
+                roll = self.roll_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.roll_second
 
                 # Apply casualty
                 self.game.pitch_to_casualties(self.player, casualty, effect, apothecary=True)
@@ -111,7 +111,8 @@ class Apothecary(Procedure):
                     ActionChoice(ActionType.DONT_USE_APOTHECARY, team=self.player.team)]
         else:
             # TODO: Does not really work
-            return [ActionChoice(ActionType.SELECT_ROLL, team=self.player.team)]
+            return [ActionChoice(ActionType.SELECT_FIRST_ROLL, team=self.player.team),
+                    ActionChoice(ActionType.SELECT_SECOND_ROLL, team=self.player.team)]
 
 
 class Armor(Procedure):

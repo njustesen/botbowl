@@ -69,10 +69,9 @@ def step(game_id):
         action_type = parse_enum(ActionType, action['action_type'])
         pos = Square(action['pos']['x'], action['pos']['y']) if 'pos' in action and action['pos'] is not None else None
         player_id = action['player_id'] if 'player_id' in action else None
-        idx = action['idx'] if 'idx' in action else -1
         game = api.get_game(game_id)
         player = game.get_player(player_id) if player_id is not None else None
-        action = Action(action_type, pos=pos, player=player, idx=idx)
+        action = Action(action_type, pos=pos, player=player)
         game = api.step(game_id, action)
     except Exception as e:
         print(e)

@@ -273,9 +273,6 @@ class Game:
                 if action.pos is not None and not isinstance(action.pos, Square):
                     print("ition", action.pos.to_json(), action.action_type.name)
                     return False
-                if action.idx is not None and not isinstance(action.idx, int):
-                    print("Illegal index")
-                    return False
                 if len(action_choice.players) > 0 and action.player not in action_choice.players:
                     print("Illegal player", action.action_type, action.player, self.state.stack.peek())
                     return False
