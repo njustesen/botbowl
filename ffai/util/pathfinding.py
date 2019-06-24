@@ -297,7 +297,7 @@ class AStarPathFinder(implements(PathFinder)):
 
     def create_paths(self, sx: int, sy: int) -> List[Path]:
         paths = []
-        for x in range(self.tile_map.get_height_in_tiles()):
+        for x in range(self.tile_map.get_width_in_tiles()):
             for y in range(self.tile_map.get_height_in_tiles()):
                 if self.tile_map.has_visited(x,y):
                     node = self.nodes[x][y]
@@ -524,8 +524,9 @@ class FfTileMap(implements(TileMap)):
 
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
         square = self.game_state.pitch.get_square(x,y)
+
         # Need to ignore the "crowd" squares on the boundary by blocking them.
-        return x == 0 or y == 0 or x == self.WIDTH-1 or y == self.HEIGHT - 1 or self.game_state.pitch.get_player_at(square) is not None
+        return (x <= 0) or (y <= 0) or (x >= self.WIDTH-1) or (y >= self.HEIGHT-1) or self.game_state.pitch.get_player_at(square) is not None
 
     def get_cost(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> float:
         square_from = self.game_state.pitch.get_square(sx, sy)
