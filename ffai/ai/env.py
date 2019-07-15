@@ -207,7 +207,7 @@ class FFAIEnv(gym.Env):
         self.observation_space = spaces.Dict({
             'board': spaces.Box(low=0, high=1, shape=(arena.height, arena.width, len(self.layers))),
             'state': spaces.Box(low=0, high=1, shape=(50,)),
-            'procedure':  spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
+            'procedure': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
         })
 
         self.actions = FFAIEnv.actions
