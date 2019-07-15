@@ -291,7 +291,7 @@ FFAI comes with five environments with various difficulty:
 * FFAI-v1-7: 7 players on a 20x11 pitch
 * FFAI-v1-5: 5 players on a 16x8 pitch
 * FFAI-v1-3: 3 players on a 12x5 pitch
-* FFAI-v1-3: 1 player on a 4x3 pitch
+* FFAI-v1-1: 1 player on a 4x3 pitch
 
 This is how the FFAI-v1-3 environment looks:
 
