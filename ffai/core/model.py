@@ -1395,7 +1395,7 @@ class Formation:
                 player_on_pitch.append(player)
         # Go through formation from scrimmage to touchdown zone
         players = [player for player in game.get_reserves(team) + player_on_pitch]
-        for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
+        for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
                 for x in reversed(range(len(self.formation[0]))):
                     if len(players) == 0:
