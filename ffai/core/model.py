@@ -633,7 +633,7 @@ class Pitch:
 
         # Determine dice and favor
         if st_for > 2 * st_against:
-            return 2
+            return 3
         elif st_for > st_against:
             return 2
         elif st_for == st_against:
