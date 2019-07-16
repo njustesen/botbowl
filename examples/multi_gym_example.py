@@ -102,9 +102,9 @@ if __name__ == "__main__":
             for remote in remotes:
                 remote.send('step')
             results = [remote.recv() for remote in remotes]
-            for i in range(len(results)):
-                obs, reward, done, info = results[i]
-                renderer.render(obs, i)
+            for j in range(len(results)):
+                obs, reward, done, info = results[j]
+                renderer.render(obs, j)
 
         for remote in remotes:
             remote.send('close')
