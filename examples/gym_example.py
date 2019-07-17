@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # Play 10 games
     steps = 0
-    for i in range(10):
+    for i in range(100):
 
         # Reset environment
         obs = env.reset()

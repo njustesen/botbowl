@@ -9,7 +9,8 @@ setup(name='ffai',
           'Flask',
           'gym',
           'Jinja2',
-          'python-interface'
+          'python-interface',
+          'stopit'
       ],
       packages=find_packages()
 )

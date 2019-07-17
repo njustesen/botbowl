@@ -43,7 +43,7 @@ class Configuration:
         self.roster_size = 16
         self.pitch_max = 11
         self.pitch_min = 3
-        self.scrimmage_max = 3
+        self.scrimmage_min = 3
         self.wing_max = 2
         self.rounds = 8
         self.kick_off_table = True
@@ -633,7 +633,7 @@ class Pitch:
 
         # Determine dice and favor
         if st_for > 2 * st_against:
-            return 2
+            return 3
         elif st_for > st_against:
             return 2
         elif st_for == st_against:
@@ -1393,8 +1393,31 @@ class Formation:
             if player.position is not None:
                 actions.append(Action(ActionType.PLACE_PLAYER, pos=None, player=player))
                 player_on_pitch.append(player)
+
         # Go through formation from scrimmage to touchdown zone
         players = [player for player in game.get_reserves(team) + player_on_pitch]
+
+        positions_used = []
+
+        # setup on scrimmage
+        for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
+            for y in range(len(self.formation)):
+                if len(players) == 0:
+                    return actions
+                x = len(self.formation[0])-1
+                tp = self.formation[y][x]
+                if tp == '-' or tp != t:
+                    continue
+                yy = y + 1
+                xx = x + 1 if not home else game.arena.width - x - 2
+                pos = game.get_square(xx, yy)
+                if not game.is_scrimmage(pos) or pos in positions_used:
+                    continue
+                player = self._get_player(players, t)
+                players.remove(player)
+                actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
+                positions_used.append(pos)
+
         for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
                 for x in reversed(range(len(self.formation[0]))):
@@ -1405,7 +1428,11 @@ class Formation:
                         continue
                     yy = y + 1
                     xx = x + 1 if not home else game.arena.width - x - 2
+                    pos = game.get_square(xx, yy)
+                    if game.is_scrimmage(pos) or pos in positions_used:
+                        continue
                     player = self._get_player(players, t)
                     players.remove(player)
-                    actions.append(Action(ActionType.PLACE_PLAYER, pos=Square(xx, yy), player=player))
+                    actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
+                    positions_used.append(pos)
         return actions

@@ -1213,6 +1213,9 @@ class Game:
         if self.state.away_team.team_id == team_id:
             return self.state.away_team
 
+    def get_square(self, x, y):
+        return self.state.pitch.get_square(x, y)
+
     def get_winner(self):
         """
         returns the winning agent of the game. None if it's a draw.

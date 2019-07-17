@@ -12,11 +12,6 @@ from ffai.ai.renderer import Renderer
 def worker(remote, parent_remote, env):
     parent_remote.close()
 
-    # Smaller variants
-    # env = gym.make("FFAI-7-v1")
-    # env = gym.make("FFAI-5-v1")
-    # env = gym.make("FFAI-3-v1")
-
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
 
@@ -102,9 +97,9 @@ if __name__ == "__main__":
             for remote in remotes:
                 remote.send('step')
             results = [remote.recv() for remote in remotes]
-            for i in range(len(results)):
-                obs, reward, done, info = results[i]
-                renderer.render(obs, i)
+            for j in range(len(results)):
+                obs, reward, done, info = results[j]
+                renderer.render(obs, j)
 
         for remote in remotes:
             remote.send('close')
