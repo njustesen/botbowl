@@ -1400,7 +1400,7 @@ class Formation:
         positions_used = []
 
         # setup on scrimmage
-        for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
+        for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
                 if len(players) == 0:
                     return actions
@@ -1418,7 +1418,7 @@ class Formation:
                 actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
                 positions_used.append(pos)
 
-        for t in ['S', 's', 'p', 'b', 'p', 'm', 'a', 'v', 'd', '0', 'x']:
+        for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
                 for x in reversed(range(len(self.formation[0]))):
                     if len(players) == 0:

@@ -10,14 +10,11 @@ import numpy as np
 from ffai.ai.registry import make_bot
 from ffai.core.game import Game
 from ffai.core.table import CasualtyType, OutcomeType
-from ffai.core.model import Agent
-from multiprocessing import Process, Pipe
 from ffai.core.load import get_team, get_rule_set, get_config
-import time 
-import signal
-from contextlib import contextmanager
+import time
 import pickle
 from ffai.core.util import get_data_path
+import stopit
 
 
 class TeamResult:
@@ -206,26 +203,19 @@ class Competition:
             result.print()
         return CompetitionResult(self.competitor_a_name, self.competitor_b_name, results)
 
-    @contextmanager
-    def time_limit(self, seconds):
-        def signal_handler(signum, frame):
-            raise TimeoutException("Timed out!")
-        signal.signal(signal.SIGALRM, signal_handler)
-        signal.alarm(seconds)
-        try:
-            yield
-        finally:
-            signal.alarm(0)
-
     def _get_competitor(self, name, init_time):
+        bot = None
         try:
-            with self.time_limit(init_time):
-                return make_bot(name)
-        except TimeoutException as e:
-            print(f"{name} timout while initializing:", e)
+            with stopit.ThreadingTimeout(init_time) as to_ctx_mgr:
+                assert to_ctx_mgr.state == to_ctx_mgr.EXECUTING
+                bot = make_bot(name)
+            if to_ctx_mgr.state == to_ctx_mgr.EXECUTED:
+                return bot
+            else:
+                print(f"{name} timed out while initializing.")
         except Exception as e:
             print(f"{name} crashed while initializing:", e)
-        return None
+        return bot
 
     def _run_match(self, match_id, home_team, away_team, home_agent, away_agent):
         game = Game(match_id, home_team=deepcopy(home_team), away_team=deepcopy(away_team), home_agent=home_agent, away_agent=away_agent, config=self.config)
@@ -233,14 +223,14 @@ class Competition:
         game.config.competition_mode = True
         print("Starting new match")
         try:
-            with self.time_limit(int(self.config.time_limits.game)):
+            with stopit.ThreadingTimeout(int(self.config.time_limits.game)) as to_ctx_mgr:
                 game.init()
-        except TimeoutException:
-            print("Game timed out!")
-            game.end_time = time.time()
-            game.game_over = True
-            game.disqualified_agent = game.actor
-            return GameResult(game)
+            if to_ctx_mgr.state != to_ctx_mgr.EXECUTED:
+                print("Game timed out!")
+                game.end_time = time.time()
+                game.game_over = True
+                game.disqualified_agent = game.actor
+                return GameResult(game)
         except Exception as e:
             print(f"Game crashed by {game.actor.name if game.actor is not None else 'the framework'}: ", e)
             game.disqualified_agent = game.actor
