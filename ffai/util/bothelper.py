@@ -388,7 +388,7 @@ def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Squa
     squares: List[m.Square] = []
     for i in range(-distance, distance+1):
         for j in range(-distance, distance+1):
-            cur_square = game.state.pitch.get_square(square.x+i, square.y+i)
+            cur_square = game.state.pitch.get_square(square.x+i, square.y+j)
             if cur_square != square and not game.state.pitch.is_out_of_bounds(cur_square):
                 squares.append(cur_square)
     return squares
