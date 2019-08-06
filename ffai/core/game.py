@@ -18,11 +18,11 @@ import random
 
 class Game:
 
-    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config=None, arena=None, ruleset=None, state=None, seed=None, auto_save=False):
+    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config=None, arena=None, ruleset=None, state=None, seed=None, record=False):
         assert config is not None or arena is not None
         assert config is not None or ruleset is not None
         assert home_team.team_id != away_team.team_id
-        self.auto_save = auto_save
+        self.replay = Replay(replay_id=game_id) if record else None
         self.game_id = game_id
         self.home_agent = home_agent
         self.away_agent = away_agent
@@ -90,12 +90,18 @@ class Game:
             game_copy_home = self._safe_clone()
             self.actor = None
             self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
+
+        self.set_available_actions()
+        # Record state
+        if self.replay is not None:
+            self.replay.record_step(self)
         # Start game if no humans
         if not self.away_agent.human and not self.home_agent.human:
-            self.set_available_actions()
-            self.step(Action(ActionType.START_GAME))
-        else:
-            self.set_available_actions()
+            start_action = Action(ActionType.START_GAME)
+            # Record state
+            if self.replay is not None:
+                self.replay.record_action(start_action)
+            self.step(start_action)
 
     def step(self, action=None):
         """
@@ -115,8 +121,16 @@ class Game:
         # Update game
         while True:
 
+            # Record state
+            if self.replay is not None:
+                self.replay.record_action(self.action)
+
             # Perform game step
             done = self._one_step(self.action)
+
+            # Record state
+            if self.replay is not None:
+                self.replay.record_step(self)
 
             # Game over
             if self.state.game_over:
@@ -253,6 +267,11 @@ class Game:
             # Disqualify if too long
             if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
                 self.disqualified_agent = self.home_agent
+
+        # Record state
+        if self.replay is not None:
+            self.replay.record_step(self)
+            self.replay.dump(self.game_id)
 
     def _is_action_allowed(self, action):
         """

@@ -6,6 +6,7 @@ Year: 2018
 This module contains functions to communicate with a game host to manage games.
 """
 
+import pickle
 from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *
@@ -54,6 +55,14 @@ def get_game(game_id):
     if game is not None and game.actor is not None and game.actor.human:
         game.refresh()
     return game
+
+
+def get_replay(replay_id):
+    return Replay(replay_id=replay_id, load=True)
+
+
+def get_replay_ids():
+    return host.get_replay_ids()
 
 
 def load_game(name):

@@ -59,7 +59,7 @@ if __name__ == "__main__":
         away_agent = make_bot("my-random-bot")
         home_agent = make_bot("my-random-bot")
 
-        game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset, record=True)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))

@@ -8,8 +8,8 @@
         <table class="table table-condensed table-hover">
             <thead>
                 <tr>
-                    <th class="text-center" style="width=30%">Home Team</th>
-                    <th class="text-center" style="width=30%"></th>
+                    <th class="text-center" style="width:30%">Home Team</th>
+                    <th class="text-center" style="width:30%"></th>
                     <th></th>
                     <th></th>
                     <th class="text-center">Away Team</th>
@@ -49,8 +49,8 @@
             <thead>
                 <tr>
                     <th class="test-center">Name</th>
-                    <th class="text-center" style="width=30%">Home Team</th>
-                    <th class="text-center" style="width=30%"></th>
+                    <th class="text-center" style="width:30%">Home Team</th>
+                    <th class="text-center" style="width:30%"></th>
                     <th></th>
                     <th></th>
                     <th class="text-center">Away Team</th>
@@ -73,4 +73,28 @@
             </tbody>
         </table>
     </section>
+
+    <section class="post">
+        <hr />
+        <h3 class="text-center">Replays</h3>
+        <hr />
+        <table class="table table-condensed table-hover">
+            <thead>
+                <tr>
+                    <th class="test-center">Name</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="replay in replays" ng-click='openReplay(replay)'>
+                    <td class="text-left">{{replay}}</td>
+                    <td class="text-right">
+                        <a href="#" ng-click="loadReplay(replay)" class="btn btn-success btn-xs"><span class="glyphicon glyphicon-play"></span> Play</a>
+                        <!--<button class="btn btn-danger btn-xs" ng-click="deleteGame(game.game_id)"><span class="glyphicon glyphicon-trash"></span> Concede</button>-->
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
 </div>

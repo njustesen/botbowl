@@ -10,9 +10,85 @@ from copy import copy, deepcopy
 import numpy as np
 import uuid
 import time
+import json
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
+
+
+class Replay:
+
+    def __init__(self, replay_id, load=False, simple=False):
+        self.replay_id = replay_id
+        self.steps = {}
+        self.actions = {}
+        self.idx = 0
+        if load:
+            filename = get_data_path('replays') + "/" + replay_id + ".rep"
+            replay = json.load(open(filename, "r"))
+            if simple:
+                self.steps = replay['steps'][0]
+                self.actions = []
+            else:
+                self.steps = replay['steps']
+                self.actions = replay['actions']
+            self.idx = 0
+
+    def record_step(self, game):
+        self.steps[self.idx] = game.to_json()
+        self.idx += 1
+
+    def record_action(self, action):
+        self.actions[self.idx] = action.to_json() if action is not None else None
+        self.idx += 1
+
+    def dump(self, replay_id):
+        name = self.steps[0]['home_agent']['name'] + "_VS_" + self.steps[0]['away_agent']['name'] + "_" + str(replay_id)
+        filename = get_data_path('replays') + '/' + name + '.rep'
+        json.dump(self.to_json(), open(filename, "w"))
+
+    def next(self):
+        if len(self.steps) == 0 or self.idx + 1 >= len(self.steps):
+            return None
+        self.idx += 1
+        while self.idx not in self.steps:
+            #print(self.actions[self.idx])
+            self.idx += 1
+        return self.steps[self.idx]
+
+    def prev(self):
+        if len(self.steps) == 0 or self.idx - 1 < 0:
+            return None
+        self.idx -= 1
+        while self.idx not in self.steps:
+            #print(self.actions[self.idx])
+            self.idx -= 1
+        return self.steps[self.idx]
+
+    def first(self):
+        if len(self.steps) == 0:
+            return None
+        self.idx = 0
+        return self.steps[self.idx]
+
+    def last(self):
+        if len(self.steps) == 0:
+            return None
+        self.idx = max(self.steps.keys())
+        return self.steps[self.idx]
+
+    def to_json(self):
+        return {
+            'replay_id': self.replay_id,
+            'steps': {idx : step for idx, step in self.steps.items()},
+            'actions': {idx : action for idx, action in self.actions.items()}
+        }
+
+    def to_simple_json(self):
+        return {
+            'game': self.steps[0]
+        }
+
 
 class TimeLimits:
 

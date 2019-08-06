@@ -52,6 +52,14 @@ def get_all_games():
     })
 
 
+@app.route('/replays/', methods=['GET'])
+def get_all_replays():
+    replays = api.get_replay_ids()
+    return json.dumps({
+        'replays': replays
+    })
+
+
 @app.route('/teams/', methods=['GET'])
 def get_all_teams():
     # TODO: Needs a ruleset
@@ -82,6 +90,11 @@ def step(game_id):
 @app.route('/games/<game_id>', methods=['GET'])
 def get_game(game_id):
     return json.dumps(api.get_game(game_id).to_json())
+
+
+@app.route('/replays/<replay_id>', methods=['GET'])
+def get_replay(replay_id):
+    return json.dumps(api.get_replay(replay_id).to_json())
 
 
 @app.route('/game/load/<name>', methods=['GET'])

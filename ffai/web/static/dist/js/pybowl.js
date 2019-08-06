@@ -39,6 +39,11 @@ app.config(['$locationProvider', '$routeProvider',
             controller: 'GamePlayCtrl',
             access: { requiredAuthentication: true }
         }).
+        when('/game/replay/:id/', {
+            templateUrl: 'static/partials/game.play.html',
+            controller: 'GamePlayCtrl',
+            access: { requiredAuthentication: true }
+        }).
         otherwise({
             redirectTo: '/'
         });
@@ -46,9 +51,10 @@ app.config(['$locationProvider', '$routeProvider',
 
 
 
-appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
-    function GameListCtrl($scope, $window, GameService) {
+appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', 'ReplayService',
+    function GameListCtrl($scope, $window, GameService, ReplayService) {
         $scope.games = [];
+        $scope.replays = [];
         $scope.savedGames = [];
 
         GameService.findAll().success(function(data) {
@@ -56,9 +62,22 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
             $scope.savedGames = data.saved_games;
         });
 
+        ReplayService.findAll().success(function(data) {
+            $scope.replays = data.replays;
+        });
+
         $scope.loadGame = function loadGame(name){
             GameService.load(name).success(function(data) {
                  $window.location.href = '/#/game/play/' + data.game.game_id + '/' + data.team_id + '/'
+            }).error(function(status, data) {
+                console.log(status);
+                console.log(data);
+            });
+        };
+
+        $scope.loadReplay = function loadReplay(replay_id){
+            ReplayService.get(replay_id).success(function(data) {
+                 $window.location.href = '/#/game/replay/' + data.replay_id
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
@@ -126,9 +145,9 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
     }
 ]);
 
-appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService',
-    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService) {
-        $scope.RELOAD_TIME = 20
+appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService',
+    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService) {
+        $scope.RELOAD_TIME = 20;
         $scope.game = {};
         $scope.reportsLimit = 20;
         $scope.saved = false;
@@ -157,6 +176,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.game_id = $routeParams.id;
         $scope.team_id = $routeParams.team_id;
         $scope.spectating = window.location.href.indexOf('/spectate/') >= 0;
+        $scope.replaying = window.location.href.indexOf('/replay/') >= 0;
+        if ($scope.replaying){
+            $scope.replay_id = $scope.game_id;
+            $scope.spectating = true;
+            $scope.replayIsPlaying = false;
+            $scope.replayStep = 0;
+        }
 
         $scope.getAvailable = function getAvailable(square){
             if (square.special_action_type === "PASS" && $scope.passOptions) {
@@ -1058,7 +1084,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.opp_turn = true;
             for (let idx in $scope.game.state.available_actions) {
                 let action = $scope.game.state.available_actions[idx];
-                if (action.disabled || $scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
+                if ($scope.replaying || action.disabled || $scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
                     action.disabled = true;
                     continue;
                 }
@@ -1208,25 +1234,96 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }, time);
         };
 
-        $scope.reload = function reload(){
-            $scope.refreshing = true;
-            GameService.get($scope.game_id).success(function (data) {
-                $scope.game = data;
+        $scope.runPlayLoop = function runPlayLoop(time){
+            setTimeout(function(){
+                if ($scope.replayIsPlaying) {
+                    $scope.nextStep();
+                    $scope.$apply();
+                }
+                $scope.runPlayLoop(time);
+            }, time);
+        };
+
+        $scope.numOfSteps = function (){
+            return  Object.keys($scope.replay.steps).length;
+        };
+
+        $scope.nextStep = function (){
+            if ($scope.replayStep + 1 < $scope.numOfSteps()){
+                $scope.replayStep += 1;
+                let stepId = Object.keys($scope.replay.steps)[$scope.replayStep];
+                $scope.game = $scope.replay.steps[stepId];
                 $scope.disableOppActions();
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
-                //$scope.updateMoveLines();
-                $scope.loading = false;
-                $scope.refreshing = false;
-                console.log(data);
-                $scope.checkForReload(2500);
-                $scope.saved = false;
-                $scope.blocked = false;
-                $scope.runTimeLoop(20, data.game_id);
-            }).error(function (status, data) {
-                $location.path("/#/");
-            });
+            } else {
+                $scope.replayIsPlaying = false;
+            }
+        };
+
+        $scope.playOrPause = function(){
+            $scope.replayIsPlaying = !$scope.replayIsPlaying;
+        };
+
+        $scope.prevStep = function (){
+            if ($scope.replayStep > 0){
+                $scope.replayStep -= 1;
+                let stepId = Object.keys($scope.replay.steps)[$scope.replayStep];
+                $scope.game = $scope.replay.steps[stepId];
+                $scope.disableOppActions();
+                $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                $scope.setLocalState();
+                $scope.setAvailablePositions();
+            } else {
+                $scope.replayIsPlaying = false;
+            }
+        };
+
+        $scope.reload = function reload(){
+            $scope.refreshing = true;
+            if ($scope.replaying){
+
+                ReplayService.get($scope.replay_id).success(function (data) {
+                    $scope.replay = data;
+                    $scope.game = data.steps[0];
+                    $scope.disableOppActions();
+                    $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                    $scope.setLocalState();
+                    $scope.setAvailablePositions();
+                    //$scope.updateMoveLines();
+                    $scope.loading = false;
+                    $scope.refreshing = false;
+                    console.log(data);
+                    $scope.saved = false;
+                    $scope.blocked = false;
+                    $scope.runPlayLoop(1000);
+                }).error(function (status, data) {
+                    $location.path("/#/");
+                });
+
+            } else {
+
+                GameService.get($scope.game_id).success(function (data) {
+                    $scope.game = data;
+                    $scope.disableOppActions();
+                    $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                    $scope.setLocalState();
+                    $scope.setAvailablePositions();
+                    //$scope.updateMoveLines();
+                    $scope.loading = false;
+                    $scope.refreshing = false;
+                    console.log(data);
+                    $scope.checkForReload(2500);
+                    $scope.saved = false;
+                    $scope.blocked = false;
+                    $scope.runTimeLoop(20, data.game_id);
+                }).error(function (status, data) {
+                    $location.path("/#/");
+                });
+
+            }
+
         };
 
         // Get game-state when document is ready
@@ -1310,6 +1407,20 @@ appServices.factory('GameService', function($http) {
 
     };
 });
+
+appServices.factory('ReplayService', function($http) {
+    return {
+        get: function(id) {
+            return $http.get(options.api.base_url + '/replays/' + id);
+        },
+
+        findAll: function() {
+            return $http.get(options.api.base_url + '/replays/');
+        }
+
+    };
+});
+
 
 
 appServices.factory('TeamService', function($http) {
