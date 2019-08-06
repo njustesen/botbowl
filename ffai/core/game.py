@@ -13,7 +13,6 @@ from copy import deepcopy
 import numpy as np
 import multiprocessing
 import pickle
-import random
 
 
 class Game:
@@ -31,8 +30,7 @@ class Game:
         self.config = config
         self.ruleset = get_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
-        self.seed = random.seed(a=seed, version=2)
-        self.rnd = np.random.RandomState(self.seed)
+        self.rnd = np.random.RandomState(seed)
 
         self.start_time = None
         self.end_time = None
