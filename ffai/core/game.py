@@ -276,6 +276,11 @@ class Game:
             self.replay.record_step(self)
             self.replay.dump(self.game_id)
 
+        # Record state
+        if self.replay is not None:
+            self.replay.record_step(self)
+            self.replay.dump(self.game_id)
+
     def _is_action_allowed(self, action):
         """
         Checks whether the specified action is allowed by comparing to actions in self.state.available_actions.
