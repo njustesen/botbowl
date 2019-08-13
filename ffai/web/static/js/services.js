@@ -32,6 +32,20 @@ appServices.factory('GameService', function($http) {
     };
 });
 
+appServices.factory('ReplayService', function($http) {
+    return {
+        get: function(id) {
+            return $http.get(options.api.base_url + '/replays/' + id);
+        },
+
+        findAll: function() {
+            return $http.get(options.api.base_url + '/replays/');
+        }
+
+    };
+});
+
+
 
 appServices.factory('TeamService', function($http) {
     return {

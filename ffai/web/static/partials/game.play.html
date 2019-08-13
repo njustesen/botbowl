@@ -155,6 +155,26 @@
 
     <div class="gamecontent">
 
+        <div ng-if="replaying" class="text-center">
+            {{ replayStep }} / {{ numOfSteps() }}
+        </div>
+
+        <div class="action-bar text-center">
+            <span ng-if="replaying">
+
+                <button type="button" class="btn btn-sm btn-default" ng-click="prevStep(action)" ng-disabled="replayStep == 0">
+                    <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+                </button>
+                <button type="button" class="btn btn-sm btn-default" ng-click="playOrPause(action)" ng-disabled="refreshing">
+                    <span class="glyphicon glyphicon-play" aria-hidden="true" ng-if="!replayIsPlaying"></span>
+                    <span class="glyphicon glyphicon-pause" aria-hidden="true" ng-if="replayIsPlaying"></span>
+                </button>
+                <button type="button" class="btn btn-sm btn-default" ng-click="nextStep(action)" ng-disabled="replayStep + 1 < Object.keys(replay.steps).length">
+                    <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                </button>
+            </span>
+        </div>
+
         <div class="square-row">
             <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
             <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to show move actions.</div>

@@ -8,6 +8,7 @@ A similar host could be implemented that uses a persistent database instead.
 """
 
 from ffai.core.util import *
+from ffai.core.model import Replay
 import pickle
 import glob
 import uuid
@@ -81,3 +82,10 @@ class InMemoryHost:
     def get_saved_games(self):
         games = [self.load_file(filename) for filename in glob.glob(get_data_path("saves/*"))]
         return zip(games, self.get_savenames())
+
+    def get_replay_ids(self):
+        replays = [filename.split('/')[-1].split('.rep')[0] for filename in glob.glob(get_data_path("replays") + "/*.rep")]
+        return sorted(replays)
+
+    def load_replay(self, replay_id):
+        return Replay(replay_id)

@@ -82,15 +82,15 @@ class GameResult:
         print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.kills_inflicted, self.home_result.kills_inflicted, self.home_agent_name))
         print("Result:")
         if self.winner is not None:
-            if self.crashed and self.winner.name == self.home_agent_name:
+            if self.crashed and self.winner.name == self.home_agent_name.lower():
                 print(f"- {self.away_agent_name} chrashed!")
-            if self.crashed and self.winner.name == self.away_agent_name:
+            if self.crashed and self.winner.name == self.away_agent_name.lower():
                 print(f"- {self.home_agent_name} chrashed!")
             if self.disqualified_agent is not None:
                 print(f"- {self.disqualified_agent.name} was disqualified!")
-            if self.timed_out and self.winner.name == self.home_agent_name:
+            if self.timed_out and self.winner.name.lower() == self.home_agent_name.lower():
                 print(f"- {self.away_agent_name} timed out!")
-            if self.timed_out and self.winner.name == self.away_agent_name:
+            if self.timed_out and self.winner.name.lower() == self.away_agent_name.lower():
                 print(f"- {self.home_agent_name} timed out!")
             print(f"- Winner: {self.winner.name}")
         elif self.timed_out:
@@ -110,28 +110,28 @@ class CompetitionResult:
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
         self.wins = {
-            competitor_a_name: np.sum([1 if result.winner is not None and result.winner.name == competitor_a_name else 0 for result in game_results]),
-            competitor_b_name: np.sum([1 if result.winner is not None and result.winner.name == competitor_b_name else 0 for result in game_results])
+            competitor_a_name: np.sum([1 if result.winner is not None and result.winner.name.lower() == competitor_a_name.lower() else 0 for result in game_results]),
+            competitor_b_name: np.sum([1 if result.winner is not None and result.winner.name.lower() == competitor_b_name.lower() else 0 for result in game_results])
         }
         self.decided = self.wins[competitor_a_name] + self.wins[competitor_b_name]
         self.undecided = len(game_results) - self.decided
         self.crashes = len([result for result in game_results if result.crashed])
-        self.a_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name != self.competitor_a_name])
-        self.b_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name != self.competitor_b_name])
-        self.a_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and result.disqualified_agent.name == competitor_a_name])
-        self.b_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and  result.disqualified_agent.name == competitor_b_name])
+        self.a_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name.lower() != self.competitor_a_name.lower()])
+        self.b_crashes = len([result for result in game_results if result.crashed and result.winner is not None and result.winner.name.lower() != self.competitor_b_name.lower()])
+        self.a_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and result.disqualified_agent.name.lower() == competitor_a_name.lower()])
+        self.b_disqualifications = len([result for result in game_results if result.disqualified_agent is not None and  result.disqualified_agent.name.lower() == competitor_b_name.lower()])
         self.disquiaifications = self.a_disqualifications + self.b_disqualifications
         self.tds = {
-            competitor_a_name: [result.home_result.tds if result.home_agent_name == competitor_a_name else result.away_result.tds for result in game_results],
-            competitor_b_name: [result.home_result.tds if result.home_agent_name == competitor_b_name else result.away_result.tds for result in game_results]
+            competitor_a_name: [result.home_result.tds if result.home_agent_name.lower() == competitor_a_name.lower() else result.away_result.tds for result in game_results],
+            competitor_b_name: [result.home_result.tds if result.home_agent_name.lower() == competitor_b_name.lower() else result.away_result.tds for result in game_results]
         }
         self.cas_inflicted = {
-            competitor_a_name: [result.home_result.cas_inflicted if result.home_agent_name == competitor_a_name else result.away_result.cas_inflicted for result in game_results],
-            competitor_b_name: [result.home_result.cas_inflicted if result.home_agent_name == competitor_b_name else result.away_result.cas_inflicted for result in game_results]
+            competitor_a_name: [result.home_result.cas_inflicted if result.home_agent_name.lower() == competitor_a_name.lower() else result.away_result.cas_inflicted for result in game_results],
+            competitor_b_name: [result.home_result.cas_inflicted if result.home_agent_name.lower() == competitor_b_name.lower() else result.away_result.cas_inflicted for result in game_results]
         }
         self.kills_inflicted = {
-            competitor_a_name: [result.home_result.kills_inflicted if result.home_agent_name == competitor_a_name else result.away_result.kills_inflicted for result in game_results],
-            competitor_b_name: [result.home_result.kills_inflicted if result.home_agent_name == competitor_b_name else result.away_result.kills_inflicted for result in game_results]
+            competitor_a_name: [result.home_result.kills_inflicted if result.home_agent_name.lower() == competitor_a_name.lower() else result.away_result.kills_inflicted for result in game_results],
+            competitor_b_name: [result.home_result.kills_inflicted if result.home_agent_name.lower() == competitor_b_name.lower() else result.away_result.kills_inflicted for result in game_results]
         }
 
     def print(self):
@@ -168,7 +168,7 @@ class TimeoutException(Exception): pass
 
 class Competition:
 
-    def __init__(self, name, competitor_a_team_id, competitor_b_team_id, competitor_a_name, competitor_b_name, config):
+    def __init__(self, name, competitor_a_team_id, competitor_b_team_id, competitor_a_name, competitor_b_name, config, record=False):
         assert competitor_a_name != competitor_b_name
         assert competitor_a_team_id != competitor_b_team_id
         self.name = name
@@ -180,6 +180,7 @@ class Competition:
         self.competitor_a_team = get_team(competitor_a_team_id, self.ruleset)
         self.competitor_b_team = get_team(competitor_b_team_id, self.ruleset)
         self.disqualified = None
+        self.record = record
 
     def run(self, num_games):
         results = []
@@ -218,7 +219,7 @@ class Competition:
         return bot
 
     def _run_match(self, match_id, home_team, away_team, home_agent, away_agent):
-        game = Game(match_id, home_team=deepcopy(home_team), away_team=deepcopy(away_team), home_agent=home_agent, away_agent=away_agent, config=self.config)
+        game = Game(match_id, home_team=deepcopy(home_team), away_team=deepcopy(away_team), home_agent=home_agent, away_agent=away_agent, config=self.config, record=self.record)
         game.config.fast_mode = True
         game.config.competition_mode = True
         print("Starting new match")

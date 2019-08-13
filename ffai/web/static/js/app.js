@@ -39,6 +39,11 @@ app.config(['$locationProvider', '$routeProvider',
             controller: 'GamePlayCtrl',
             access: { requiredAuthentication: true }
         }).
+        when('/game/replay/:id/', {
+            templateUrl: 'static/partials/game.play.html',
+            controller: 'GamePlayCtrl',
+            access: { requiredAuthentication: true }
+        }).
         otherwise({
             redirectTo: '/'
         });

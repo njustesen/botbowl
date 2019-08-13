@@ -17,11 +17,11 @@ import pickle
 
 class Game:
 
-    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config=None, arena=None, ruleset=None, state=None, seed=None, auto_save=False):
+    def __init__(self, game_id, home_team, away_team, home_agent, away_agent, config=None, arena=None, ruleset=None, state=None, seed=None, record=False):
         assert config is not None or arena is not None
         assert config is not None or ruleset is not None
         assert home_team.team_id != away_team.team_id
-        self.auto_save = auto_save
+        self.replay = Replay(replay_id=game_id) if record else None
         self.game_id = game_id
         self.home_agent = home_agent
         self.away_agent = away_agent
@@ -88,12 +88,18 @@ class Game:
             game_copy_home = self._safe_clone()
             self.actor = None
             self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
+
+        self.set_available_actions()
+        # Record state
+        if self.replay is not None:
+            self.replay.record_step(self)
         # Start game if no humans
         if not self.away_agent.human and not self.home_agent.human:
-            self.set_available_actions()
-            self.step(Action(ActionType.START_GAME))
-        else:
-            self.set_available_actions()
+            start_action = Action(ActionType.START_GAME)
+            # Record state
+            if self.replay is not None:
+                self.replay.record_action(start_action)
+            self.step(start_action)
 
     def step(self, action=None):
         """
@@ -113,8 +119,16 @@ class Game:
         # Update game
         while True:
 
+            # Record state
+            if self.replay is not None:
+                self.replay.record_action(self.action)
+
             # Perform game step
             done = self._one_step(self.action)
+
+            # Record state
+            if self.replay is not None:
+                self.replay.record_step(self)
 
             # Game over
             if self.state.game_over:
@@ -227,30 +241,40 @@ class Game:
         self.state.game_over = True
 
         # Let agents know that the game ended
+        now = None
         if not self.home_agent.human:
             self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
-            now = time.time()
             if self.config.competition_mode:
                 self.actor = self.home_agent
-                self.home_agent.end_game(self._safe_clone())
+                clone = self._safe_clone()
+                now = time.time()
+                self.home_agent.end_game(clone)
                 self.actor = None
             else:
                 self.home_agent.end_game(self)
             # Disqualify if too long
             if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
+                print("End time violated by " + self.home_agent.name + ". Time used: " + time.time() - now)
                 self.disqualified_agent = self.home_agent
         if not self.away_agent.human:
             self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
-            now = time.time()
             if self.config.competition_mode:
                 self.actor = self.away_agent
-                self.away_agent.end_game(self._safe_clone())
+                clone = self._safe_clone()
+                now = time.time()
+                self.away_agent.end_game(clone)
                 self.actor = None
             else:
                 self.away_agent.end_game(self)
             # Disqualify if too long
             if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
-                self.disqualified_agent = self.home_agent
+                print("End time violated by " + self.away_agent.name + ". Time used: " + time.time() - now)
+                self.disqualified_agent = self.away_agent
+
+        # Record state
+        if self.replay is not None:
+            self.replay.record_step(self)
+            self.replay.dump(self.game_id)
 
     def _is_action_allowed(self, action):
         """
@@ -919,6 +943,7 @@ class Game:
         self.state.pitch.remove(player)
         self.get_reserves(player.team).append(player)
         player.state.used = False
+        player.state.up = True
 
     def reserves_to_pitch(self, player, pos):
         """
@@ -930,6 +955,7 @@ class Game:
         if player_at is not None:
             self.pitch_to_reserves(player_at)
         self.state.pitch.put(player, pos)
+        player.state.up = True
 
     def pitch_to_kod(self, player):
         """
@@ -939,6 +965,7 @@ class Game:
         self.state.pitch.remove(player)
         self.get_kods(player.team).append(player)
         player.state.knocked_out = True
+        player.state.up = True
 
     def kod_to_reserves(self, player):
         """
@@ -948,6 +975,7 @@ class Game:
         self.get_kods(player.team).remove(player)
         self.get_reserves(player.team).append(player)
         player.state.knocked_out = False
+        player.state.up = True
 
     def pitch_to_casualties(self, player, casualty, effect, apothecary=False):
         """
@@ -959,6 +987,7 @@ class Game:
         :return:
         """
         self.state.pitch.remove(player)
+        player.state.up = True
         if apothecary and effect == CasualtyEffect.NONE:
             # Apothecary puts badly hurt players in the reserves
             self.get_reserves(player.team).append(player)
@@ -975,6 +1004,7 @@ class Game:
         self.state.pitch.remove(player)
         self.get_dungeon(player.team).append(player)
         player.state.ejected = True
+        player.state.up = True
 
     def move_player(self, player, pos):
         """
