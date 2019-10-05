@@ -12,6 +12,7 @@ from ffai.core.load import *
 import json
 import random
 import sys
+from ffai.ai.registry import make_bot
 
 app = Flask(__name__)
 
@@ -24,7 +25,21 @@ def home():
 @app.route('/game/create', methods=['PUT'])
 def create():
     data = json.loads(request.data)
-    game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'])
+    bot_list = api.get_bots()
+    # make_bot or Agent depending on choice... (unknown name => human)
+    homePlayer = data['game']['home_player']
+    if homePlayer in bot_list:
+        homeAgent = make_bot(homePlayer)
+    else:
+        homeAgent = Agent("Player 1", human=True)
+
+    awayPlayer = data['game']['away_player']
+    if awayPlayer in bot_list:
+        awayAgent = make_bot(awayPlayer)
+    else:
+        awayAgent = Agent("Player 1", human=True)
+
+    game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'], homeAgent, awayAgent)
     return json.dumps(game.to_json())
 
 
@@ -106,6 +121,10 @@ def load_game(name):
     save.game.set_seed(seed)
 
     return json.dumps(save.to_json())
+
+@app.route('/bots/', methods=['GET'])
+def get_bots():
+    return json.dumps(api.get_bots())
 
 
 def start_server(debug=False, use_reloader=False):

@@ -52,10 +52,11 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
     }
 ]);
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService) {
+appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
+        $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
@@ -63,6 +64,10 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             $scope.teams = data;
         });
 
+        BotService.listAll().success(function(data) {
+            $scope.bots = data;
+        });
+        
         $scope.getTeam = function getTeam(team_id){
             for (let i in $scope.teams){
                 if ($scope.teams[i].team_id === team_id){
@@ -72,14 +77,23 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             return null;
         };
 
+        $scope.playerIcon = function playerIcon(player, isHome, race){
+            return IconService.getPlayerIcon(race, player.role, isHome, false);
+        };
+
+        $scope.prettify = function prettify(text){
+            let pretty = text.replace("SETUP_FORMATION_", "").toLowerCase().split("_").join(" ");
+            return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+        };
+
         $scope.home_player = "human";
         $scope.away_player = "human";
 
         $scope.save = function save(game, shouldPublish) {
             //var content = $('#textareaContent').val();
             game = {};
-            game.state.home_team_id = $scope.home_team_id;
-            game.state.away_team_id = $scope.away_team_id;
+            game.home_team_id = $scope.home_team_id;
+            game.away_team_id = $scope.away_team_id;
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
@@ -242,11 +256,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         $scope.playerIcon = function playerIcon(player){
             let team = $scope.teamOfPlayer(player);
-            let icon_base = IconService.playerIcons[team.race][player.role];
-            let icon_num = "1";
-            let team_letter = player.team_id === $scope.game.state.home_team.team_id ? "b" : "";
-            let angle = $scope.isPlayerActive(player) ? "an" : "";
-            return icon_base + icon_num + team_letter + angle + ".gif";
+            let isHome = player.team_id === $scope.game.state.home_team.team_id;
+            return IconService.getPlayerIcon(team.race, player.role, isHome, $scope.isPlayerActive(player));
         };
 
         $scope.getCursor = function getCursor(square){

@@ -11,6 +11,7 @@ from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *
 from ffai.ai.bots import *
+from ffai.ai.registry import list_bots
 
 # Create a game in-memory host
 host = InMemoryHost()
@@ -80,3 +81,6 @@ def get_saved_games():
 def get_teams(ruleset):
     return get_all_teams(ruleset)
 
+
+def get_bots():
+    return list_bots()

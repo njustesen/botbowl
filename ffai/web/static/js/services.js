@@ -45,14 +45,20 @@ appServices.factory('ReplayService', function($http) {
     };
 });
 
-
-
 appServices.factory('TeamService', function($http) {
     return {
         findAll: function() {
             return $http.get(options.api.base_url + '/teams/');
         }
     };
+});
+
+appServices.factory('BotService', function($http){
+    return {
+        listAll: function() {
+            return $http.get(options.api.base_url + '/bots/');
+        }
+    }
 });
 
 appServices.factory('GameLogService', function() {
@@ -206,6 +212,14 @@ appServices.factory('IconService', function() {
                 'Troll': 'troll',
                 'Goblin': 'goblin'
             }
+        },
+
+        getPlayerIcon: function (race, role, isHome, isActive){
+            let icon_base = this.playerIcons[race][role];
+            let icon_num = "1";
+            let team_letter = isHome ? "b" : "";
+            let angle = isActive ? "an" : "";
+            return icon_base + icon_num + team_letter + angle + ".gif";
         }
     };
 });
