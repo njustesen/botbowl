@@ -1,7 +1,7 @@
 from gym.envs.registration import register
 from ffai.core.load import *
 
-ruleset = get_rule_set('LRB5-Experimental.xml')
+ruleset = get_rule_set('LRB5-Experimental')
 
 register(
     id='FFAI-v1',

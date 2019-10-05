@@ -50,13 +50,13 @@ def parse_sc(sc):
 
 def get_rule_set(name, debug=False, all_rules=True):
     """
-    :param name: The filename of the .xml file to load in data/rules/
+    :param name: The name of the ruleset - this should match the filename of the .xml file to load in data/rules/ (without extension)
     :param debug:
     :param all_rules: If False, only a small set of the rules are loaded.
     :return: A ruleset loaded from .xml.
     """
 
-    path = get_data_path('rules/' + name)
+    path = get_data_path('rules/' + name + '.xml')
 
     if debug:
         print("Loading rules at " + path)

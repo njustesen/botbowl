@@ -59,11 +59,11 @@ def get_all_replays():
         'replays': replays
     })
 
-
 @app.route('/teams/', methods=['GET'])
-def get_all_teams():
-    # TODO: Needs a ruleset
-    teams = api.get_teams()
+@app.route('/teams/<ruleset_name>', methods=['GET'])
+def get_all_teams(ruleset_name = 'LRB5-Experimental'):
+    ruleset = get_rule_set(ruleset_name)
+    teams = api.get_teams(ruleset)
     team_list = []
     for team in teams:
         team_list.append(team.to_json())
