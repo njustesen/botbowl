@@ -159,10 +159,10 @@ def get_players(game: g.Game, team: m.Team, include_own: bool = True, include_op
 def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.Square]:
 
     # * At it's simplest, a cage requires 4 platers in the North-East, South-East, South-West and North-West
-    # * positions, relative to the ball carrier, such that there is no more than 2 squares between the players in
+    # * positions, relative to the ball carrier, such that there is no more than 3 squares between the players in
     # * each of those adjacent compass directions.
     # *
-    # *   1     2
+    # *   1     3
     # *    xx-xx
     # *    xx-xx
     # *    --o--
@@ -197,7 +197,7 @@ def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x + 1, y + 1))
             caging_squares.append(game.state.pitch.get_square(x + 1, y + 2))
             caging_squares.append(game.state.pitch.get_square(x + 2, y + 1))
-            # caging_squares.append(game.state.pitch.get_square(x + 2, y + 2))
+            # caging_squares.append(game.state.pitch.get_square(x + 3, y + 3))
 
     return caging_squares
 
@@ -221,7 +221,7 @@ def caging_squares_north_west(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x - 1, y + 1))
             caging_squares.append(game.state.pitch.get_square(x - 1, y + 2))
             caging_squares.append(game.state.pitch.get_square(x - 2, y + 1))
-            # caging_squares.append(game.state.pitch.get_square(x - 2, y + 2))
+            # caging_squares.append(game.state.pitch.get_square(x - 3, y + 3))
 
     return caging_squares
 
@@ -245,7 +245,7 @@ def caging_squares_south_west(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x - 1, y - 1))
             caging_squares.append(game.state.pitch.get_square(x - 1, y - 2))
             caging_squares.append(game.state.pitch.get_square(x - 2, y - 1))
-            # caging_squares.append(game.state.pitch.get_square(x - 2, y - 2))
+            # caging_squares.append(game.state.pitch.get_square(x - 3, y - 3))
 
     return caging_squares
 
@@ -269,7 +269,7 @@ def caging_squares_south_east(game: g.Game, protect_square: m.Square) -> List[m.
             caging_squares.append(game.state.pitch.get_square(x + 1, y - 1))
             caging_squares.append(game.state.pitch.get_square(x + 1, y - 2))
             caging_squares.append(game.state.pitch.get_square(x + 2, y - 1))
-            # caging_squares.append(game.state.pitch.get_square(x + 2, y - 2))
+            # caging_squares.append(game.state.pitch.get_square(x + 3, y - 3))
 
     return caging_squares
 
@@ -435,8 +435,8 @@ def distance_to_nearest_player(game: g.Game, team: m.Team, square: m.Square, inc
 
 
 def screening_distance(game: g.Game, from_square: m.Square, to_square: m.Square) -> float:
-    # Return the "screening distance" between 2 squares.  (To complete)
-    # float dist =math.sqrt(math.pow(square.x - cur.position.x, 2) + math.pow(square.y - cur.position.y, 2))
+    # Return the "screening distance" between 3 squares.  (To complete)
+    # float dist =math.sqrt(math.pow(square.x - cur.position.x, 3) + math.pow(square.y - cur.position.y, 3))
     return 0.0
 
 

@@ -78,7 +78,7 @@ if __name__ == "__main__":
     game_times = []
     for i in range(100):
         away_agent = MyRandomBot("Random Bot 1")
-        home_agent = MyRandomBot("Random Bot 2")
+        home_agent = MyRandomBot("Random Bot 3")
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

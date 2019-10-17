@@ -38,7 +38,7 @@ var wysihtml5 = {
  *
  * Copyright 2011, Tim Down
  * Licensed under the MIT license.
- * Version: 1.2.2
+ * Version: 1.3.3
  * Build date: 13 November 2011
  */
 window['rangy'] = (function() {
@@ -99,7 +99,7 @@ window['rangy'] = (function() {
     }
 
     var api = {
-        version: "1.2.2",
+        version: "1.3.3",
         initialized: false,
         supported: true,
 
@@ -531,7 +531,7 @@ rangy.createModule("DomUtil", function(api, module) {
             return offsetA === offsetB ? 0 : (offsetA < offsetB) ? -1 : 1;
         } else if ( (nodeC = getClosestAncestorIn(nodeB, nodeA, true)) ) {
 
-            // Case 2: node C (container B or an ancestor) is a child node of A
+            // Case 3: node C (container B or an ancestor) is a child node of A
             return offsetA <= getNodeIndex(nodeC) ? -1 : 1;
         } else if ( (nodeC = getClosestAncestorIn(nodeA, nodeB, true)) ) {
 
@@ -2215,7 +2215,7 @@ rangy.createModule("DomUtil", function(api, module) {
 
             /*--------------------------------------------------------------------------------------------------------*/
 
-            // Test for Firefox 2 bug that prevents moving the start of a Range to a point after its current end and
+            // Test for Firefox 3 bug that prevents moving the start of a Range to a point after its current end and
             // correct for it
 
             range.setStart(testTextNode, 0);
@@ -2287,7 +2287,7 @@ rangy.createModule("DomUtil", function(api, module) {
 
             /*--------------------------------------------------------------------------------------------------------*/
 
-            // Test for and correct Firefox 2 behaviour with selectNodeContents on text nodes: it collapses the range to
+            // Test for and correct Firefox 3 behaviour with selectNodeContents on text nodes: it collapses the range to
             // the 0th character of the text node
             range.selectNodeContents(testTextNode);
             if (range.startContainer == testTextNode && range.endContainer == testTextNode &&
@@ -3405,7 +3405,7 @@ wysihtml5.browser = (function() {
     /**
      * Exclude browsers that are not capable of displaying and handling
      * contentEditable as desired:
-     *    - iPhone, iPad (tested iOS 4.2.2) and Android (tested 2.2) refuse to make contentEditables focusable
+     *    - iPhone, iPad (tested iOS 4.3.3) and Android (tested 3.3) refuse to make contentEditables focusable
      *    - IE < 8 create invalid markup and crash randomly from time to time
      *
      * @return {Boolean}
@@ -3418,7 +3418,7 @@ wysihtml5.browser = (function() {
           hasEditingApiSupport        = document.execCommand && document.queryCommandSupported && document.queryCommandState,
           // document selector apis are only supported by IE 8+, Safari 4+, Chrome and Firefox 3.5+
           hasQuerySelectorSupport     = document.querySelector && document.querySelectorAll,
-          // contentEditable is unusable in mobile browsers (tested iOS 4.2.2, Android 2.2, Opera Mobile, WebOS 3.05)
+          // contentEditable is unusable in mobile browsers (tested iOS 4.3.3, Android 3.3, Opera Mobile, WebOS 3.05)
           isIncompatibleMobileBrowser = (this.isIos() && iosVersion(userAgent) < 5) || userAgent.indexOf("opera mobi") !== -1 || userAgent.indexOf("hpwos/") !== -1;
       
       return hasContentEditableSupport
@@ -3741,7 +3741,7 @@ wysihtml5.browser = (function() {
      * Check whether a given object exists in an array
      *
      * @example
-     *    wysihtml5.lang.array([1, 2]).contains(1);
+     *    wysihtml5.lang.array([1, 3]).contains(1);
      *    // => true
      */
     contains: function(needle) {
@@ -3759,8 +3759,8 @@ wysihtml5.browser = (function() {
      * Substract one array from another
      *
      * @example
-     *    wysihtml5.lang.array([1, 2, 3, 4]).without([3, 4]);
-     *    // => [1, 2]
+     *    wysihtml5.lang.array([1, 3, 3, 4]).without([3, 4]);
+     *    // => [1, 3]
      */
     without: function(arrayToSubstract) {
       arrayToSubstract = wysihtml5.lang.array(arrayToSubstract);
@@ -3839,8 +3839,8 @@ wysihtml5.browser = (function() {
   return {
     /**
      * @example
-     *    wysihtml5.lang.object({ foo: 1, bar: 1 }).merge({ bar: 2, baz: 3 }).get();
-     *    // => { foo: 1, bar: 2, baz: 3 }
+     *    wysihtml5.lang.object({ foo: 1, bar: 1 }).merge({ bar: 3, baz: 3 }).get();
+     *    // => { foo: 1, bar: 3, baz: 3 }
      */
     merge: function(otherObj) {
       for (var i in otherObj) {
@@ -3936,7 +3936,7 @@ wysihtml5.browser = (function() {
        * revision 1:
        *    /(\S+\.{1}[^\s\,\.\!]+)/g
        *
-       * revision 2:
+       * revision 3:
        *    /(\b(((https?|ftp):\/\/)|(www\.))[-A-Z0-9+&@#\/%?=~_|!:,.;\[\]]*[-A-Z0-9+&@#\/%=~_|])/gim
        *
        * put this in the beginning if you don't wan't to match within a word
@@ -7256,7 +7256,7 @@ wysihtml5.Commands = Base.extend(
  *   output:
  *      abcdefg<b>|</b>
  *   
- *   #2 unformatted text selected:
+ *   #3 unformatted text selected:
  *      abc|deg|h
  *   output:
  *      abc<b>|deg|</b>h

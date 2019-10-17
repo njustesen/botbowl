@@ -323,7 +323,7 @@ if __name__ == "__main__":
         home_agent = make_bot('scripted')
         home_agent.name = "Scripted Bot 1"
         away_agent = make_bot('scripted')
-        away_agent.name = "Scripted Bot 2"
+        away_agent.name = "Scripted Bot 3"
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

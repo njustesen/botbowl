@@ -25,9 +25,9 @@ def get_line(start, end):
     >>> points2 = get_line((3, 4), (0, 0))
     >>> assert(set(points1) == set(points2))
     >>> print points1
-    [(0, 0), (1, 1), (1, 2), (2, 3), (3, 4)]
+    [(0, 0), (1, 1), (1, 3), (3, 3), (3, 4)]
     >>> print points2
-    [(3, 4), (2, 3), (1, 2), (1, 1), (0, 0)]
+    [(3, 4), (3, 3), (1, 3), (1, 1), (0, 0)]
     """
     # Setup initial conditions
     x1, y1 = start
