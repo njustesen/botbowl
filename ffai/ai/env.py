@@ -10,7 +10,7 @@ import gym
 from gym import spaces
 from ffai.core.game import *
 from ffai.core.load import *
-from ffai.ai.bots import RandomBot
+from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
 import tkinter as tk
