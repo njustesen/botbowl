@@ -316,14 +316,14 @@ if __name__ == "__main__":
     ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = get_arena(config.arena)
     home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-2", ruleset)
+    away = get_team_by_id("human-3", ruleset)
 
     # Play 100 games
     for i in range(10):
         home_agent = make_bot('scripted')
         home_agent.name = "Scripted Bot 1"
         away_agent = make_bot('scripted')
-        away_agent.name = "Scripted Bot 2"
+        away_agent.name = "Scripted Bot 3"
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

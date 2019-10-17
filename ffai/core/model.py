@@ -840,7 +840,7 @@ class Pitch:
     def interceptors(self, passer, pos):
         """
         1) Find line x from a to b
-        2) Find squares s where x intersects
+        3) Find squares s where x intersects
         3) Find manhattan neighboring n squares of s
         4) Remove squares where distance to a is larger than dist(a,b)
         5) Remove squares without standing opponents with hands
@@ -850,7 +850,7 @@ class Pitch:
         # 1) Find line x from a to b
         x = get_line((passer.position.x, passer.position.y), (pos.x, pos.y))
 
-        # 2) Find squares s where x intersects
+        # 3) Find squares s where x intersects
         s = []
         for i in x:
             s.append(Square(i[0], i[1]))

@@ -11,19 +11,20 @@ from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *
 from ffai.ai.bots import *
+from ffai.ai.registry import list_bots
 
 # Create a game in-memory host
 host = InMemoryHost()
 
 
-def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11-web.json"):
+def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11-web.json", board_size=11):
     assert away_agent is not None
     assert home_agent is not None
     config = get_config(config_name)
     # config.competition_mode = True
     ruleset = get_rule_set(config.ruleset, all_rules=False)
-    home = get_team_by_id(home_team_id, ruleset)
-    away = get_team_by_id(away_team_id, ruleset)
+    home = get_team_by_id(home_team_id, ruleset, board_size=board_size)
+    away = get_team_by_id(away_team_id, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
     game = Game(game_id, home, away, home_agent, away_agent, config)
     game.init()
@@ -77,6 +78,9 @@ def get_saved_games():
     return host.get_saved_games()
 
 
-def get_teams(ruleset):
-    return get_all_teams(ruleset)
+def get_teams(ruleset, board_size=11):
+    return get_all_teams(ruleset, board_size=board_size)
 
+
+def get_bots():
+    return list_bots()

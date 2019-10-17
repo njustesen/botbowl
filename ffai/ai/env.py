@@ -154,7 +154,7 @@ class FFAIEnv(gym.Env):
     ]
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
-        self.__version__ = "0.0.2"
+        self.__version__ = "0.0.3"
         self.config = config
         self.config.competition_mode = False
         self.config.fast_mode = True

@@ -50,13 +50,13 @@ def parse_sc(sc):
 
 def get_rule_set(name, debug=False, all_rules=True):
     """
-    :param name: The filename of the .xml file to load in data/rules/
+    :param name: The name of the ruleset - this should match the filename of the .xml file to load in data/rules/ (without extension)
     :param debug:
     :param all_rules: If False, only a small set of the rules are loaded.
     :return: A ruleset loaded from .xml.
     """
 
-    path = get_data_path('rules/' + name)
+    path = get_data_path('rules/' + name + '.xml')
 
     if debug:
         print("Loading rules at " + path)
@@ -135,27 +135,27 @@ def get_rule_set(name, debug=False, all_rules=True):
     return ruleset
 
 
-def get_all_teams(ruleset):
+def get_all_teams(ruleset, board_size=11):
     """
     :param ruleset:
     :return: All the teams in data/teams/
     """
     path = get_data_path('teams/')
     teams = []
-    for file in list(glob.glob(path + '/*.json')):
+    for file in list(glob.glob(f'{path}/{board_size}/*json')):
         name = os.path.split(file)[1].split(".")[0]
         teams.append(get_team(name, ruleset))
     return teams
 
 
-def get_team_by_id(team_id, ruleset):
+def get_team_by_id(team_id, ruleset, board_size=11):
     """
     :param team_id:
     :param ruleset:
     :return: The team with team_id
     """
     path = get_data_path('teams/')
-    for file in list(glob.glob(path + '/*.json')):
+    for file in list(glob.glob(f'{path}/{board_size}/*.json')):
         name = os.path.split(file)[1].split(".")[0]
         team = get_team(name, ruleset)
         if team.team_id == team_id:
@@ -163,14 +163,14 @@ def get_team_by_id(team_id, ruleset):
     return None
 
 
-def get_team(name, ruleset):
+def get_team(name, ruleset, board_size=11):
     """
     :param name:
     :param ruleset:
     :return: The team with filename name (without file extension).
     """
     # print(name)
-    path = get_data_path('teams/' + name + '.json')
+    path = get_data_path(f'teams/{board_size}/{name}.json')
     f = open(path)
     str = f.read()
     f.close()

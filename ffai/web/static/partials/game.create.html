@@ -61,9 +61,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="player in getTeam(home_team_id).players">
+                                <tr ng-repeat="(key,player) in getTeam(home_team_id).players_by_id">
                                     <td>{{ player.nr }}. {{ player.name}}</td>
-                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, true, getTeam(home_team_id).race, false) }}" /> {{ player.position_name }}</td>
+                                    <td><img width="20px" ng-src="static/img/iconssmall/{{playerIcon(player, true, getTeam(home_team_id).race) }}" /> {{ player.role }}</td>
                                     <td class="text-center">{{ player.ma }}</td>
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
@@ -73,6 +73,20 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="form-group">
+                        <h4>Coach:</h4>
+                        <select id="homePlayer" ng-model="home_player" class="form-control">
+                            <option value="human">Human</option>
+                            <option ng-repeat="bot in bots" value="{{bot}}">{{prettify(bot)}}</option>
+                        </select>    
+                    </div>
+                </div>
+                <div class="col-xs-8 text-left">
+
                 </div>
             </div>
 
@@ -136,9 +150,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="player in getTeam(away_team_id).players">
+                                <tr ng-repeat="(key, player) in getTeam(away_team_id).players_by_id">
                                     <td>{{ player.nr }}. {{ player.name}}</td>
-                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, false, getTeam(away_team_id).race, false) }}" /> {{ player.position_name }}</td>
+                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, false, getTeam(away_team_id).race) }}" /> {{ player.role }}</td>
                                     <td class="text-center">{{ player.ma }}</td>
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
@@ -150,7 +164,21 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="form-group">
+                        <h4>Coach:</h4>
+                        <select id="awayPlayer" ng-model="away_player" class="form-control">
+                            <option value="human">Human</option>
+                            <option ng-repeat="bot in bots" value="{{bot}}">{{prettify(bot)}}</option>
+                        </select>   
+                    </div> 
+                </div>
+            </div>
+            <div class="col-xs-8 text-left">
 
+            </div>
+        </div>
             <hr/>
 
             <div class="text-center">
