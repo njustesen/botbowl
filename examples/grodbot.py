@@ -1483,7 +1483,7 @@ def main():
     ruleset = api.get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = api.get_arena(config.arena)
     home = api.get_team_by_id("human-1", ruleset)
-    away = api.get_team_by_id("human-3", ruleset)
+    away = api.get_team_by_id("human-2", ruleset)
     config.competition_mode = False
 
     # Play 5 games as away

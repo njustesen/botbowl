@@ -316,7 +316,7 @@ if __name__ == "__main__":
     ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = get_arena(config.arena)
     home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-3", ruleset)
+    away = get_team_by_id("human-2", ruleset)
 
     # Play 100 games
     for i in range(10):
