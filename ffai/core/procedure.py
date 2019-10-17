@@ -508,7 +508,7 @@ class Casualty(Procedure):
 
 class Catch(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1478,7 +1478,7 @@ class GFI(Procedure):
 
 class Dodge(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1635,7 +1635,7 @@ class Handoff(Procedure):
 
 class PassAction(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1772,7 +1772,7 @@ class PassAction(Procedure):
 
 class Pickup(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod

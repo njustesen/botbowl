@@ -7,7 +7,7 @@ This module contains a generic A* Path Finder, along with a specific test implem
 Kevin Glass: http://www.cokeandcode.com/main/tutorials/path-finding/ and converted to Python, with modifications, by
 Peter Moore.  The main modifications,
     1. Create_paths, which finds solutions to all nodes within search_distance
-    2. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
+    3. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
     3. Simple class implementations as well as run code that demonstrates the results via main()
 """
 import math
@@ -245,7 +245,7 @@ class AStarPathFinder(implements(PathFinder)):
     def find_paths(self, mover, sx: int, sy: int) -> List[Path]:
         """
         Find all paths up to self.max_search_distance starting from (sx, sy).
-        :return: 2-D List of either Paths (where a path to the node exists) or None, where no Path exists
+        :return: 3-D List of either Paths (where a path to the node exists) or None, where no Path exists
         """
         t0 = time.time()
         self.nodes[sx][sy].cost = 0

@@ -215,12 +215,12 @@ class Renderer:
                 grid_x = col * (len(grid[0]) + 1) * Renderer.square_size_fl + Renderer.square_size_fl
                 grid_y = row * (len(grid) + 1) * Renderer.square_size_fl + self.cv_height + Renderer.square_size_fl + ((row+1) * Renderer.layer_text_height)
 
-                self.cvs[idx].create_text(grid_x + (len(grid[0]) * Renderer.square_size_fl)/2, grid_y - Renderer.layer_text_height/2, text=name)
+                self.cvs[idx].create_text(grid_x + (len(grid[0]) * Renderer.square_size_fl)/3, grid_y - Renderer.layer_text_height/3, text=name)
                 self.cvs[idx].create_rectangle(grid_x,
                                          grid_y,
                                          grid_x + len(grid[0]) * Renderer.square_size_fl,
                                          grid_y + len(grid) * Renderer.square_size_fl,
-                                         fill='black', outline=Renderer.black, width=2)
+                                         fill='black', outline=Renderer.black, width=3)
                 for y in range(len(grid)):
                     for x in range(len(grid[0])):
                         value = 1 - grid[y][x]

@@ -53,6 +53,7 @@ def worker(remote, parent_remote, env):
             steps += 1
 
             # Render
+            # Currently crashes on mac python 3.7.4
             # env.render(feature_layers=False)
 
             if done:
@@ -99,7 +100,8 @@ if __name__ == "__main__":
             results = [remote.recv() for remote in remotes]
             for j in range(len(results)):
                 obs, reward, done, info = results[j]
-                renderer.render(obs, j)
+                # Currently crashes on mac python 3.7.4
+                # renderer.render(obs, j)
 
         for remote in remotes:
             remote.send('close')

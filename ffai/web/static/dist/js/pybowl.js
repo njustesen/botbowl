@@ -104,10 +104,11 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
     }
 ]);
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService) {
+appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
+        $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
@@ -115,6 +116,10 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             $scope.teams = data;
         });
 
+        BotService.listAll().success(function(data) {
+            $scope.bots = data;
+        });
+        
         $scope.getTeam = function getTeam(team_id){
             for (let i in $scope.teams){
                 if ($scope.teams[i].team_id === team_id){
@@ -124,14 +129,23 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             return null;
         };
 
+        $scope.playerIcon = function playerIcon(player, isHome, race){
+            return IconService.getPlayerIcon(race, player.role, isHome, false);
+        };
+
+        $scope.prettify = function prettify(text){
+            let pretty = text.replace("SETUP_FORMATION_", "").toLowerCase().split("_").join(" ");
+            return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+        };
+
         $scope.home_player = "human";
         $scope.away_player = "human";
 
         $scope.save = function save(game, shouldPublish) {
             //var content = $('#textareaContent').val();
             game = {};
-            game.state.home_team_id = $scope.home_team_id;
-            game.state.away_team_id = $scope.away_team_id;
+            game.home_team_id = $scope.home_team_id;
+            game.away_team_id = $scope.away_team_id;
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
@@ -294,11 +308,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         $scope.playerIcon = function playerIcon(player){
             let team = $scope.teamOfPlayer(player);
-            let icon_base = IconService.playerIcons[team.race][player.role];
-            let icon_num = "1";
-            let team_letter = player.team_id === $scope.game.state.home_team.team_id ? "b" : "";
-            let angle = $scope.isPlayerActive(player) ? "an" : "";
-            return icon_base + icon_num + team_letter + angle + ".gif";
+            let isHome = player.team_id === $scope.game.state.home_team.team_id;
+            return IconService.getPlayerIcon(team.race, player.role, isHome, $scope.isPlayerActive(player));
         };
 
         $scope.getCursor = function getCursor(square){
@@ -1422,14 +1433,20 @@ appServices.factory('ReplayService', function($http) {
     };
 });
 
-
-
 appServices.factory('TeamService', function($http) {
     return {
         findAll: function() {
             return $http.get(options.api.base_url + '/teams/');
         }
     };
+});
+
+appServices.factory('BotService', function($http){
+    return {
+        listAll: function() {
+            return $http.get(options.api.base_url + '/bots/');
+        }
+    }
 });
 
 appServices.factory('GameLogService', function() {
@@ -1449,7 +1466,7 @@ appServices.factory('GameLogService', function() {
             //'WEATHER_VERY_SUNNY': "<b>Very Sunny:</b> A glorious day, but the blinding sunshine causes a -1 modifier on all passing rolls.",
             //'WEATHER_NICE': "<b>Nice weather:</b> Perfect Blood Bowl weather.",
             //'WEATHER_POURING_RAIN': "<b>Pouring Rain:</b> It’s raining, making the ball slippery and difficult to hold. A -1 modifier applies to all catch, intercept, or pick-up rolls.",
-            //'WEATHER_BLIZZARD': "<b>Blizzard:</b> It’s cold and snowing! The ice on the pitch means that any player attempting to move an extra square (GFI) will slip and be Knocked Down on a roll of 1-2, while the snow means that only quick or short passes can be attempted.",
+            //'WEATHER_BLIZZARD': "<b>Blizzard:</b> It’s cold and snowing! The ice on the pitch means that any player attempting to move an extra square (GFI) will slip and be Knocked Down on a roll of 1-3, while the snow means that only quick or short passes can be attempted.",
             'WEATHER_SWELTERING_HEAT': "<b>Sweltering Heat:</b> Players may collapse after this drive.",
             'WEATHER_VERY_SUNNY': "<b>Very Sunny:</b> A -1 modifier on passing rolls.",
             'WEATHER_NICE': "<b>Nice weather:</b> Perfect for a game of fantasy football",
@@ -1457,10 +1474,10 @@ appServices.factory('GameLogService', function() {
             'WEATHER_BLIZZARD': "<b>Blizzard:</b> A -1 modifier on GFI attempts and only quick and short passes are possible.",
             'ILLEGAL_SETUP_NUM': '<b>Illegal Setup:</b> You must pitch between 3 and 11 players.',
             'ILLEGAL_SETUP_SCRIMMAGE': '<b>Illegal Setup:</b> Min. 3 players on the line of scrimmage!',
-            'ILLEGAL_SETUP_WINGS': '<b>Illegal Setup:</b> Max. 2 players on each wing!',
+            'ILLEGAL_SETUP_WINGS': '<b>Illegal Setup:</b> Max. 3 players on each wing!',
             'BALL_PLACED': '<team> <b>Kicks</b> the ball',
             'TOUCHBACK_BALL_PLACED': "<player> will start with the ball.",
-            //'KICKOFF_GET_THE_REF': "<b>Get the Ref:</b> The fans exact gruesome revenge on the referee for some of the dubious decisions he has made, either during this match or in the past. His replacement is so intimidated that he can be more easily persuaded to look the other way. Each team receives 1 additional Bribe to use during this game. A Bribe allows you to attempt to ignore one call by the referee for a player who has committed a foul to be sent off, or a player armed with a secret weapon to be banned from the match. Roll a D6: on a roll of 2-6 the bribe is effective (preventing a turnover if the player was ejected for fouling), but on a roll of 1 the bribe is wasted and the call still stands! Each bribe may be used once per match.",
+            //'KICKOFF_GET_THE_REF': "<b>Get the Ref:</b> The fans exact gruesome revenge on the referee for some of the dubious decisions he has made, either during this match or in the past. His replacement is so intimidated that he can be more easily persuaded to look the other way. Each team receives 1 additional Bribe to use during this game. A Bribe allows you to attempt to ignore one call by the referee for a player who has committed a foul to be sent off, or a player armed with a secret weapon to be banned from the match. Roll a D6: on a roll of 3-6 the bribe is effective (preventing a turnover if the player was ejected for fouling), but on a roll of 1 the bribe is wasted and the call still stands! Each bribe may be used once per match.",
             //'KICKOFF_RIOT': "<b>Riot:</b> The trash talk between two opposing players explodes and rapidly degenerates, involving the rest of the players. If the receiving team’s turn marker is on turn 7 for the half, both teams move their turn marker back one space as the referee resets the clock back to before the fight started. If the receiving team has not yet taken a turn this half the referee lets the clock run on during the fight and both teams’ turn markers are moved forward one space. Otherwise roll a D6. On a 1-3, both teams’ turn markers are moved forward one space. On a 4-6, both team’s turn markers are moved back one space.",
             //'KICKOFF_PERFECT_DEFENSE': "<b>Perfect Defence:</b> The kicking team’s coach may reorganize his players – in other words he can set them up again into another legal defence. The receiving team must remain in the set-up chosen by their coach.",
             //'KICKOFF_HIGH_KICK': "<b>High Kick:</b> The ball is kicked very high, allowing a player on the receiving team time to move into the perfect position to catch it. Any one player on the receiving team who is not in an opposing player’s tackle zone may be moved into the square where the ball will land no matter what their MA may be, as long as the square is unoccupied.",
@@ -1583,6 +1600,14 @@ appServices.factory('IconService', function() {
                 'Troll': 'troll',
                 'Goblin': 'goblin'
             }
+        },
+
+        getPlayerIcon: function (race, role, isHome, isActive){
+            let icon_base = this.playerIcons[race][role];
+            let icon_num = "1";
+            let team_letter = isHome ? "b" : "";
+            let angle = isActive ? "an" : "";
+            return icon_base + icon_num + team_letter + angle + ".gif";
         }
     };
 });

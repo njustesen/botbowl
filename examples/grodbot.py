@@ -880,7 +880,7 @@ def score_move_towards_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.
     #     if helper.distance_to_sideline(game, to_square): score += 10.0
 
     # Increase score if moving closer to the ball
-    # score += (current_distance_to_ball - distance_to_ball)*2
+    # score += (current_distance_to_ball - distance_to_ball)*3
 
     return score, True
 
@@ -899,7 +899,7 @@ def score_move_to_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Playe
     num_tz = game.state.pitch.num_tackle_zones_at(player, ball_square)
     score += - 10 * num_tz    # Lower score if lots of tackle zones on ball.
 
-    # If there is only 1 or 2 players left to move, lets improve score of trying to pick the ball up
+    # If there is only 1 or 3 players left to move, lets improve score of trying to pick the ball up
     players_to_move: List[m.Player] = helper.get_players(game, player.team, include_own=True, include_opp=False, include_used=False, include_stunned=False)
     if len(players_to_move) == 1:
         score += 25
@@ -1029,7 +1029,7 @@ def score_offensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
 
     # Another subtle one.  Basically if the ball carrier "breaks out", I want to screen him from
     # behind, rather than cage him.  I may even want to do this with an important receiver.
-    #     Want my players to be 2 squares from each other, not counting direct diagonals.
+    #     Want my players to be 3 squares from each other, not counting direct diagonals.
     #     Want my players to be hampering the movement of opponent ball or players.
     #     Want my players in a line between goal line and opponent.
     #
@@ -1483,7 +1483,7 @@ def main():
     ruleset = api.get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = api.get_arena(config.arena)
     home = api.get_team_by_id("human-1", ruleset)
-    away = api.get_team_by_id("human-2", ruleset)
+    away = api.get_team_by_id("human-3", ruleset)
     config.competition_mode = False
 
     # Play 5 games as away

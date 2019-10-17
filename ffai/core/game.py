@@ -1101,7 +1101,7 @@ class Game:
         """
         The returned list of players who's tackle zone overlap with player is split into:
         1. tackle_zones: all players,
-        2. tacklers: players with the Tackle skill,
+        3. tacklers: players with the Tackle skill,
         3. prehensile_tailers: players with the Prehensile Tail skill,
         4. diving_tacklers: players with the Diving Tackle skill,
         5. shadowers: players with the Shadower skill,
