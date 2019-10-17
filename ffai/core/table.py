@@ -366,8 +366,6 @@ class Skill(Enum):
     WILD_ANIMAL = 35
     RIGHT_STUFF = 36
     ALWAYS_HUNGRY = 37
-    REALLY_STUPID = 36
-    REGENERATION = 37
     THROW_TEAM_MATE = 38
     BONE_HEAD = 39
     DUMP_OFF = 40
@@ -402,7 +400,8 @@ class Skill(Enum):
     STAKES = 69
     ANIMOSITY = 70
     PILING_ON = 71
-
+    REALLY_STUPID = 72
+    REGENERATION = 73
 
 class PassDistance(Enum):
     QUICK_PASS = 1
