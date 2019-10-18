@@ -2,10 +2,6 @@
   "id": "human-1-5",
   "name": "Human Team 1",
   "race": "Human",
-  "coach" : {
-    "id": 3,
-    "name": "Alice"
-  },
   "treasury": 0,
   "apothecary": false,
   "rerolls": 2,

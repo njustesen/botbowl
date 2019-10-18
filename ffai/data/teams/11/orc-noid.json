@@ -1,10 +1,6 @@
 {
   "name": "Orc with Troll",
   "race": "Orc",
-  "coach" : {
-    "id": 2,
-    "name": "Bob"
-  },
   "treasury": 0,
   "apothecary": false,
   "rerolls": 2,
@@ -13,7 +9,6 @@
   "cheerleaders": 1,
   "players": [
     {
-      "id" : "Troll",
       "nr" : 1,
       "name": "Big Dave",
       "position": "Troll",
@@ -27,7 +22,6 @@
       "mng": false
     },
     {
-      "id" : "G1",
       "nr" : 2,
       "name": "Lil' Kev",
       "position": "Goblin",
@@ -41,7 +35,6 @@
       "mng": false
     },
     {
-      "id" : "b3",
       "nr" : 3,
       "name": "Rackspite, Ugly",
       "position": "Blitzer",
@@ -55,7 +48,6 @@
       "mng": false
     },
     {
-      "id" : "b4",
       "nr" : 4,
       "name": "Vilechuck, Osgar",
       "position": "Blitzer",
@@ -69,7 +61,6 @@
       "mng": false
     },
     {
-      "id" : "b5",
       "nr" : 5,
       "name": "Da Rock",
       "position": "Black Orc Blocker",
@@ -83,7 +74,6 @@
       "mng": false
     },
     {
-      "id" : "b6",
       "nr" : 6,
       "name": "Blazetown, Igor",
       "position": "Black Orc Blocker",
@@ -97,7 +87,6 @@
       "mng": false
     },
     {
-      "id" : "b7",
       "nr" : 7,
       "name": "Demoncutter, Hak",
       "position": "Black Orc Blocker",
@@ -111,7 +100,6 @@
       "mng": false
     },
     {
-      "id" : "b8",
       "nr" : 8,
       "name": "Elfspliiter, Trok",
       "position": "Black Orc Blocker",
@@ -125,7 +113,6 @@
       "mng": false
     },
     {
-      "id" : "b9",
       "nr" : 9,
       "name": "Halftoad, Gurk",
       "position": "Thrower",
@@ -139,7 +126,6 @@
       "mng": false
     },
     {
-      "id" : "b10",
       "nr" : 10,
       "name": "Izzi the Frog",
       "position": "Lineman",
@@ -153,7 +139,6 @@
       "mng": false
     },
     {
-      "id" : "b11",
       "nr" : 11,
       "name": "Kneebender, Urgrain",
       "position": "Lineman",
@@ -167,7 +152,6 @@
       "mng": false
     },
     {
-      "id" : "b12",
       "nr" : 12,
       "name": "Ogrehack, Eruk",
       "position": "Lineman",

@@ -2,10 +2,6 @@
   "id": "orc-2",
   "name": "Orc Team 2",
   "race": "Orc",
-  "coach" : {
-    "id": 2,
-    "name": "Bob"
-  },
   "treasury": 0,
   "apothecary": false,
   "rerolls": 2,

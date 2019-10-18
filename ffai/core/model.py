@@ -1289,19 +1289,6 @@ class Square:
         return self.distance(other, manhattan) == 1
 
 
-class Coach:
-
-    def __init__(self, coach_id, name):
-        self.coach_id = coach_id
-        self.name = name
-
-    def to_json(self):
-        return {
-            'coach_id': self.coach_id,
-            'name': self.name
-        }
-
-
 class Race:
 
     def __init__(self, name, roles, reroll_cost, apothecary, stakes):
@@ -1314,11 +1301,10 @@ class Race:
 
 class Team:
 
-    def __init__(self, team_id, name, race, coach, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
+    def __init__(self, team_id, name, race, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
         self.team_id = team_id
         self.name = name
-        self.coach = coach
         self.race = race
         self.players = players if players is not None else []
         self.treasury = treasury
@@ -1338,7 +1324,6 @@ class Team:
         return {
             'team_id': self.team_id,
             'name': self.name,
-            'coach': self.coach.to_json(),
             'race': self.race,
             'treasury': self.treasury,
             'apothecary': self.apothecary,
