@@ -143,40 +143,40 @@ def get_all_teams(ruleset, board_size=11):
     path = get_data_path('teams/')
     teams = []
     for file in list(glob.glob(f'{path}/{board_size}/*json')):
-        name = os.path.split(file)[1].split(".")[0]
-        teams.append(get_team(name, ruleset))
+        team_id = os.path.split(file)[1].split(".")[0]
+        teams.append(get_team(team_id, ruleset))
     return teams
 
 
-def get_team_by_id(team_id, ruleset, board_size=11):
-    """
-    :param team_id:
-    :param ruleset:
-    :return: The team with team_id
-    """
-    path = get_data_path('teams/')
-    for file in list(glob.glob(f'{path}/{board_size}/*.json')):
-        name = os.path.split(file)[1].split(".")[0]
-        team = get_team(name, ruleset)
-        if team.team_id == team_id:
-            return team
-    return None
+# def get_team_by_id(team_id, ruleset, board_size=11):
+#     """
+#     :param team_id:
+#     :param ruleset:
+#     :return: The team with team_id
+#     """
+#     path = get_data_path('teams/')
+#     for file in list(glob.glob(f'{path}/{board_size}/*.json')):
+#         name = os.path.split(file)[1].split(".")[0]
+#         team = get_team(name, ruleset)
+#         if team.team_id == team_id:
+#             return team
+#     return None
 
 
-def get_team(name, ruleset, board_size=11):
+def get_team(team_id, ruleset, board_size=11):
     """
-    :param name:
+    :param team_id: identifier for the team / file
     :param ruleset:
-    :return: The team with filename name (without file extension).
+    :return: The team with filename team)_id (without file extension).
     """
-    # print(name)
-    path = get_data_path(f'teams/{board_size}/{name}.json')
+    # print(team_id)
+    path = get_data_path(f'teams/{board_size}/{team_id}.json')
     f = open(path)
     str = f.read()
     f.close()
     data = json.loads(str)
     coach = Coach(data['coach']['id'], data['coach']['name'])
-    team = Team(data['id'], data['name'], data['race'], players=[], coach=coach, treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
+    team = Team(team_id, data['name'], data['race'], players=[], coach=coach, treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)
         player = Player(player_id=p['id'], role=role, name=p['name'], nr=p['nr'], niggling=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)

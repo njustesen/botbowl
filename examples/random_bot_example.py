@@ -48,8 +48,8 @@ if __name__ == "__main__":
     config = get_config("ff-11-bot-bowl-i.json")
     ruleset = get_rule_set(config.ruleset)
     arena = get_arena(config.arena)
-    home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-2", ruleset)
+    home = get_team("human-1", ruleset)
+    away = get_team("human-2", ruleset)
     config.competition_mode = False
     config.debug_mode = False
 

@@ -23,8 +23,8 @@ def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, confi
     config = get_config(config_name)
     # config.competition_mode = True
     ruleset = get_rule_set(config.ruleset, all_rules=False)
-    home = get_team_by_id(home_team_id, ruleset, board_size=board_size)
-    away = get_team_by_id(away_team_id, ruleset, board_size=board_size)
+    home = get_team(home_team_id, ruleset, board_size=board_size)
+    away = get_team(away_team_id, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
     game = Game(game_id, home, away, home_agent, away_agent, config)
     game.init()
