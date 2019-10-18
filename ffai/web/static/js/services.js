@@ -211,6 +211,12 @@ appServices.factory('IconService', function() {
                 'Black Orc Blocker': 'oblackorc',
                 'Troll': 'troll',
                 'Goblin': 'goblin'
+            },
+            'Elf': {
+                'Lineman': 'eplineman',
+                'Blitzer': 'epblitzer',
+                'Thrower': 'epthrower',
+                'Catcher': 'epcatcher'
             }
         },
 
