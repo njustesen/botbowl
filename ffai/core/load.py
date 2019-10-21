@@ -151,7 +151,7 @@ def get_all_teams(ruleset, board_size=11):
 def get_team_by_filename(name, ruleset, board_size=11):
     path = get_data_path('teams/')
     for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
-        if filepath.split("/")[-1].split(".json")[0] == name:
+        if os.path.split(filepath)[1].split(".json")[0] == name:
             return get_team(filepath, ruleset)
     raise Exception("Team file not found.")
 
