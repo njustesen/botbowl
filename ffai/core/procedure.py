@@ -2362,6 +2362,8 @@ class Push(Procedure):
         if self.squares is None:
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
             if self.player.has_skill(Skill.SIDE_STEP):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
+                self.squares = self.game.adjacent_squares(self.player.position, exclude_occupied=True)
                 if self.player.team != self.game.state.current_team:
                     self.game.add_secondary_clock(self.player.team)
             return False
