@@ -1138,7 +1138,7 @@ class Dugout:
 
 class Role:
 
-    def __init__(self, name, races, ma, st, ag, av, skills, cost, feeder, n_skill_sets=[], d_skill_sets=[],
+    def __init__(self, name, races, ma, st, ag, av, skills, cost, feeder, n_skill_sets=None, d_skill_sets=None,
                  star_player=False):
         self.name = name
         self.races = races
@@ -1149,8 +1149,8 @@ class Role:
         self.skills = skills
         self.cost = cost
         self.feeder = feeder
-        self.n_skill_sets = n_skill_sets
-        self.d_skill_sets = d_skill_sets
+        self.n_skill_sets = n_skill_sets if n_skill_sets is not None else []
+        self.d_skill_sets = d_skill_sets if d_skill_sets is not None else []
         self.star_player = star_player
 
 
@@ -1162,7 +1162,7 @@ class Piece:
 
 class Player(Piece):
 
-    def __init__(self, player_id, role, name, nr, team, extra_skills=[], extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
+    def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling=0, mng=False, spp=0, position=None):
         super().__init__(position)
         self.player_id = player_id
@@ -1170,7 +1170,7 @@ class Player(Piece):
         self.name = name
         self.nr = nr
         self.team = team
-        self.extra_skills = extra_skills
+        self.extra_skills = extra_skills if extra_skills is not None else []
         self.skills = self.extra_skills + self.role.skills
         self.extra_ma = extra_ma
         self.extra_st = extra_st
@@ -1344,12 +1344,12 @@ class Team:
 
 class Outcome:
 
-    def __init__(self, outcome_type, pos=None, player=None, opp_player=None, rolls=[], team=None, n=0, skill=None):
+    def __init__(self, outcome_type, pos=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type
         self.pos = pos
         self.player = player
         self.opp_player = opp_player
-        self.rolls = rolls
+        self.rolls = rolls if rolls is not None else []
         self.team = team
         self.n = n
         self.skill = skill
