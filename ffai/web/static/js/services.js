@@ -197,6 +197,11 @@ appServices.factory('IconService', function() {
 
     return {
         playerIcons: {
+            'Chaos': {
+                'Beastman': 'cbeastman',
+                'Chaos Warrior': 'cwarrior',
+                'Minotaur': 'minotaur'
+            },
             'Human': {
                 'Lineman': 'hlineman',
                 'Blitzer': 'hblitzer',
