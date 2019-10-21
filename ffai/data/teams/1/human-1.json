@@ -1,6 +1,5 @@
 {
-  "id": "human-2-1",
-  "name": "Human Team 2",
+  "name": "Human Team 1",
   "race": "Human",
   "treasury": 0,
   "apothecary": false,
@@ -10,7 +9,6 @@
   "cheerleaders": 2,
   "players": [
     {
-      "id" : "d1",
       "nr" : 1,
       "name": "Abschuss, Ziggi",
       "position": "Blitzer",

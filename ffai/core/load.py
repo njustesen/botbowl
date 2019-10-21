@@ -143,24 +143,38 @@ def get_all_teams(ruleset, board_size=11):
     """
     path = get_data_path('teams/')
     teams = []
-    for file in list(glob.glob(f'{path}/{board_size}/*json')):
-        team_id = os.path.split(file)[1].split(".")[0]
-        teams.append(get_team(team_id, ruleset))
+    for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
+        teams.append(get_team(filepath, ruleset))
     return teams
 
 
-def get_team(team_id, ruleset, board_size=11):
+def get_team_by_filename(name, ruleset, board_size=11):
+    path = get_data_path('teams/')
+    for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
+        if filepath.split("/")[-1].split(".json")[0] == name:
+            return get_team(filepath, ruleset)
+    raise Exception("Team file not found.")
+
+
+def get_team_by_name(name, ruleset, board_size=11):
+    for team in get_all_teams(ruleset, board_size):
+        if team.name == name:
+            return team
+    raise Exception(f"Team with {name} not found.")
+
+
+def get_team(path, ruleset):
     """
-    :param team_id: identifier for the team / file
+    :param path: path to team file name.
     :param ruleset:
     :return: The team with filename team)_id (without file extension).
     """
-    # print(team_id)
-    path = get_data_path(f'teams/{board_size}/{team_id}.json')
+    #path = get_data_path(path)
     f = open(path)
     jsonStr = f.read()
     f.close()
     data = json.loads(jsonStr)
+    team_id = str(uuid.uuid1())
     team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)

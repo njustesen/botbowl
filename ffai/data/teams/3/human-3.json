@@ -1,6 +1,5 @@
 {
-  "id": "human-2-3",
-  "name": "Human Team 2",
+  "name": "Human Team 1",
   "race": "Human",
   "treasury": 0,
   "apothecary": false,
@@ -10,7 +9,6 @@
   "cheerleaders": 2,
   "players": [
     {
-      "id" : "d1",
       "nr" : 1,
       "name": "Abschuss, Ziggi",
       "position": "Blitzer",
@@ -24,7 +22,6 @@
       "mng": false
     },
     {
-      "id" : "d3",
       "nr" : 3,
       "name": "Di Passella, Luigi",
       "position": "Thrower",
@@ -38,7 +35,6 @@
       "mng": false
     },
     {
-      "id" : "d5",
       "nr" : 5,
       "name": "Headreka, Helmut",
       "position": "Catcher",
@@ -52,7 +48,6 @@
       "mng": false
     },
     {
-      "id" : "d6",
       "nr" : 6,
       "name": "Himmelstein, Henny",
       "position": "Lineman",
@@ -66,7 +61,6 @@
       "mng": false
     },
     {
-      "id" : "d7",
       "nr" : 7,
       "name": "Heldman, Dirk Hero",
       "position": "Lineman",
