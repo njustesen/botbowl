@@ -1,11 +1,6 @@
 {
-  "id": "human-1-1",
   "name": "Human Team 1",
   "race": "Human",
-  "coach" : {
-    "id": 3,
-    "name": "Alice"
-  },
   "treasury": 0,
   "apothecary": false,
   "rerolls": 3,
@@ -14,7 +9,6 @@
   "cheerleaders": 2,
   "players": [
     {
-      "id" : "c1",
       "nr" : 1,
       "name": "Abschuss, Ziggi",
       "position": "Blitzer",

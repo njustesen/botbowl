@@ -17,14 +17,14 @@ from ffai.ai.registry import list_bots
 host = InMemoryHost()
 
 
-def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11-web.json", board_size=11):
+def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, config_name="ff-11-web.json", board_size=11):
     assert away_agent is not None
     assert home_agent is not None
     config = get_config(config_name)
     # config.competition_mode = True
     ruleset = get_rule_set(config.ruleset, all_rules=False)
-    home = get_team_by_id(home_team_id, ruleset, board_size=board_size)
-    away = get_team_by_id(away_team_id, ruleset, board_size=board_size)
+    home = get_team_by_name(home_team_name, ruleset, board_size=board_size)
+    away = get_team_by_name(away_team_name, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
     game = Game(game_id, home, away, home_agent, away_agent, config)
     game.init()

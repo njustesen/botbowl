@@ -120,9 +120,9 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             $scope.bots = data;
         });
         
-        $scope.getTeam = function getTeam(team_id){
+        $scope.getTeam = function getTeam(team_name){
             for (let i in $scope.teams){
-                if ($scope.teams[i].team_id === team_id){
+                if ($scope.teams[i].name === team_name){
                     return $scope.teams[i];
                 }
             }
@@ -141,11 +141,11 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
         $scope.home_player = "human";
         $scope.away_player = "human";
 
-        $scope.save = function save(game, shouldPublish) {
+        $scope.createGame = function createGame(game) {
             //var content = $('#textareaContent').val();
             game = {};
-            game.home_team_id = $scope.home_team_id;
-            game.away_team_id = $scope.away_team_id;
+            game.home_team_name = $scope.home_team_name;
+            game.away_team_name = $scope.away_team_name;
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 

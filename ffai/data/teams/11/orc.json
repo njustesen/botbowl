@@ -1,11 +1,6 @@
 {
-  "id": "orc-1",
-  "name": "Orc Team 1",
+  "name": "Orc Team",
   "race": "Orc",
-  "coach" : {
-    "id": 1,
-    "name": "Bob"
-  },
   "treasury": 0,
   "apothecary": false,
   "rerolls": 2,
@@ -14,9 +9,8 @@
   "cheerleaders": 1,
   "players": [
     {
-      "id" : "a1",
       "nr" : 1,
-      "name": "Muglurk, 'Bandy' Durg",
+      "name": "Durg 'Bandy' Muglurk",
       "position": "Blitzer",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -28,9 +22,8 @@
       "mng": false
     },
     {
-      "id" : "a2",
       "nr" : 2,
-      "name": "Painspear, Krug",
+      "name": "Krug Painspear",
       "position": "Blitzer",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -42,9 +35,8 @@
       "mng": false
     },
     {
-      "id" : "a3",
       "nr" : 3,
-      "name": "Rackspite, Ugly",
+      "name": "Ugly Rackspite",
       "position": "Blitzer",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -56,9 +48,8 @@
       "mng": false
     },
     {
-      "id" : "a4",
       "nr" : 4,
-      "name": "Vilechuck, Osgar",
+      "name": "Osgar Vilechuck",
       "position": "Blitzer",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -70,7 +61,6 @@
       "mng": false
     },
     {
-      "id" : "a5",
       "nr" : 5,
       "name": "Da Rock",
       "position": "Black Orc Blocker",
@@ -84,9 +74,8 @@
       "mng": false
     },
     {
-      "id" : "a6",
       "nr" : 6,
-      "name": "Blazetown, Igor",
+      "name": "Igor Blazetown",
       "position": "Black Orc Blocker",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -98,9 +87,8 @@
       "mng": false
     },
     {
-      "id" : "a7",
       "nr" : 7,
-      "name": "Demoncutter, Hak",
+      "name": "Hak Demoncutter",
       "position": "Black Orc Blocker",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -112,9 +100,8 @@
       "mng": false
     },
     {
-      "id" : "a8",
       "nr" : 8,
-      "name": "Elfspliiter, Trok",
+      "name": "Trok Elfspliiter",
       "position": "Black Orc Blocker",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -126,9 +113,8 @@
       "mng": false
     },
     {
-      "id" : "a9",
       "nr" : 9,
-      "name": "Halftoad, Gurk",
+      "name": "Gurk Halftoad",
       "position": "Thrower",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -140,7 +126,6 @@
       "mng": false
     },
     {
-      "id" : "a10",
       "nr" : 10,
       "name": "Izzi the Frog",
       "position": "Lineman",
@@ -154,9 +139,8 @@
       "mng": false
     },
     {
-      "id" : "a11",
       "nr" : 11,
-      "name": "Kneebender, Urgrain",
+      "name": "Urgrain Kneebender",
       "position": "Lineman",
       "extra_skills" : [],
       "extra_ma" : 0,
@@ -168,9 +152,8 @@
       "mng": false
     },
     {
-      "id" : "a12",
       "nr" : 12,
-      "name": "Ogrehack, Eruk",
+      "name": "Eruk Ogrehack",
       "position": "Lineman",
       "extra_skills" : [],
       "extra_ma" : 0,

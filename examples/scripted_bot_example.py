@@ -315,8 +315,8 @@ if __name__ == "__main__":
     # config = get_config("ff-3.json")
     ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = get_arena(config.arena)
-    home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-2", ruleset)
+    home = get_team_by_filename("human", ruleset)
+    away = get_team_by_filename("human", ruleset)
 
     # Play 100 games
     for i in range(10):

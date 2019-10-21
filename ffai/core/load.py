@@ -11,6 +11,7 @@ import json
 from ffai.core.util import *
 import glob
 import untangle
+import uuid
 
 
 # Tile set mapping
@@ -142,44 +143,43 @@ def get_all_teams(ruleset, board_size=11):
     """
     path = get_data_path('teams/')
     teams = []
-    for file in list(glob.glob(f'{path}/{board_size}/*json')):
-        name = os.path.split(file)[1].split(".")[0]
-        teams.append(get_team(name, ruleset))
+    for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
+        teams.append(get_team(filepath, ruleset))
     return teams
 
 
-def get_team_by_id(team_id, ruleset, board_size=11):
-    """
-    :param team_id:
-    :param ruleset:
-    :return: The team with team_id
-    """
+def get_team_by_filename(name, ruleset, board_size=11):
     path = get_data_path('teams/')
-    for file in list(glob.glob(f'{path}/{board_size}/*.json')):
-        name = os.path.split(file)[1].split(".")[0]
-        team = get_team(name, ruleset)
-        if team.team_id == team_id:
+    for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
+        if filepath.split("/")[-1].split(".json")[0] == name:
+            return get_team(filepath, ruleset)
+    raise Exception("Team file not found.")
+
+
+def get_team_by_name(name, ruleset, board_size=11):
+    for team in get_all_teams(ruleset, board_size):
+        if team.name == name:
             return team
-    return None
+    raise Exception(f"Team with {name} not found.")
 
 
-def get_team(name, ruleset, board_size=11):
+def get_team(path, ruleset):
     """
-    :param name:
+    :param path: path to team file name.
     :param ruleset:
-    :return: The team with filename name (without file extension).
+    :return: The team with filename team)_id (without file extension).
     """
-    # print(name)
-    path = get_data_path(f'teams/{board_size}/{name}.json')
+    #path = get_data_path(path)
     f = open(path)
-    str = f.read()
+    jsonStr = f.read()
     f.close()
-    data = json.loads(str)
-    coach = Coach(data['coach']['id'], data['coach']['name'])
-    team = Team(data['id'], data['name'], data['race'], players=[], coach=coach, treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
+    data = json.loads(jsonStr)
+    team_id = str(uuid.uuid1())
+    team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)
-        player = Player(player_id=p['id'], role=role, name=p['name'], nr=p['nr'], niggling=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)
+        player_id = str(uuid.uuid1())
+        player = Player(player_id=player_id, role=role, name=p['name'], nr=p['nr'], niggling=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)
         for s in p['extra_skills']:
             player.extra_skills.append(parse_enum(Skill, s))
         team.players.append(player)

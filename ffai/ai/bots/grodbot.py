@@ -1482,8 +1482,8 @@ def main():
     config = api.get_config("ff-11-bot-bowl-i.json")
     ruleset = api.get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = api.get_arena(config.arena)
-    home = api.get_team_by_id("human-1", ruleset)
-    away = api.get_team_by_id("human-2", ruleset)
+    home = api.get_team("human-1", ruleset)
+    away = api.get_team("human-2", ruleset)
     config.competition_mode = False
 
     # Play 5 games as away

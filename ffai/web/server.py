@@ -39,7 +39,7 @@ def create():
     else:
         awayAgent = Agent("Player 1", human=True)
 
-    game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'], homeAgent, awayAgent)
+    game = api.new_game(data['game']['home_team_name'], data['game']['away_team_name'], homeAgent, awayAgent)
     return json.dumps(game.to_json())
 
 
