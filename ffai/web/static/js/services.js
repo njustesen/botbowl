@@ -197,6 +197,17 @@ appServices.factory('IconService', function() {
 
     return {
         playerIcons: {
+            'Chaos': {
+                'Beastman': 'cbeastman',
+                'Chaos Warrior': 'cwarrior',
+                'Minotaur': 'minotaur'
+            },
+            'Chaos Dwarf': {
+                'Hobgoblin': 'cdhobgoblin',
+                'Chaos Dwarf Blocker': 'cddwarf',
+                'Bull Centaur': 'centaur',
+                'Minotaur': 'minotaur'
+            },
             'Human': {
                 'Lineman': 'hlineman',
                 'Blitzer': 'hblitzer',
@@ -211,6 +222,12 @@ appServices.factory('IconService', function() {
                 'Black Orc Blocker': 'oblackorc',
                 'Troll': 'troll',
                 'Goblin': 'goblin'
+            },
+            'Elf': {
+                'Lineman': 'eplineman',
+                'Blitzer': 'epblitzer',
+                'Thrower': 'epthrower',
+                'Catcher': 'epcatcher'
             }
         },
 
