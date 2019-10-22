@@ -1622,6 +1622,12 @@ appServices.factory('IconService', function() {
                 'Bull Centaur': 'centaur',
                 'Minotaur': 'minotaur'
             },
+            'High Elf':{
+                'Lineman': 'helineman',
+                'Blitzer': 'heblitzer',
+                'Thrower': 'hethrower',
+                'Catcher': 'hecatcher'
+            },
             'Human': {
                 'Lineman': 'hlineman',
                 'Blitzer': 'hblitzer',
