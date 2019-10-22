@@ -202,6 +202,12 @@ appServices.factory('IconService', function() {
                 'Chaos Warrior': 'cwarrior',
                 'Minotaur': 'minotaur'
             },
+            'Chaos Dwarf': {
+                'Hobgoblin': 'cdhobgoblin',
+                'Chaos Dwarf Blocker': 'cddwarf',
+                'Bull Centaur': 'centaur',
+                'Minotaur': 'minotaur'
+            },
             'Human': {
                 'Lineman': 'hlineman',
                 'Blitzer': 'hblitzer',
