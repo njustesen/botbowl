@@ -6,11 +6,12 @@ FFAI is still under development and is planned to be heavily updated.
 
 Please cite us if you use FFAI in your publications.
 ```
-@inproceedings{justesen2018blood,
-  title={Blood Bowl: The Next Board Game Challenge for AI},
-  author={Justesen, Niels and Risi, Sebastian and Togelius, Julian},
-  booktitle={FDG 2018, 1st Workshop on Tabletop Games},
-  year={2018}
+@inproceedings{justesen2019blood,
+  title={Blood Bowl: A New Board Game Challenge and Competition for AI},
+  author={Justesen, Niels and Moore, Peter David and Uth, Lasse M{\o}ller and Togelius, Julian and Jakobsen, Christopher and Risi, Sebastian}
+  booktitle={2019 IEEE Conference on Games (COG)},
+  year={2019},
+  organization={IEEE}
 }
 ```
 
