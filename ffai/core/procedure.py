@@ -277,6 +277,10 @@ class Block(Procedure):
                                          rolls=[self.dauntless_roll], n=True))
                 return False
 
+            # Report Horns
+            if self.blitz and self.attacker.has_skill(Skill.HORNS):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.HORNS))
+
             dice, self.favor = Block.dice_and_favor(self.game, self.attacker, self.defender,
                                                     blitz=self.blitz, dauntless_success=self.dauntless_success)
 
@@ -2017,8 +2021,8 @@ class PlayerAction(Procedure):
                 EndPlayerTurn(self.game, self.player)
 
             # Block
-            Block(self.game, self.player, player_to, gfi=gfi)
-            self.blitz_block = True if self.player_action_type == PlayerActionType.BLITZ else False
+            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
+            Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
 
             if self.player_action_type == PlayerActionType.BLOCK:
                 return True
