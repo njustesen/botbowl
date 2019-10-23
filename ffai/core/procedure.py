@@ -2021,7 +2021,7 @@ class PlayerAction(Procedure):
                 EndPlayerTurn(self.game, self.player)
 
             # Block
-            self.blitz_block = True if self.player_action_type == PlayerActionType.BLITZ else False
+            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
             Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
 
             if self.player_action_type == PlayerActionType.BLOCK:
