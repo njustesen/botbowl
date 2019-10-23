@@ -61,6 +61,27 @@ appServices.factory('BotService', function($http){
     }
 });
 
+appServices.factory('BigGuyService', function($http){
+    return {
+        bigGuys: [
+            "Troll",
+            "Minotaur",
+            "Ogre",
+            "Bull Centaur",
+            "Chaos Troll",
+            "Chaos Ogre",
+            "Tomb Guardian", // Not sure
+            "Kroxigor",
+            "Yhetee",
+            "Beast of Nurgle",
+            "Rat Ogre",
+            "Mummy", // Not sure
+            "Warpstone Troll",
+
+        ]
+    }
+});
+
 appServices.factory('GameLogService', function() {
 
     return {

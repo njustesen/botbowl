@@ -159,8 +159,8 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
     }
 ]);
 
-appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService',
-    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService) {
+appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService', 'BigGuyService',
+    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService, BigGuyService) {
         $scope.RELOAD_TIME = 20;
         $scope.game = {};
         $scope.reportsLimit = 20;
@@ -381,6 +381,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     ball = ball_obj;
                 }
             }
+            let big_guy = true;
+            if (player !== null){
+                big_guy = (BigGuyService.bigGuys.indexOf(player["role"]) > -1);
+            }
             return {
                 x: x,
                 y: y,
@@ -398,7 +402,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 area: area,
                 sub_area: sub_area,
                 ball: ball,
-                num: number
+                num: number,
+                big_guy: big_guy
             };
         };
 
@@ -1446,6 +1451,27 @@ appServices.factory('BotService', function($http){
         listAll: function() {
             return $http.get(options.api.base_url + '/bots/');
         }
+    }
+});
+
+appServices.factory('BigGuyService', function($http){
+    return {
+        bigGuys: [
+            "Troll",
+            "Minotaur",
+            "Ogre",
+            "Bull Centaur",
+            "Chaos Troll",
+            "Chaos Ogre",
+            "Tomb Guardian", // Not sure
+            "Kroxigor",
+            "Yhetee",
+            "Beast of Nurgle",
+            "Rat Ogre",
+            "Mummy", // Not sure
+            "Warpstone Troll",
+
+        ]
     }
 });
 

@@ -501,6 +501,10 @@ a:hover {
   color: black;
   background-color: rgba(0, 255, 0, 0.4);
 }
+.gamecontent .game-info .player-info .stats-box .skill-box {
+  overflow: scroll;
+  width: 74%;
+}
 .gamecontent .game-info .action-bar {
   border-color: #080808;
   min-height: 34px;
@@ -578,6 +582,12 @@ a:hover {
 }
 .gamecontent .gameboard .playericon {
   line-height: 28px;
+  position: relative;
+}
+.gamecontent .gameboard .bigguy {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -20%);
   position: absolute;
 }
 .gamecontent .gameboard .dice {

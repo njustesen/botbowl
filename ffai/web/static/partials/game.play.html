@@ -251,7 +251,7 @@
                             </span>
                         </div>
                         <div class="playericon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].player != null">
-                            <img src="static/img/iconssmall/{{ local_state.board[$parent.$parent.$index+1][$index+1].player_icon }}" class="{{ local_state.board[$parent.$parent.$index+1][$index+1].player.state.used ? 'transparent' : ''  }}" />
+                            <img src="static/img/iconssmall/{{ local_state.board[$parent.$parent.$index+1][$index+1].player_icon }}" class="{{ local_state.board[$parent.$parent.$index+1][$index+1].big_guy ? 'bigguy' : '' }} {{ local_state.board[$parent.$parent.$index+1][$index+1].player.state.used ? 'transparent' : ''  }}" />
                         </div>
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].ball != null">
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].ball.in_air" src="static/img/ball/sball_30x30.png" />
@@ -327,7 +327,7 @@
                                 <div class="gamelabel">AV</div>
                                 <div class="value label label-success red">{{playerInFocus(game.state.away_team).av}}</div>
                             </div>
-                            <div class="attribute">
+                            <div class="attribute skill-box">
                                 <div class="gamelabel">Skills</div>
                                 <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.away_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
                             </div>
@@ -364,7 +364,7 @@
                                 <div class="gamelabel">AV</div>
                                 <div class="value label label-success blue">{{playerInFocus(game.state.home_team).av}}</div>
                             </div>
-                            <div class="attribute">
+                            <div class="attribute skill-box">
                                 <div class="gamelabel">Skills</div>
                                 <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.home_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
                             </div>
