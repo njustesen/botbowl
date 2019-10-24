@@ -1622,12 +1622,23 @@ appServices.factory('IconService', function() {
                 'Bull Centaur': 'centaur',
                 'Minotaur': 'minotaur'
             },
+            'High Elf':{
+                'Lineman': 'helineman',
+                'Blitzer': 'heblitzer',
+                'Thrower': 'hethrower',
+                'Catcher': 'hecatcher'
+            },
             'Human': {
                 'Lineman': 'hlineman',
                 'Blitzer': 'hblitzer',
                 'Thrower': 'hthrower',
                 'Catcher': 'hcatcher',
                 'Ogre': 'ogre'
+            },
+            'Lizardman': {
+                'Kroxigor': 'kroxigor',
+                'Saurus': 'lmsaurus',
+                'Skink': 'lmskink'
             },
             'Orc': {
                 'Lineman': 'olineman',
@@ -1642,6 +1653,19 @@ appServices.factory('IconService', function() {
                 'Blitzer': 'epblitzer',
                 'Thrower': 'epthrower',
                 'Catcher': 'epcatcher'
+            },
+            'Skaven': {
+                'Lineman': 'sklineman',
+                'Blitzer': 'skstorm',
+                'Thrower': 'skthrower',
+                'Gutter Runner': 'skrunner',
+                'Rat Ogre': 'ratogre'
+            },
+            'Amazon': {
+                'Linewoman': 'amlineman',
+                'Blitzer': 'amblitzer',
+                'Thrower': 'amthrower',
+                'Catcher': 'amcatcher'
             }
         },
 
