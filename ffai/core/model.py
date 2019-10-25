@@ -1194,10 +1194,10 @@ class Player(Piece):
         return self.role.av + self.extra_av
 
     def has_skill(self, skill):
-        return skill in self.skills
+        return skill in self.get_skills()
 
     def get_skills(self):
-        return self.skills
+        return self.skills + self.extra_skills
 
     def has_tackle_zone(self):
         if self.has_skill(Skill.TITCHY):
@@ -1214,16 +1214,13 @@ class Player(Piece):
         return self.state.up and not self.state.bone_headed and not self.state.hypnotized and not self.state.really_stupid
 
     def to_json(self):
-        skills = []
-        for skill in self.get_skills():
-            skills.append(skill.name)
         return {
             'player_id': self.player_id,
             'name': self.name,
             'role': self.role.name,
             'team_id': self.team.team_id,
             'nr': self.nr,
-            'skills': [skill.name for skill in self.skills],
+            'skills': [skill.name for skill in self.get_skills()],
             'ma': self.get_ma(),
             'st': self.get_st(),
             'ag': self.get_ag(),
