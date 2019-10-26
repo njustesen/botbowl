@@ -1,20 +1,14 @@
 {
-  "id": "human-2-5",
-  "name": "Human Team 2",
+  "name": "Human Team 1",
   "race": "Human",
-  "coach" : {
-    "id": 4,
-    "name": "Alice"
-  },
   "treasury": 0,
   "apothecary": false,
-  "rerolls": 2,
+  "rerolls": 1,
   "fan_factor": 3,
   "ass_coaches": 1,
   "cheerleaders": 2,
   "players": [
     {
-      "id" : "d1",
       "nr" : 1,
       "name": "Abschuss, Ziggi",
       "position": "Blitzer",
@@ -28,7 +22,6 @@
       "mng": false
     },
     {
-      "id" : "d3",
       "nr" : 3,
       "name": "Di Passella, Luigi",
       "position": "Thrower",
@@ -42,7 +35,6 @@
       "mng": false
     },
     {
-      "id" : "d5",
       "nr" : 5,
       "name": "Headreka, Helmut",
       "position": "Catcher",
@@ -56,7 +48,6 @@
       "mng": false
     },
     {
-      "id" : "d6",
       "nr" : 6,
       "name": "Himmelstein, Henny",
       "position": "Lineman",
@@ -70,37 +61,8 @@
       "mng": false
     },
     {
-      "id" : "d7",
       "nr" : 7,
       "name": "Heldman, Dirk Hero",
-      "position": "Lineman",
-      "extra_skills" : [],
-      "extra_ma" : 0,
-      "extra_st" : 0,
-      "extra_ag" : 0,
-      "extra_av" : 0,
-      "spp": 0,
-      "niggling": false,
-      "mng": false
-    },
-    {
-      "id" : "d8",
-      "nr" : 8,
-      "name": "Holstein, Erdrich",
-      "position": "Lineman",
-      "extra_skills" : [],
-      "extra_ma" : 0,
-      "extra_st" : 0,
-      "extra_ag" : 0,
-      "extra_av" : 0,
-      "spp": 0,
-      "niggling": false,
-      "mng": false
-    },
-    {
-      "id" : "d9",
-      "nr" : 9,
-      "name": "Hackson, Gruff",
       "position": "Lineman",
       "extra_skills" : [],
       "extra_ma" : 0,

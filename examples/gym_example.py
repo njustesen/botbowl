@@ -65,6 +65,7 @@ if __name__ == "__main__":
             steps += 1
 
             # Render
-            env.render(feature_layers=True)
+            # Currently crashes on mac python 3.7.4
+            # env.render(feature_layers=True)
 
     print(steps)

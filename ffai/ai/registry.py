@@ -22,6 +22,12 @@ class BotRegistry:
             raise Exception('Bot with ID {} not registered.'.format(id.lower()))
         return self.bots[id.lower()](id.lower())
 
+    def list(self):
+        result = []
+        for key in self.bots:
+            result.append(key)
+        return result
+
 
 # Have a global registry
 registry = BotRegistry()
@@ -33,3 +39,7 @@ def register_bot(id, cls):
 
 def make_bot(id):
     return registry.make(id)
+
+
+def list_bots():
+    return registry.list()

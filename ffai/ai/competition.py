@@ -10,12 +10,12 @@ import numpy as np
 from ffai.ai.registry import make_bot
 from ffai.core.game import Game
 from ffai.core.table import CasualtyType, OutcomeType
-from ffai.core.load import get_team, get_rule_set, get_config
+from ffai.core.load import get_team_by_name, get_rule_set, get_config
 import time
 import pickle
 from ffai.core.util import get_data_path
 import stopit
-
+import uuid
 
 class TeamResult:
 
@@ -168,17 +168,18 @@ class TimeoutException(Exception): pass
 
 class Competition:
 
-    def __init__(self, name, competitor_a_team_id, competitor_b_team_id, competitor_a_name, competitor_b_name, config, record=False):
+    def __init__(self, name, competitor_a_team, competitor_b_team, competitor_a_name, competitor_b_name, config, record=False):
         assert competitor_a_name != competitor_b_name
-        assert competitor_a_team_id != competitor_b_team_id
         self.name = name
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
         self.config = config
         self.config.competition_mode = True
         self.ruleset = get_rule_set(self.config.ruleset)
-        self.competitor_a_team = get_team(competitor_a_team_id, self.ruleset)
-        self.competitor_b_team = get_team(competitor_b_team_id, self.ruleset)
+        self.competitor_a_team = deepcopy(competitor_a_team)
+        self.competitor_a_team.team_id = str(uuid.uuid1())
+        self.competitor_b_team = deepcopy(competitor_b_team)
+        self.competitor_b_team.team_id = str(uuid.uuid1())
         self.disqualified = None
         self.record = record
 

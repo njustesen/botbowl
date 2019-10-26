@@ -840,7 +840,7 @@ class Pitch:
     def interceptors(self, passer, pos):
         """
         1) Find line x from a to b
-        2) Find squares s where x intersects
+        3) Find squares s where x intersects
         3) Find manhattan neighboring n squares of s
         4) Remove squares where distance to a is larger than dist(a,b)
         5) Remove squares without standing opponents with hands
@@ -850,7 +850,7 @@ class Pitch:
         # 1) Find line x from a to b
         x = get_line((passer.position.x, passer.position.y), (pos.x, pos.y))
 
-        # 2) Find squares s where x intersects
+        # 3) Find squares s where x intersects
         s = []
         for i in x:
             s.append(Square(i[0], i[1]))
@@ -1138,7 +1138,7 @@ class Dugout:
 
 class Role:
 
-    def __init__(self, name, races, ma, st, ag, av, skills, cost, feeder, n_skill_sets=[], d_skill_sets=[],
+    def __init__(self, name, races, ma, st, ag, av, skills, cost, feeder, n_skill_sets=None, d_skill_sets=None,
                  star_player=False):
         self.name = name
         self.races = races
@@ -1149,8 +1149,8 @@ class Role:
         self.skills = skills
         self.cost = cost
         self.feeder = feeder
-        self.n_skill_sets = n_skill_sets
-        self.d_skill_sets = d_skill_sets
+        self.n_skill_sets = n_skill_sets if n_skill_sets is not None else []
+        self.d_skill_sets = d_skill_sets if d_skill_sets is not None else []
         self.star_player = star_player
 
 
@@ -1162,7 +1162,7 @@ class Piece:
 
 class Player(Piece):
 
-    def __init__(self, player_id, role, name, nr, team, extra_skills=[], extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
+    def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling=0, mng=False, spp=0, position=None):
         super().__init__(position)
         self.player_id = player_id
@@ -1170,7 +1170,7 @@ class Player(Piece):
         self.name = name
         self.nr = nr
         self.team = team
-        self.extra_skills = extra_skills
+        self.extra_skills = extra_skills if extra_skills is not None else []
         self.skills = self.extra_skills + self.role.skills
         self.extra_ma = extra_ma
         self.extra_st = extra_st
@@ -1289,19 +1289,6 @@ class Square:
         return self.distance(other, manhattan) == 1
 
 
-class Coach:
-
-    def __init__(self, coach_id, name):
-        self.coach_id = coach_id
-        self.name = name
-
-    def to_json(self):
-        return {
-            'coach_id': self.coach_id,
-            'name': self.name
-        }
-
-
 class Race:
 
     def __init__(self, name, roles, reroll_cost, apothecary, stakes):
@@ -1314,11 +1301,10 @@ class Race:
 
 class Team:
 
-    def __init__(self, team_id, name, race, coach, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
+    def __init__(self, team_id, name, race, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
         self.team_id = team_id
         self.name = name
-        self.coach = coach
         self.race = race
         self.players = players if players is not None else []
         self.treasury = treasury
@@ -1338,7 +1324,6 @@ class Team:
         return {
             'team_id': self.team_id,
             'name': self.name,
-            'coach': self.coach.to_json(),
             'race': self.race,
             'treasury': self.treasury,
             'apothecary': self.apothecary,
@@ -1359,12 +1344,12 @@ class Team:
 
 class Outcome:
 
-    def __init__(self, outcome_type, pos=None, player=None, opp_player=None, rolls=[], team=None, n=0, skill=None):
+    def __init__(self, outcome_type, pos=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type
         self.pos = pos
         self.player = player
         self.opp_player = opp_player
-        self.rolls = rolls
+        self.rolls = rolls if rolls is not None else []
         self.team = team
         self.n = n
         self.skill = skill

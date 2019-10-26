@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from ffai.web.api import *
-from ffai.ai.bots import ProcBot
+from ffai.ai.bots.proc_bot import ProcBot
 from ffai.ai.registry import register_bot, make_bot
 import time
 
@@ -315,15 +315,15 @@ if __name__ == "__main__":
     # config = get_config("ff-3.json")
     ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = get_arena(config.arena)
-    home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-2", ruleset)
+    home = get_team_by_filename("human", ruleset)
+    away = get_team_by_filename("human", ruleset)
 
     # Play 100 games
     for i in range(10):
         home_agent = make_bot('scripted')
         home_agent.name = "Scripted Bot 1"
         away_agent = make_bot('scripted')
-        away_agent.name = "Scripted Bot 2"
+        away_agent.name = "Scripted Bot 3"
         config.debug_mode = False
         game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True

@@ -277,6 +277,10 @@ class Block(Procedure):
                                          rolls=[self.dauntless_roll], n=True))
                 return False
 
+            # Report Horns
+            if self.blitz and self.attacker.has_skill(Skill.HORNS):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.HORNS))
+
             dice, self.favor = Block.dice_and_favor(self.game, self.attacker, self.defender,
                                                     blitz=self.blitz, dauntless_success=self.dauntless_success)
 
@@ -508,7 +512,7 @@ class Casualty(Procedure):
 
 class Catch(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1478,7 +1482,7 @@ class GFI(Procedure):
 
 class Dodge(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1635,7 +1639,7 @@ class Handoff(Procedure):
 
 class PassAction(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -1772,7 +1776,7 @@ class PassAction(Procedure):
 
 class Pickup(Procedure):
 
-    #          0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
@@ -2017,8 +2021,8 @@ class PlayerAction(Procedure):
                 EndPlayerTurn(self.game, self.player)
 
             # Block
-            Block(self.game, self.player, player_to, gfi=gfi)
-            self.blitz_block = True if self.player_action_type == PlayerActionType.BLITZ else False
+            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
+            Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
 
             if self.player_action_type == PlayerActionType.BLOCK:
                 return True
@@ -2362,6 +2366,8 @@ class Push(Procedure):
         if self.squares is None:
             self.squares = self.game.push_squares(self.pusher.position, self.player.position)
             if self.player.has_skill(Skill.SIDE_STEP):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
+                self.squares = self.game.adjacent_squares(self.player.position, exclude_occupied=True)
                 if self.player.team != self.game.state.current_team:
                     self.game.add_secondary_clock(self.player.team)
             return False

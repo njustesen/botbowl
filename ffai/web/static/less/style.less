@@ -587,6 +587,11 @@ a, a:focus, a:hover {
                         background-color: rgba(0, 255, 0, 0.4);
                     }
                 }
+
+                .skill-box {
+                    overflow: scroll;
+                    width: 74%;
+                }
             }
 
         }
@@ -688,6 +693,13 @@ a, a:focus, a:hover {
 
         .playericon {
             line-height: 28px;
+            position: relative;
+        }
+
+        .bigguy {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -20%);
             position: absolute;
         }
 
@@ -754,10 +766,16 @@ a, a:focus, a:hover {
         .ballicon {
             position: absolute;
             line-height: 30px;
+            top: 4px;
+            left: -4px;
+            width: 90%;
+            object-fit: scale-down;
         }
 
         .stateicon {
             position: absolute;
+            top: 1px;
+            left: 1px;
         }
     }
 

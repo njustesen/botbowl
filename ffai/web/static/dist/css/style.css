@@ -501,6 +501,10 @@ a:hover {
   color: black;
   background-color: rgba(0, 255, 0, 0.4);
 }
+.gamecontent .game-info .player-info .stats-box .skill-box {
+  overflow: scroll;
+  width: 74%;
+}
 .gamecontent .game-info .action-bar {
   border-color: #080808;
   min-height: 34px;
@@ -578,6 +582,12 @@ a:hover {
 }
 .gamecontent .gameboard .playericon {
   line-height: 28px;
+  position: relative;
+}
+.gamecontent .gameboard .bigguy {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -20%);
   position: absolute;
 }
 .gamecontent .gameboard .dice {
@@ -634,9 +644,15 @@ a:hover {
 .gamecontent .gameboard .ballicon {
   position: absolute;
   line-height: 30px;
+  top: 4px;
+  left: -4px;
+  width: 90%;
+  object-fit: scale-down;
 }
 .gamecontent .gameboard .stateicon {
   position: absolute;
+  top: 1px;
+  left: 1px;
 }
 .gamecontent .gameboard.swelteringheat {
   background-image: url("../../img/arenas/bb_pitch/lines/pitch_heat.jpg");

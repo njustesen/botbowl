@@ -12,6 +12,7 @@ from ffai.core.load import *
 import json
 import random
 import sys
+from ffai.ai.registry import make_bot
 
 app = Flask(__name__)
 
@@ -24,7 +25,21 @@ def home():
 @app.route('/game/create', methods=['PUT'])
 def create():
     data = json.loads(request.data)
-    game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'])
+    bot_list = api.get_bots()
+    # make_bot or Agent depending on choice... (unknown name => human)
+    homePlayer = data['game']['home_player']
+    if homePlayer in bot_list:
+        homeAgent = make_bot(homePlayer)
+    else:
+        homeAgent = Agent("Player 1", human=True)
+
+    awayPlayer = data['game']['away_player']
+    if awayPlayer in bot_list:
+        awayAgent = make_bot(awayPlayer)
+    else:
+        awayAgent = Agent("Player 1", human=True)
+
+    game = api.new_game(data['game']['home_team_name'], data['game']['away_team_name'], homeAgent, awayAgent)
     return json.dumps(game.to_json())
 
 
@@ -59,11 +74,11 @@ def get_all_replays():
         'replays': replays
     })
 
-
 @app.route('/teams/', methods=['GET'])
-def get_all_teams():
-    # TODO: Needs a ruleset
-    teams = api.get_teams()
+@app.route('/teams/<ruleset_name>', methods=['GET'])
+def get_all_teams(ruleset_name = 'LRB5-Experimental'):
+    ruleset = get_rule_set(ruleset_name)
+    teams = api.get_teams(ruleset)
     team_list = []
     for team in teams:
         team_list.append(team.to_json())
@@ -106,6 +121,10 @@ def load_game(name):
     save.game.set_seed(seed)
 
     return json.dumps(save.to_json())
+
+@app.route('/bots/', methods=['GET'])
+def get_bots():
+    return json.dumps(api.get_bots())
 
 
 def start_server(debug=False, use_reloader=False):
