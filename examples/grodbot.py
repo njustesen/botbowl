@@ -32,7 +32,7 @@ class GrodBot(Agent):
 
     BASE_SCORE_BLITZ = 60.0
     BASE_SCORE_FOUL = -50.0
-    BASE_SCORE_BLOCK = 2*65   # For a two dice block
+    BASE_SCORE_BLOCK = 65   # For a two dice block
     BASE_SCORE_HANDOFF = 40.0
     BASE_SCORE_PASS = 40.0
     BASE_SCORE_MOVE_TO_OPPONENT = 45.0
