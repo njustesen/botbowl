@@ -1,5 +1,5 @@
 {
-    "name": "Fantasy Football",
+    "name": "FFAI Web App",
     "arena": "ff-pitch-11.txt",
     "ruleset": "BB2016",
     "dungeon": false,

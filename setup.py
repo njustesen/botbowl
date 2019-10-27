@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='ffai',
-      version="0.0.8",
+      version="0.0.9",
       include_package_data=True,
       install_requires=[
           'numpy',
@@ -10,7 +10,8 @@ setup(name='ffai',
           'gym',
           'Jinja2',
           'python-interface',
-          'stopit'
+          'stopit',
+          'pytest'
       ],
       packages=find_packages()
 )

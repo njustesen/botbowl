@@ -160,7 +160,7 @@ def get_team_by_name(name, ruleset, board_size=11):
     for team in get_all_teams(ruleset, board_size):
         if team.name == name:
             return team
-    raise Exception(f"Team with {name} not found.")
+    raise Exception(f"Team with name '{name}' not found.")
 
 
 def get_team(path, ruleset):
@@ -191,6 +191,8 @@ def get_arena(name):
     :param name: The filename to load.
     :return: The arena at data/arena/<name>
     """
+    if not name.endswith(".txt"):
+        name += ".txt"
     path = get_data_path('arenas/' + name)
     # name = 'Unknown arena'
     dungeon = False
@@ -260,16 +262,18 @@ def get_config(name):
     return config
 
 
-def get_formation(name, size):
+def get_formation(name, size=11):
     """
     :param name: the filename to load.
     :param size: The number of players on the pitch in the used FFAI variant.
     :return: The formation in data/formations/<size>/<name>
     """
+    if not name.endswith(".txt"):
+        name += ".txt"
     path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
     file = open(path, 'r')
-    name = name.replace(".txt", "").replace("off_", "").replace("def_", "")
+    name = name.replace(".txt", "").replace("off_", "").replace("def_", "").title()
     while True:
         line = file.readline()
         if not line:

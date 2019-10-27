@@ -2593,13 +2593,13 @@ class Setup(Procedure):
     def step(self, action):
         formation = None
         if action.action_type == ActionType.SETUP_FORMATION_WEDGE:
-            formation = [formation for formation in self.formations if formation.name == "wedge"][0]
+            formation = [formation for formation in self.formations if formation.name == "Wedge"][0]
         if action.action_type == ActionType.SETUP_FORMATION_ZONE:
-            formation = [formation for formation in self.formations if formation.name == "zone"][0]
+            formation = [formation for formation in self.formations if formation.name == "Zone"][0]
         if action.action_type == ActionType.SETUP_FORMATION_LINE:
-            formation = [formation for formation in self.formations if formation.name == "line"][0]
+            formation = [formation for formation in self.formations if formation.name == "Line"][0]
         if action.action_type == ActionType.SETUP_FORMATION_SPREAD:
-            formation = [formation for formation in self.formations if formation.name == "spread"][0]
+            formation = [formation for formation in self.formations if formation.name == "Spread"][0]
 
         if formation is not None:
             actions = formation.actions(self.game, self.team)
@@ -2654,13 +2654,13 @@ class Setup(Procedure):
         ]
         if not self.reorganize:
             for formation in self.formations:
-                if formation.name == "wedge":
+                if formation.name == "Wedge":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=self.team))
-                if formation.name == "line":
+                if formation.name == "Line":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=self.team))
-                if formation.name == "spread":
+                if formation.name == "Spread":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=self.team))
-                if formation.name == "zone":
+                if formation.name == "Zone":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=self.team))
 
         return aa
