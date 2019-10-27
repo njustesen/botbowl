@@ -521,7 +521,9 @@ class Catch(Procedure):
         modifiers = -2 if interception else modifiers
         if interception and player.has_skill(Skill.LONG_LEGS):
             modifiers += 1
-        modifiers -= game.num_tackle_zones_in(player)
+        # opposing tackle zones
+        if not player.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= game.num_tackle_zones_in(player)
         if game.state.weather == WeatherType.POURING_RAIN:
             modifiers -= 1
         if player.has_skill(Skill.EXTRA_ARMS):
@@ -1645,8 +1647,10 @@ class PassAction(Procedure):
     @staticmethod
     def pass_modifiers(game, passer, pass_distance):
         modifiers = Rules.pass_modifiers[pass_distance]
+        # Opposing tackle zones
         tackle_zones = game.num_tackle_zones_in(passer)
-        modifiers -= tackle_zones
+        if not passer.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= tackle_zones
 
         # Weather
         if game.state.weather == WeatherType.VERY_SUNNY:
