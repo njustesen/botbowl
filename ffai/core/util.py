@@ -11,7 +11,7 @@ import ffai
 
 
 def parse_enum(enum_class, name):
-    enum_name = name.upper().replace(" ", "_").replace("-", "_")
+    enum_name = name.upper().replace(" ", "_").replace("'", "").replace("é", "e").replace("-", "_")
     if enum_name not in enum_class.__members__:
         raise Exception("Uknown enum name " + enum_name + " (orig: " + name + ")")
     return enum_class[enum_name]

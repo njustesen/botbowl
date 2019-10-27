@@ -45,7 +45,7 @@ register_bot('my-random-bot', MyRandomBot)
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = get_config("ff-11-bot-bowl-i.json")
+    config = get_config("bot-bowl-ii")
     ruleset = get_rule_set(config.ruleset)
     arena = get_arena(config.arena)
     home = get_team_by_filename("human", ruleset)

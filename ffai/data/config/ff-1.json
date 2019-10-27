@@ -1,7 +1,7 @@
 {
     "name": "Fantasy Football 1",
     "arena": "ff-pitch-1.txt",
-    "ruleset": "LRB5-Experimental",
+    "ruleset": "BB2016",
     "dungeon": false,
     "roster_size": 4,
     "pitch_max": 1,

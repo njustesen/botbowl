@@ -308,7 +308,7 @@ register_bot('scripted', MyScriptedBot)
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = get_config("ff-11.json")
+    config = get_config("bot-bowl-ii")
     config.competition_mode = True
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")

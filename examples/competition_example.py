@@ -14,7 +14,7 @@ from ffai.ai.bots import violator_bot
 
 
 # Load competition configuration for the bot bowl
-config = get_config('ff-11-bot-bowl-i.json')
+config = get_config('bot-bowl-ii')
 
 # Get ruleset
 ruleset = get_rule_set(config.ruleset, all_rules=False)

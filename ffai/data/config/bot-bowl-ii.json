@@ -17,11 +17,11 @@
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
     "time_limits": {
-        "game": 15360,
-        "turn": 240,
+        "game": 5000,
+        "turn": 120,
         "secondary": 5,
         "disqualification": 5,
-        "init": 10,
+        "init": 20,
         "end": 10
     }
 }

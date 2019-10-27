@@ -76,7 +76,7 @@ def get_all_replays():
 
 @app.route('/teams/', methods=['GET'])
 @app.route('/teams/<ruleset_name>', methods=['GET'])
-def get_all_teams(ruleset_name = 'LRB5-Experimental'):
+def get_all_teams(ruleset_name = 'BB2016'):
     ruleset = get_rule_set(ruleset_name)
     teams = api.get_teams(ruleset)
     team_list = []

@@ -218,6 +218,8 @@ def get_config(name):
     :param name: the filename to load.
     :return: The configuration in data/config/<name>
     """
+    if not name.endswith(".json"):
+        name += ".json"
     path = get_data_path('config/' + name)
     f = open(path)
     str = f.read()
