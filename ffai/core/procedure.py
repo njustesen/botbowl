@@ -1664,6 +1664,9 @@ class PassAction(Procedure):
                     pass_distance == PassDistance.LONG_BOMB:
                 modifiers += 1
 
+        if passer.has_skill(Skill.STUNTY):
+            modifiers -= 1
+
         return modifiers
 
     def __init__(self, game, ball, passer, catcher, pos, pass_distance):
