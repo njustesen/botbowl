@@ -13,6 +13,15 @@ register(
 )
 
 register(
+    id='FFAI-11-v1',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': get_config("ff-11"),
+            'home_team': get_team_by_filename('human', ruleset, board_size=11),
+            'away_team': get_team_by_filename('human', ruleset, board_size=11)
+            }
+)
+
+register(
     id='FFAI-7-v1',
     entry_point='ffai.ai.env:FFAIEnv',
     kwargs={'config': get_config("ff-7"),

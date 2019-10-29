@@ -16,6 +16,3 @@ def test_server():
     assert r.status_code == 200
     p.kill()
 
-
-if __name__ == "__main__":
-    test_server()
