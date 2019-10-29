@@ -71,40 +71,42 @@ def worker(remote, parent_remote, env):
 
             # Close environment
             env.close()
+            break
 
 
 if __name__ == "__main__":
 
-        renderer = Renderer()
+    renderer = Renderer()
 
-        nenvs = 8
-        envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]
-        for i in range(len(envs)):
-            seed = envs[i].seed()
+    nenvs = 8
+    envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]
+    for i in range(len(envs)):
+        envs[i].seed()
 
-        remotes, work_remotes = zip(*[Pipe() for _ in range(nenvs)])
+    remotes, work_remotes = zip(*[Pipe() for _ in range(nenvs)])
 
-        ps = [Process(target=worker, args=(work_remote, remote, env))
-              for (work_remote, remote, env) in zip(work_remotes, remotes, envs)]
+    ps = [Process(target=worker, args=(work_remote, remote, env))
+          for (work_remote, remote, env) in zip(work_remotes, remotes, envs)]
 
-        for p in ps:
-            p.daemon = True  # If the main process crashes, we should not cause things to hang
-            p.start()
+    for p in ps:
+        p.daemon = True  # If the main process crashes, we should not cause things to hang
+        p.start()
 
-        for remote in work_remotes:
-            remote.close()
+    for remote in work_remotes:
+        remote.close()
 
-        for i in range(100000):
-            for remote in remotes:
-                remote.send('step')
-            results = [remote.recv() for remote in remotes]
-            for j in range(len(results)):
-                obs, reward, done, info = results[j]
-                # Currently crashes on mac python 3.7.4
-                # renderer.render(obs, j)
-
+    for i in range(10):
+        print(i)
         for remote in remotes:
-            remote.send('close')
+            remote.send('step')
+        results = [remote.recv() for remote in remotes]
+        for j in range(len(results)):
+            obs, reward, done, info = results[j]
+            # Currently crashes on mac python 3.7.4
+            # renderer.render(obs, j)
 
-        for p in ps:
-            p.join()
+    for remote in remotes:
+        remote.send('close')
+
+    for p in ps:
+        p.join()
