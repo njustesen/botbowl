@@ -237,7 +237,7 @@ class Game:
         End the game
         '''
         # Game ended when the last action was received - to avoid timout during finishing procedures
-        self.state.end_time = self.last_action_time
+        self.end_time = self.last_action_time
         self.state.game_over = True
 
         # Let agents know that the game ended
