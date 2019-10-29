@@ -127,7 +127,7 @@ def get_bots():
     return json.dumps(api.get_bots())
 
 
-def start_server(debug=False, use_reloader=False):
+def start_server(debug=False, use_reloader=False, port=5000):
     
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
@@ -142,4 +142,4 @@ def start_server(debug=False, use_reloader=False):
     app.jinja_options = jinja_options
 
     app.config['TEMPLATES_AUTO_RELOAD']=True
-    app.run(debug=debug, use_reloader=use_reloader)
+    app.run(debug=debug, use_reloader=use_reloader, port=port)

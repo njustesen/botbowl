@@ -11,6 +11,7 @@ setup(name='ffai',
           'Jinja2',
           'python-interface',
           'stopit',
+          'requests',
           'pytest'
       ],
       packages=find_packages()
