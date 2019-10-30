@@ -61,7 +61,7 @@ class Game:
             'active_other_player_id': self.active_other_player_id()
         }
 
-    def _safe_clone(self):
+    def safe_clone(self):
         # Make dummy agents for the clone
         home_agent = self.home_agent
         away_agent = self.away_agent
@@ -79,13 +79,13 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            game_copy_away = self._safe_clone()
+            game_copy_away = self.safe_clone()
             self.actor = self.away_agent
             self.away_agent.new_game(game_copy_away, game_copy_away.state.away_team)
             self.actor = None
         if not self.home_agent.human:
             self.actor = self.home_agent
-            game_copy_home = self._safe_clone()
+            game_copy_home = self.safe_clone()
             self.actor = None
             self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
 
@@ -246,7 +246,7 @@ class Game:
             self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
             if self.config.competition_mode:
                 self.actor = self.home_agent
-                clone = self._safe_clone()
+                clone = self.safe_clone()
                 now = time.time()
                 self.home_agent.end_game(clone)
                 self.actor = None
@@ -260,7 +260,7 @@ class Game:
             self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
             if self.config.competition_mode:
                 self.actor = self.away_agent
-                clone = self._safe_clone()
+                clone = self.safe_clone()
                 now = time.time()
                 self.away_agent.end_game(clone)
                 self.actor = None
@@ -314,7 +314,7 @@ class Game:
         Clone the game before requesting an action so agent can't manipulate it.
         '''
         if self.config.competition_mode:
-            action = self.actor.act(self._safe_clone())
+            action = self.actor.act(self.safe_clone())
             # Correct player object
             if action.player is not None:
                 action.player = self.state.player_by_id[action.player.player_id]
@@ -1301,3 +1301,15 @@ class Game:
                 if proc.catcher is not None:
                     return proc.player.player_id
         return None
+
+    def set_home_agent(self, agent):
+        if self.actor.agent_id == self.home_agent.agent_id:
+            self.actor = agent
+        self.home_agent = agent
+
+    def set_away_agent(self, agent):
+        if self.actor.agent_id == self.away_agent.agent_id:
+            self.actor = agent
+        self.away_agent = agent
+
+
