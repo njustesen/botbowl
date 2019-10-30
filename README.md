@@ -294,7 +294,7 @@ FFAI comes with five environments with various difficulty:
 * FFAI-3-v1: 3 players on a 12x5 pitch
 * FFAI-1-v1: 1 player on a 4x3 pitch
 
-This is how the FFAI-v1-3 environment looks:
+This is how the FFAI-3-v1 environment looks:
 
 ![FFAI Gym GUI](screenshots/gym_3.png?raw=true "FFAI Gym GUI FFAI-3")
 
