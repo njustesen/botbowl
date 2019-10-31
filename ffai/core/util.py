@@ -99,3 +99,4 @@ def get_data_path(rel_path):
     root_dir = ffai.__file__.replace("__init__.py", "")
     filename = os.path.join(root_dir, "data/" + rel_path)
     return os.path.abspath(os.path.realpath(filename))
+

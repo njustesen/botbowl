@@ -1312,4 +1312,8 @@ class Game:
             self.actor = agent
         self.away_agent = agent
 
-
+    def has_report_of_type(self, outcome_type):
+        for report in self.state.reports:
+            if report.outcome_type == outcome_type:
+                return True
+        return False
