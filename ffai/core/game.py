@@ -1119,7 +1119,17 @@ class Game:
         """
         return self.state.pitch.get_push_squares(pos_from, pos_to)
 
-    def is_setup_legal(self, team, tile=None, max_players=11, min_players=3):
+    def is_setup_legal(self, team):
+        if not self.is_setup_legal_count(team, max_players=self.config.pitch_max,
+                                        min_players=self.config.pitch_min):
+            return False
+        elif not self.is_setup_legal_scrimmage(team, min_players=self.config.scrimmage_min):
+            return False
+        elif not self.is_setup_legal_wings(team, max_players=self.config.wing_max):
+            return False
+        return True
+
+    def is_setup_legal_count(self, team, tile=None, max_players=11, min_players=3):
         """
         :param team:
         :param tile: The tile area to check.
@@ -1168,8 +1178,8 @@ class Game:
         :return: True if team is setup legally on scrimmage.
         """
         if team == self.state.home_team:
-            return self.is_setup_legal(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
-        return self.is_setup_legal(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
+            return self.is_setup_legal_count(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
+        return self.is_setup_legal_count(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
 
     def is_setup_legal_wings(self, team, min_players=0, max_players=2):
         """
@@ -1179,10 +1189,10 @@ class Game:
         :return: True if team is setup legally on the wings.
         """
         if team == self.state.home_team:
-            return self.is_setup_legal(team, tile=Tile.HOME_WING_LEFT, max_players=max_players, min_players=min_players) and \
-                   self.is_setup_legal(team, tile=Tile.HOME_WING_RIGHT, max_players=max_players, min_players=min_players)
-        return self.is_setup_legal(team, tile=Tile.AWAY_WING_LEFT, max_players=max_players, min_players=min_players) and \
-               self.is_setup_legal(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
+            return self.is_setup_legal_count(team, tile=Tile.HOME_WING_LEFT, max_players=max_players, min_players=min_players) and \
+                   self.is_setup_legal_count(team, tile=Tile.HOME_WING_RIGHT, max_players=max_players, min_players=min_players)
+        return self.is_setup_legal_count(team, tile=Tile.AWAY_WING_LEFT, max_players=max_players, min_players=min_players) and \
+               self.is_setup_legal_count(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
 
     def procs(self):
         """

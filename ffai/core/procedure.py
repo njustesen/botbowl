@@ -2608,7 +2608,7 @@ class Setup(Procedure):
             return False
 
         if action.action_type == ActionType.END_SETUP:
-            if not self.game.is_setup_legal(self.team, max_players=self.game.config.pitch_max,
+            if not self.game.is_setup_legal_count(self.team, max_players=self.game.config.pitch_max,
                                             min_players=self.game.config.pitch_min):
                 self.game.report(Outcome(OutcomeType.ILLEGAL_SETUP_NUM, team=self.team))
                 return False
