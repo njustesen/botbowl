@@ -7,7 +7,7 @@ n = 10000
 
 
 @pytest.mark.parametrize("die", [D3, D6, D8])
-def test(die):
+def test_d_die(die):
     results = {}
     for seed in range(n):
         rnd = np.random.RandomState(seed)
@@ -23,6 +23,84 @@ def test(die):
     for key in results.keys():
         assert 0 < key <= l
         assert (n / (l+1)) < results[key] < (n / (l-1))
+
+
+def test_d3_fixation():
+    for seed in range(10):
+        rnd = np.random.RandomState(seed)
+        D3.fix_result(1)
+        D3.fix_result(2)
+        D3.fix_result(3)
+        assert D3(rnd).value == 1
+        assert D3(rnd).value == 2
+        assert D3(rnd).value == 3
+    with pytest.raises(ValueError):
+        D3.fix_result(0)
+    with pytest.raises(ValueError):
+        D3.fix_result(4)
+
+
+def test_d6_fixation():
+    for seed in range(10):
+        rnd = np.random.RandomState(seed)
+        D6.fix_result(1)
+        D6.fix_result(2)
+        D6.fix_result(3)
+        D6.fix_result(4)
+        D6.fix_result(5)
+        D6.fix_result(6)
+        assert D6(rnd).value == 1
+        assert D6(rnd).value == 2
+        assert D6(rnd).value == 3
+        assert D6(rnd).value == 4
+        assert D6(rnd).value == 5
+        assert D6(rnd).value == 6
+    with pytest.raises(ValueError):
+        D6.fix_result(0)
+    with pytest.raises(ValueError):
+        D6.fix_result(7)
+
+
+def test_d8_fixation():
+    for seed in range(10):
+        rnd = np.random.RandomState(seed)
+        D8.fix_result(1)
+        D8.fix_result(2)
+        D8.fix_result(3)
+        D8.fix_result(4)
+        D8.fix_result(5)
+        D8.fix_result(6)
+        D8.fix_result(7)
+        D8.fix_result(8)
+        assert D8(rnd).value == 1
+        assert D8(rnd).value == 2
+        assert D8(rnd).value == 3
+        assert D8(rnd).value == 4
+        assert D8(rnd).value == 5
+        assert D8(rnd).value == 6
+        assert D8(rnd).value == 7
+        assert D8(rnd).value == 8
+    with pytest.raises(ValueError):
+        D8.fix_result(0)
+    with pytest.raises(ValueError):
+        D8.fix_result(9)
+
+
+def test_bb_fixation():
+    for seed in range(10):
+        rnd = np.random.RandomState(seed)
+        BBDie.fix_result(BBDieResult.ATTACKER_DOWN)
+        BBDie.fix_result(BBDieResult.BOTH_DOWN)
+        BBDie.fix_result(BBDieResult.PUSH)
+        BBDie.fix_result(BBDieResult.DEFENDER_STUMBLES)
+        BBDie.fix_result(BBDieResult.DEFENDER_DOWN)
+        assert BBDie(rnd).value == BBDieResult.ATTACKER_DOWN
+        assert BBDie(rnd).value == BBDieResult.BOTH_DOWN
+        assert BBDie(rnd).value == BBDieResult.PUSH
+        assert BBDie(rnd).value == BBDieResult.DEFENDER_STUMBLES
+        assert BBDie(rnd).value == BBDieResult.DEFENDER_DOWN
+    with pytest.raises(ValueError):
+        BBDie.fix_result(1)
 
 
 def test_bb_die():

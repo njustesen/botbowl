@@ -981,7 +981,7 @@ class TwoPlayerArena:
 class Die:
 
     def get_value(self):
-        pass
+        Exception("Method not implemented")
 
 
 class DiceRoll:
@@ -1056,8 +1056,20 @@ class DiceRoll:
 
 class D3(Die):
 
+    FixedRolls = []
+
+    @staticmethod
+    def fix_result(value):
+        if 1 <= value <= 3:
+            D3.FixedRolls.append(value)
+        else:
+            raise ValueError("Fixed result of D3 must be between 1 and 3")
+
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 4)
+        if len(D3.FixedRolls) > 0:
+            self.value = D3.FixedRolls.pop(0)
+        else:
+            self.value = rnd.randint(1, 4)
 
     def get_value(self):
         return self.value
@@ -1071,8 +1083,20 @@ class D3(Die):
 
 class D6(Die):
 
+    FixedRolls = []
+
+    @staticmethod
+    def fix_result(value):
+        if 1 <= value <= 6:
+            D6.FixedRolls.append(value)
+        else:
+            raise ValueError("Fixed result of D6 must be between 1 and 6")
+
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 7)
+        if len(D6.FixedRolls) > 0:
+            self.value = D6.FixedRolls.pop(0)
+        else:
+            self.value = rnd.randint(1, 7)
 
     def get_value(self):
         return self.value
@@ -1086,8 +1110,20 @@ class D6(Die):
 
 class D8(Die):
 
+    FixedRolls = []
+
+    @staticmethod
+    def fix_result(value):
+        if 1 <= value <= 8:
+            D8.FixedRolls.append(value)
+        else:
+            raise ValueError("Fixed result of D8 must be between 1 and 8")
+
     def __init__(self, rnd):
-        self.value = rnd.randint(1, 9)
+        if len(D8.FixedRolls) > 0:
+            self.value = D8.FixedRolls.pop(0)
+        else:
+            self.value = rnd.randint(1, 9)
 
     def get_value(self):
         return self.value
@@ -1101,11 +1137,23 @@ class D8(Die):
 
 class BBDie(Die):
 
+    FixedRolls = []
+
+    @staticmethod
+    def fix_result(value):
+        if type(value) == BBDieResult:
+            BBDie.FixedRolls.append(value)
+        else:
+            raise ValueError("Fixed result of BBDie must be a BBDieResult")
+
     def __init__(self, rnd):
-        r = rnd.randint(1, 7)
-        if r == 6:
-            r = 3
-        self.value = BBDieResult(r)
+        if len(BBDie.FixedRolls) > 0:
+            self.value = BBDie.FixedRolls.pop(0)
+        else:
+            r = rnd.randint(1, 7)
+            if r == 6:
+                r = 3
+            self.value = BBDieResult(r)
 
     def get_value(self):
         return self.value
