@@ -1507,8 +1507,10 @@ class Dodge(Procedure):
             ignore_opp_mods = True
         if player.has_skill(Skill.TWO_HEADS):
             modifiers += 1
-        
-        if detractors :
+
+        if not detractors:
+            detractors = game.tackle_zones_in_detailed(player)
+        if detractors:
             # see game.tackle_zones_in_detailed for magic numbers
             if detractors[2]: 
                 modifiers -= len(detractors[2]) # subtract 1 for each prehensile tail detractor
@@ -1542,9 +1544,13 @@ class Dodge(Procedure):
             self.rolled = True
 
             # Calculate target
-            roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos)
+            # we need tacklers later, so passing in result
+            detractors = self.game.tackle_zones_in_detailed(self.player)
 
             tacklers = self.game.get_tackle_zones_detailed(self.player)[1]
+            roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos, detractors=detractors)
+
+            tacklers = detractors[1]
 
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
