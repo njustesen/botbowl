@@ -148,10 +148,8 @@ class Armor(Procedure):
             # Armor broken
             if result >= roll.target:
                 armor_broken = True
-
-            # Armor broken - Might Blow
-            if self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW) \
-                    and result + 1 > self.player.get_av():
+            elif result == roll.target -1 and self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW):
+                # only use mighty_blow if it makes the armour break
                 roll.modifiers += 1
                 armor_broken = True
                 mighty_blow_used = True
