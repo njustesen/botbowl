@@ -1493,7 +1493,7 @@ class Dodge(Procedure):
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
-    def dodge_modifiers(game, player, pos):
+    def dodge_modifiers(game, player, pos, detractors=None):
 
         modifiers = 1
         tackle_zones_to = game.num_tackle_zones_at(player, pos)
@@ -1507,6 +1507,11 @@ class Dodge(Procedure):
             ignore_opp_mods = True
         if player.has_skill(Skill.TWO_HEADS):
             modifiers += 1
+        
+        if detractors :
+            # see game.tackle_zones_in_detailed for magic numbers
+            if detractors[2]: 
+                modifiers -= len(detractors[2]) # subtract 1 for each prehensile tail detractor
 
         if not ignore_opp_mods:
             modifiers -= tackle_zones_to

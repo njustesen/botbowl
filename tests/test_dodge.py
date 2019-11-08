@@ -1,0 +1,44 @@
+import pytest
+from ffai.core.game import *
+from unittest.mock import *
+
+@patch("ffai.core.game.Game")
+def test_default_dodge_modifier(mock_game):
+    mock_game.num_tackle_zones_at.return_value = 0 # no tackle zones in target square
+
+    role = Role("Lineman", "orc", 6,3,3,9, [], 50000, None)
+    player = Player("1", role, "test", 1, "orc")
+
+    pos = Square(11,12)
+    # need to test static method to ensure calculation for lookahead requests
+    modifier = Dodge.dodge_modifiers(mock_game, player, pos)
+
+    assert modifier == 1
+
+
+@patch("ffai.core.game.Game")
+def test_prehensile_tail_modifier(mock_game):
+    mock_game.num_tackle_zones_at.return_value = 0 # no tackle zones in target square
+
+    role = Role("Lineman", "orc", 6,3,3,9, [], 50000, None)
+    player = Player("1", role, "test", 1, "orc")
+
+    # set up a detractor in square moving from
+    tail_player = Player("1", role, "test", 1, "orc", extra_skills=[Skill.PREHENSILE_TAIL])
+    
+    pos = Square(11,12)
+    prehensile_tailers = [tail_player]
+    tackle_zones = 0
+
+    tacklers = []
+    # prehensile_tailers = []
+    diving_tacklers = []
+    shadowers = []
+    tentaclers = []
+
+    detractors = (tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers)
+
+    # need to test static method to ensure calculation for lookahead requests
+    modifier = Dodge.dodge_modifiers(mock_game, player, pos, detractors=detractors)
+
+    assert modifier == 0
