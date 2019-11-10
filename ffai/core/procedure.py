@@ -5,7 +5,7 @@ Year: 2018
 ==========================
 This module contains all the procedures. Procedures contain the core part of the rules in FFAI. Each procedure are
 responsible for an isolated part of the game. Procedures are added to a stack, and the top-most procedure must finish
-before other procedures are run. Procedures can add other procedures to the stack simply by intiating the procedure.
+before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 
 from ffai.core.model import *
@@ -22,12 +22,23 @@ class Procedure:
         self.initialized = False
 
     def setup(self):
+        """
+        Is called just before step() is called the first time. The Game clas will set initialized to True.
+        """
         pass
 
     def step(self, action):
+        """
+        Is called when this procedure is on the top of the stack until the procedure is done.
+        :param action: an action performed by an agent - will be None if there are no available actions.
+        :return: a bool indicating whether the procedure is done.
+        """
         pass
 
     def available_actions(self):
+        """
+        :return: a list of available actions. This can vary based on the state of the procedure.
+        """
         pass
 
 
