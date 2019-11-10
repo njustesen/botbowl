@@ -70,7 +70,7 @@ class FfHeatMap:
 
     def add_players_moved(self, game: g.Game, players: List[m.Player]):
         for player in players:
-            adjacents: List[m.Square] = game.state.pitch.get_adjacent_squares(player.position)
+            adjacents: List[m.Square] = game.get_adjacent_squares(player.position, include_occupied=True)
             self.units_friendly[player.position.x][player.position.y] += 1.0
             for adjacent in adjacents:
                 self.units_friendly[player.position.x][player.position.y] += 0.5
@@ -286,7 +286,7 @@ def has_player_within_n_squares(game: g.Game, units: List[m.Player], square: m.S
 
 
 def has_adjacent_player(game: g.Game, square: m.Square) -> bool:
-    return not game.state.pitch.adjacent_players(square)
+    return not game.state.pitch.get_adjacent_players(square)
 
 
 def is_castle_position_of(game: g.Game, player1: m.Player, player2: m.Player) -> bool:
@@ -421,7 +421,7 @@ def players_in_scoring_distance(game: g.Game, team: m.Team, include_own: bool = 
     players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned)
     selected_players: List[m.Player] = []
     for player in players:
-        if distance_to_scoring_endzone(game, team, player.position) <= player.move_allowed(): selected_players.append(player)
+        if distance_to_scoring_endzone(game, team, player.position) <= player.num_moves_left(): selected_players.append(player)
     return selected_players
 
 
@@ -472,7 +472,7 @@ def number_opponents_closer_than_to_endzone(game: g.Game, team: g.Team, square: 
 
 
 def in_scoring_range(game: g.Game, player: m.Player) -> bool:
-    return player.move_allowed() >= distance_to_scoring_endzone(game, player.team, player.position)
+    return player.num_moves_left() >= distance_to_scoring_endzone(game, player.team, player.position)
 
 
 def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, include_opp=True, include_used=True, include_stunned=True) -> List[m.Player]:

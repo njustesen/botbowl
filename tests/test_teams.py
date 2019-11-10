@@ -18,11 +18,10 @@ races = [
 
 @pytest.mark.parametrize("race", races)
 def test_team(race):
-    # Load configurations, rules, arena and teams
-    config = get_config("ff-11")
-    ruleset = get_rule_set(config.ruleset)
-    home = get_team_by_filename(race, ruleset)
-    away = get_team_by_filename(race, ruleset)
+    config = load_config("ff-11")
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename(race, ruleset)
+    away = load_team_by_filename(race, ruleset)
     away_agent = make_bot("random")
     home_agent = make_bot("random")
     game = Game(1, home, away, home_agent, away_agent, config)

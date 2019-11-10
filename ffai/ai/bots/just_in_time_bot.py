@@ -22,7 +22,7 @@ class JustInTimeBot(Agent):
         self.my_team = team
         
     def act(self, game):
-        while time.time() < game.seconds_left(self.my_team):
+        while time.time() < game.get_seconds_left(self.my_team):
             time.sleep(0.01)
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)

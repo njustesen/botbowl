@@ -3,10 +3,10 @@ from ffai.core.game import *
 
 
 def get_game(seed=0):
-    config = get_config("ff-11")
-    ruleset = get_rule_set(config.ruleset)
-    home = get_team_by_filename("human", ruleset)
-    away = get_team_by_filename("human", ruleset)
+    config = load_config("ff-11")
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
     home_agent = Agent("human1", human=True)
     away_agent = Agent("human2", human=True)
     game = Game(1, home, away, home_agent, away_agent, config)
@@ -26,7 +26,7 @@ def test_coin_toss(action_type):
         proc = game.state.stack.peek()
         assert type(proc) is CoinTossFlip
         actor_id = game.actor.agent_id
-        acting_team = game.agent_team(game.actor)
+        acting_team = game.get_agent_team(game.actor)
         game.set_seed(i)
         game.step(Action(action_type))
         proc = game.state.stack.peek()
@@ -71,7 +71,7 @@ def test_kick_receive(action_type):
         proc = game.state.stack.peek()
         assert type(proc) is CoinTossKickReceive
         selector = game.actor
-        selecting_team = game.agent_team(game.actor)
+        selecting_team = game.get_agent_team(game.actor)
         actors.add(game.home_agent == selector)
         game.step(Action(action_type))
         proc = game.state.stack.peek()
@@ -93,10 +93,3 @@ def test_kick_receive(action_type):
         else:
             assert False
     assert False
-
-
-if __name__ == "__main__":
-    test_coin_toss(ActionType.HEADS)
-    test_coin_toss(ActionType.TAILS)
-    test_kick_receive(ActionType.KICK)
-    test_kick_receive(ActionType.RECEIVE)

@@ -3,11 +3,11 @@ from ffai.core.game import *
 
 
 def get_game(home_team, seed=0):
-    config = get_config("ff-11")
+    config = load_config("ff-11")
     config.kick_off_table = False
-    ruleset = get_rule_set(config.ruleset)
-    home = get_team_by_filename("human", ruleset)
-    away = get_team_by_filename("human", ruleset)
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
     home_agent = Agent("human1", human=True)
     away_agent = Agent("human2", human=True)
     game = Game(1, home, away, home_agent, away_agent, config)
@@ -148,15 +148,6 @@ def test_player_count_setup(home_team):
     assert not game.is_setup_legal(team)
     game.pitch_to_reserves(player)
     assert game.is_setup_legal(team)
-    assert game.agent_team(game.actor) == team
+    assert game.get_agent_team(game.actor) == team
     game.step(Action(ActionType.END_SETUP))
-    assert game.agent_team(game.actor) != team
-
-
-#if __name__ == "__main__":
-#    test_scrimmage_setup(True)
-#    test_scrimmage_setup(False)
-#    test_wings_setup(True)
-#    test_wings_setup(False)
-#    test_player_count_setup(True)
-#    test_player_count_setup(False)
+    assert game.get_agent_team(game.actor) != team

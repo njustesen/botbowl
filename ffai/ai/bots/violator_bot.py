@@ -22,7 +22,7 @@ class ViolatorBot(Agent):
         self.my_team = team
         
     def act(self, game):
-        seconds_left = game.seconds_left(self.my_team)
+        seconds_left = game.get_seconds_left(self.my_team)
         time.sleep(seconds_left + game.config.time_limits.disqualification)
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)

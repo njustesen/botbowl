@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from ffai.ai.competition import Competition
-from ffai.core.load import get_config, get_team_by_filename, get_rule_set
+from ffai.core.load import load_config, load_team_by_filename, load_rule_set
 
 from ffai.ai.bots import crash_bot
 from ffai.ai.bots import grodbot
@@ -14,14 +14,14 @@ from ffai.ai.bots import violator_bot
 
 
 # Load competition configuration for the bot bowl
-config = get_config('bot-bowl-ii')
+config = load_config('bot-bowl-ii')
 
 # Get ruleset
-ruleset = get_rule_set(config.ruleset, all_rules=False)
+ruleset = load_rule_set(config.ruleset, all_rules=False)
 
 # Load team to be used
-human_team_a = get_team_by_filename('human', ruleset)
-human_team_b = get_team_by_filename('human', ruleset)
+human_team_a = load_team_by_filename('human', ruleset)
+human_team_b = load_team_by_filename('human', ruleset)
 
 # Random vs. Random
 competition = Competition('MyCompetition', competitor_a_team=human_team_a, competitor_b_team=human_team_b, competitor_a_name='random', competitor_b_name='grodbot', config=config)

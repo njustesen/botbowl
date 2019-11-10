@@ -110,6 +110,7 @@ class TimeLimits:
             'end': self.end
         }
 
+
 class Configuration:
 
     def __init__(self):
@@ -253,6 +254,7 @@ class TeamState:
         self.rerolls -= 1
         self.reroll_used = True
 
+
 class Clock:
 
     def __init__(self, team, seconds, is_primary=False):
@@ -276,30 +278,30 @@ class Clock:
         self.paused_seconds += now - self.paused_at
         self.paused_at = None
 
-    def running_time(self):
+    def get_running_time(self):
         now = time.time()
         if self.is_running():
             return now - self.started_at - self.paused_seconds
         else:
             return self.paused_at - self.started_at - self.paused_seconds
 
-    def ratio_done(self):
-        return self.running_time() / self.seconds
+    def get_ratio_done(self):
+        return self.get_running_time() / self.seconds
 
-    def seconds_left(self):
-        return self.seconds - self.running_time()
+    def get_seconds_left(self):
+        return self.seconds - self.get_running_time()
 
     def is_done(self):
-        return self.is_running() and self.running_time() > self.seconds
+        return self.is_running() and self.get_running_time() > self.seconds
 
     def to_json(self):
         return {
             'is_running': self.is_running(),
-            'running_time': self.running_time(),
-            'ratio_done': self.ratio_done(),
+            'running_time': self.get_running_time(),
+            'ratio_done': self.get_ratio_done(),
             'is_done': self.is_done(),
             'seconds': self.seconds,
-            'seconds_left': self.seconds_left(),
+            'seconds_left': self.get_seconds_left(),
             'is_primary': self.is_primary,
             'team_id': self.team.team_id,
             'paused_seconds': self.paused_seconds,
@@ -366,27 +368,6 @@ class GameState:
         }
 
 
-class Ball:
-
-    def __init__(self, position, on_ground=True, is_carried=False):
-        self.position = position
-        self.on_ground = on_ground
-        self.is_carried = is_carried
-
-    def move(self, x, y):
-        self.position = Square(self.position.x + x, self.position.y + y)
-
-    def move_to(self, pos):
-        self.position = Square(pos.x, pos.y)
-
-    def to_json(self):
-        return {
-            'position': self.position.to_json() if self.position is not None else None,
-            'on_ground': self.on_ground,
-            'is_carried': self.is_carried
-        }
-
-
 class Pitch:
 
     range = [-1, 0, 1]
@@ -403,7 +384,6 @@ class Pitch:
                 self.squares[y].append(Square(x, y))
         self.height = len(self.board)
         self.width = len(self.board[0])
-
 
     def to_json(self):
         board = []
@@ -531,11 +511,9 @@ class Pitch:
             return self.squares[y][x]
         return Square(x, y)
 
-    def get_adjacent_squares(self, pos, manhattan=False, include_out=False, exclude_occupied=False, include_leap=False):
+    def get_adjacent_squares(self, pos, include_diagonal=True, include_out=False, include_occupied=True, distance=1):
         squares = []
-        r = Pitch.range
-        if include_leap:
-            r = range(-2,3)
+        r = range(-distance, distance+1)
         for yy in r:
             for xx in r:
                 if yy == 0 and xx == 0:
@@ -543,21 +521,21 @@ class Pitch:
                 sq = self.get_square(pos.x+xx, pos.y+yy)
                 if not include_out and self.is_out_of_bounds(sq):
                     continue
-                if exclude_occupied and self.get_player_at(sq) is not None:
+                if not include_occupied and self.get_player_at(sq) is not None:
                     continue
-                if not manhattan:
+                if include_diagonal:
                     squares.append(sq)
                 elif xx == 0 or yy == 0:
                     squares.append(sq)
         return squares
 
-    def adjacent_player_squares_at(self, player_or_team, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+    def get_adjacent_player_squares_at(self, player_or_team, position, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
         squares = []
         if isinstance(player_or_team, Team):
             team = player_or_team
         else:
             team = player_or_team.team
-        for square in self.get_adjacent_squares(position, manhattan=manhattan):
+        for square in self.get_adjacent_squares(position, include_diagonal=include_diagonal):
             player_at = self.get_player_at(square)
             if player_at is None:
                 continue
@@ -569,13 +547,13 @@ class Pitch:
                         squares.append(square)
         return squares
 
-    def adjacent_players_at(self, player_or_team, position, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
+    def get_adjacent_players_at(self, player_or_team, position, include_own=True, include_opp=True, include_diagonal=False, only_blockable=False, only_foulable=False, include_stunned=True):
         players = []
         if isinstance(player_or_team, Team):
             team = player_or_team
         else:
             team = player_or_team.team
-        for square in self.get_adjacent_squares(position, manhattan=manhattan):
+        for square in self.get_adjacent_squares(position, include_diagonal=include_diagonal):
             player_at = self.get_player_at(square)
             if player_at is None:
                 continue
@@ -587,15 +565,15 @@ class Pitch:
                         players.append(player_at)
         return players
 
-    def adjacent_players(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
-        return self.adjacent_players_at(player, player.position, include_own=include_own, include_opp=include_opp, manhattan=manhattan, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
+    def get_adjacent_players(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
+        return self.get_adjacent_players_at(player, player.position, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
 
-    def adjacent_player_squares(self, player, include_own=True, include_opp=True, manhattan=False, only_blockable=False, only_foulable=False, include_stunned=True):
-        return self.adjacent_player_squares_at(player, player.position, include_own=include_own, include_opp=include_opp, manhattan=manhattan, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
+    def get_adjacent_player_squares(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
+        return self.get_adjacent_player_squares_at(player, player.position, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
 
     def num_tackle_zones_at(self, player, position):
         tackle_zones = 0
-        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player = self.get_player_at(square)
             if player is not None and player.has_tackle_zone():
                 tackle_zones += 1
@@ -603,20 +581,20 @@ class Pitch:
 
     def num_tackle_zones_in(self, player):
         tackle_zones = 0
-        for square in self.adjacent_player_squares(player, include_own=False, include_opp=True):
+        for square in self.get_adjacent_player_squares(player, include_own=False, include_opp=True):
             player = self.get_player_at(square)
             if player is not None and player.has_tackle_zone():
                 tackle_zones += 1
         return tackle_zones
 
-    def tackle_zones_detailed(self, player):
+    def get_tackle_zones_detailed(self, player):
         tackle_zones = 0
         tacklers = []
         prehensile_tailers = []
         diving_tacklers = []
         shadowers = []
         tentaclers = []
-        for square in self.adjacent_player_squares(player, include_own=False, include_opp=True):
+        for square in self.get_adjacent_player_squares(player, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
             if player_at is not None and player_at.has_tackle_zone():
                 tackle_zones += 1
@@ -633,14 +611,14 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def tackle_zones_detailed_at(self, player, position):
+    def get_tackle_zones_detailed_at(self, player, position):
         tackle_zones = 0
         tacklers = []
         prehensile_tailers = []
         diving_tacklers = []
         shadowers = []
         tentaclers = []
-        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
             if player_at is not None and player_at.has_tackle_zone():
                 tackle_zones += 1
@@ -656,16 +634,16 @@ class Pitch:
 
         return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
 
-    def players_blockable_at(self, player, position):
+    def get_players_blockable_at(self, player, position):
         blockable = []
-        for square in self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
+        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
             player_at = self.get_player_at(square)
             if player_at is not None and player_at.has_tackle_zone():
                 blockable.append(player_at)
 
         return blockable
 
-    def assists(self, player, opp_player, ignore_guard=False):
+    def get_assisting_players(self, player, opp_player, ignore_guard=False):
         assists = []
         for yy in range(-1, 2, 1):
             for xx in range(-1, 2, 1):
@@ -732,7 +710,7 @@ class Pitch:
 
         # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
         # Assists against
-        opp_assist_squares = self.adjacent_player_squares_at(player, position, include_own=False, include_opp=True, only_blockable=True)
+        opp_assist_squares = self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True, only_blockable=True)
         n_assist_against: int = 0
         for opp_assist_square in opp_assist_squares:
             # For each opponent, check if they can assist
@@ -745,7 +723,7 @@ class Pitch:
                 continue
             else:
                 # Check if in a tackle zone of anyone besides player (at either original square, or "position")
-                adjacent_to_assister_squares = self.adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
+                adjacent_to_assister_squares = self.get_adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
                 found_adjacent = False
                 for adjacent_to_assister_square in adjacent_to_assister_squares:
                     player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
@@ -758,7 +736,7 @@ class Pitch:
                 if not found_adjacent:
                     n_assist_against += 1
         # Assists for
-        assist_squares = self.adjacent_player_squares(opp_player, include_own=False, include_opp=True, only_blockable=True)
+        assist_squares = self.get_adjacent_player_squares(opp_player, include_own=False, include_opp=True, only_blockable=True)
         n_assists_for: int = 0
         for assist_square in assist_squares:
             # For each opponent, check if they can assist
@@ -768,7 +746,7 @@ class Pitch:
             elif not assister.can_assist():
                 continue
             else:
-                adjacent_to_assister_squares = self.adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
+                adjacent_to_assister_squares = self.get_adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
                 found_adjacent = False
                 for adjacent_to_assister_square in adjacent_to_assister_squares:
                     player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
@@ -781,7 +759,7 @@ class Pitch:
                     n_assists_for += 1
         return (n_assists_for, n_assist_against)
 
-    def passes_at(self, passer, weather, position):
+    def get_pass_distances_at(self, passer, weather, position):
         squares = []
         distances = []
         distances_allowed = [PassDistance.QUICK_PASS,
@@ -797,13 +775,13 @@ class Pitch:
                 to_pos = Square(x, y)
                 if self.is_out_of_bounds(to_pos) or position == to_pos:
                     continue
-                distance = self.pass_distance(position, to_pos)
+                distance = self.get_pass_distance(position, to_pos)
                 if distance in distances_allowed:
                     squares.append(to_pos)
                     distances.append(distance)
         return squares, distances
 
-    def passes(self, passer, weather):
+    def get_pass_distances(self, passer, weather):
         squares = []
         distances = []
         distances_allowed = [PassDistance.QUICK_PASS,
@@ -819,13 +797,13 @@ class Pitch:
                 pos = Square(x, y)
                 if self.is_out_of_bounds(pos) or passer.position == pos:
                     continue
-                distance = self.pass_distance(passer, pos)
+                distance = self.get_pass_distance(passer, pos)
                 if distance in distances_allowed:
                     squares.append(pos)
                     distances.append(distance)
         return squares, distances
 
-    def pass_distance(self, passer, pos):
+    def get_pass_distance(self, passer, pos):
         if isinstance(passer, Player):
             distance_x = abs(passer.position.x - pos.x)
             distance_y = abs(passer.position.y - pos.y)
@@ -837,7 +815,7 @@ class Pitch:
         distance = Rules.pass_matrix[distance_y][distance_x]
         return PassDistance(distance)
 
-    def interceptors(self, passer, pos):
+    def get_interceptors(self, passer, pos):
         """
         1) Find line x from a to b
         3) Find squares s where x intersects
@@ -956,7 +934,7 @@ class TwoPlayerArena:
         self.height = len(board)
         self.json = None
 
-    def in_opp_endzone(self, pos, home):
+    def is_in_opp_endzone(self, pos, home):
         if home:
             return self.board[pos.y][pos.x] == Tile.AWAY_TOUCHDOWN
         else:
@@ -1208,6 +1186,28 @@ class Piece:
         self.position = position
 
 
+class Ball(Piece):
+
+    def __init__(self, position, on_ground=True, is_carried=False):
+        super().__init__(position)
+        self.on_ground = on_ground
+        self.is_carried = is_carried
+
+    def move(self, x, y):
+        self.position.x += x
+        self.position.y += y
+
+    def move_to(self, pos):
+        self.position = Square(pos.x, pos.y)
+
+    def to_json(self):
+        return {
+            'position': self.position.to_json() if self.position is not None else None,
+            'on_ground': self.on_ground,
+            'is_carried': self.is_carried
+        }
+
+
 class Player(Piece):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
@@ -1219,7 +1219,6 @@ class Player(Piece):
         self.nr = nr
         self.team = team
         self.extra_skills = extra_skills if extra_skills is not None else []
-        self.skills = self.extra_skills + self.role.skills
         self.extra_ma = extra_ma
         self.extra_st = extra_st
         self.extra_ag = extra_ag
@@ -1245,7 +1244,7 @@ class Player(Piece):
         return skill in self.get_skills()
 
     def get_skills(self):
-        return self.skills + self.extra_skills
+        return self.role.skills + self.extra_skills
 
     def has_tackle_zone(self):
         if self.has_skill(Skill.TITCHY):
@@ -1280,7 +1279,7 @@ class Player(Piece):
             'position': self.position.to_json() if self.position is not None else None
         }
 
-    def move_allowed(self, include_gfi: bool = True):
+    def num_moves_left(self, include_gfi: bool = True):
         if self.state.used or self.state.stunned:
             moves = 0
         else:
