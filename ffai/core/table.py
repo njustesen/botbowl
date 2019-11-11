@@ -55,6 +55,7 @@ class RollType(Enum):
     STAND_UP_ROLL = 21
     KO_READY_ROLL = 22
     SWELTERING_HEAT_ROLL = 23
+    BONE_HEAD_ROLL = 24
 
 
 class OutcomeType(Enum):
@@ -185,7 +186,8 @@ class OutcomeType(Enum):
     PLAYER_HEATED = 134
     PLAYER_NOT_HEATED = 135
     END_OF_GAME_DISQUALIFICATION = 136
-
+    FAILED_BONE_HEAD = 137
+    SUCCESSFUL_BONE_HEAD = 138
 
 class PlayerActionType(Enum):
     MOVE = 1

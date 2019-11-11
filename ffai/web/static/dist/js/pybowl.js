@@ -1602,7 +1602,9 @@ appServices.factory('GameLogService', function() {
             "BLITZ_START": "<team> makes a <b>blitz</b>.",
             "QUICK_SNAP": "<team> makes a <b>quick snap</b>.",
             "TEAM_SPECTATORS": "<team> has <b><n> fans</b> cheering for them.",
-            "END_OF_GAME_DISQUALIFICATION": "<team> was <b>disqualified</b>."
+            "END_OF_GAME_DISQUALIFICATION": "<team> was <b>disqualified</b>.",
+            "FAILED_BONE_HEAD": "<player> failed a <b>bonehead</b> roll",
+            "SUCCESSFUL_BONE_HEAD": "<player> passed a <b>bonehead</b> roll"
         }
     };
 });
