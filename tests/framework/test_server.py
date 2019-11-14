@@ -14,5 +14,5 @@ def test_server():
     url = "http://localhost:3405/"
     r = requests.get(url=url, params={})
     assert r.status_code == 200
-    p.kill()
+    p.terminate()
 
