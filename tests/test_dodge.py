@@ -36,8 +36,8 @@ def test_prehensile_tail_modifier(mock_game):
     tail_player = Player("1", role, "test", 1, "orc", extra_skills=[Skill.PREHENSILE_TAIL])
     prehensile_tailers = [tail_player]
 
-    detractors = (tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers)
-    mock_game.tackle_zones_in_detailed.return_value = detractors
+    tz_details = TackleZoneDetails(tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers)
+    mock_game.get_tackle_zones_detailed.return_value = tz_details
 
     pos = Square(11, 12)
     modifier = Dodge.dodge_modifiers(mock_game, player, pos)

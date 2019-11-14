@@ -588,28 +588,7 @@ class Pitch:
         return tackle_zones
 
     def get_tackle_zones_detailed(self, player):
-        tackle_zones = 0
-        tacklers = []
-        prehensile_tailers = []
-        diving_tacklers = []
-        shadowers = []
-        tentaclers = []
-        for square in self.get_adjacent_player_squares(player, include_own=False, include_opp=True):
-            player_at = self.get_player_at(square)
-            if player_at is not None and player_at.has_tackle_zone():
-                tackle_zones += 1
-            if player_at is not None and player_at.has_skill(Skill.TACKLE):
-                tacklers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.PREHENSILE_TAIL):
-                prehensile_tailers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.DIVING_TACKLE):
-                diving_tacklers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.SHADOWING):
-                shadowers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.TENTACLES):
-                tentaclers.append(player_at)
-
-        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
+        return self.get_tackle_zones_detailed_at(player, player.position)
 
     def get_tackle_zones_detailed_at(self, player, position):
         tackle_zones = 0
@@ -632,7 +611,7 @@ class Pitch:
             if player_at is None and player_at.has_skill(Skill.TENTACLES):
                 tentaclers.append(player_at)
 
-        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
+        return TackleZoneDetails(tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers)
 
     def get_players_blockable_at(self, player, position):
         blockable = []
@@ -1541,3 +1520,13 @@ class Formation:
                     actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
                     positions_used.append(pos)
         return actions
+
+
+class TackleZoneDetails:
+    def __init__(self, tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers):
+        self.tackle_zones = tackle_zones
+        self.tacklers = tacklers
+        self.prehensile_tailers = prehensile_tailers
+        self.diving_tacklers = diving_tacklers
+        self.shadowers = shadowers
+        self.tentaclers = tentaclers

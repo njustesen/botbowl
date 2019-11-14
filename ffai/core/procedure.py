@@ -1493,7 +1493,7 @@ class Dodge(Procedure):
     success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     @staticmethod
-    def dodge_modifiers(game, player, pos, detractors=None):
+    def dodge_modifiers(game, player, pos, tz_details=None):
 
         modifiers = 1
         tackle_zones_to = game.num_tackle_zones_at(player, pos)
@@ -1508,12 +1508,11 @@ class Dodge(Procedure):
         if player.has_skill(Skill.TWO_HEADS):
             modifiers += 1
 
-        if not detractors:
-            detractors = game.tackle_zones_in_detailed(player)
-        if detractors:
-            # see game.tackle_zones_in_detailed for magic numbers
-            if detractors[2]: 
-                modifiers -= len(detractors[2]) # subtract 1 for each prehensile tail detractor
+        if not tz_details:
+            tz_details = game.get_tackle_zones_detailed(player)
+        if tz_details:
+            if tz_details.prehensile_tailers:
+                modifiers -= len(tz_details.prehensile_tailers)  # subtract 1 for each prehensile tail detractor
 
         if not ignore_opp_mods:
             modifiers -= tackle_zones_to
@@ -1545,12 +1544,11 @@ class Dodge(Procedure):
 
             # Calculate target
             # we need tacklers later, so passing in result
-            detractors = self.game.tackle_zones_in_detailed(self.player)
+            tz_details = self.game.get_tackle_zones_detailed(self.player)
 
-            tacklers = self.game.get_tackle_zones_detailed(self.player)[1]
-            roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos, detractors=detractors)
+            roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos, tz_details=tz_details)
 
-            tacklers = detractors[1]
+            tacklers = tz_details.tacklers
 
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
