@@ -13,7 +13,7 @@ from ffai.core.load import *
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-import tkinter as tk
+# import tkinter as tk
 import math
 from copy import deepcopy
 
@@ -160,7 +160,7 @@ class FFAIEnv(gym.Env):
         self.config.fast_mode = True
         self.game = None
         self.team_id = None
-        self.ruleset = get_rule_set(config.ruleset, all_rules=False)
+        self.ruleset = load_rule_set(config.ruleset, all_rules=False)
         self.home_team = home_team
         self.away_team = away_team
         self.actor = Agent("Gym Learner", human=True)
@@ -202,7 +202,7 @@ class FFAIEnv(gym.Env):
             SkillLayer(Skill.PASS)
         ]
 
-        arena = get_arena(self.config.arena)
+        arena = load_arena(self.config.arena)
 
         self.observation_space = spaces.Dict({
             'board': spaces.Box(low=0, high=1, shape=(len(self.layers), arena.height, arena.width)),
@@ -300,10 +300,10 @@ class FFAIEnv(gym.Env):
         obs['state']['is kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
         obs['state']['is kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
         obs['state']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['state']['own kods'] = len(game.get_kods(active_team)) / 16.0 if active_team is not None else 0.0
+        obs['state']['own kods'] = len(game.get_knocked_out(active_team)) / 16.0 if active_team is not None else 0.0
         obs['state']['own casualites'] = len(game.get_casualties(active_team)) / 16.0 if active_team is not None else 0.0
         obs['state']['opp reserves'] = len(game.get_reserves(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
-        obs['state']['opp kods'] = len(game.get_kods(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
+        obs['state']['opp kods'] = len(game.get_knocked_out(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
         obs['state']['opp casualties'] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
 
         obs['state']['own score'] = active_team.state.score / 16.0 if active_team is not None else 0.0
@@ -449,6 +449,8 @@ class FFAIEnv(gym.Env):
                                 width=1)
 
     def render(self, feature_layers=False):
+        '''
+        Disabled due to Tinker bugs. Switch to other UI lib.
         if self.root is None:
             self.root = tk.Tk()
             self.root.title("FFAI Gym")
@@ -502,7 +504,7 @@ class FFAIEnv(gym.Env):
                 x += FFAIEnv.square_size
             x = 4
             y += FFAIEnv.square_size
-            for player in self.game.get_kods(self.game.state.away_team):
+            for player in self.game.get_knocked_out(self.game.state.away_team):
                 self._draw_player(player, x, y)
                 x += FFAIEnv.square_size
             x = 4
@@ -523,7 +525,7 @@ class FFAIEnv(gym.Env):
                 x -= FFAIEnv.square_size
             x = self.game.arena.width * FFAIEnv.square_size - FFAIEnv.square_size
             y += FFAIEnv.square_size
-            for player in self.game.get_kods(self.game.state.home_team):
+            for player in self.game.get_knocked_out(self.game.state.home_team):
                 self._draw_player(player, x, y)
                 x -= FFAIEnv.square_size
             x = self.game.arena.width * FFAIEnv.square_size - FFAIEnv.square_size
@@ -593,6 +595,7 @@ class FFAIEnv(gym.Env):
 
         self.root.update_idletasks()
         self.root.update()
+        '''
 
     def close(self):
         self.game = None

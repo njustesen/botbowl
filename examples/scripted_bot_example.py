@@ -65,7 +65,7 @@ class MyScriptedBot(ProcBot):
         if game.is_team_side(game.get_ball_position(), self.my_team) and \
                 game.get_player_at(game.get_ball_position()) is None:
             for player in game.get_players_on_pitch(self.my_team, up=True):
-                if Skill.BLOCK in player.skills:
+                if Skill.BLOCK in player.get_skills():
                     return Action(ActionType.PLACE_PLAYER, player=player, pos=ball_pos)
         return Action(ActionType.SELECT_NONE)
 
@@ -75,7 +75,7 @@ class MyScriptedBot(ProcBot):
         """
         p = None
         for player in game.get_players_on_pitch(self.my_team, up=True):
-            if Skill.BLOCK in player.skills:
+            if Skill.BLOCK in player.get_skills():
                 return Action(ActionType.SELECT_PLAYER, player=player)
             p = player
         return Action(ActionType.SELECT_PLAYER, player=p)
@@ -99,7 +99,7 @@ class MyScriptedBot(ProcBot):
 
             # Start block action
             if not game.is_blitz() and not game.is_quick_snap():
-                adjacent_player_squares = game.adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True)
+                adjacent_player_squares = game.get_adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True)
                 if player.state.up and len(adjacent_player_squares) > 0:
                     opp_player = game.get_player_at(adjacent_player_squares[0])
                     dice, favor = Block.dice_and_favor(game, player, opp_player)
@@ -117,8 +117,8 @@ class MyScriptedBot(ProcBot):
                 return Action(ActionType.START_HANDOFF, player=player)
 
             # Start foul action
-            adjacent_player_squares = game.adjacent_player_squares(player, include_own=False, include_opp=True,
-                                                                   only_foulable=True)
+            adjacent_player_squares = game.get_adjacent_player_squares(player, include_own=False, include_opp=True,
+                                                                       only_foulable=True)
             if game.is_foul_available() and len(adjacent_player_squares) > 0:
                 return Action(ActionType.START_FOUL, player=player)
 
@@ -158,8 +158,7 @@ class MyScriptedBot(ProcBot):
                 for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
 
                     # Only do blocks with 1 die if attacker has block
-                    if block_rolls >= 2 or (block_rolls == 1 and Skill.BLOCK in player.skills):
-                        opp_player = game.get_player_at(position)
+                    if block_rolls >= 2 or (block_rolls == 1 and Skill.BLOCK in player.get_skills()):
                         return Action(ActionType.BLOCK, pos=position)
 
             # Pass action?
@@ -169,7 +168,7 @@ class MyScriptedBot(ProcBot):
                 for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
 
                     catcher = game.get_player_at(position)
-                    pass_distance = game.pass_distance(player, position)
+                    pass_distance = game.get_pass_distance(player, position)
 
                     # Don't pass to empty squares or long bombs
                     if catcher is not None and pass_distance != PassDistance.LONG_BOMB:
@@ -308,15 +307,15 @@ register_bot('scripted', MyScriptedBot)
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = get_config("ff-11.json")
+    config = load_config("bot-bowl-ii")
     config.competition_mode = True
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
-    ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
-    arena = get_arena(config.arena)
-    home = get_team_by_filename("human", ruleset)
-    away = get_team_by_filename("human", ruleset)
+    ruleset = load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
+    arena = load_arena(config.arena)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
 
     # Play 100 games
     for i in range(10):

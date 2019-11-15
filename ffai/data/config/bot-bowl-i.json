@@ -1,5 +1,5 @@
 {
-    "name": "Fantasy Football",
+    "name": "Bot Bowl I",
     "arena": "ff-pitch-11.txt",
     "ruleset": "LRB5-Experimental",
     "dungeon": false,
@@ -10,18 +10,18 @@
     "wing_max": 2,
     "turns": 8,
     "kick_off_table": true,
-    "fast_mode": false,
+    "fast_mode": true,
     "debug_mode": false,
-    "competition_mode": true,
+    "competition_mode": false,
     "kick_scatter_dice": "d6",
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
     "time_limits": {
-        "game": 15360,
-        "turn": 240,
-        "secondary": 20,
-        "disqualification": 1000,
-        "init": 10,
+        "game": 5000,
+        "turn": 120,
+        "secondary": 5,
+        "disqualification": 5,
+        "init": 20,
         "end": 10
     }
 }

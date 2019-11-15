@@ -402,6 +402,11 @@ class Skill(Enum):
     PILING_ON = 71
     REALLY_STUPID = 72
     REGENERATION = 73
+    MONSTROUS_MOUTH = 74
+    SWOOP = 75
+    FAN_FAVOURITE = 76
+    SWIFT_REACTION = 77
+
 
 class PassDistance(Enum):
     QUICK_PASS = 1

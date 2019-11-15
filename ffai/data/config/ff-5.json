@@ -1,7 +1,7 @@
 {
-    "name": "Fantasy Football 5",
+    "name": "FFAI 5",
     "arena": "ff-pitch-5.txt",
-    "ruleset": "LRB5-Experimental",
+    "ruleset": "BB2016",
     "dungeon": false,
     "roster_size": 7,
     "pitch_max": 5,

@@ -49,7 +49,7 @@ def parse_sc(sc):
     return parsed
 
 
-def get_rule_set(name, debug=False, all_rules=True):
+def load_rule_set(name, debug=False, all_rules=True):
     """
     :param name: The name of the ruleset - this should match the filename of the .xml file to load in data/rules/ (without extension)
     :param debug:
@@ -136,7 +136,7 @@ def get_rule_set(name, debug=False, all_rules=True):
     return ruleset
 
 
-def get_all_teams(ruleset, board_size=11):
+def load_all_teams(ruleset, board_size=11):
     """
     :param ruleset:
     :return: All the teams in data/teams/
@@ -144,26 +144,26 @@ def get_all_teams(ruleset, board_size=11):
     path = get_data_path('teams/')
     teams = []
     for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
-        teams.append(get_team(filepath, ruleset))
+        teams.append(load_team(filepath, ruleset))
     return teams
 
 
-def get_team_by_filename(name, ruleset, board_size=11):
+def load_team_by_filename(name, ruleset, board_size=11):
     path = get_data_path('teams/')
     for filepath in list(glob.glob(f'{path}/{board_size}/*json')):
         if os.path.split(filepath)[1].split(".json")[0] == name:
-            return get_team(filepath, ruleset)
+            return load_team(filepath, ruleset)
     raise Exception("Team file not found.")
 
 
-def get_team_by_name(name, ruleset, board_size=11):
-    for team in get_all_teams(ruleset, board_size):
+def load_team_by_name(name, ruleset, board_size=11):
+    for team in load_all_teams(ruleset, board_size):
         if team.name == name:
             return team
-    raise Exception(f"Team with {name} not found.")
+    raise Exception(f"Team with name '{name}' not found.")
 
 
-def get_team(path, ruleset):
+def load_team(path, ruleset):
     """
     :param path: path to team file name.
     :param ruleset:
@@ -186,11 +186,13 @@ def get_team(path, ruleset):
     return team
 
 
-def get_arena(name):
+def load_arena(name):
     """
     :param name: The filename to load.
     :return: The arena at data/arena/<name>
     """
+    if not name.endswith(".txt"):
+        name += ".txt"
     path = get_data_path('arenas/' + name)
     # name = 'Unknown arena'
     dungeon = False
@@ -213,11 +215,13 @@ def get_arena(name):
     return TwoPlayerArena(np.array(board))
 
 
-def get_config(name):
+def load_config(name):
     """
     :param name: the filename to load.
     :return: The configuration in data/config/<name>
     """
+    if not name.endswith(".json"):
+        name += ".json"
     path = get_data_path('config/' + name)
     f = open(path)
     str = f.read()
@@ -239,9 +243,9 @@ def get_config(name):
     config.debug_mode = data['debug_mode']
     config.competition_mode = data['competition_mode']
     config.kick_scatter_dice = data['kick_scatter_dice']
-    config.defensive_formations = [get_formation(formation, config.pitch_max) for formation in
+    config.defensive_formations = [load_formation(formation, config.pitch_max) for formation in
                                    data['defensive_formations']]
-    config.offensive_formations = [get_formation(formation, config.pitch_max) for formation in
+    config.offensive_formations = [load_formation(formation, config.pitch_max) for formation in
                                    data['offensive_formations']]
     game = None
     disqualification = None
@@ -258,16 +262,18 @@ def get_config(name):
     return config
 
 
-def get_formation(name, size):
+def load_formation(name, size=11):
     """
     :param name: the filename to load.
     :param size: The number of players on the pitch in the used FFAI variant.
     :return: The formation in data/formations/<size>/<name>
     """
+    if not name.endswith(".txt"):
+        name += ".txt"
     path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
     file = open(path, 'r')
-    name = name.replace(".txt", "").replace("off_", "").replace("def_", "")
+    name = name.replace(".txt", "").replace("off_", "").replace("def_", "").title()
     while True:
         line = file.readline()
         if not line:

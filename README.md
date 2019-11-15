@@ -289,12 +289,12 @@ These values are commulative, such that 'cas_inflicted' referes to the total num
 ### Variants
 FFAI comes with five environments with various difficulty:
 * FFAI-v1: 11 players on a 26x15 pitch (traditional size)
-* FFAI-v1-7: 7 players on a 20x11 pitch
-* FFAI-v1-5: 5 players on a 16x8 pitch
-* FFAI-v1-3: 3 players on a 12x5 pitch
-* FFAI-v1-1: 1 player on a 4x3 pitch
+* FFAI-7-v1: 7 players on a 20x11 pitch
+* FFAI-5-v1: 5 players on a 16x8 pitch
+* FFAI-3-v1: 3 players on a 12x5 pitch
+* FFAI-1-v1: 1 player on a 4x3 pitch
 
-This is how the FFAI-v1-3 environment looks:
+This is how the FFAI-3-v1 environment looks:
 
 ![FFAI Gym GUI](screenshots/gym_3.png?raw=true "FFAI Gym GUI FFAI-3")
 

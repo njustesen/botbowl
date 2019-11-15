@@ -33,5 +33,7 @@ api.new_game(home_team_id="human-1",
              away_agent=make_bot("GrodBot"))
 '''
 
-# Run server
-server.start_server(debug=True, use_reloader=False)
+if __name__ == "__main__":
+
+    # Run server
+    server.start_server(debug=True, use_reloader=False)

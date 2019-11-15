@@ -10,7 +10,7 @@ import numpy as np
 from ffai.ai.registry import make_bot
 from ffai.core.game import Game
 from ffai.core.table import CasualtyType, OutcomeType
-from ffai.core.load import get_team_by_name, get_rule_set, get_config
+from ffai.core.load import load_team_by_name, load_rule_set, load_config
 import time
 import pickle
 from ffai.core.util import get_data_path
@@ -54,7 +54,7 @@ class GameResult:
     def __init__(self, game, crashed=False):
         self.home_agent_name = game.home_agent.name
         self.away_agent_name = game.away_agent.name
-        self.timed_out = game.timed_out()
+        self.timed_out = game.is_timed_out()
         self.crashed = crashed
         self.winner = game.get_winner()
         self.disqualified_agent = game.disqualified_agent
@@ -62,7 +62,7 @@ class GameResult:
         # If game crashed award the non-acting player
         if crashed:
             if game.actor is not None:
-                self.winner = game.other_agent(game.actor)
+                self.winner = game.get_other_agent(game.actor)
 
         self.home_result = TeamResult(game, game.home_agent.name, game.state.home_team, self.winner, self.crashed, self.timed_out)
         self.away_result = TeamResult(game, game.away_agent.name, game.state.away_team, self.winner, self.crashed, self.timed_out)
@@ -175,7 +175,7 @@ class Competition:
         self.competitor_b_name = competitor_b_name
         self.config = config
         self.config.competition_mode = True
-        self.ruleset = get_rule_set(self.config.ruleset)
+        self.ruleset = load_rule_set(self.config.ruleset)
         self.competitor_a_team = deepcopy(competitor_a_team)
         self.competitor_a_team.team_id = str(uuid.uuid1())
         self.competitor_b_team = deepcopy(competitor_b_team)

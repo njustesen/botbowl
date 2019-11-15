@@ -26,9 +26,9 @@ class Game:
         self.home_agent = home_agent
         self.away_agent = away_agent
         self.actor = None
-        self.arena = get_arena(config.arena) if arena is None else arena
+        self.arena = load_arena(config.arena) if arena is None else arena
         self.config = config
-        self.ruleset = get_rule_set(config.ruleset) if ruleset is None else ruleset
+        self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.rnd = np.random.RandomState(seed)
 
@@ -47,7 +47,7 @@ class Game:
             'start_time': self.start_time,
             'end_time': self.end_time,
             'state': self.state.to_json(),
-            'stack': self.procs(),
+            'stack': self.get_procedure_names(),
             'home_agent': self.home_agent.to_json(),
             'away_agent': self.away_agent.to_json(),
             'squares_moved': self._squares_moved(),
@@ -58,10 +58,10 @@ class Game:
             'actor_id': self.actor.agent_id if self.actor is not None else None,
             'disqualified_agent_id': self.disqualified_agent.agent_id if self.disqualified_agent is not None else None,
             'time_limits': self.config.time_limits.to_json(),
-            'active_other_player_id': self.active_other_player_id()
+            'active_other_player_id': self.get_other_active_player_id()
         }
 
-    def _safe_clone(self):
+    def safe_clone(self):
         # Make dummy agents for the clone
         home_agent = self.home_agent
         away_agent = self.away_agent
@@ -79,13 +79,13 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            game_copy_away = self._safe_clone()
+            game_copy_away = self.safe_clone()
             self.actor = self.away_agent
             self.away_agent.new_game(game_copy_away, game_copy_away.state.away_team)
             self.actor = None
         if not self.home_agent.human:
             self.actor = self.home_agent
-            game_copy_home = self._safe_clone()
+            game_copy_home = self.safe_clone()
             self.actor = None
             self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
 
@@ -144,7 +144,7 @@ class Game:
 
                 # Query agent for action
                 self.last_request_time = time.time()
-                self.action = self._checksum_act()
+                self.action = self._safe_act()
                 # self.action = self._safe_act()
                 
                 # Check if time limit was violated
@@ -182,12 +182,12 @@ class Game:
             return
 
         # Timed out?
-        if self.timed_out():
+        if self.is_timed_out():
             print("Game timed out")
             self.action = None
             self.remove_clocks()
             self.disqualified_agent = self.actor
-            self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
+            self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.get_agent_team(self.actor)))
             self._end_game()
             return
 
@@ -200,12 +200,12 @@ class Game:
         if clock.is_done():
             
             # Disqualification? Relevant for hanging bots in competitions
-            if clock.running_time() > clock.seconds + self.config.time_limits.disqualification:
+            if clock.get_running_time() > clock.seconds + self.config.time_limits.disqualification:
                 print(f"Time violation. {self.actor.name} will be disqualified!")
                 self.action = None
                 self.remove_clocks()
                 self.disqualified_agent = self.actor
-                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.agent_team(self.actor)))
+                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.get_agent_team(self.actor)))
                 self._end_game()
                 return
 
@@ -237,7 +237,7 @@ class Game:
         End the game
         '''
         # Game ended when the last action was received - to avoid timout during finishing procedures
-        self.state.end_time = self.last_action_time
+        self.end_time = self.last_action_time
         self.state.game_over = True
 
         # Let agents know that the game ended
@@ -246,7 +246,7 @@ class Game:
             self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
             if self.config.competition_mode:
                 self.actor = self.home_agent
-                clone = self._safe_clone()
+                clone = self.safe_clone()
                 now = time.time()
                 self.home_agent.end_game(clone)
                 self.actor = None
@@ -260,7 +260,7 @@ class Game:
             self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
             if self.config.competition_mode:
                 self.actor = self.away_agent
-                clone = self._safe_clone()
+                clone = self.safe_clone()
                 now = time.time()
                 self.away_agent.end_game(clone)
                 self.actor = None
@@ -314,44 +314,7 @@ class Game:
         Clone the game before requesting an action so agent can't manipulate it.
         '''
         if self.config.competition_mode:
-            action = self.actor.act(self._safe_clone())
-            # Correct player object
-            if action.player is not None:
-                action.player = self.state.player_by_id[action.player.player_id]
-            return action
-        return self.actor.act(self)
-
-    def _checksum_act(self):
-        '''
-        If in competition_mode, compare json-values before and after sending the game instance so agents get disqualified if they manipulated the game object.
-        '''
-        if self.config.competition_mode:
-            # Hide agents
-            actor = self.actor
-            home_agent = self.home_agent
-            away_agent = self.away_agent
-            self.actor = Agent(actor.name, agent_id=actor.agent_id)
-            self.home_agent = Agent(home_agent.name, agent_id=home_agent.agent_id)
-            self.away_agent = Agent(away_agent.name, agent_id=away_agent.agent_id)
-
-            id_before = id(self)
-            checksum_before = self.to_json()
-            checksum_before['state']['clocks'] = None
-            action = actor.act(self)
-            checksum_after = self.to_json()
-            checksum_after['state']['clocks'] = None
-            id_after = id(self)
-
-            self.actor = actor
-            self.home_agent = home_agent
-            self.away_agent = away_agent
-
-            # If game instance was manipulated
-            if not (checksum_after.__eq__(checksum_before) and id_after == id_before):
-                self.disqualified_agent = self.actor
-                self._end_game()
-                return None
-
+            action = self.actor.act(self.safe_clone())
             # Correct player object
             if action.player is not None:
                 action.player = self.state.player_by_id[action.player.player_id]
@@ -365,7 +328,7 @@ class Game:
         # Take first negative action
         for action_type in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN, ActionType.SELECT_NONE, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN, ActionType.SELECT_DEFENDER_STUMBLES, ActionType.SELECT_ATTACKER_DOWN, ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL, ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
-                if action_type == ActionType.END_SETUP and not self.is_setup_legal(self.agent_team(self.actor)):
+                if action_type == ActionType.END_SETUP and not self.is_setup_legal(self.get_agent_team(self.actor)):
                     continue
                 if action.action_type == action_type:
                     return Action(action_type)
@@ -519,7 +482,7 @@ class Game:
         Returns the clock belonging to the given agent's team.
         '''
         for clock in self.state.clocks:
-            if clock.team == self.agent_team(agent):
+            if clock.team == self.get_agent_team(agent):
                 return clock
         return None
 
@@ -537,7 +500,7 @@ class Game:
         Returns true if the given agent's team has a clock.
         '''
         for clock in self.state.clocks:
-            if clock.team == self.agent_team(agent):
+            if clock.team == self.get_agent_team(agent):
                 return True
         return False
 
@@ -567,16 +530,16 @@ class Game:
         clock = Clock(team, self.config.time_limits.turn, is_primary=True)
         self.state.clocks.append(clock)
 
-    def seconds_left(self, team):
+    def get_seconds_left(self, team):
         '''
         Returns the number of seconds left on the clock for the given team and None if the given team has no clock.
         '''
         for clock in self.state.clocks:
             if clock.team == team:
-                return clock.seconds_left()
+                return clock.get_seconds_left()
         return None
         
-    def team_agent(self, team):
+    def get_team_agent(self, team):
         """
         :param team:
         :return: The agent who's controlling the specified team.
@@ -587,7 +550,7 @@ class Game:
             return self.home_agent
         return self.away_agent
 
-    def agent_team(self, agent):
+    def get_agent_team(self, agent):
         """
         :param team:
         :return: The team controlled by the specified agent.
@@ -781,7 +744,7 @@ class Game:
         """
         return self.get_dugout(team).reserves
 
-    def get_kods(self, team):
+    def get_knocked_out(self, team):
         """
         :param team:
         :return: The knocked out players in the dugout of this team.
@@ -868,7 +831,7 @@ class Game:
         :param player:
         :return: True if player is in the opponent's endzone with the ball.
         """
-        return self.arena.in_opp_endzone(player.position, player.team == self.state.home_team)
+        return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team)
 
     def is_out_of_bounds(self, pos):
         """
@@ -968,7 +931,7 @@ class Game:
         :param player:
         """
         self.state.pitch.remove(player)
-        self.get_kods(player.team).append(player)
+        self.get_knocked_out(player.team).append(player)
         player.state.knocked_out = True
         player.state.up = True
 
@@ -977,7 +940,7 @@ class Game:
         Moves player from the KO section in the dugout to the pitch. This also resets the players knocked_out state.
         :param player:
         """
-        self.get_kods(player.team).remove(player)
+        self.get_knocked_out(player.team).remove(player)
         self.get_reserves(player.team).append(player)
         player.state.knocked_out = False
         player.state.up = True
@@ -1027,50 +990,50 @@ class Game:
         """
         self.state.pitch.swap(piece_a, piece_b)
 
-    def assists(self, player, opp_player, ignore_guard=False):
+    def get_assisting_players(self, player, opp_player, ignore_guard=False):
         """
         :param player: The attacker.
         :param opp_player: The defender.
         :param ignore_guard: Whether gauard should be ignored (default: False)
         :return: The players that can assist player when blocking opp_player.
         """
-        return self.state.pitch.assists(player, opp_player, ignore_guard=ignore_guard)
+        return self.state.pitch.get_assisting_players(player, opp_player, ignore_guard=ignore_guard)
 
-    def interceptors(self, passer, pos):
+    def get_interceptors(self, passer, pos):
         """
         :param passer:
         :param pos:
         :return: Possible intercepters when passer attempts a pass to pos.
         """
-        return self.state.pitch.interceptors(passer, pos)
+        return self.state.pitch.get_interceptors(passer, pos)
 
-    def pass_distance(self, passer, pos):
+    def get_pass_distance(self, passer, pos):
         """
         :param passer:
         :param pos:
         :return: The passing distance from passer to pos.
         """
-        return self.state.pitch.pass_distance(passer, pos)
+        return self.state.pitch.get_pass_distance(passer, pos)
 
-    def passes(self, passer):
+    def get_pass_distances(self, passer):
         """
         :param passer:
         :return: (squares, distances). Squares is a list of squares that passer can attempt to pass to and distances
         is a list of pass distances; one for each square.
         """
-        return self.state.pitch.passes(passer, self.state.weather)
+        return self.state.pitch.get_pass_distances(passer, self.state.weather)
 
-    def adjacent_squares(self, pos, diagonal=False, include_out=False, exclude_occupied=False):
+    def get_adjacent_squares(self, pos, include_diagonal=True, include_out=False, include_occupied=True, distance=1):
         """
         :param pos:
-        :param diagonal: Whether to include diagonally adjacent squares.
+        :param include_diagonal: Whether to include diagonally adjacent squares.
         :param include_out: Whether to include squares out of bounds.
-        :param exclude_occupied: Whether to exclude occupied squares.
+        :param include_occupied: Whether to include occupied squares.
         :return: Squares adjacent to pos.
         """
-        return self.state.pitch.get_adjacent_squares(pos, manhattan=diagonal, include_out=include_out, exclude_occupied=exclude_occupied)
+        return self.state.pitch.get_adjacent_squares(pos, include_diagonal=include_diagonal, include_out=include_out, include_occupied=include_occupied, distance=distance)
 
-    def adjacent_player_squares(self, player, include_own=True, include_opp=True, diagonal=False, only_blockable=False, only_foulable=False):
+    def get_adjacent_player_squares(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False):
         """
         :param player:
         :param include_own: Whether to include own players.
@@ -1080,7 +1043,7 @@ class Game:
         :param only_foulable: Whether to only include foulable players.
         :return: players adjacent to player.
         """
-        return self.state.pitch.adjacent_player_squares(player, include_own, include_opp, diagonal, only_blockable, only_foulable)
+        return self.state.pitch.get_adjacent_player_squares(player, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable)
 
     def num_tackle_zones_in(self, player):
         """
@@ -1097,7 +1060,7 @@ class Game:
         """
         return self.state.pitch.num_tackle_zones_at(player, position)
 
-    def tackle_zones_in_detailed(self, player):
+    def get_tackle_zones_detailed(self, player):
         """
         The returned list of players who's tackle zone overlap with player is split into:
         1. tackle_zones: all players,
@@ -1109,9 +1072,9 @@ class Game:
         :param player:
         :return: Opponent players who's tackle zones overlap with player split into six lists.
         """
-        return self.state.pitch.tackle_zones_detailed(player)
+        return self.state.pitch.get_tackle_zones_detailed(player)
 
-    def push_squares(self, pos_from, pos_to):
+    def get_push_squares(self, pos_from, pos_to):
         """
         :param pos_from: The position of the attacker.
         :param pos_to: The position of the defender.
@@ -1119,7 +1082,17 @@ class Game:
         """
         return self.state.pitch.get_push_squares(pos_from, pos_to)
 
-    def is_setup_legal(self, team, tile=None, max_players=11, min_players=3):
+    def is_setup_legal(self, team):
+        if not self.is_setup_legal_count(team, max_players=self.config.pitch_max,
+                                        min_players=self.config.pitch_min):
+            return False
+        elif not self.is_setup_legal_scrimmage(team, min_players=self.config.scrimmage_min):
+            return False
+        elif not self.is_setup_legal_wings(team, max_players=self.config.wing_max):
+            return False
+        return True
+
+    def is_setup_legal_count(self, team, tile=None, max_players=11, min_players=3):
         """
         :param team:
         :param tile: The tile area to check.
@@ -1168,8 +1141,8 @@ class Game:
         :return: True if team is setup legally on scrimmage.
         """
         if team == self.state.home_team:
-            return self.is_setup_legal(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
-        return self.is_setup_legal(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
+            return self.is_setup_legal_count(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
+        return self.is_setup_legal_count(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
 
     def is_setup_legal_wings(self, team, min_players=0, max_players=2):
         """
@@ -1179,12 +1152,12 @@ class Game:
         :return: True if team is setup legally on the wings.
         """
         if team == self.state.home_team:
-            return self.is_setup_legal(team, tile=Tile.HOME_WING_LEFT, max_players=max_players, min_players=min_players) and \
-                   self.is_setup_legal(team, tile=Tile.HOME_WING_RIGHT, max_players=max_players, min_players=min_players)
-        return self.is_setup_legal(team, tile=Tile.AWAY_WING_LEFT, max_players=max_players, min_players=min_players) and \
-               self.is_setup_legal(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
+            return self.is_setup_legal_count(team, tile=Tile.HOME_WING_LEFT, max_players=max_players, min_players=min_players) and \
+                   self.is_setup_legal_count(team, tile=Tile.HOME_WING_RIGHT, max_players=max_players, min_players=min_players)
+        return self.is_setup_legal_count(team, tile=Tile.AWAY_WING_LEFT, max_players=max_players, min_players=min_players) and \
+               self.is_setup_legal_count(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
 
-    def procs(self):
+    def get_procedure_names(self):
         """
         :return: a list of procedure names in the stack.
         """
@@ -1222,7 +1195,7 @@ class Game:
             for player in team.players:
                 player.team = team
 
-    def termination_time(self):
+    def get_termination_time(self):
         """
         The time at which the current turn must be terminated - or the opponent's action choice (like selecting block die).
         """
@@ -1230,7 +1203,7 @@ class Game:
             return self.state.termination_opp
         return self.state.termination_turn
 
-    def timed_out(self):
+    def is_timed_out(self):
         """
         Returns true if the game timed out - i.e. it was longer than the allowed self.config.time_limits.game - only if in competition mode.
         """
@@ -1240,7 +1213,7 @@ class Game:
             return False
         return self.end_time - self.start_time > self.config.time_limits.game
 
-    def team_by_id(self, team_id):
+    def get_team_by_id(self, team_id):
         if self.state.home_team.team_id == team_id:
             return self.state.home_team
         if self.state.away_team.team_id == team_id:
@@ -1258,10 +1231,10 @@ class Game:
         """
         # Disqualified players lose
         if self.disqualified_agent is not None:
-            return self.other_agent(self.disqualified_agent)
+            return self.get_other_agent(self.disqualified_agent)
         
         # If game timed out the current player lost
-        if self.timed_out():
+        if self.is_timed_out():
             if self.home_agent == self.actor:
                 return self.away_agent
             elif self.away_agent == self.actor:
@@ -1269,11 +1242,11 @@ class Game:
         
         # If the game is over the player with most TDs wins
         if self.state.game_over:
-            return self.team_agent(self.get_winning_team())
+            return self.get_team_agent(self.get_winning_team())
         
         return None
 
-    def other_agent(self, agent):
+    def get_other_agent(self, agent):
         """
         Returns the other agent in the game.
         """
@@ -1283,7 +1256,7 @@ class Game:
             return self.away_agent
         return self.home_agent
 
-    def active_other_player_id(self):
+    def get_other_active_player_id(self):
         """
         Returns the player id of the other player involved in current procedures - if any.
         """
@@ -1301,3 +1274,19 @@ class Game:
                 if proc.catcher is not None:
                     return proc.player.player_id
         return None
+
+    def replace_home_agent(self, agent):
+        if self.actor.agent_id == self.home_agent.agent_id:
+            self.actor = agent
+        self.home_agent = agent
+
+    def replace_away_agent(self, agent):
+        if self.actor.agent_id == self.away_agent.agent_id:
+            self.actor = agent
+        self.away_agent = agent
+
+    def has_report_of_type(self, outcome_type):
+        for report in self.state.reports:
+            if report.outcome_type == outcome_type:
+                return True
+        return False

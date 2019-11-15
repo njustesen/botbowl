@@ -10,8 +10,8 @@
   "players": [
     {
       "nr" : 1,
-      "name": "Durg 'Bandy' Muglurk",
-      "position": "Blitzer",
+      "name": "Big Dave",
+      "position": "Troll",
       "extra_skills" : [],
       "extra_ma" : 0,
       "extra_st" : 0,
@@ -23,8 +23,8 @@
     },
     {
       "nr" : 2,
-      "name": "Krug Painspear",
-      "position": "Blitzer",
+      "name": "Lil' Kev",
+      "position": "Goblin",
       "extra_skills" : [],
       "extra_ma" : 0,
       "extra_st" : 0,

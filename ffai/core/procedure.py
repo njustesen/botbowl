@@ -5,7 +5,7 @@ Year: 2018
 ==========================
 This module contains all the procedures. Procedures contain the core part of the rules in FFAI. Each procedure are
 responsible for an isolated part of the game. Procedures are added to a stack, and the top-most procedure must finish
-before other procedures are run. Procedures can add other procedures to the stack simply by intiating the procedure.
+before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 
 from ffai.core.model import *
@@ -22,12 +22,23 @@ class Procedure:
         self.initialized = False
 
     def setup(self):
+        """
+        Is called just before step() is called the first time. The Game clas will set initialized to True.
+        """
         pass
 
     def step(self, action):
+        """
+        Is called when this procedure is on the top of the stack until the procedure is done.
+        :param action: an action performed by an agent - will be None if there are no available actions.
+        :return: a bool indicating whether the procedure is done.
+        """
         pass
 
     def available_actions(self):
+        """
+        :return: a list of available actions. This can vary based on the state of the procedure.
+        """
         pass
 
 
@@ -148,10 +159,8 @@ class Armor(Procedure):
             # Armor broken
             if result >= roll.target:
                 armor_broken = True
-
-            # Armor broken - Might Blow
-            if self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW) \
-                    and result + 1 > self.player.get_av():
+            elif result == roll.target -1 and self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW):
+                # only use mighty_blow if it makes the armour break
                 roll.modifiers += 1
                 armor_broken = True
                 mighty_blow_used = True
@@ -212,8 +221,8 @@ class Block(Procedure):
             st_from = st_to
 
         # Find assists
-        assists_from = game.assists(attacker, defender)
-        assists_to = game.assists(defender, attacker)
+        assists_from = game.get_assisting_players(attacker, defender)
+        assists_to = game.get_assisting_players(defender, attacker)
         st_from = st_from + len(assists_from)
         st_to = st_to + len(assists_to)
 
@@ -521,7 +530,9 @@ class Catch(Procedure):
         modifiers = -2 if interception else modifiers
         if interception and player.has_skill(Skill.LONG_LEGS):
             modifiers += 1
-        modifiers -= game.num_tackle_zones_in(player)
+        # opposing tackle zones
+        if not player.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= game.num_tackle_zones_in(player)
         if game.state.weather == WeatherType.POURING_RAIN:
             modifiers -= 1
         if player.has_skill(Skill.EXTRA_ARMS):
@@ -723,8 +734,8 @@ class Foul(Procedure):
     def step(self, action):
 
         # Assists
-        assists_from = self.game.assists(self.fouler, self.defender, ignore_guard=True)
-        assists_to = self.game.assists(self.defender, self.fouler, ignore_guard=True)
+        assists_from = self.game.get_assisting_players(self.fouler, self.defender, ignore_guard=True)
+        assists_to = self.game.get_assisting_players(self.defender, self.fouler, ignore_guard=True)
         modifier = len(assists_from) - len(assists_to)
 
         self.game.report(Outcome(OutcomeType.FOUL, player=self.fouler, opp_player=self.defender))
@@ -1194,10 +1205,9 @@ class ThrowARock(Procedure):
             rocks.append(roll.get_result())
             self.game.report(Outcome(OutcomeType.THROW_A_ROCK_ROLL, team=team, rolls=[roll]))
 
-        max_cheers = np.max(rocks)
         for i in range(len(self.game.state.teams)):
             team = self.game.state.teams[i]
-            if max_cheers >= rocks[i]:
+            if rocks[i] == 1:
                 players = self.game.get_players_on_pitch(team)
                 if len(players) > 0:
                     player = self.game.rnd.choice(players)
@@ -1219,11 +1229,8 @@ class PitchInvasionRoll(Procedure):
 
     def step(self, action):
         roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.PITCH_INVASION_ROLL)
-
-        roll.modifiers = self.team.state.fame
-        result = roll.get_sum() + roll.modifiers
-
-        if result >= 6:
+        roll.modifiers = self.game.get_opp_team(self.team).state.fame
+        if roll.get_result() >= 6 and roll.get_sum() != 1:
             if self.player.has_skill(Skill.BALL_AND_CHAIN):
                 self.game.report(Outcome(OutcomeType.KNOCKED_OUT, rolls=[roll], player=self.player, team=self.team))
                 KnockOut(self.game, self.player, roll=roll)
@@ -1284,8 +1291,8 @@ class KickoffTable(Procedure):
             ThrowARock(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_THROW_A_ROCK, rolls=[roll]))
         elif roll.result == 12:  # Pitch Invasion
-            for team in self.game.state.teams:
-                for player in self.game.get_players_on_pitch(team):
+            for team in reversed(self.game.state.teams):
+                for player in sorted(self.game.get_players_on_pitch(team), key=lambda p: p.nr, reverse=True):
                     PitchInvasionRoll(self.game, team, player)
             self.game.report(Outcome(OutcomeType.KICKOFF_PITCH_INVASION, rolls=[roll]))
 
@@ -1532,7 +1539,7 @@ class Dodge(Procedure):
             # Calculate target
             roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos)
 
-            tacklers = self.game.tackle_zones_in_detailed(self.player)[1]
+            tacklers = self.game.get_tackle_zones_detailed(self.player)[1]
 
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
@@ -1645,8 +1652,10 @@ class PassAction(Procedure):
     @staticmethod
     def pass_modifiers(game, passer, pass_distance):
         modifiers = Rules.pass_modifiers[pass_distance]
+        # Opposing tackle zones
         tackle_zones = game.num_tackle_zones_in(passer)
-        modifiers -= tackle_zones
+        if not passer.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= tackle_zones
 
         # Weather
         if game.state.weather == WeatherType.VERY_SUNNY:
@@ -1659,6 +1668,9 @@ class PassAction(Procedure):
             if pass_distance == PassDistance.SHORT_PASS or pass_distance == PassDistance.LONG_PASS or \
                     pass_distance == PassDistance.LONG_BOMB:
                 modifiers += 1
+
+        if passer.has_skill(Skill.STUNTY):
+            modifiers -= 1
 
         return modifiers
 
@@ -1686,7 +1698,7 @@ class PassAction(Procedure):
 
             # Check for interception
             if not self.interception_tried:
-                interceptors = self.game.interceptors(self.passer, self.pos)
+                interceptors = self.game.get_interceptors(self.passer, self.pos)
                 # TODO: Implement option to intercept for all opponent teams
                 if len(interceptors) > 0:
                     Interception(self.game, interceptors[0].team, self.ball, interceptors)
@@ -2047,7 +2059,7 @@ class PlayerAction(Procedure):
         elif action.action_type == ActionType.PASS:
 
             # Check distance
-            pass_distance = self.game.pass_distance(self.player, action.pos)
+            pass_distance = self.game.get_pass_distance(self.player, action.pos)
             EndPlayerTurn(self.game, self.player)
             PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.pos,
                        pass_distance)
@@ -2075,7 +2087,7 @@ class PlayerAction(Procedure):
             elif (not self.turn.quick_snap
                   and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
                     or (self.turn.quick_snap and self.player.state.moves == 0):
-                for square in self.game.adjacent_squares(self.player.position, exclude_occupied=True):
+                for square in self.game.get_adjacent_squares(self.player.position, include_occupied=False):
                     ball_at = self.game.get_ball_at(square)
                     move_positions.append(square)
                     rolls = []
@@ -2113,10 +2125,10 @@ class PlayerAction(Procedure):
             if can_block:
                 block_positions = []
                 block_rolls = []
-                for square in self.game.adjacent_player_squares(self.player,
-                                                                include_own=False,
-                                                                include_opp=True,
-                                                                only_blockable=True):
+                for square in self.game.get_adjacent_player_squares(self.player,
+                                                                    include_own=False,
+                                                                    include_opp=True,
+                                                                    only_blockable=True):
                     player_to = self.game.get_player_at(square)
                     block_positions.append(square)
                     dice, favor = Block.dice_and_favor(self.game, attacker=self.player, defender=player_to,
@@ -2135,14 +2147,14 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.FOUL:
             foul_positions = []
             foul_rolls = []
-            for square in self.game.adjacent_player_squares(self.player, include_own=False,
-                                                            include_opp=True,
-                                                            only_foulable=True):
+            for square in self.game.get_adjacent_player_squares(self.player, include_own=False,
+                                                                include_opp=True,
+                                                                only_foulable=True):
                 player_to = self.game.get_player_at(square)
                 foul_positions.append(square)
                 armor = player_to.get_av()
-                assists_from = self.game.assists(self.player, player_to, ignore_guard=True)
-                assists_to = self.game.assists(player_to, self.player, ignore_guard=True)
+                assists_from = self.game.get_assisting_players(self.player, player_to, ignore_guard=True)
+                assists_to = self.game.get_assisting_players(player_to, self.player, ignore_guard=True)
                 foul_rolls.append(min(0, armor + 1 - len(assists_from) + len(assists_to)))
 
             if len(foul_positions) > 0:
@@ -2153,7 +2165,7 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.HANDOFF and self.game.has_ball(self.player):
             hand_off_positions = []
             agi_rolls = []
-            for square in self.game.adjacent_player_squares(self.player, include_own=True, include_opp=False):
+            for square in self.game.get_adjacent_player_squares(self.player, include_own=True, include_opp=False):
                 player_to = self.game.get_player_at(square)
                 if player_to.can_catch():
                     hand_off_positions.append(square)
@@ -2167,7 +2179,7 @@ class PlayerAction(Procedure):
 
         # Pass actions
         if self.player_action_type == PlayerActionType.PASS and self.game.has_ball(self.player):
-            positions, distances = self.game.passes(self.player)
+            positions, distances = self.game.get_pass_distances(self.player)
             agi_rolls = []
             cache = {}
             for i in range(len(distances)):
@@ -2261,7 +2273,7 @@ class PreKickOff(Procedure):
 
     def step(self, action):
         # Check KOed
-        for player in self.game.get_kods(self.team):
+        for player in self.game.get_knocked_out(self.team):
             if player not in self.checked:
                 roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.KO_READY_ROLL)
                 if roll.get_sum() >= 4:
@@ -2364,12 +2376,16 @@ class Push(Procedure):
 
         # Get possible squares
         if self.squares is None:
-            self.squares = self.game.push_squares(self.pusher.position, self.player.position)
+            # Side step lets the defender choose
             if self.player.has_skill(Skill.SIDE_STEP):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
-                self.squares = self.game.adjacent_squares(self.player.position, exclude_occupied=True)
-                if self.player.team != self.game.state.current_team:
-                    self.game.add_secondary_clock(self.player.team)
+                self.squares = self.game.get_adjacent_squares(self.player.position, include_occupied=False)
+                if len(self.squares) > 0:
+                    if self.player.team != self.game.state.current_team:
+                        self.game.add_secondary_clock(self.player.team)
+            # If not side step or no free squares
+            if self.squares is None or len(self.squares) == 0:
+                self.squares = self.game.get_push_squares(self.pusher.position, self.player.position)
             return False
 
         # Stand firm
@@ -2586,13 +2602,13 @@ class Setup(Procedure):
     def step(self, action):
         formation = None
         if action.action_type == ActionType.SETUP_FORMATION_WEDGE:
-            formation = [formation for formation in self.formations if formation.name == "wedge"][0]
+            formation = [formation for formation in self.formations if formation.name == "Wedge"][0]
         if action.action_type == ActionType.SETUP_FORMATION_ZONE:
-            formation = [formation for formation in self.formations if formation.name == "zone"][0]
+            formation = [formation for formation in self.formations if formation.name == "Zone"][0]
         if action.action_type == ActionType.SETUP_FORMATION_LINE:
-            formation = [formation for formation in self.formations if formation.name == "line"][0]
+            formation = [formation for formation in self.formations if formation.name == "Line"][0]
         if action.action_type == ActionType.SETUP_FORMATION_SPREAD:
-            formation = [formation for formation in self.formations if formation.name == "spread"][0]
+            formation = [formation for formation in self.formations if formation.name == "Spread"][0]
 
         if formation is not None:
             actions = formation.actions(self.game, self.team)
@@ -2601,7 +2617,7 @@ class Setup(Procedure):
             return False
 
         if action.action_type == ActionType.END_SETUP:
-            if not self.game.is_setup_legal(self.team, max_players=self.game.config.pitch_max,
+            if not self.game.is_setup_legal_count(self.team, max_players=self.game.config.pitch_max,
                                             min_players=self.game.config.pitch_min):
                 self.game.report(Outcome(OutcomeType.ILLEGAL_SETUP_NUM, team=self.team))
                 return False
@@ -2647,13 +2663,13 @@ class Setup(Procedure):
         ]
         if not self.reorganize:
             for formation in self.formations:
-                if formation.name == "wedge":
+                if formation.name == "Wedge":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=self.team))
-                if formation.name == "line":
+                if formation.name == "Line":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=self.team))
-                if formation.name == "spread":
+                if formation.name == "Spread":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=self.team))
-                if formation.name == "zone":
+                if formation.name == "Zone":
                     aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=self.team))
 
         return aa
@@ -2945,7 +2961,7 @@ class Turn(Procedure):
                 if self.foul_available:
                     foul_players.append(player)
                 if not self.quick_snap and not self.blitz and player.state.up:
-                    if self.game.state.pitch.adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True):
+                    if self.game.state.pitch.get_adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True):
                         block_players.append(player)
 
         actions = []

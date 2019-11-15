@@ -494,7 +494,7 @@ class FfMover(Mover):
     def __init__(self, unit: m.Player):
 
         self.unit: m.Player = unit
-        self.move_allowed: int = unit.move_allowed()
+        self.move_allowed: int = unit.num_moves_left()
 
 
 class FfTileMap(implements(TileMap)):
@@ -535,7 +535,7 @@ class FfTileMap(implements(TileMap)):
         agility = moving_unit.get_ag()
 
         cost = 0.0
-        num_zones_from, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers = self.game_state.pitch.tackle_zones_detailed_at(mover.unit, square_from)
+        num_zones_from, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers = self.game_state.pitch.get_tackle_zones_detailed_at(mover.unit, square_from)
 
         if num_zones_from > 0:
             num_zones_to = self.game_state.pitch.num_tackle_zones_at(mover.unit, square_to)
@@ -546,7 +546,7 @@ class FfTileMap(implements(TileMap)):
             if moving_unit.has_skill(m.Skill.DODGE) and not tacklers:  # Should also check if already dodged
                 cost = cost * cost
         cur_depth: int = mover.cur_depth  # essentially number of moves already done.
-        if cur_depth != -1 and (cur_depth + 1 > moving_unit.move_allowed(include_gfi=False)):
+        if cur_depth != -1 and (cur_depth + 1 > moving_unit.num_moves_left(include_gfi=False)):
             incr_cost = 1.0/6.0
             if self.game_state.weather == m.WeatherType.BLIZZARD:
                 incr_cost = incr_cost*2
