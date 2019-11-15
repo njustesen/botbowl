@@ -3048,7 +3048,7 @@ class Bonehead(Procedure):
                     return False
 
                 # Player forgets what to do
-                self.trigger_bonehead(self.roll)
+                self.trigger_bonehead()
                 return True
 
         # If reroll used
