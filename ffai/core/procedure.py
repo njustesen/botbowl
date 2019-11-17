@@ -3038,6 +3038,7 @@ class Bonehead(Procedure):
 
             if self.roll.is_d6_success():
                 # Success
+                self.player.state.bone_headed = False
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_BONE_HEAD, player=self.player, rolls=[self.roll]))
                 return True
             else:
