@@ -2926,8 +2926,6 @@ class Bonehead(Procedure):
     def step(self, action):
         # If player hasn't rolled
         if not self.rolled:
-            # report bonehead check - needed for reroll prompt to make sense
-            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.BONE_HEAD))
             # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.BONE_HEAD_ROLL)
             self.roll.target = 2
