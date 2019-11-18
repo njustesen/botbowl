@@ -2767,8 +2767,10 @@ class Turn(Procedure):
 
         # Start action
         self.game.state.active_player = player
-        PlayerAction(self.game, player, player_action_type, turn=self)
+        player_action = PlayerAction(self.game, player, player_action_type, turn=self)
         self.game.report(Outcome(outcome_type, player=player))
+        if player.has_skill(Skill.BONE_HEAD):
+            Bonehead(self.game, player, player_action)
 
     def step(self, action):
 
@@ -2907,4 +2909,69 @@ class WeatherTable(Procedure):
         return True
 
     def available_actions(self):
+        return []
+
+
+class Bonehead(Procedure):
+    def __init__(self, game, player, player_action):
+        super().__init__(game)
+        self.game = game
+        self.player = player
+        self.awaiting_reroll = False
+        self.reroll_used = False
+        self.rolled = False
+        self.roll = None
+        self.player_action = player_action
+
+    def step(self, action):
+        # If player hasn't rolled
+        if not self.rolled:
+            # report bonehead check - needed for reroll prompt to make sense
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.BONE_HEAD))
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.BONE_HEAD_ROLL)
+            self.roll.target = 2
+            self.rolled = True
+
+            if self.roll.is_d6_success():
+                # Success
+                self.player.state.bone_headed = False
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_BONE_HEAD, player=self.player, rolls=[self.roll]))
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_BONE_HEAD, player=self.player, skill=Skill.BONE_HEAD, rolls=[self.roll]))
+                # Check if reroll available
+                if self.game.can_use_reroll(self.player.team):
+                    self.awaiting_reroll = True
+                    return False
+
+                # Player forgets what to do
+                self.trigger_bonehead()
+                return True
+
+        # If reroll used
+        if self.awaiting_reroll:
+            if action.action_type == ActionType.USE_REROLL:
+                # Remove reroll and roll again - recursive call
+                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
+                self.player.team.state.use_reroll()
+                self.rolled = False
+                return self.step(None)
+            else:
+                # Player forgets what to do
+                self.trigger_bonehead()
+                return True
+
+    def trigger_bonehead(self):
+        self.player.state.bone_headed = True
+        # mark player turn as over
+        EndPlayerTurn(self.game, self.player)
+        # don't let the intended action happen
+        self.player_action.done = True
+
+    def available_actions(self):
+        if self.awaiting_reroll:
+            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
+                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
+
         return []
