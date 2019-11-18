@@ -36,5 +36,6 @@ class RandomBot(Agent):
     def end_game(self, game):
         pass
 
+
 # Register bot
 register_bot('random', RandomBot)

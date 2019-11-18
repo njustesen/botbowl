@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import ffai.web.api as api
 import ffai.ai.bots as bot
 import ffai.core.model as m
 import ffai.core.table as t
 import ffai.core.procedure as p
 import ffai.util.pathfinding as pf
+import ffai.core.load as l
 from typing import Optional, List, Dict, Tuple
 import time
 import ffai.core.game as g
@@ -1481,11 +1481,11 @@ def main():
     import examples.scripted_bot_example
 
     # Load configurations, rules, arena and teams
-    config = api.load_config("bot-bowl-i.json")
-    ruleset = api.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
-    arena = api.load_arena(config.arena)
-    home = api.load_team_by_filename("human", ruleset)
-    away = api.load_team_by_filename("human", ruleset)
+    config = l.load_config("bot-bowl-i.json")
+    ruleset = l.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
+    arena = l.load_arena(config.arena)
+    home = l.load_team_by_filename("human", ruleset)
+    away = l.load_team_by_filename("human", ruleset)
     config.competition_mode = False
 
     # Play 5 games as away
@@ -1495,7 +1495,7 @@ def main():
         home_agent = make_bot('scripted')
         home_agent.name = 'scripted'
         config.debug_mode = False
-        game = api.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = g.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i + 1))
@@ -1511,7 +1511,7 @@ def main():
         home_agent = make_bot('grodbot')
         home_agent.name = 'grodbot'
         config.debug_mode = False
-        game = api.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = g.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i + 1))
