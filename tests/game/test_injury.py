@@ -1,7 +1,7 @@
 import pytest
 from ffai.core.game import *
 from unittest.mock import *
-import numpy as np
+
 
 @patch("ffai.core.game.Game")
 def test_injury_default_stunned(mock_game):

@@ -441,7 +441,7 @@ class Bounce(Procedure):
             y = 1
 
         self.ball.move(x, y)
-        self.game.report(Outcome(OutcomeType.BALL_BOUNCED, pos=self.ball.position, rolls=[roll_scatter]))
+        self.game.report(Outcome(OutcomeType.BALL_BOUNCED, position=self.ball.position, rolls=[roll_scatter]))
 
         if self.kick:
             # Touchback
@@ -461,10 +461,10 @@ class Bounce(Procedure):
         player_at = self.game.get_player_at(self.ball.position)
         if player_at is not None:
             Catch(self.game, player_at, self.ball)
-            self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, pos=self.ball.position, player=player_at))
+            self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position, player=player_at))
             return True
 
-        self.game.report(Outcome(OutcomeType.BALL_ON_GROUND, pos=self.ball.position))
+        self.game.report(Outcome(OutcomeType.BALL_ON_GROUND, position=self.ball.position))
         return True
 
     def available_actions(self):
@@ -521,24 +521,6 @@ class Casualty(Procedure):
 
 class Catch(Procedure):
 
-    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
-    success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
-
-    @staticmethod
-    def catch_modifiers(game, player, accurate=False, interception=False, handoff=False):
-        modifiers = 1 if accurate or handoff else 0
-        modifiers = -2 if interception else modifiers
-        if interception and player.has_skill(Skill.LONG_LEGS):
-            modifiers += 1
-        # opposing tackle zones
-        if not player.has_skill(Skill.NERVES_OF_STEEL):
-            modifiers -= game.num_tackle_zones_in(player)
-        if game.state.weather == WeatherType.POURING_RAIN:
-            modifiers -= 1
-        if player.has_skill(Skill.EXTRA_ARMS):
-            modifiers += 1
-        return modifiers
-
     def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False, kick=False):
         super().__init__(game)
         self.player = player
@@ -565,13 +547,13 @@ class Catch(Procedure):
                 return True
 
             # Set modifiers
-            modifiers = Catch.catch_modifiers(self.game, self.player, accurate=self.accurate,
+            modifiers = self.game.get_catch_modifiers(self.player, accurate=self.accurate,
                                               interception=self.interception, handoff=self.handoff)
 
             # Roll
             roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             roll.modifiers = modifiers
-            roll.target = Catch.success[self.player.get_ag()]
+            roll.target = Rules.agility_table[self.player.get_ag()]
             self.rolled = True
             if roll.is_d6_success():
                 if self.interception:
@@ -734,8 +716,8 @@ class Foul(Procedure):
     def step(self, action):
 
         # Assists
-        assists_from = self.game.get_assisting_players(self.fouler, self.defender, ignore_guard=True)
-        assists_to = self.game.get_assisting_players(self.defender, self.fouler, ignore_guard=True)
+        assists_from = self.game.get_assisting_players(self.fouler, self.defender, foul=True)
+        assists_to = self.game.get_assisting_players(self.defender, self.fouler, foul=True)
         modifier = len(assists_from) - len(assists_to)
 
         self.game.report(Outcome(OutcomeType.FOUL, player=self.fouler, opp_player=self.defender))
@@ -912,8 +894,8 @@ class Interception(Procedure):
     def available_actions(self):
         agi_rolls = []
         for interceptor in self.interceptors:
-            modifier = Catch.catch_modifiers(self.game, interceptor, interception=True)
-            agi_rolls.append([max(2, min(6, Catch.success[interceptor.get_ag()] - modifier))])
+            modifier = self.game.get_catch_modifiers(interceptor, interception=True)
+            agi_rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
         return [ActionChoice(ActionType.INTERCEPTION, team=self.team,
                              players=self.interceptors, agi_rolls=agi_rolls),
                 ActionChoice(ActionType.SELECT_NONE, team=self.team)]
@@ -942,7 +924,7 @@ class Touchback(Procedure):
 
         self.ball.move_to(position)
         self.ball.on_ground = True
-        self.game.report(Outcome(OutcomeType.TOUCHBACK_BALL_PLACED, player=player, pos=position))
+        self.game.report(Outcome(OutcomeType.TOUCHBACK_BALL_PLACED, player=player, position=position))
         self.game.remove_secondary_clocks()
         return True
 
@@ -979,11 +961,11 @@ class LandKick(Procedure):
         player_at = self.game.get_player_at(self.ball.position)
         if player_at is None:
             Bounce(self.game, self.ball, kick=True)
-            self.game.report(Outcome(OutcomeType.BALL_HIT_GROUND, pos=self.ball.position))
+            self.game.report(Outcome(OutcomeType.BALL_HIT_GROUND, position=self.ball.position))
             return True
 
         Catch(self.game, player_at, self.ball, kick=True)
-        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, pos=self.ball.position, player=player_at))
+        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position, player=player_at))
 
         return True
 
@@ -1113,8 +1095,8 @@ class HighKick(Procedure):
         if len(self.standing_players) == 0:
             return True
         if action.action_type == ActionType.PLACE_PLAYER:
-            self.game.move_player(action.player, self.ball.position)
-            self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, pos=action.pos, team=self.receiving_team))
+            self.game.move(action.player, self.ball.position)
+            self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, position=action.position, team=self.receiving_team))
         elif action.action_type == ActionType.END_SETUP:
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.receiving_team))
         return True
@@ -1377,18 +1359,18 @@ class KnockOut(Procedure):
 
 class Move(Procedure):
 
-    def __init__(self, game, player, pos, gfi, dodge):
+    def __init__(self, game, player, position, gfi, dodge):
         super().__init__(game)
         self.player = player
-        self.pos = pos
+        self.position = position
         if dodge:
-            Dodge(game, player, pos)
+            Dodge(game, player, position)
         if gfi:
-            GFI(game, player, pos)
+            GFI(game, player, position)
 
     def step(self, action):
 
-        self.game.move_player(self.player, self.pos)
+        self.game.move(self.player, self.position)
 
         # Check if player moved onto the ball
         ball = self.game.get_ball_at(self.player.position)
@@ -1415,10 +1397,10 @@ class Move(Procedure):
 
 class GFI(Procedure):
 
-    def __init__(self, game, player, pos):
+    def __init__(self, game, player, position):
         super().__init__(game)
         self.player = player
-        self.pos = pos
+        self.position = position
         self.awaiting_reroll = False
         self.sure_feet_used = False
         self.reroll_used = False
@@ -1438,13 +1420,13 @@ class GFI(Procedure):
             if roll.is_d6_success():
 
                 # Success
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_GFI, player=self.player, pos=self.pos, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_GFI, player=self.player, position=self.position, rolls=[roll]))
                 return True
 
             else:
 
                 # Fail
-                self.game.report(Outcome(OutcomeType.FAILED_GFI, player=self.player, pos=self.pos, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_GFI, player=self.player, position=self.position, rolls=[roll]))
 
                 # Check if sure feet
                 if self.player.has_skill(Skill.SURE_FEET) and not self.sure_feet_used:
@@ -1459,9 +1441,9 @@ class GFI(Procedure):
                     return False
 
                 # Player trips
-                if not self.player.position == self.pos:
-                    self.game.move_player(self.player, self.pos)
-                KnockDown(self.game, self.player, self.pos, turnover=True)
+                if not self.player.position == self.position:
+                    self.game.move(self.player, self.position)
+                KnockDown(self.game, self.player, self.position, turnover=True)
                 return True
 
         # If reroll used
@@ -1474,8 +1456,8 @@ class GFI(Procedure):
                 return self.step(None)
             else:
                 # Player trips
-                if not self.player.position == self.pos:
-                    self.game.move_player(self.player, self.pos)
+                if not self.player.position == self.position:
+                    self.game.move(self.player, self.position)
                 KnockDown(self.game, self.player, turnover=True)
                 return True
 
@@ -1489,40 +1471,10 @@ class GFI(Procedure):
 
 class Dodge(Procedure):
 
-    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
-    success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
-
-    @staticmethod
-    def dodge_modifiers(game, player, pos, tz_details=None):
-
-        modifiers = 1
-        tackle_zones_to = game.num_tackle_zones_at(player, pos)
-
-        ignore_opp_mods = False
-        if player.has_skill(Skill.STUNTY):
-            modifiers = 1
-            ignore_opp_mods = True
-        if player.has_skill(Skill.TITCHY):
-            modifiers += 1
-            ignore_opp_mods = True
-        if player.has_skill(Skill.TWO_HEADS):
-            modifiers += 1
-
-        if not tz_details:
-            tz_details = game.get_tackle_zones_detailed(player)
-        if tz_details:
-            if tz_details.prehensile_tailers:
-                modifiers -= len(tz_details.prehensile_tailers)  # subtract 1 for each prehensile tail detractor
-
-        if not ignore_opp_mods:
-            modifiers -= tackle_zones_to
-
-        return modifiers
-
-    def __init__(self, game, player, pos, cause_turnover=True):
+    def __init__(self, game, player, position, cause_turnover=True):
         super().__init__(game)
         self.player = player
-        self.pos = pos
+        self.position = position
         self.dodge_used = False
         self.awaiting_dodge = False
         self.awaiting_reroll = False
@@ -1535,42 +1487,37 @@ class Dodge(Procedure):
         if not self.rolled:
 
             # TODO: Allow player to select if shadowing and diving tackle
-            # TODO: Put diving tackle or shadowing proc on stack
+            # TODO: Put diving tackle, shadowing proc or tentacles on stack
             # TODO: Auto-use other skills
 
             # Roll
             roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             self.rolled = True
+            roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position)
 
-            # Calculate target
-            # we need tacklers later, so passing in result
-            tz_details = self.game.get_tackle_zones_detailed(self.player)
-
-            roll.modifiers = Dodge.dodge_modifiers(self.game, self.player, self.pos, tz_details=tz_details)
-
-            tacklers = tz_details.tacklers
+            # Get players with tackle
+            tacklers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.TACKLE)
 
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
             if self.player.has_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_st():
                 attribute = self.player.get_st()
 
-            roll.target = Dodge.success[attribute]
+            roll.target = Rules.agility_table[attribute]
 
             if roll.is_d6_success():
 
                 # Success
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, pos=self.pos,
-                                         rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position, rolls=[roll]))
                 return True
 
             else:
 
                 # Fail
-                self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, pos=self.pos, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[roll]))
 
                 # Check if dodge
-                if self.player.has_skill(Skill.DODGE) and (not self.dodge_used) and (not tacklers):
+                if self.player.has_skill(Skill.DODGE) and not self.dodge_used and len(tacklers) == 0:
                     self.dodge_used = True
                     self.awaiting_dodge = True
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.DODGE))
@@ -1582,7 +1529,7 @@ class Dodge(Procedure):
                     return False
 
                 # Player trips
-                self.game.move_player(self.player, self.pos)
+                self.game.move(self.player, self.position)
                 KnockDown(self.game, self.player, turnover=self.cause_turnover)
 
                 return True
@@ -1603,7 +1550,7 @@ class Dodge(Procedure):
                 return self.step(None)
             else:
                 # Player trips
-                self.game.move_player(self.player, self.pos)
+                self.game.move(self.player, self.position)
                 KnockDown(self.game, self.player, turnover=self.cause_turnover)
                 return True
 
@@ -1655,40 +1602,12 @@ class Handoff(Procedure):
 
 class PassAction(Procedure):
 
-    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
-    success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
-
-    @staticmethod
-    def pass_modifiers(game, passer, pass_distance):
-        modifiers = Rules.pass_modifiers[pass_distance]
-        # Opposing tackle zones
-        tackle_zones = game.num_tackle_zones_in(passer)
-        if not passer.has_skill(Skill.NERVES_OF_STEEL):
-            modifiers -= tackle_zones
-
-        # Weather
-        if game.state.weather == WeatherType.VERY_SUNNY:
-            modifiers -= 1
-
-        if passer.has_skill(Skill.ACCURATE):
-            modifiers += 1
-
-        if passer.has_skill(Skill.STRONG_ARM):
-            if pass_distance == PassDistance.SHORT_PASS or pass_distance == PassDistance.LONG_PASS or \
-                    pass_distance == PassDistance.LONG_BOMB:
-                modifiers += 1
-
-        if passer.has_skill(Skill.STUNTY):
-            modifiers -= 1
-
-        return modifiers
-
-    def __init__(self, game, ball, passer, catcher, pos, pass_distance):
+    def __init__(self, game, ball, passer, catcher, position, pass_distance):
         super().__init__(game)
         self.ball = ball
         self.passer = passer
         self.catcher = catcher
-        self.pos = pos
+        self.position = position
         self.pass_distance = pass_distance
         self.pass_roll = None
         self.reroll_used = False
@@ -1707,7 +1626,7 @@ class PassAction(Procedure):
 
             # Check for interception
             if not self.interception_tried:
-                interceptors = self.game.get_interceptors(self.passer, self.pos)
+                interceptors = self.game.get_interceptors(self.passer.position, self.position, team=self.game.get_opp_team(self.passer.team))
                 # TODO: Implement option to intercept for all opponent teams
                 if len(interceptors) > 0:
                     Interception(self.game, interceptors[0].team, self.ball, interceptors)
@@ -1718,15 +1637,15 @@ class PassAction(Procedure):
 
             # Roll
             self.pass_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.pass_roll.target = Catch.success[self.passer.get_ag()]
-            self.pass_roll.modifiers = PassAction.pass_modifiers(self.game, self.passer, self.pass_distance)
+            self.pass_roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.pass_roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance)
             result = self.pass_roll.get_sum()
             mod_result = result + self.pass_roll.modifiers
 
             if result == 6 or (result != 1 and mod_result >= self.pass_roll.target):
                 # Accurate pass
                 self.game.report(Outcome(OutcomeType.ACCURATE_PASS, player=self.passer, rolls=[self.pass_roll]))
-                self.ball.move_to(self.pos)
+                self.ball.move_to(self.position)
                 TurnoverIfPossessionLost(self.game, self.ball)
                 if self.catcher is not None:
                     Catch(self.game, self.catcher, self.ball, accurate=True)
@@ -1761,7 +1680,7 @@ class PassAction(Procedure):
                 Bounce(self.game, self.ball)
             else:
                 TurnoverIfPossessionLost(self.game, self.ball)
-                self.ball.move_to(self.pos)
+                self.ball.move_to(self.position)
                 Scatter(self.game, self.ball, is_pass=True)
 
             return True
@@ -1781,7 +1700,7 @@ class PassAction(Procedure):
                 return True
 
             TurnoverIfPossessionLost(self.game, self.ball)
-            self.ball.move_to(self.pos)
+            self.ball.move_to(self.position)
             Scatter(self.game, self.ball, is_pass=True)
             return True
 
@@ -1796,29 +1715,6 @@ class PassAction(Procedure):
 
 
 class Pickup(Procedure):
-
-    #          0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
-    success = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
-
-    @staticmethod
-    def pickup_modifiers(game, player):
-
-        modifiers = 1
-        tackle_zones = game.num_tackle_zones_in(player)
-
-        if not player.has_skill(Skill.BIG_HAND):
-            modifiers -= tackle_zones
-
-        # Weather
-        if game.state.weather == WeatherType.POURING_RAIN:
-            if not player.has_skill(Skill.BIG_HAND):
-                modifiers -= 1
-
-        # Extra arms
-        if player.has_skill(Skill.EXTRA_ARMS):
-            modifiers += 1
-
-        return modifiers
 
     def __init__(self, game, ball, player, cause_turnover=True):
         super().__init__(game)
@@ -1836,8 +1732,8 @@ class Pickup(Procedure):
         if not self.rolled:
 
             roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            roll.target = Pickup.success[self.player.get_ag()]
-            roll.modifiers = Pickup.pickup_modifiers(self.game, self.player)
+            roll.target = Rules.agility_table[self.player.get_ag()]
+            roll.modifiers = self.game.get_pickup_modifiers(self.player, self.ball.position)
 
             # Roll
             self.rolled = True
@@ -1848,13 +1744,13 @@ class Pickup(Procedure):
                     Touchdown(self.game, self.player)
                 return True
             else:
-                self.game.report(Outcome(OutcomeType.FAILED_PICKUP, player=self.player, pos=self.player.position,
+                self.game.report(Outcome(OutcomeType.FAILED_PICKUP, player=self.player, position=self.player.position,
                                          rolls=[roll]))
                 # Check if sure hands
                 if self.player.has_skill(Skill.SURE_HANDS) and not self.sure_hands_used:
                     self.sure_hands_used = True
                     self.waiting_for_sure_hands = True
-                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, pos=self.player.position,
+                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, position=self.player.position,
                                              rolls=[roll], skill=Skill.SURE_HANDS))
                     return False
 
@@ -1941,8 +1837,8 @@ class PlaceBall(Procedure):
     def step(self, action):
         self.game.state.pitch.balls.append(self.ball)
         self.ball.on_ground = False
-        self.ball.move_to(action.pos)
-        self.game.report(Outcome(OutcomeType.BALL_PLACED, pos=action.pos, team=self.game.get_kicking_team()))
+        self.ball.move_to(action.position)
+        self.game.report(Outcome(OutcomeType.BALL_PLACED, position=action.position, team=self.game.get_kicking_team()))
         self.game.remove_secondary_clocks()
         return True
 
@@ -1996,7 +1892,7 @@ class PlayerAction(Procedure):
             return False
 
         # Action attributes
-        player_to = self.game.get_player_at(action.pos)
+        player_to = self.game.get_player_at(action.position)
 
         if action.action_type == ActionType.MOVE:
 
@@ -2015,8 +1911,8 @@ class PlayerAction(Procedure):
                     dodge = tackle_zones_from > 0
 
             # Add proc
-            Move(self.game, self.player, action.pos, gfi, dodge)
-            self.squares.append(action.pos)
+            Move(self.game, self.player, action.position, gfi, dodge)
+            self.squares.append(action.position)
 
             self.player.state.moves += 1
 
@@ -2060,17 +1956,17 @@ class PlayerAction(Procedure):
         elif action.action_type == ActionType.HANDOFF:
 
             EndPlayerTurn(self.game, self.player)
-            Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.pos,
-                    self.game.get_player_at(action.pos))
+            Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
+                    self.game.get_player_at(action.position))
 
             return True
 
         elif action.action_type == ActionType.PASS:
 
             # Check distance
-            pass_distance = self.game.get_pass_distance(self.player, action.pos)
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
             EndPlayerTurn(self.game, self.player)
-            PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.pos,
+            PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.position,
                        pass_distance)
             self.turn.pass_available = False
 
@@ -2096,7 +1992,7 @@ class PlayerAction(Procedure):
             elif (not self.turn.quick_snap
                   and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
                     or (self.turn.quick_snap and self.player.state.moves == 0):
-                for square in self.game.get_adjacent_squares(self.player.position, include_occupied=False):
+                for square in self.game.get_adjacent_squares(self.player.position, occupied=False):
                     ball_at = self.game.get_ball_at(square)
                     move_positions.append(square)
                     rolls = []
@@ -2104,12 +2000,12 @@ class PlayerAction(Procedure):
                         if gfi:
                             rolls.append(2)
                         if self.game.num_tackle_zones_in(self.player) > 0:
-                            modifiers = Dodge.dodge_modifiers(self.game, self.player, square)
-                            target = Dodge.success[self.player.get_ag()]
+                            modifiers = self.game.get_dodge_modifiers(self.player, square)
+                            target = Rules.agility_table[self.player.get_ag()]
                             rolls.append(min(6, max(2, target - modifiers)))
                         if ball_at is not None and ball_at.on_ground:
-                            target = Pickup.success[self.player.get_ag()]
-                            modifiers = Pickup.pickup_modifiers(self.game, self.player)
+                            target = Rules.agility_table[self.player.get_ag()]
+                            modifiers = self.game.get_pickup_modifiers(self.player, square)
                             rolls.append(min(6, max(2, target - modifiers)))
                     agi_rolls.append(rolls)
                 if len(move_positions) > 0:
@@ -2134,12 +2030,8 @@ class PlayerAction(Procedure):
             if can_block:
                 block_positions = []
                 block_rolls = []
-                for square in self.game.get_adjacent_player_squares(self.player,
-                                                                    include_own=False,
-                                                                    include_opp=True,
-                                                                    only_blockable=True):
-                    player_to = self.game.get_player_at(square)
-                    block_positions.append(square)
+                for player_to in self.game.get_adjacent_opponents(self.player, down=False):
+                    block_positions.append(player_to.position)
                     dice, favor = Block.dice_and_favor(self.game, attacker=self.player, defender=player_to,
                                                        blitz=self.player_action_type == PlayerActionType.BLITZ,
                                                        dauntless_success=False)
@@ -2156,14 +2048,11 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.FOUL:
             foul_positions = []
             foul_rolls = []
-            for square in self.game.get_adjacent_player_squares(self.player, include_own=False,
-                                                                include_opp=True,
-                                                                only_foulable=True):
-                player_to = self.game.get_player_at(square)
-                foul_positions.append(square)
+            for player_to in self.game.get_adjacent_opponents(self.player, standing=False, down=True):
+                foul_positions.append(player_to.position)
                 armor = player_to.get_av()
-                assists_from = self.game.get_assisting_players(self.player, player_to, ignore_guard=True)
-                assists_to = self.game.get_assisting_players(player_to, self.player, ignore_guard=True)
+                assists_from = self.game.get_assisting_players(self.player, player_to, foul=True)
+                assists_to = self.game.get_assisting_players(player_to, self.player, foul=True)
                 foul_rolls.append(min(0, armor + 1 - len(assists_from) + len(assists_to)))
 
             if len(foul_positions) > 0:
@@ -2174,12 +2063,11 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.HANDOFF and self.game.has_ball(self.player):
             hand_off_positions = []
             agi_rolls = []
-            for square in self.game.get_adjacent_player_squares(self.player, include_own=True, include_opp=False):
-                player_to = self.game.get_player_at(square)
+            for player_to in self.game.get_adjacent_teammates(self.player):
                 if player_to.can_catch():
-                    hand_off_positions.append(square)
-                    modifiers = Catch.catch_modifiers(self.game, self.player, square)
-                    target = Catch.success[self.player.get_ag()]
+                    hand_off_positions.append(player_to.position)
+                    modifiers = self.game.get_catch_modifiers(self.player, player_to.position)
+                    target = Rules.agility_table[self.player.get_ag()]
                     agi_rolls.append([min(6, max(2, target - modifiers))])
 
             if len(hand_off_positions) > 0:
@@ -2195,15 +2083,15 @@ class PlayerAction(Procedure):
                 distance = distances[i]
                 position = positions[i]
                 if distance not in cache:
-                    modifiers = PassAction.pass_modifiers(self.game, self.player, distance)
-                    target = PassAction.success[self.player.get_ag()]
+                    modifiers = self.game.get_pass_modifiers(self.player, distance)
+                    target = Rules.agility_table[self.player.get_ag()]
                     cache[distance] = min(6, max(2, target - modifiers))
                 rolls = [cache[distance]]
                 player_to = self.game.get_player_at(position)
                 if player_to is not None and player_to.team == self.player.team \
                         and player_to.can_catch():
-                    catch_target = Catch.success[player_to.get_ag()]
-                    catch_modifiers = Catch.catch_modifiers(self.game, player_to, accurate=True)
+                    catch_target = Rules.agility_table[player_to.get_ag()]
+                    catch_modifiers = self.game.get_catch_modifiers(player_to, accurate=True)
                     rolls.append(min(6, max(2, catch_target - catch_modifiers)))
                 agi_rolls.append(rolls)
             if len(positions) > 0:
@@ -2308,9 +2196,9 @@ class FollowUp(Procedure):
 
     def step(self, action):
 
-        if action.pos == self.pos_to:
-            self.game.move_player(self.player, self.pos_to)
-            self.game.report(Outcome(OutcomeType.FOLLOW_UP, pos=self.pos_to, player=self.player))
+        if action.position == self.pos_to:
+            self.game.move(self.player, self.pos_to)
+            self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.player))
 
         return True
 
@@ -2349,7 +2237,7 @@ class Push(Procedure):
             self.game.remove_secondary_clocks()
 
             # Move pushed player
-            self.game.move_player(self.player, self.push_to)
+            self.game.move(self.player, self.push_to)
 
             # Ball
             if self.game.has_ball(self.player):
@@ -2357,7 +2245,7 @@ class Push(Procedure):
                     Touchdown(self.game, self.player)
                 elif self.game.is_out_of_bounds(self.player.position):
                     ball = self.game.get_ball_at(self.player.position)
-                    ThrowIn(self.game, ball, pos=self.follow_to)
+                    ThrowIn(self.game, ball, position=self.follow_to)
             elif self.game.get_ball_at(self.push_to) is not None:
                 Bounce(self.game, self.game.get_ball_at(self.push_to))
 
@@ -2388,7 +2276,7 @@ class Push(Procedure):
             # Side step lets the defender choose
             if self.player.has_skill(Skill.SIDE_STEP):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
-                self.squares = self.game.get_adjacent_squares(self.player.position, include_occupied=False)
+                self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
                 if len(self.squares) > 0:
                     if self.player.team != self.game.state.current_team:
                         self.game.add_secondary_clock(self.player.team)
@@ -2406,23 +2294,23 @@ class Push(Procedure):
         if action.action_type == ActionType.PUSH:
 
             # Push to crowd?
-            self.crowd = self.game.is_out_of_bounds(action.pos)
+            self.crowd = self.game.is_out_of_bounds(action.position)
 
             # Report
             if self.crowd:
                 self.game.report(Outcome(OutcomeType.PUSHED_INTO_CROWD, player=self.player))
             else:
-                self.game.report(Outcome(OutcomeType.PUSHED, player=self.player, pos=action.pos))
+                self.game.report(Outcome(OutcomeType.PUSHED, player=self.player, position=action.position))
 
             # Follow up - wait if push is delayed
-            player_at = self.game.get_player_at(action.pos)
+            player_at = self.game.get_player_at(action.position)
 
             # Move players in next step - after chaining
             self.waiting_for_move = True
             self.squares = None
 
             # Save positions before chaining
-            self.push_to = Square(action.pos.x, action.pos.y)
+            self.push_to = Square(action.position.x, action.position.y)
             self.follow_to = Square(self.player.position.x, self.player.position.y)
 
             assert self.push_to != self.follow_to
@@ -2502,21 +2390,21 @@ class Scatter(Procedure):
                     if self.game.is_out_of_bounds(self.ball.position):
                         if self.gentle_gust:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OUT_OF_BOUNDS, pos=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OUT_OF_BOUNDS, position=self.ball.position,
                                                      rolls=rolls))
                         else:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.KICK_OUT_OF_BOUNDS, pos=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.KICK_OUT_OF_BOUNDS, position=self.ball.position,
                                                      rolls=rolls))
                         return True
                     elif self.game.is_team_side(self.ball.position, self.game.get_kicking_team()):
                         if self.gentle_gust:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OPP_HALF, pos=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OPP_HALF, position=self.ball.position,
                                                      rolls=rolls))
                         else:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.KICK_OPP_HALF, pos=self.ball.position, rolls=rolls))
+                            self.game.report(Outcome(OutcomeType.KICK_OPP_HALF, position=self.ball.position, rolls=rolls))
                         return True
                 else:
                     # Throw in
@@ -2524,7 +2412,7 @@ class Scatter(Procedure):
                         ThrowIn(self.game, self.ball, Square(self.ball.position.x-x, self.ball.position.y-y))
                         self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
                         self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
-                                                 pos=self.ball.position))
+                                                 position=self.ball.position))
                         return True
 
                     # Passes are scattered three times
@@ -2537,18 +2425,18 @@ class Scatter(Procedure):
                     player = self.game.get_player_at(self.ball.position)
                     if player is not None:
                         Catch(self.game, player, self.ball)
-                        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, pos=self.ball.position,
+                        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position,
                                                  player=player, rolls=[roll_scatter]))
                         return True
 
         if self.kick:
             if self.gentle_gust:
                 # Wait for ball to land
-                self.game.report(Outcome(OutcomeType.GENTLE_GUST_IN_BOUNDS, pos=self.ball.position,
+                self.game.report(Outcome(OutcomeType.GENTLE_GUST_IN_BOUNDS, position=self.ball.position,
                                          rolls=[roll_scatter]))
             else:
                 # Wait for ball to land
-                self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, pos=self.ball.position,
+                self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, position=self.ball.position,
                                          rolls=[roll_scatter, roll_distance]))
         else:
             # Bounce ball
@@ -2642,17 +2530,17 @@ class Setup(Procedure):
             return True
 
         if action.action_type == ActionType.PLACE_PLAYER:
-            if action.pos is None:
+            if action.position is None:
                 self.game.pitch_to_reserves(action.player)
             elif action.player.position is None:
-                self.game.reserves_to_pitch(action.player, action.pos)
+                self.game.reserves_to_pitch(action.player, action.position)
             else:
-                player_at = self.game.get_player_at(action.pos)
+                player_at = self.game.get_player_at(action.position)
                 if player_at is not None:
                     self.game.swap(action.player, player_at)
                 else:
-                    self.game.move_player(action.player, action.pos)
-            self.game.report(Outcome(OutcomeType.PLAYER_PLACED, pos=action.pos, player=action.player))
+                    self.game.move(action.player, action.position)
+            self.game.report(Outcome(OutcomeType.PLAYER_PLACED, position=action.position, player=action.player))
             return False
 
     def available_actions(self):
@@ -2686,15 +2574,15 @@ class Setup(Procedure):
 
 class ThrowIn(Procedure):
 
-    def __init__(self, game, ball, pos):
+    def __init__(self, game, ball, position):
         super().__init__(game)
         self.ball = ball
-        self.pos = pos
+        self.position = position
 
     def step(self, action):
 
         # Move ball to throw-in position
-        self.ball.move_to(self.pos)
+        self.ball.move_to(self.position)
         self.ball.carried = False
 
         # Roll
@@ -2734,11 +2622,11 @@ class ThrowIn(Procedure):
             self.ball.move(x, y)
             if self.game.is_out_of_bounds(self.ball.position):
                 ThrowIn(self.game, self.ball, Square(self.ball.position.x - x, self.ball.position.y - y))
-                self.game.report(Outcome(OutcomeType.THROW_IN_OUT_OF_BOUNDS, pos=self.ball.position,
+                self.game.report(Outcome(OutcomeType.THROW_IN_OUT_OF_BOUNDS, position=self.ball.position,
                                          rolls=[roll_direction, roll_distance]))
                 return True
 
-        self.game.report(Outcome(OutcomeType.THROW_IN, pos=self.ball.position, rolls=[roll_direction,  roll_distance]))
+        self.game.report(Outcome(OutcomeType.THROW_IN, position=self.ball.position, rolls=[roll_direction,  roll_distance]))
 
         # On player -> Catch
         player = self.game.get_player_at(self.ball.position)
@@ -2970,7 +2858,7 @@ class Turn(Procedure):
                 if self.foul_available:
                     foul_players.append(player)
                 if not self.quick_snap and not self.blitz and player.state.up:
-                    if self.game.state.pitch.get_adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True):
+                    if self.game.get_adjacent_opponents(player, down=False):
                         block_players.append(player)
 
         actions = []

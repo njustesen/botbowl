@@ -463,3 +463,6 @@ class Rules:
         CasualtyType.SMASHED_COLLAR_BONE: CasualtyEffect.ST,
         CasualtyType.DEAD: CasualtyEffect.DEAD
     }
+
+    #                0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
+    agility_table = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]

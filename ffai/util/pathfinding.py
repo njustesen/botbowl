@@ -13,7 +13,8 @@ Peter Moore.  The main modifications,
 import math
 from interface import implements, Interface
 from typing import Optional, List
-import ffai.core.model as m
+from ffai.core.model import *
+from ffai.core.game import *
 import time
 
 
@@ -491,18 +492,18 @@ class TestMap(implements(TileMap)):
 
 class FfMover(Mover):
 
-    def __init__(self, unit: m.Player):
+    def __init__(self, unit: Player):
 
-        self.unit: m.Player = unit
+        self.unit: Player = unit
         self.move_allowed: int = unit.num_moves_left()
 
 
 class FfTileMap(implements(TileMap)):
 
-    def __init__(self, game_state: m.GameState):
-        self.game_state: m.GameState = game_state
-        self.WIDTH = game_state.pitch.width
-        self.HEIGHT = game_state.pitch.height
+    def __init__(self, game: Game):
+        self.game: Game = game
+        self.WIDTH = game.state.pitch.width
+        self.HEIGHT = game.state.pitch.height
         self.visited: List[List[bool]] = [[False for y in range(self.HEIGHT)] for x in range(self.WIDTH)]
 
     def get_width_in_tiles(self) -> int:
@@ -523,34 +524,37 @@ class FfTileMap(implements(TileMap)):
         return self.visited[x][y]
 
     def blocked(self, mover: Mover, x: int, y: int) -> bool:
-        square = self.game_state.pitch.get_square(x,y)
+        square = self.game.get_square(x,y)
 
         # Need to ignore the "crowd" squares on the boundary by blocking them.
-        return (x <= 0) or (y <= 0) or (x >= self.WIDTH-1) or (y >= self.HEIGHT-1) or self.game_state.pitch.get_player_at(square) is not None
+        return (x <= 0) or (y <= 0) or (x >= self.WIDTH-1) or (y >= self.HEIGHT-1) or self.game.get_player_at(square) is not None
 
     def get_cost(self, mover: Mover, sx: int, sy: int, tx: int, ty: int) -> float:
-        square_from = self.game_state.pitch.get_square(sx, sy)
-        square_to = self.game_state.pitch.get_square(tx, ty)
+        square_from = self.game.get_square(sx, sy)
+        square_to = self.game.get_square(tx, ty)
         moving_unit = mover.unit
         agility = moving_unit.get_ag()
 
         cost = 0.0
-        num_zones_from, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers = self.game_state.pitch.get_tackle_zones_detailed_at(mover.unit, square_from)
+        num_zones_from = self.game.num_tackle_zones_in(mover.unit)
+        tacklers = self.game.get_adjacent_opponents(mover.unit, skill=Skill.TACKLE)
+        diving_tacklers = self.game.get_adjacent_opponents(mover.unit, skill=Skill.DIVING_TACKLE)
+        prehensile_tailers = self.game.get_adjacent_opponents(mover.unit, skill=Skill.TENTACLES)
 
         if num_zones_from > 0:
-            num_zones_to = self.game_state.pitch.num_tackle_zones_at(mover.unit, square_to)
-            if moving_unit.has_skill(m.Skill.STUNTY):
+            num_zones_to = self.game.num_tackle_zones_at(mover.unit, square_to)
+            if moving_unit.has_skill(Skill.STUNTY):
                 num_zones_to = 0
             num_zones_to = num_zones_to - len(prehensile_tailers) - 2 * len(diving_tacklers)
             cost = (min(5.0, max(1.0, 5.0 - agility + num_zones_to)) / 6.0)
-            if moving_unit.has_skill(m.Skill.DODGE) and not tacklers:  # Should also check if already dodged
+            if moving_unit.has_skill(Skill.DODGE) and not tacklers:  # Should also check if already dodged
                 cost = cost * cost
         cur_depth: int = mover.cur_depth  # essentially number of moves already done.
         if cur_depth != -1 and (cur_depth + 1 > moving_unit.num_moves_left(include_gfi=False)):
             incr_cost = 1.0/6.0
-            if self.game_state.weather == m.WeatherType.BLIZZARD:
+            if self.game.state.weather == WeatherType.BLIZZARD:
                 incr_cost = incr_cost*2
-            if moving_unit.has_skill(m.Skill.SURE_FEET):
+            if moving_unit.has_skill(Skill.SURE_FEET):
                 incr_cost = incr_cost * incr_cost
             cost = 1 - (1 - cost)*(1 - incr_cost)
 

@@ -13,6 +13,7 @@ import json
 import random
 import sys
 from ffai.ai.registry import make_bot
+import traceback
 
 app = Flask(__name__)
 
@@ -90,14 +91,15 @@ def step(game_id):
     try:
         action = json.loads(request.data)['action']
         action_type = parse_enum(ActionType, action['action_type'])
-        pos = Square(action['pos']['x'], action['pos']['y']) if 'pos' in action and action['pos'] is not None else None
+        position = Square(action['position']['x'], action['position']['y']) if 'position' in action and action['position'] is not None else None
         player_id = action['player_id'] if 'player_id' in action else None
         game = api.get_game(game_id)
         player = game.get_player(player_id) if player_id is not None else None
-        action = Action(action_type, pos=pos, player=player)
+        action = Action(action_type, position=position, player=player)
         game = api.step(game_id, action)
     except Exception as e:
         print(e)
+        traceback.print_exc()
         game = api.get_game(game_id)
     return json.dumps(game.to_json())
 

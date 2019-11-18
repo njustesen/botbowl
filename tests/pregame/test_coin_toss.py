@@ -1,18 +1,6 @@
 import pytest
 from ffai.core.game import *
-
-
-def get_game(seed=0):
-    config = load_config("ff-11")
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
-    home_agent = Agent("human1", human=True)
-    away_agent = Agent("human2", human=True)
-    game = Game(1, home, away, home_agent, away_agent, config)
-    game.set_seed(seed)
-    game.init()
-    return game
+from tests.util import *
 
 
 @pytest.mark.parametrize("action_type", [ActionType.HEADS, ActionType.TAILS])
@@ -21,7 +9,7 @@ def test_coin_toss(action_type):
     for i in range(100):
         if len(coverage) == 2:
             return
-        game = get_game()
+        game = get_game_coin_toss()
         game.step(Action(ActionType.START_GAME))
         proc = game.state.stack.peek()
         assert type(proc) is CoinTossFlip
@@ -64,7 +52,7 @@ def test_kick_receive(action_type):
     for i in range(100):
         if len(actors) == 2:
             return
-        game = get_game()
+        game = get_game_coin_toss()
         game.set_seed(i)
         game.step(Action(ActionType.START_GAME))
         game.step(Action(ActionType.HEADS))

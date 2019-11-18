@@ -40,7 +40,7 @@ def test_gym(env):
     assert steps > 10
 
 
-@pytest.mark.parametrize("env", ["FFAI-11-v1"])
+@pytest.mark.parametrize("env", envs)
 def test_multiple_gyms(env):
 
     def worker(remote, parent_remote, env):

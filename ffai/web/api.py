@@ -10,7 +10,8 @@ import pickle
 from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *
-from ffai.ai.bots import *
+import ffai.ai.bots.random_bot
+import ffai.ai.bots.grodbot
 from ffai.ai.registry import list_bots
 
 # Create a game in-memory host

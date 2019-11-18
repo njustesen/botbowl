@@ -70,7 +70,7 @@ class FfHeatMap:
 
     def add_players_moved(self, game: g.Game, players: List[m.Player]):
         for player in players:
-            adjacents: List[m.Square] = game.get_adjacent_squares(player.position, include_occupied=True)
+            adjacents: List[m.Square] = game.get_adjacent_squares(player.position, occupied=True)
             self.units_friendly[player.position.x][player.position.y] += 1.0
             for adjacent in adjacents:
                 self.units_friendly[player.position.x][player.position.y] += 0.5
@@ -150,7 +150,7 @@ def get_players(game: g.Game, team: m.Team, include_own: bool = True, include_op
 
         if include_stunned or not player.state.stunned:
             if include_used or not player.state.used:
-                if include_off_pitch or (player.position is not None and not game.state.pitch.is_out_of_bounds(player.position)):
+                if include_off_pitch or (player.position is not None and not game.is_out_of_bounds(player.position)):
                     selected_players.append(player)
 
     return selected_players
@@ -186,17 +186,17 @@ def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.
 
     if x <= game.state.pitch.width - 3:
         if y == game.state.pitch.height-2:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x + 1, y))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y))
+            caging_squares.append(game.get_square(x + 1, y + 1))
+            caging_squares.append(game.get_square(x + 2, y + 1))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
         elif y == game.state.pitch.height-1:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
         else:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x + 1, y + 2))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y + 1))
+            caging_squares.append(game.get_square(x + 1, y + 1))
+            caging_squares.append(game.get_square(x + 1, y + 2))
+            caging_squares.append(game.get_square(x + 2, y + 1))
             # caging_squares.append(game.state.pitch.get_square(x + 3, y + 3))
 
     return caging_squares
@@ -210,17 +210,17 @@ def caging_squares_north_west(game: g.Game, protect_square: m.Square) -> List[m.
 
     if x >= 3:
         if y == game.state.pitch.height-2:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x - 1, y))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y))
+            caging_squares.append(game.get_square(x - 1, y + 1))
+            caging_squares.append(game.get_square(x - 2, y + 1))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
         elif y == game.state.pitch.height-1:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
         else:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y + 1))
-            caging_squares.append(game.state.pitch.get_square(x - 1, y + 2))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y + 1))
+            caging_squares.append(game.get_square(x - 1, y + 1))
+            caging_squares.append(game.get_square(x - 1, y + 2))
+            caging_squares.append(game.get_square(x - 2, y + 1))
             # caging_squares.append(game.state.pitch.get_square(x - 3, y + 3))
 
     return caging_squares
@@ -234,17 +234,17 @@ def caging_squares_south_west(game: g.Game, protect_square: m.Square) -> List[m.
 
     if x >= 3:
         if y == 2:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x - 1, y))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y))
+            caging_squares.append(game.get_square(x - 1, y - 1))
+            caging_squares.append(game.get_square(x - 2, y - 1))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
         elif y == 1:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
         else:
-            caging_squares.append(game.state.pitch.get_square(x - 1, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x - 1, y - 2))
-            caging_squares.append(game.state.pitch.get_square(x - 2, y - 1))
+            caging_squares.append(game.get_square(x - 1, y - 1))
+            caging_squares.append(game.get_square(x - 1, y - 2))
+            caging_squares.append(game.get_square(x - 2, y - 1))
             # caging_squares.append(game.state.pitch.get_square(x - 3, y - 3))
 
     return caging_squares
@@ -258,18 +258,18 @@ def caging_squares_south_east(game: g.Game, protect_square: m.Square) -> List[m.
 
     if x <= game.state.pitch.width-3:
         if y == 2:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x + 1, y))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y))
+            caging_squares.append(game.get_square(x + 1, y - 1))
+            caging_squares.append(game.get_square(x + 2, y - 1))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
         elif y == 1:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
         else:
-            caging_squares.append(game.state.pitch.get_square(x + 1, y - 1))
-            caging_squares.append(game.state.pitch.get_square(x + 1, y - 2))
-            caging_squares.append(game.state.pitch.get_square(x + 2, y - 1))
-            # caging_squares.append(game.state.pitch.get_square(x + 3, y - 3))
+            caging_squares.append(game.get_square(x + 1, y - 1))
+            caging_squares.append(game.get_square(x + 1, y - 2))
+            caging_squares.append(game.get_square(x + 2, y - 1))
+            # caging_squares.append(game.get_square(x + 3, y - 3))
 
     return caging_squares
 
@@ -286,7 +286,7 @@ def has_player_within_n_squares(game: g.Game, units: List[m.Player], square: m.S
 
 
 def has_adjacent_player(game: g.Game, square: m.Square) -> bool:
-    return not game.state.pitch.get_adjacent_players(square)
+    return not game.get_adjacent_players(square)
 
 
 def is_castle_position_of(game: g.Game, player1: m.Player, player2: m.Player) -> bool:
@@ -352,13 +352,13 @@ def on_los(game: g.Game, team: g.Team, square: m.Square) -> bool:
 def los_squares(game: g.Game, team: g.Team) -> List[m.Square]:
 
     squares: List[m.Square] = [
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 5),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 6),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 7),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 8),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 9),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 10),
-        game.state.pitch.get_square(reverse_x_for_right(game, team, 13), 11)
+        game.get_square(reverse_x_for_right(game, team, 13), 5),
+        game.get_square(reverse_x_for_right(game, team, 13), 6),
+        game.get_square(reverse_x_for_right(game, team, 13), 7),
+        game.get_square(reverse_x_for_right(game, team, 13), 8),
+        game.get_square(reverse_x_for_right(game, team, 13), 9),
+        game.get_square(reverse_x_for_right(game, team, 13), 10),
+        game.get_square(reverse_x_for_right(game, team, 13), 11)
     ]
     return squares
 
@@ -380,7 +380,7 @@ def last_block_proc(game) -> Optional[p.Block]:
 
 
 def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
-    ball_square = game.state.pitch.get_ball_position()
+    ball_square = game.get_ball_position()
     return ball_square is not None and ball_square.is_adjacent(square)
 
 
@@ -388,8 +388,8 @@ def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Squa
     squares: List[m.Square] = []
     for i in range(-distance, distance+1):
         for j in range(-distance, distance+1):
-            cur_square = game.state.pitch.get_square(square.x+i, square.y+j)
-            if cur_square != square and not game.state.pitch.is_out_of_bounds(cur_square):
+            cur_square = game.get_square(square.x+i, square.y+j)
+            if cur_square != square and not game.is_out_of_bounds(cur_square):
                 squares.append(cur_square)
     return squares
 
@@ -489,7 +489,7 @@ def players_in(game: g.Game, team: m.Team, squares: List[m.Square], include_own=
     res: List[m.Player] = []
 
     for square in squares:
-        player: Optional[m.Player] = game.state.pitch.get_player_at(square)
+        player: Optional[m.Player] = game.get_player_at(square)
         if player is None:
             continue
         if player in allowed_players:

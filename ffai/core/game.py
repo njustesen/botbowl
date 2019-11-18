@@ -3,7 +3,7 @@
 Author: Niels Justesen
 Year: 2018
 ==========================
-This module contains the Game class, which is the main class used to interact with a game in FFAI.
+This module contains the Game class, which is the main class and interface used to interact with a game in FFAI.
 """
 
 from ffai.core.model import *
@@ -111,7 +111,7 @@ class Game:
         # Ensure player points to player object
         if action is not None:
             action.player = self.get_player(action.player.player_id) if action.player is not None else None
-            action.pos = Square(action.pos.x, action.pos.y) if action.pos is not None else None
+            action.position = Square(action.position.x, action.position.y) if action.position is not None else None
 
         # Set action as a property so other methods can access it
         self.action = action
@@ -297,14 +297,14 @@ class Game:
                 if action.player is not None and not isinstance(action.player, Player):
                     print("Illegal player", action.action_type, action.player.to_json(), self.state.stack.peek())
                     return False
-                if action.pos is not None and not isinstance(action.pos, Square):
-                    print("ition", action.pos.to_json(), action.action_type.name)
+                if action.position is not None and not isinstance(action.position, Square):
+                    print("ition", action.position.to_json(), action.action_type.name)
                     return False
                 if len(action_choice.players) > 0 and action.player not in action_choice.players:
                     print("Illegal player", action.action_type, action.player, self.state.stack.peek())
                     return False
-                if len(action_choice.positions) > 0 and action.pos not in action_choice.positions:
-                    print("Illegal position", action.pos.to_json(), action.action_type.name)
+                if len(action_choice.positions) > 0 and action.position not in action_choice.positions:
+                    print("Illegal position", action.position.to_json(), action.action_type.name)
                     return False
                 return True
         return False
@@ -334,9 +334,9 @@ class Game:
                     return Action(action_type)
         # Take random action
         action_choice = self.rnd.choice(self.state.available_actions)
-        pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        position = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
-        return Action(action_choice.action_type, pos=pos, player=player)
+        return Action(action_choice.action_type, position=position, player=player)
     
     def _squares_moved(self):
         """
@@ -587,15 +587,15 @@ class Game:
         """
         self.state.reports.append(outcome)
 
-    def is_team_side(self, pos, team):
+    def is_team_side(self, position, team):
         """
-        :param pos:
+        :param position:
         :param team:
         :return: Returns True if pos is on team's side of the arena.
         """
         if team == self.state.home_team:
-            return self.arena.board[pos.y][pos.x] in TwoPlayerArena.home_tiles
-        return self.arena.board[pos.y][pos.x] in TwoPlayerArena.away_tiles
+            return self.arena.board[position.y][position.x] in TwoPlayerArena.home_tiles
+        return self.arena.board[position.y][position.x] in TwoPlayerArena.away_tiles
 
     def get_team_side(self, team):
         """
@@ -609,22 +609,22 @@ class Game:
                     tiles.append(Square(x, y))
         return tiles
 
-    def is_scrimmage(self, pos):
+    def is_scrimmage(self, position):
         """
-        :param pos:
+        :param position:
         :return: Returns True if pos is on the scrimmage line.
         """
-        return self.arena.board[pos.y][pos.x] in TwoPlayerArena.scrimmage_tiles
+        return self.arena.board[position.y][position.x] in TwoPlayerArena.scrimmage_tiles
 
-    def is_wing(self, pos, right):
+    def is_wing(self, position, right):
         """
-        :param pos:
+        :param position:
         :param right: Whether to check on the right side of the arena. If False, it will check on the left side.
         :return: True if pos is on the arena's wing and on the specified side.
         """
         if right:
-            return self.arena.board[pos.y][pos.x] in TwoPlayerArena.wing_right_tiles
-        return self.arena.board[pos.y][pos.x] in TwoPlayerArena.wing_left_tiles
+            return self.arena.board[position.y][position.x] in TwoPlayerArena.wing_right_tiles
+        return self.arena.board[position.y][position.x] in TwoPlayerArena.wing_left_tiles
 
     def remove_balls(self):
         """
@@ -670,12 +670,12 @@ class Game:
         """
         return self.state.player_by_id[player_id]
 
-    def get_player_at(self, pos):
+    def get_player_at(self, position):
         """
-        :param pos: 
+        :param position: 
         :return: Returns the player at pos else None.
         """
-        return self.state.pitch.board[pos.y][pos.x]
+        return self.state.pitch.board[position.y][position.x]
 
     def set_turn_order_from(self, first_team):
         """
@@ -804,27 +804,13 @@ class Game:
             return self.state.receiving_this_drive
         return self.state.receiving_first_half if half == 1 else self.state.kicking_first_half
 
-    def get_ball_position(self):
-        """
-        :return: The position of the ball. If no balls are in the arena None is returned. If multiple balls are in the
-        arena, the position of the first ball is return.
-        """
-        return self.state.pitch.get_ball_position()
-
     def has_ball(self, player):
         """
         :param player:
         :return: True if player has the ball.
         """
-        ball = self.state.pitch.get_ball_at(player.position)
+        ball = self.get_ball_at(player.position)
         return True if ball is not None and ball.is_carried else False
-
-    def get_ball_at(self, pos):
-        """
-        :param pos:
-        :return: The ball object at pos or None.
-        """
-        return self.state.pitch.get_ball_at(pos)
 
     def is_touchdown(self, player):
         """
@@ -832,13 +818,6 @@ class Game:
         :return: True if player is in the opponent's endzone with the ball.
         """
         return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team)
-
-    def is_out_of_bounds(self, pos):
-        """
-        :param pos:
-        :return: True if pos is out of bounds.
-        """
-        return self.state.pitch.is_out_of_bounds(pos)
 
     def is_blitz_available(self):
         """
@@ -908,21 +887,21 @@ class Game:
         Moves player from the pitch to the reserves section in the dugout.
         :param player:
         """
-        self.state.pitch.remove(player)
+        self.remove(player)
         self.get_reserves(player.team).append(player)
         player.state.used = False
         player.state.up = True
 
-    def reserves_to_pitch(self, player, pos):
+    def reserves_to_pitch(self, player, position):
         """
         Moves player from the reserves section in the dugout to the pitch.
         :param player:
         """
         self.get_reserves(player.team).remove(player)
-        player_at = self.get_player_at(pos)
+        player_at = self.get_player_at(position)
         if player_at is not None:
             self.pitch_to_reserves(player_at)
-        self.state.pitch.put(player, pos)
+        self.put(player, position)
         player.state.up = True
 
     def pitch_to_kod(self, player):
@@ -930,7 +909,7 @@ class Game:
         Moves player from the pitch to the KO section in the dugout.
         :param player:
         """
-        self.state.pitch.remove(player)
+        self.remove(player)
         self.get_knocked_out(player.team).append(player)
         player.state.knocked_out = True
         player.state.up = True
@@ -954,7 +933,7 @@ class Game:
         :param apothecary: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
         :return:
         """
-        self.state.pitch.remove(player)
+        self.remove(player)
         player.state.up = True
         if apothecary and effect == CasualtyEffect.NONE:
             # Apothecary puts badly hurt players in the reserves
@@ -969,88 +948,167 @@ class Game:
         Moves player from the pitch to the dungeon and ejects the player from the game.
         :param player:
         """
-        self.state.pitch.remove(player)
+        self.remove(player)
         self.get_dungeon(player.team).append(player)
         player.state.ejected = True
         player.state.up = True
 
-    def move_player(self, player, pos):
+    def put(self, piece, position):
         """
-        Moves player from the pitch to pos.
-        :param player: The player on the pitch to move.
-        :param pos: A position on the pitch.
+        Put a piece on the board.
+        :param piece: Ball or player
+        :param position:
         """
-        self.state.pitch.move(player, pos)
+        piece.position = Square(position.x, position.y)
+        self.state.pitch.board[position.y][position.x] = piece
+
+    def remove(self, piece):
+        """
+        Remove a piece from the board.
+        :param piece:
+        """
+        assert piece.position is not None
+        self.state.pitch.board[piece.position.y][piece.position.x] = None
+        piece.position = None
+
+    def move(self, piece, position):
+        """
+        Move a piece already on the board on the board. If the piece is a ball carrier, the ball is moved as well.
+        :param piece:
+        :param position:
+        :return:
+        """
+        assert piece.position is not None
+        assert self.state.pitch.board[position.y][position.x] is None
+        for ball in self.state.pitch.balls:
+            if ball.position == piece.position and ball.is_carried:
+                ball.move_to(position)
+        self.remove(piece)
+        self.put(piece, position)
 
     def swap(self, piece_a, piece_b):
         """
-        Swaps two pieces (e.g. players) on the pitch.
+        Swap two pieces on the board.
         :param piece_a:
         :param piece_b:
+        :return:
         """
-        self.state.pitch.swap(piece_a, piece_b)
+        assert piece_a.position is not None
+        assert piece_b.position is not None
+        pos_a = Square(piece_a.position.x, piece_a.position.y)
+        pos_b = Square(piece_b.position.x, piece_b.position.y)
+        piece_a.position = pos_b
+        piece_b.position = pos_a
+        self.state.pitch.board[pos_a.y][pos_a.x] = piece_b
+        self.state.pitch.board[pos_b.y][pos_b.x] = piece_a
 
-    def get_assisting_players(self, player, opp_player, ignore_guard=False):
+    def get_catch_modifiers(game, player, accurate=False, interception=False, handoff=False):
         """
-        :param player: The attacker.
-        :param opp_player: The defender.
-        :param ignore_guard: Whether gauard should be ignored (default: False)
-        :return: The players that can assist player when blocking opp_player.
+        :param catcher:
+        :param accurate: whether it is an accurate pass.
+        :param interception: whether it is an interception catch.
+        :param interception: whether it is a handoff catch.
+        :return: the modifier to be added to the pass roll.
         """
-        return self.state.pitch.get_assisting_players(player, opp_player, ignore_guard=ignore_guard)
+        modifiers = 1 if accurate or handoff else 0
+        modifiers = -2 if interception else modifiers
+        if interception and player.has_skill(Skill.LONG_LEGS):
+            modifiers += 1
+        # opposing tackle zones
+        if not player.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= game.num_tackle_zones_in(player)
+        if game.state.weather == WeatherType.POURING_RAIN:
+            modifiers -= 1
+        if player.has_skill(Skill.EXTRA_ARMS):
+            modifiers += 1
+        return modifiers
 
-    def get_interceptors(self, passer, pos):
+    def get_pass_modifiers(self, passer, pass_distance):
         """
         :param passer:
-        :param pos:
-        :return: Possible intercepters when passer attempts a pass to pos.
+        :param pass_distance: the PassDistance to the target.
+        :return: the modifier to be added to the pass roll.
         """
-        return self.state.pitch.get_interceptors(passer, pos)
+        modifiers = Rules.pass_modifiers[pass_distance]
+        # Opposing tackle zones
+        tackle_zones = self.num_tackle_zones_in(passer)
+        if not passer.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= tackle_zones
 
-    def get_pass_distance(self, passer, pos):
-        """
-        :param passer:
-        :param pos:
-        :return: The passing distance from passer to pos.
-        """
-        return self.state.pitch.get_pass_distance(passer, pos)
+        # Weather
+        if self.state.weather == WeatherType.VERY_SUNNY:
+            modifiers -= 1
 
-    def get_pass_distances(self, passer):
-        """
-        :param passer:
-        :return: (squares, distances). Squares is a list of squares that passer can attempt to pass to and distances
-        is a list of pass distances; one for each square.
-        """
-        return self.state.pitch.get_pass_distances(passer, self.state.weather)
+        if passer.has_skill(Skill.ACCURATE):
+            modifiers += 1
 
-    def get_adjacent_squares(self, pos, include_diagonal=True, include_out=False, include_occupied=True, distance=1):
-        """
-        :param pos:
-        :param include_diagonal: Whether to include diagonally adjacent squares.
-        :param include_out: Whether to include squares out of bounds.
-        :param include_occupied: Whether to include occupied squares.
-        :return: Squares adjacent to pos.
-        """
-        return self.state.pitch.get_adjacent_squares(pos, include_diagonal=include_diagonal, include_out=include_out, include_occupied=include_occupied, distance=distance)
+        if passer.has_skill(Skill.STRONG_ARM):
+            if pass_distance == PassDistance.SHORT_PASS or pass_distance == PassDistance.LONG_PASS or \
+                    pass_distance == PassDistance.LONG_BOMB:
+                modifiers += 1
 
-    def get_adjacent_player_squares(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False):
+        if passer.has_skill(Skill.STUNTY):
+            modifiers -= 1
+
+        return modifiers
+
+    def get_dodge_modifiers(self, player, position):
         """
         :param player:
-        :param include_own: Whether to include own players.
-        :param include_opp: Whether to include opponent players.
-        :param diagonal: Whether to include diagonally adjacent squares.
-        :param only_blockable: Whether to only include blockable players.
-        :param only_foulable: Whether to only include foulable players.
-        :return: players adjacent to player.
+        :param position: The position the player is dodging to
+        :return: the modifier to be added to the dodge roll.
         """
-        return self.state.pitch.get_adjacent_player_squares(player, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable)
+        modifiers = 1
+        tackle_zones_to = self.num_tackle_zones_at(player, position)
+
+        ignore_opp_mods = False
+        if player.has_skill(Skill.STUNTY):
+            modifiers = 1
+            ignore_opp_mods = True
+        if player.has_skill(Skill.TITCHY):
+            modifiers += 1
+            ignore_opp_mods = True
+        if player.has_skill(Skill.TWO_HEADS):
+            modifiers += 1
+
+        prehensile_tailers = self.get_adjacent_opponents(player, skill=Skill.PREHENSILE_TAIL)
+        if len(prehensile_tailers) > 0:
+            modifiers -= len(prehensile_tailers)  # subtract 1 for each prehensile tail detractor
+
+        if not ignore_opp_mods:
+            modifiers -= tackle_zones_to
+
+        return modifiers
+
+    def get_pickup_modifiers(self, player, position):
+        """
+        :param player:
+        :param position: the square of the ball.
+        :return: the modifier to be added to the pickup roll.
+        """
+        modifiers = 1
+        tackle_zones = self.num_tackle_zones_at(player, position)
+
+        if not player.has_skill(Skill.BIG_HAND):
+            modifiers -= tackle_zones
+
+        # Weather
+        if self.state.weather == WeatherType.POURING_RAIN:
+            if not player.has_skill(Skill.BIG_HAND):
+                modifiers -= 1
+
+        # Extra arms
+        if player.has_skill(Skill.EXTRA_ARMS):
+            modifiers += 1
+
+        return modifiers
 
     def num_tackle_zones_in(self, player):
         """
         :param player:
-        :return: Number of opponent tackle zone player is in.
+        :return: Number of opponent tackle zones the player is in.
         """
-        return self.state.pitch.num_tackle_zones_in(player)
+        return self.num_tackle_zones_at(player, player.position)
 
     def num_tackle_zones_at(self, player, position):
         """
@@ -1058,31 +1116,17 @@ class Game:
         :param position:
         :return: Number of opponent tackle zones player would be in, if standing at position.
         """
-        return self.state.pitch.num_tackle_zones_at(player, position)
-
-    def get_tackle_zones_detailed(self, player):
-        """
-        The returned list of players who's tackle zone overlap with player is split into:
-        1. tackle_zones: all players,
-        3. tacklers: players with the Tackle skill,
-        3. prehensile_tailers: players with the Prehensile Tail skill,
-        4. diving_tacklers: players with the Diving Tackle skill,
-        5. shadowers: players with the Shadower skill,
-        6: tentaclers: players with the Tentacles skill.
-        :param player:
-        :return: Opponent players who's tackle zones overlap with player split into six lists.
-        """
-        return self.state.pitch.get_tackle_zones_detailed(player)
-
-    def get_push_squares(self, pos_from, pos_to):
-        """
-        :param pos_from: The position of the attacker.
-        :param pos_to: The position of the defender.
-        :return: Possible square to push the player standing on pos_to on to.
-        """
-        return self.state.pitch.get_push_squares(pos_from, pos_to)
+        tackle_zones = 0
+        for p in self.get_adjacent_players(position, team=self.get_opp_team(player.team)):
+            if p is not None and p.has_tackle_zone():
+                tackle_zones += 1
+        return tackle_zones
 
     def is_setup_legal(self, team):
+        """
+        :param team:
+        :return: Whether the team has set up legally.
+        """
         if not self.is_setup_legal_count(team, max_players=self.config.pitch_max,
                                         min_players=self.config.pitch_min):
             return False
@@ -1171,7 +1215,11 @@ class Game:
                 procs.append(proc.__class__.__name__)
         return procs
 
-    def get_player_action_type(self, player):
+    def get_player_action_type(self):
+        """
+        :param player:
+        :return: the player ActionType if there is any on the stack.
+        """
         if self.state.game_over:
             return None
         proc = self.state.stack.peek()
@@ -1214,13 +1262,15 @@ class Game:
         return self.end_time - self.start_time > self.config.time_limits.game
 
     def get_team_by_id(self, team_id):
+        """
+        :param team_id:
+        :return: returns the team with the id or None
+        """
         if self.state.home_team.team_id == team_id:
             return self.state.home_team
         if self.state.away_team.team_id == team_id:
             return self.state.away_team
-
-    def get_square(self, x, y):
-        return self.state.pitch.get_square(x, y)
+        return None
 
     def get_winner(self):
         """
@@ -1276,17 +1326,475 @@ class Game:
         return None
 
     def replace_home_agent(self, agent):
+        """
+        Replaces the home agent safely.
+        :param agent:
+        """
         if self.actor.agent_id == self.home_agent.agent_id:
             self.actor = agent
         self.home_agent = agent
 
     def replace_away_agent(self, agent):
+        """
+        Replaces the away agent safely.
+        :param agent:
+        """
         if self.actor.agent_id == self.away_agent.agent_id:
             self.actor = agent
         self.away_agent = agent
 
-    def has_report_of_type(self, outcome_type):
-        for report in self.state.reports:
+    def has_report_of_type(self, outcome_type, last=None):
+        """
+        :param outcome_type:
+        :return: True if the the game has reported an outcome of the given type. If last is specified, only the recent number of reports are checked.
+        """
+        assert last is None or last > 0
+        n = len(self.state.reports) if last is None else min(len(self.state.reports), last)
+        j = len(self.state.reports) - n
+        for report in self.state.reports[j:]:
             if report.outcome_type == outcome_type:
                 return True
         return False
+
+    def get_balls_at(self, position, in_air=False):
+        """
+        Assumes there is only one ball on the square
+        :param position:
+        :param in_air:
+        :return: Ball or None
+        """
+        balls = []
+        for ball in self.state.pitch.balls:
+            if ball.position == position and (ball.on_ground or in_air):
+                balls.append(ball)
+        return balls
+
+    def get_ball_at(self, position, in_air=False):
+        """
+        Assumes there is only one ball on the square
+        :param position:
+        :param in_air:
+        :return: Ball or None
+        """
+        balls_at = self.get_balls_at(position, in_air)
+        return balls_at[0] if balls_at else None
+
+    def get_ball_positions(self):
+        """
+        :return: The position of the ball. If no balls are in the arena None is returned. If multiple balls are in the
+        arena, the position of the first ball is return.
+        """
+        return [ball.position for ball in self.state.pitch.balls]
+
+    def get_ball_position(self):
+        """
+        Assumes there is only one ball on the square
+        :return: Ball or None
+        """
+        for ball in self.state.pitch.balls:
+            return ball.position
+        return None
+
+    def get_ball_carrier(self):
+        """
+        :return: the ball carrier if any - otherwise None.
+        """
+        ball_position: Square = self.get_ball_position()
+        if ball_position is None:
+            return None
+        else:
+            return self.get_player_at(ball_position)
+
+    def is_out_of_bounds(self, position):
+        """
+        :param position:
+        :return: True if pos is out of bounds.
+        """
+        return position.x < 1 or position.x >= self.state.pitch.width-1 or position.y < 1 or position.y >= self.state.pitch.height-1
+
+    def get_push_squares(self, from_position, to_position):
+        """
+        :param from_position: The position of the attacker.
+        :param to_position: The position of the defender.
+        :return: Possible square to push the player standing on pos_to on to.
+        """
+        squares_to = self.get_adjacent_squares(to_position, out=True)
+        squares_empty = []
+        squares_out = []
+        squares = []
+        #print("From:", pos_from)
+        for square in squares_to:
+            #print("Checking: ", square)
+            #print("Distance: ", pos_from.distance(square, manhattan=False))
+            include = False
+            if from_position.x == to_position.x or from_position.y == to_position.y:
+                if from_position.distance(square, manhattan=False) >= 2:
+                    include = True
+            else:
+                if from_position.distance(square, manhattan=True) >= 3:
+                    include = True
+            #print("Include: ", include)
+            if include:
+                if self.is_out_of_bounds(square):
+                    squares_out.append(square)
+                elif self.get_player_at(square) is None:
+                    squares_empty.append(square)
+                squares.append(square)
+        if len(squares_empty) > 0:
+            return squares_empty
+        if len(squares_out) > 0:
+            return squares_out
+        assert len(squares) > 0
+        return squares
+
+    def get_square(self, x, y):
+        """
+        Returns an existing square object for the given position to avoid a new instantiation. If the square object
+        is out of bounds it may be instantiated.
+        :param x:
+        :param y:
+        :return: A square with the position (x,y)
+        """
+        if 0 >= x < self.state.pitch.width and 0 >= y < self.state.pitch.height:
+            return self.state.pitch.squares[y][x]
+        return Square(x, y)
+
+    def get_adjacent_squares(self, position, diagonal=True, out=False, occupied=True, distance=1):
+        """
+        Returns a list of adjacent squares from the position.
+        :param position:
+        :param diagonal: include diagonal
+        :param out: include squares outside of the pitch and in the crowd.
+        :param occupied: include occupied squares
+        :param distance: distance of adjacency. E.g. use distance 2 when checking for leap.
+        :return:
+        """
+        squares = []
+        r = range(-distance, distance+1)
+        for yy in r:
+            for xx in r:
+                if yy == 0 and xx == 0:
+                    continue
+                sq = self.get_square(position.x+xx, position.y+yy)
+                if not out and self.is_out_of_bounds(sq):
+                    continue
+                if not occupied and self.get_player_at(sq) is not None:
+                    continue
+                if diagonal:
+                    squares.append(sq)
+                elif xx == 0 or yy == 0:
+                    squares.append(sq)
+        return squares
+
+    def get_adjacent_opponents(self, player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
+        """
+        Returns a list of adjacent opponents to the player it its current position.
+        :param position:
+        :param diagonal: Whether to include diagonally adjacent players.
+        :param down: Whether to include down players.
+        :param standing: Whether to include standing players.
+        :param stunned: Whether to include stunned players.
+        :param skill: Only include players with this skill.
+        :return:
+        """
+        return self.get_adjacent_players(player.position, self.get_opp_team(player.team), diagonal, down, standing, stunned, skill=skill)
+
+    def get_adjacent_teammates(self, player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
+        """
+        Returns a list of adjacent teammates to the player it its current position.
+        :param position:
+        :param diagonal: Whether to include diagonally adjacent players.
+        :param down: Whether to include down players.
+        :param standing: Whether to include standing players.
+        :param stunned: Whether to include stunned players.
+        :param skill: Only include players with this skill.
+        :return:
+        """
+        return self.get_adjacent_players(player.position, player.team, diagonal, down, standing, stunned, skill=skill)
+
+    def get_adjacent_players(self, position, team=None, diagonal=True, down=True, standing=True, stunned=True, skill=None):
+        """
+        Returns a list of adjacent player to the position.
+        :param position:
+        :param team: Team of players to include. Includes all teams if None.
+        :param diagonal: Whether to include diagonally adjacent players.
+        :param down: Whether to include down players.
+        :param standing: Whether to include standing players.
+        :param stunned: Whether to include stunned players.
+        :param skill: Only include players with this skill.
+        :return:
+        """
+        players = []
+        for square in self.get_adjacent_squares(position, diagonal=diagonal):
+            player_at = self.get_player_at(square)
+            if player_at is None:
+                continue
+            if not down and not player_at.state.up:
+                continue
+            if not standing and player_at.state.up:
+                continue
+            if not stunned and player_at.state.stunned:
+                continue
+            if team is not None and player_at.team != team:
+                continue
+            if skill is not None and not player_at.has_skill(skill):
+                continue
+            players.append(player_at)
+        return players
+
+    def get_assisting_players(self, player, opp_player, foul=False):
+        """
+        Returns a list of assisting players in a block between player and opp_player.
+        :param player:
+        :param opp_player:
+        :param foul: Indicates whether it is a foul. The Guard skill is ignored if fould=True.
+        :return: a list of assisting players.
+        """
+        assists = []
+        for yy in range(-1, 2, 1):
+            for xx in range(-1, 2, 1):
+                if yy == 0 and xx == 0:
+                    continue
+                p = Square(opp_player.position.x+xx, opp_player.position.y+yy)
+                if not self.is_out_of_bounds(p) and player.position != p:
+                    player_at = self.get_player_at(p)
+                    if player_at is not None:
+                        if player_at.team == player.team:
+                            if not player_at.can_assist():
+                                continue
+                            if (not foul and player_at.has_skill(Skill.GUARD)) or \
+                                            self.num_tackle_zones_in(player_at) <= 1:
+                                assists.append(player_at)
+        return assists
+
+    def num_block_dice(self, attacker, defender, blitz=False, dauntless_success=False):
+        """
+        :param attacker: 
+        :param defender: 
+        :param blitz: if it is a blitz
+        :param dauntless_success: If a dauntless rolls was successful.
+        :return: The number of block dice used in a block between the attacker and defender.
+        """
+        return self.num_block_dice_at(attacker, defender, attacker.position, blitz, dauntless_success)
+
+    def num_block_dice_at(self, attacker, defender, position, blitz=False, dauntless_success=False):
+        """
+        :param attacker:
+        :param defender:
+        :param blitz: if it is a blitz
+        :param dauntless_success: If a dauntless rolls was successful.
+        :return: The number of block dice used in a block between the attacker and defender if the attacker block at the given position.
+        """
+
+        # Determine dice and favor
+        st_for = attacker.get_st()
+        st_against = defender.get_st()
+
+        # Horns
+        if blitz and attacker.has_skill(Skill.HORNS):
+            st_for += 1
+
+        # Dauntless
+        if dauntless_success:
+            st_for = max(st_for, st_against)
+
+        # Find assists
+        assists_for, assists_against = self.num_assists_at(attacker, defender, position, foul=False)
+
+        st_for = st_for + assists_for
+        st_against = st_against + assists_against
+
+        # Determine dice and favor
+        if st_for > 2 * st_against:
+            return 3
+        elif st_for > st_against:
+            return 2
+        elif st_for == st_against:
+            return 1
+        elif st_for < 2*st_against:
+            return -3
+        elif st_for < st_against:
+            return -2
+
+    def num_assists_at(self, player, opp_player, position, foul: bool = False):
+        '''
+        Return net assists for a block of player on opp_player when player has moved to position first.  Required for
+        calculating assists after moving in a Blitz action.
+        :param player: Player
+        :param opp_player: Player
+        :param position: Square
+        :param ignore_guard: bool
+        :return: int - Net # of assists
+        '''
+
+        # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
+        # Assists against
+        opp_assisters = self.get_adjacent_opponents(player, down=False)
+        n_assist_against: int = 0
+        for assister in opp_assisters:
+            # For each opponent, check if they can assist
+            if assister == opp_player:
+                continue
+            elif not foul and assister.has_skill(Skill.GUARD):
+                n_assist_against += 1
+            elif not assister.can_assist():
+                continue
+            else:
+                # Check if in a tackle zone of anyone besides player (at either original square, or "position")
+                adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
+                found_adjacent = False
+                for adjacent_to_assister in adjacent_to_assisters:
+                    # Need to make sure we take into account the blocking/blitzing player may be in a different square than currently represented on the board.
+                    if adjacent_to_assister.position == position or adjacent_to_assister.position == player.position or not adjacent_to_assister.can_assist():
+                        continue
+                    else:
+                        found_adjacent = True
+                        break
+                if not found_adjacent:
+                    n_assist_against += 1
+        # Assists for
+        assisters = self.get_adjacent_opponents(opp_player, down=False)
+        n_assists_for: int = 0
+        for assister in assisters:
+            # For each opponent, check if they can assist
+            if assister.has_skill(Skill.GUARD) and not foul:
+                n_assists_for += 1
+            elif not assister.can_assist():
+                continue
+            else:
+                adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
+                found_adjacent = False
+                for adjacent_to_assister in adjacent_to_assisters:
+                    if not adjacent_to_assister.can_assist():
+                        continue
+                    else:
+                        found_adjacent = True
+                        break
+                if not found_adjacent:
+                    n_assists_for += 1
+        return (n_assists_for, n_assist_against)
+
+    def get_pass_distances(self, passer):
+        """
+        :param passer:
+        :param weather:
+        :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to.
+        """
+        return self.get_pass_distances_at(passer, passer.position)
+
+    def get_pass_distances_at(self, passer, position):
+        """
+        :param passer:
+        :param weather:
+        :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to if at the given position.
+        """
+        squares = []
+        distances = []
+        distances_allowed = [PassDistance.QUICK_PASS,
+                             PassDistance.SHORT_PASS,
+                             PassDistance.LONG_PASS,
+                             PassDistance.LONG_BOMB,
+                             PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
+            else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
+        if self.state.weather == WeatherType.BLIZZARD:
+            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
+        for y in range(len(self.state.pitch.board)):
+            for x in range(len(self.state.pitch.board[y])):
+                to_position = Square(x, y)
+                if self.is_out_of_bounds(to_position) or position == to_position:
+                    continue
+                distance = self.get_pass_distance(position, to_position)
+                if distance in distances_allowed:
+                    squares.append(to_position)
+                    distances.append(distance)
+        return squares, distances
+
+    def get_pass_distance(self, from_position, to_position):
+        """
+        :param from_position:
+        :param to_position:
+        :return: The PassDistance between the passer and the target position.
+        """
+        distance_x = abs(from_position.x - to_position.x)
+        distance_y = abs(from_position.y - to_position.y)
+        if distance_y >= len(Rules.pass_matrix) or distance_x >= len(Rules.pass_matrix[0]):
+            return PassDistance.HAIL_MARY
+        distance = Rules.pass_matrix[distance_y][distance_x]
+        return PassDistance(distance)
+
+    def get_interceptors(self, position_from, position_to, team):
+        """
+        Finds interceptors using the following rules:
+        1) Find line x from a to b
+        3) Find squares s where x intersects
+        3) Find manhattan neighboring n squares of s
+        4) Remove squares where distance to a is larger than dist(a,b)
+        5) Remove squares without standing opponents with hands
+        6) Determine players on squares
+        :param position_from where the passer is
+        :param position_to where the ball is passed to
+        """
+
+        # 1) Find line x from a to b
+        x = get_line((position_from.x, position_from.y), (position_to.x, position_to.y))
+
+        # 3) Find squares s where x intersects
+        s = []
+        for i in x:
+            s.append(Square(i[0], i[1]))
+
+        # 3) Include manhattan neighbors s into n
+        # 4) Remove squares where distance to a is larger than dist(a,b)
+        max_distance = position_from.distance(position_to)
+        n = set()
+        for square in s:
+            for neighbor in self.get_adjacent_squares(square) + [square]:
+
+                if neighbor in n:
+                    continue
+
+                # 4) Remove squares where distance to a is larger than dist(a,b)
+                if neighbor.distance(position_from) > max_distance:
+                    continue
+                if neighbor.distance(position_to) > max_distance:
+                    continue
+                if neighbor.x > max(position_from.x, position_to.x) or neighbor.x < min(position_from.x, position_to.x):
+                    continue
+                if neighbor.y > max(position_from.y, position_to.y) or neighbor.y < min(position_from.y, position_to.y):
+                    continue
+
+                # 5) Remove squares without standing opponents with hands
+                player_at = self.get_player_at(neighbor)
+                if player_at is None:
+                    continue
+                if player_at.team != team:
+                    continue
+                if not player_at.can_catch():
+                    continue
+                if player_at.has_skill(Skill.NO_HANDS):
+                    continue
+
+                n.add(neighbor)
+
+        if position_from in n:
+            n.remove(position_from)
+        if position_to in n:
+            n.remove(position_to)
+
+        players = []
+        for square in n:
+            players.append(self.get_player_at(square))
+
+        return players
+
+    def get_available_actions(self):
+        """
+        :return: a list of available action choices in the current state.
+        """
+        return self.state.available_actions
+
+    def clear_board(self):
+        for player in self.get_players_on_pitch(self.state.home_team):
+            self.pitch_to_reserves(player)
+        for player in self.get_players_on_pitch(self.state.away_team):
+            self.pitch_to_reserves(player)

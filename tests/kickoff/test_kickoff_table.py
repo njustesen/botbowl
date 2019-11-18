@@ -1,35 +1,16 @@
 import pytest
 from ffai.core.game import *
-
-
-def get_game(seed=0):
-    config = load_config("ff-11")
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("orc", ruleset)
-    home_agent = Agent("human1", human=True)
-    away_agent = Agent("human2", human=True)
-    game = Game(1, home, away, home_agent, away_agent, config)
-    game.set_seed(seed)
-    game.init()
-    game.step(Action(ActionType.START_GAME))
-    game.step(Action(ActionType.HEADS))
-    game.step(Action(ActionType.KICK))
-    game.step(Action(ActionType.SETUP_FORMATION_ZONE))
-    game.step(Action(ActionType.END_SETUP))
-    game.step(Action(ActionType.SETUP_FORMATION_WEDGE))
-    game.step(Action(ActionType.END_SETUP))
-    return game
+from tests.util import *
 
 
 def test_get_the_ref():
-    game = get_game()
+    game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D6.fix_result(1)
     D6.fix_result(1)
     home_bribes = game.state.home_team.state.bribes
     away_bribes = game.state.away_team.state.bribes
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_GET_THE_REF)
     assert game.state.home_team.state.bribes == home_bribes + 1
     assert game.state.away_team.state.bribes == away_bribes + 1
@@ -41,7 +22,7 @@ def test_riot():
         if 0 < i < 7:
             rolls = [1, 2, 3, 4, 5, 6]
         for roll in rolls:
-            game = get_game()
+            game = get_game_kickoff()
             game.state.home_team.state.turn = i
             game.state.away_team.state.turn = i
             D6.fix_result(1)  # Scatter
@@ -49,7 +30,7 @@ def test_riot():
             D6.fix_result(2)
             if 0 < i < 7:
                 D6.fix_result(roll)  # Riot roll
-            game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+            game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
             if i == 7:
                 assert game.state.home_team.state.turn == i - 1
                 assert game.state.away_team.state.turn == i - 1
@@ -66,11 +47,11 @@ def test_riot():
 
 
 def test_perfect_defence():
-    game = get_game()
+    game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D6.fix_result(2)
     D6.fix_result(2)
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     proc = game.state.stack.peek()
     assert game.has_report_of_type(OutcomeType.KICKOFF_PERFECT_DEFENSE)
     assert type(proc) == Setup
@@ -86,7 +67,7 @@ def test_perfect_defence():
                 square.x -= 1
             else:
                 square.y += 1
-            game.step(Action(ActionType.PLACE_PLAYER, player=player, pos=square))
+            game.step(Action(ActionType.PLACE_PLAYER, player=player, position=square))
             assert game.get_player_at(square) == player
 
 
@@ -103,14 +84,14 @@ def get_empty_square_without_adjacent_players(game):
 
 
 def test_high_kick():
-    game = get_game()
+    game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D8.fix_result(6)  # Scatter
     D6.fix_result(3)
     D6.fix_result(2)
     ball_placed_at = get_empty_square_without_adjacent_players(game)
     assert ball_placed_at is not None
-    game.step(Action(ActionType.PLACE_BALL, pos=ball_placed_at))
+    game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
     proc = game.state.stack.peek()
     assert game.has_report_of_type(OutcomeType.KICKOFF_HIGH_KICK)
     assert type(proc) == HighKick
@@ -136,11 +117,11 @@ def test_high_kick():
 
 
 def test_blitz():
-    game = get_game()
+    game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D6.fix_result(5)
     D6.fix_result(5)
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_BLITZ)
     actor = game.actor
     team = game.get_agent_team(actor)
@@ -158,18 +139,18 @@ def test_blitz():
                     assert action_choice.action_type != ActionType.BLOCK
                     if not moved:
                         game.step(Action(ActionType.START_MOVE, player=player))
-                        game.step(Action(ActionType.MOVE, player=player, pos=Square(player.position.x - 1, player.position.y)))
+                        game.step(Action(ActionType.MOVE, player=player, position=Square(player.position.x - 1, player.position.y)))
                         game.step(Action(ActionType.END_PLAYER_TURN, player=player))
                         moved = True
     game.step(Action(ActionType.END_TURN))
 
 
 def test_quick_snap():
-    game = get_game()
+    game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D6.fix_result(4)
     D6.fix_result(5)  # Quick snap
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_QUICK_SNAP)
     actor = game.actor
     team = game.get_agent_team(actor)
@@ -178,7 +159,7 @@ def test_quick_snap():
     for player in game.get_players_on_pitch(team):
         for action_choice in game.state.available_actions:
             if action_choice.action_type != ActionType.END_TURN:
-                adjacent_squares = game.get_adjacent_squares(player.position, include_occupied=False)
+                adjacent_squares = game.get_adjacent_squares(player.position, occupied=False)
                 if len(adjacent_squares) == 0:
                     assert player not in action_choice.players
                 else:
@@ -187,14 +168,14 @@ def test_quick_snap():
                     for action_choice in game.state.available_actions:
                         if action_choice.action_type != ActionType.END_PLAYER_TURN:
                             assert len(action_choice.positions) == len(adjacent_squares)
-                            game.step(Action(ActionType.MOVE, player=player, pos=action_choice.positions[0]))
+                            game.step(Action(ActionType.MOVE, player=player, position=action_choice.positions[0]))
                             game.step(Action(ActionType.END_PLAYER_TURN, player=player))
     game.step(Action(ActionType.END_TURN))
 
 
 @pytest.mark.parametrize("kickoff_event", [OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING])
 def test_cheering_fans_brilliant_coaching_equal_fame_and_roll(kickoff_event):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     game.state.home_team.cheerleaders = 0
@@ -212,7 +193,7 @@ def test_cheering_fans_brilliant_coaching_equal_fame_and_roll(kickoff_event):
         D6.fix_result(4)  # Brilliant coaching
     D3.fix_result(1)  # home team roll
     D3.fix_result(1)  # away team roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
     assert game.state.away_team.state.rerolls == away_rr + 1
@@ -220,7 +201,7 @@ def test_cheering_fans_brilliant_coaching_equal_fame_and_roll(kickoff_event):
 
 @pytest.mark.parametrize("kickoff_event", [OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING])
 def test_cheering_fans_brilliant_coaching_equal_roll(kickoff_event):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 1
     game.state.home_team.cheerleaders = 0
@@ -238,7 +219,7 @@ def test_cheering_fans_brilliant_coaching_equal_roll(kickoff_event):
         D6.fix_result(4)  # Brilliant coaching
     D3.fix_result(2)  # home team roll
     D3.fix_result(1)  # away team roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
     assert game.state.away_team.state.rerolls == away_rr + 1
@@ -246,7 +227,7 @@ def test_cheering_fans_brilliant_coaching_equal_roll(kickoff_event):
 
 @pytest.mark.parametrize("kickoff_event", [OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING])
 def test_cheering_fans_brilliant_coaching_unequal_roll(kickoff_event):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 1
     game.state.home_team.cheerleaders = 0
@@ -264,7 +245,7 @@ def test_cheering_fans_brilliant_coaching_unequal_roll(kickoff_event):
         D6.fix_result(4)  # Brilliant coaching
     D3.fix_result(3)  # home team roll
     D3.fix_result(1)  # away team roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
     assert game.state.away_team.state.rerolls == away_rr
@@ -272,7 +253,7 @@ def test_cheering_fans_brilliant_coaching_unequal_roll(kickoff_event):
 
 @pytest.mark.parametrize("kickoff_event", [OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING])
 def test_cheering_fans_brilliant_coaching_cheerleaders_ass_coaches_equal(kickoff_event):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 1
     game.state.home_team.cheerleaders = 1
@@ -290,7 +271,7 @@ def test_cheering_fans_brilliant_coaching_cheerleaders_ass_coaches_equal(kickoff
         D6.fix_result(4)  # Brilliant coaching
     D3.fix_result(1)  # home team roll
     D3.fix_result(1)  # away team roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
     assert game.state.away_team.state.rerolls == away_rr + 1
@@ -298,7 +279,7 @@ def test_cheering_fans_brilliant_coaching_cheerleaders_ass_coaches_equal(kickoff
 
 @pytest.mark.parametrize("kickoff_event", [OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING])
 def test_cheering_fans_brilliant_coaching_ten_fame(kickoff_event):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 10
     game.state.away_team.state.fame = 0
     game.state.home_team.cheerleaders = 0
@@ -316,7 +297,7 @@ def test_cheering_fans_brilliant_coaching_ten_fame(kickoff_event):
         D6.fix_result(4)  # Brilliant coaching
     D3.fix_result(1)  # home team roll
     D3.fix_result(3)  # away team roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
     assert game.state.away_team.state.rerolls == away_rr
@@ -325,7 +306,7 @@ def test_cheering_fans_brilliant_coaching_ten_fame(kickoff_event):
 weather_dice_rolls = [[1, 1], [1, 2], [2, 2], [5, 5], [5, 6], [6, 6]]
 @pytest.mark.parametrize("dice_roll", weather_dice_rolls)
 def test_changing_weather(dice_roll):
-    game = get_game()
+    game = get_game_kickoff()
     game.state.weather = WeatherType.NICE
     D6.fix_result(1)  # Scatter
     D6.fix_result(3)
@@ -338,7 +319,7 @@ def test_changing_weather(dice_roll):
     elif pos.x >= 14:
         pos.x = 19
     pos.y = 7
-    game.step(Action(ActionType.PLACE_BALL, pos=pos))
+    game.step(Action(ActionType.PLACE_BALL, position=pos))
     assert game.has_report_of_type(OutcomeType.KICKOFF_CHANGING_WHEATHER)
     if np.sum(dice_roll) == 2:
         assert game.state.weather == WeatherType.SWELTERING_HEAT
@@ -354,7 +335,7 @@ def test_changing_weather(dice_roll):
 
 
 def test_throw_a_rock_same_stunned():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -368,7 +349,7 @@ def test_throw_a_rock_same_stunned():
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 1
@@ -376,7 +357,7 @@ def test_throw_a_rock_same_stunned():
 
 
 def test_throw_a_rock_same_knocked_out():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -391,7 +372,7 @@ def test_throw_a_rock_same_knocked_out():
     D6.fix_result(4)  # Injury roll
     D6.fix_result(4)  # Injury roll
     D6.fix_result(4)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10
     assert len(game.get_knocked_out(game.state.home_team)) == 1
@@ -401,7 +382,7 @@ def test_throw_a_rock_same_knocked_out():
 
 
 def test_throw_a_rock_same_cas():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -420,7 +401,7 @@ def test_throw_a_rock_same_cas():
     D6.fix_result(5)  # Injury roll
     D6.fix_result(1)  # Badly hurt
     D8.fix_result(1)  # Badly hurt
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10
     assert len(game.get_casualties(game.state.home_team)) == 1
@@ -430,7 +411,7 @@ def test_throw_a_rock_same_cas():
 
 
 def test_throw_a_rock_home_stunned():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -444,7 +425,7 @@ def test_throw_a_rock_home_stunned():
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 0
@@ -452,7 +433,7 @@ def test_throw_a_rock_home_stunned():
 
 
 def test_throw_a_rock_away_stunned():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -466,7 +447,7 @@ def test_throw_a_rock_away_stunned():
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 1
@@ -474,7 +455,7 @@ def test_throw_a_rock_away_stunned():
 
 
 def test_throw_a_rock_home_fame_stunned():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 1
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -488,7 +469,7 @@ def test_throw_a_rock_home_fame_stunned():
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 0
@@ -496,7 +477,7 @@ def test_throw_a_rock_home_fame_stunned():
 
 
 def test_throw_a_rock_away_fame_stunned():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 1
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -510,7 +491,7 @@ def test_throw_a_rock_away_fame_stunned():
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
     D6.fix_result(1)  # Injury roll
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 1
@@ -518,7 +499,7 @@ def test_throw_a_rock_away_fame_stunned():
 
 
 def test_pitch_invasion_no_fame():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -532,7 +513,7 @@ def test_pitch_invasion_no_fame():
             D6.fix_result(i)
             if i < 6:
                 i += 1
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 6
@@ -548,7 +529,7 @@ def test_pitch_invasion_no_fame():
 
 
 def test_pitch_invasion_home_fame():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 1
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -562,7 +543,7 @@ def test_pitch_invasion_home_fame():
             D6.fix_result(i)
             if i < 6:
                 i += 1
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 6
@@ -578,7 +559,7 @@ def test_pitch_invasion_home_fame():
 
 
 def test_pitch_invasion_away_fame():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 1
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -592,7 +573,7 @@ def test_pitch_invasion_away_fame():
             D6.fix_result(i)
             if i < 6:
                 i += 1
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     assert len([player for player in game.get_players_on_pitch(game.state.home_team) if not player.state.up]) == 7
@@ -608,7 +589,7 @@ def test_pitch_invasion_away_fame():
 
 
 def test_pitch_invasion_ball_and_chain():
-    game = get_game()
+    game = get_game_kickoff()
     game.state.home_team.state.fame = 0
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
@@ -621,7 +602,7 @@ def test_pitch_invasion_ball_and_chain():
     for team in game.state.teams:
         for player in game.get_players_on_pitch(team):
             D6.fix_result(6)
-    game.step(Action(ActionType.PLACE_BALL, pos=game.state.available_actions[0].positions[0]))
+    game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10
     assert len(game.get_knocked_out(game.state.home_team)) == 1

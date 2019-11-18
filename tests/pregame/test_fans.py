@@ -1,5 +1,7 @@
 import pytest
 from ffai.core.game import *
+from tests.util import *
+
 
 fans_dice_rolls = []
 for i in range(1, 7, 1):
@@ -7,21 +9,9 @@ for i in range(1, 7, 1):
         fans_dice_rolls.append([i, j])
 
 
-def get_game(seed=0):
-    config = load_config("ff-11")
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("orc", ruleset)
-    home_agent = Agent("human1", human=True)
-    away_agent = Agent("human2", human=True)
-    game = Game(1, home, away, home_agent, away_agent, config)
-    game.set_seed(seed)
-    return game
-
-
 @pytest.mark.parametrize("dice_roll", fans_dice_rolls)
 def test_spectators(dice_roll):
-    game = get_game()
+    game = get_game_fans()
     proc = Fans(game)
     proc.setup()
     D6.fix_result(dice_roll[0])
@@ -42,7 +32,7 @@ def test_spectators(dice_roll):
 
 @pytest.mark.parametrize("dice_roll", fans_dice_rolls)
 def test_fame(dice_roll):
-    game = get_game()
+    game = get_game_fans()
     proc = Fans(game)
     proc.setup()
     # Home

@@ -30,7 +30,7 @@ class JustInTimeBot(Agent):
                 break
         pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
-        action = Action(action_choice.action_type, pos=pos, player=player)
+        action = Action(action_choice.action_type, position=pos, player=player)
         return action
 
     def end_game(self, game):

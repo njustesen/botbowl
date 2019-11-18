@@ -75,7 +75,7 @@ class OwnTackleZoneLayer(FeatureLayer):
         for player in active_team.players:
             if player.position is not None:
                 if player.has_tackle_zone():
-                    for square in game.state.pitch.get_adjacent_squares(player.position):
+                    for square in game.get_adjacent_squares(player.position):
                         out[square.y][square.x] += 0.125
         return out
 

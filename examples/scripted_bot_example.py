@@ -45,7 +45,7 @@ class MyScriptedBot(ProcBot):
         player = reserves[0]
         y = 3
         x = 13 if game.is_team_side(Square(13, 3), self.my_team) else 14
-        return Action(ActionType.PLACE_PLAYER, player=player, pos=Square(x, y + i))
+        return Action(ActionType.PLACE_PLAYER, player=player, position=Square(x, y + i))
 
     def place_ball(self, game):
         """
@@ -54,8 +54,8 @@ class MyScriptedBot(ProcBot):
         left_center = Square(7, 8)
         right_center = Square(20, 8)
         if game.is_team_side(left_center, self.opp_team):
-            return Action(ActionType.PLACE_BALL, pos=left_center)
-        return Action(ActionType.PLACE_BALL, pos=right_center)
+            return Action(ActionType.PLACE_BALL, position=left_center)
+        return Action(ActionType.PLACE_BALL, position=right_center)
 
     def high_kick(self, game):
         """
@@ -66,7 +66,7 @@ class MyScriptedBot(ProcBot):
                 game.get_player_at(game.get_ball_position()) is None:
             for player in game.get_players_on_pitch(self.my_team, up=True):
                 if Skill.BLOCK in player.get_skills():
-                    return Action(ActionType.PLACE_PLAYER, player=player, pos=ball_pos)
+                    return Action(ActionType.PLACE_PLAYER, player=player, position=ball_pos)
         return Action(ActionType.SELECT_NONE)
 
     def touchback(self, game):
@@ -99,9 +99,9 @@ class MyScriptedBot(ProcBot):
 
             # Start block action
             if not game.is_blitz() and not game.is_quick_snap():
-                adjacent_player_squares = game.get_adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True)
-                if player.state.up and len(adjacent_player_squares) > 0:
-                    opp_player = game.get_player_at(adjacent_player_squares[0])
+                adjacent_players = game.get_adjacent_opponents(player, down=False)
+                if player.state.up and len(adjacent_players) > 0:
+                    opp_player = adjacent_players[0]
                     dice, favor = Block.dice_and_favor(game, player, opp_player)
                     if favor == self.my_team and dice > 1:
                         return Action(ActionType.START_BLOCK, player=player)
@@ -117,8 +117,7 @@ class MyScriptedBot(ProcBot):
                 return Action(ActionType.START_HANDOFF, player=player)
 
             # Start foul action
-            adjacent_player_squares = game.get_adjacent_player_squares(player, include_own=False, include_opp=True,
-                                                                       only_foulable=True)
+            adjacent_player_squares = game.get_adjacent_opponents(player, down=False)
             if game.is_foul_available() and len(adjacent_player_squares) > 0:
                 return Action(ActionType.START_FOUL, player=player)
 
@@ -149,7 +148,7 @@ class MyScriptedBot(ProcBot):
                 # Loop through adjacent empty squares
                 for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
                     if len(agi_rolls) == 0:
-                        return Action(ActionType.MOVE, pos=position)
+                        return Action(ActionType.MOVE, position=position)
 
             # Block action?
             if action_choice.action_type == ActionType.BLOCK:
@@ -159,7 +158,7 @@ class MyScriptedBot(ProcBot):
 
                     # Only do blocks with 1 die if attacker has block
                     if block_rolls >= 2 or (block_rolls == 1 and Skill.BLOCK in player.get_skills()):
-                        return Action(ActionType.BLOCK, pos=position)
+                        return Action(ActionType.BLOCK, position=position)
 
             # Pass action?
             if action_choice.action_type == ActionType.PASS:
@@ -172,21 +171,21 @@ class MyScriptedBot(ProcBot):
 
                     # Don't pass to empty squares or long bombs
                     if catcher is not None and pass_distance != PassDistance.LONG_BOMB:
-                        return Action(ActionType.PASS, pos=position)
+                        return Action(ActionType.PASS, position=position)
 
             # Hand-off action
             if action_choice.action_type == ActionType.HANDOFF:
 
                 # Loop through players to hand-off to
                 for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-                    return Action(ActionType.HANDOFF, pos=position)
+                    return Action(ActionType.HANDOFF, position=position)
 
             # Foul action
             if action_choice.action_type == ActionType.FOUL:
 
                 # Loop through players to foul
                 for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
-                    return Action(ActionType.FOUL, pos=position)
+                    return Action(ActionType.FOUL, position=position)
 
         return Action(ActionType.END_PLAYER_TURN)
 
@@ -223,7 +222,7 @@ class MyScriptedBot(ProcBot):
         """
         # Loop through available squares
         for position in game.state.available_actions[0].positions:
-            return Action(ActionType.PUSH, pos=position)
+            return Action(ActionType.PUSH, position=position)
 
     def follow_up(self, game):
         """
@@ -233,7 +232,7 @@ class MyScriptedBot(ProcBot):
         for position in game.state.available_actions[0].positions:
             # Always follow up
             if player.position != position:
-                return Action(ActionType.FOLLOW_UP, pos=position)
+                return Action(ActionType.FOLLOW_UP, position=position)
 
     def apothecary(self, game):
         """

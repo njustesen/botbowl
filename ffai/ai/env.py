@@ -239,7 +239,7 @@ class FFAIEnv(gym.Env):
                 position = action.positions[0]
         elif action_type in self.positional_action_types:
             position = p
-        real_action = Action(action_type=action_type, pos=position, player=player)
+        real_action = Action(action_type=action_type, position=position, player=player)
         return self._step(real_action)
 
     def _step(self, action):
@@ -337,18 +337,12 @@ class FFAIEnv(gym.Env):
         obs['state']['is blitz'] = 1.0 if game.is_blitz() else 0.0
         obs['state']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
 
-        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.MOVE else 0.0
-        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.BLOCK else 0.0
-        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.BLITZ else 0.0
-        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.PASS else 0.0
-        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.HANDOFF else 0.0
-        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.FOUL else 0.0
+        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.MOVE else 0.0
+        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLOCK else 0.0
+        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLITZ else 0.0
+        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.PASS else 0.0
+        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.HANDOFF else 0.0
+        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.FOUL else 0.0
 
         # Procedure
         if game.state.stack.size() > 0:
