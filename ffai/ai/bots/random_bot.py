@@ -5,8 +5,8 @@ Year: 2018
 ==========================
 This module contains a random bot that takes random actions.
 """
-
-from ffai.core.procedure import *
+import numpy as np
+from ffai.core.model import Agent, ActionType, Action
 from ffai.ai.registry import register_bot
 
 

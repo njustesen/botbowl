@@ -1650,7 +1650,7 @@ appServices.factory('IconService', function() {
                 'Troll': 'troll',
                 'Goblin': 'goblin'
             },
-            'Elf': {
+            'Elven Union': {
                 'Lineman': 'eplineman',
                 'Blitzer': 'epblitzer',
                 'Thrower': 'epthrower',

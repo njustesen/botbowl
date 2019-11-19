@@ -5,8 +5,8 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-
-from ffai.core.procedure import *
+import numpy as np
+from ffai.core.model import Agent, ActionType, Action
 from ffai.ai.registry import register_bot
 import time
 
@@ -28,7 +28,7 @@ class ViolatorBot(Agent):
             action_choice = self.rnd.choice(game.state.available_actions)
             if action_choice.action_type != ActionType.PLACE_PLAYER:
                 break
-        pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        position = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
         action = Action(action_choice.action_type, position=position, player=player)
         return action

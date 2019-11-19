@@ -7,7 +7,7 @@ races = [
     "amazon",
     "chaos",
     "chaos-dwarf",
-    "elf",
+    "elven-union",
     "high-elf",
     "human",
     "lizardmen",

@@ -11,7 +11,6 @@ from ffai.web import api
 from ffai.core.load import *
 import json
 import random
-import sys
 from ffai.ai.registry import make_bot
 import traceback
 

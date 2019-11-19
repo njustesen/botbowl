@@ -5,12 +5,11 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-
-from ffai.core.procedure import *
+from ffai.core.model import Agent
 from ffai.ai.registry import register_bot
 
 
-class ChrashBot(Agent):
+class IdleBot(Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -19,11 +18,11 @@ class ChrashBot(Agent):
         pass
         
     def act(self, game):
-        v = 1 / 0
+        time.sleep(1000000)
         return None
 
     def end_game(self, game):
         pass
 
-# Register bot
-register_bot('crash', ChrashBot)
+
+register_bot('idle', IdleBot)

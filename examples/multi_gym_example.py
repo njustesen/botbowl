@@ -2,10 +2,8 @@
 
 import gym
 import numpy as np
-import ffai.ai
-from ffai.ai.env import FFAIEnv
+import ffai
 from multiprocessing import Process, Pipe
-import numpy as np
 from ffai.ai.renderer import Renderer
 
 

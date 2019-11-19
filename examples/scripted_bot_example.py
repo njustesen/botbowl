@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from ffai.core.game import *
-from ffai.ai.bots.proc_bot import ProcBot
+from ffai import Action, ActionType, Square
+from ffai import ProcBot
+from ffai.core.load import *
 from ffai.ai.registry import register_bot, make_bot
 import time
 

@@ -2,9 +2,6 @@
 
 import ffai.web.server as server
 
-# Import this to register bots
-from ffai.ai.bots import grodbot
-
 # Create some games
 '''
 api.new_game(home_team_id="orc-1",

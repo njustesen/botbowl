@@ -5,7 +5,7 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-
+from ffai.core.model import Agent
 from ffai.core.procedure import *
 
 

@@ -13,8 +13,9 @@ Peter Moore.  The main modifications,
 import math
 from interface import implements, Interface
 from typing import Optional, List
-from ffai.core.model import *
-from ffai.core.game import *
+from ffai.core.model import Player
+from ffai.core.table import Skill, WeatherType
+from ffai.core.game import Game
 import time
 
 

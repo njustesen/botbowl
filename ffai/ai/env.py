@@ -8,8 +8,7 @@ This module contains the FFAIEnv class; FFAI implementing the Open AI Gym interf
 
 import gym
 from gym import spaces
-from ffai.core.game import *
-from ffai.core.load import *
+from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid

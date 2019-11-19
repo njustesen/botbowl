@@ -2,8 +2,8 @@
 
 import gym
 import numpy as np
-import ffai.ai
-from ffai.ai.env import FFAIEnv
+import ffai
+
 
 if __name__ == "__main__":
 

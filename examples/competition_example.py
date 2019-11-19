@@ -2,15 +2,7 @@
 
 from ffai.ai.competition import Competition
 from ffai.core.load import load_config, load_team_by_filename, load_rule_set
-
-from ffai.ai.bots import crash_bot
-from ffai.ai.bots import grodbot
-from ffai.ai.bots import idle_bot
-from ffai.ai.bots import init_crash_bot
-from ffai.ai.bots import just_in_time_bot
-from ffai.ai.bots import manipulator_bot
-from ffai.ai.bots import random_bot
-from ffai.ai.bots import violator_bot
+import ffai.ai.bots.testbots
 
 
 # Load competition configuration for the bot bowl

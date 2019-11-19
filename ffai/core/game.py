@@ -6,13 +6,10 @@ Year: 2018
 This module contains the Game class, which is the main class and interface used to interact with a game in FFAI.
 """
 
-from ffai.core.model import *
 from ffai.core.procedure import *
 from ffai.core.load import *
 from copy import deepcopy
 import numpy as np
-import multiprocessing
-import pickle
 
 
 class Game:

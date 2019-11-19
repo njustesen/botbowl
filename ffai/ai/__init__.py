@@ -1,5 +1,13 @@
 from gym.envs.registration import register
+
 from ffai.core.load import *
+from .env import FFAIEnv
+from .layers import *
+from .registry import *
+from .renderer import *
+from .bots import GrodBot
+from .bots import RandomBot
+from .bots import ProcBot
 
 ruleset = load_rule_set('LRB5-Experimental')
 
