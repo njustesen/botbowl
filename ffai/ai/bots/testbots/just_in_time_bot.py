@@ -5,9 +5,10 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-from ffai.core.model import Agent
+from ffai.core.model import Agent, ActionType, Action
 from ffai.ai.registry import register_bot
 import time
+import numpy as np
 
 
 class JustInTimeBot(Agent):
