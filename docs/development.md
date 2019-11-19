@@ -10,7 +10,7 @@ Run the above command from the root of the repository.
 ## Run tests
 Install pytest and run the unit and integration tests in [tests/](../tests) by running:
 ```
-$ pytest
+pytest
 ```
 from the root of the repository.
 
