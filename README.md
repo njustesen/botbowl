@@ -58,6 +58,10 @@ pip install git+https://github.com/njustesen/ffai
 
 ## Run FFAI's Web Server
 ```
+python -c "import ffai.web.server as server;server.start_server(debug=True, use_reloader=False, port=5000)"
+```
+Or download the examples folder and run:
+```
 python examples/server_example.py
 ```
 Go to: http://127.0.0.1:5000/
@@ -65,8 +69,7 @@ Go to: http://127.0.0.1:5000/
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
 ## Disclaminers and Copyrighted Art
-FFAI is not affiliated with or endorsed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP.
+FFAI is not affiliated with or endorsed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP. The team icons are from FUMBBL are used. The license described in [LICENSE](LICENSE) only covers the source code - not any of the graphics files.
 
 ## Get Involved
 Do you want implement a bot for FFAI or perhaps help us test, develop, and/or organize AI competitions? Join our Discord server using this link: [FFAI Discord Server](https://discord.gg/MTXMuae).
-
