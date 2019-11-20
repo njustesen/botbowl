@@ -748,6 +748,25 @@ class Player(Piece):
         self.spp = spp
         self.state = PlayerState()
 
+    def to_json(self):
+        return {
+            'player_id': self.player_id,
+            'name': self.name,
+            'role': self.role.name,
+            'team_id': self.team.team_id,
+            'nr': self.nr,
+            'skills': [skill.name for skill in self.get_skills()],
+            'ma': self.get_ma(),
+            'st': self.get_st(),
+            'ag': self.get_ag(),
+            'av': self.get_av(),
+            'niggling': self.niggling,
+            'mng': self.mng,
+            'spp': self.spp,
+            'state': self.state.to_json(),
+            'position': self.position.to_json() if self.position is not None else None
+        }
+
     def get_ag(self):
         return self.role.ag + self.extra_ag
 
@@ -779,25 +798,6 @@ class Player(Piece):
 
     def can_assist(self):
         return self.state.up and not self.state.bone_headed and not self.state.hypnotized and not self.state.really_stupid
-
-    def to_json(self):
-        return {
-            'player_id': self.player_id,
-            'name': self.name,
-            'role': self.role.name,
-            'team_id': self.team.team_id,
-            'nr': self.nr,
-            'skills': [skill.name for skill in self.get_skills()],
-            'ma': self.get_ma(),
-            'st': self.get_st(),
-            'ag': self.get_ag(),
-            'av': self.get_av(),
-            'niggling': self.niggling,
-            'mng': self.mng,
-            'spp': self.spp,
-            'state': self.state.to_json(),
-            'position': self.position.to_json() if self.position is not None else None
-        }
 
     def num_moves_left(self, include_gfi: bool = True):
         if self.state.used or self.state.stunned:

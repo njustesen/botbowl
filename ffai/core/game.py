@@ -1626,16 +1626,16 @@ class Game:
 
         # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
         # Assists against
-        opp_assisters = self.get_adjacent_opponents(player, down=False)
+        opp_assisters = self.get_adjacent_players(position, team=self.get_opp_team(player.team), down=False)
         n_assist_against: int = 0
         for assister in opp_assisters:
             # For each opponent, check if they can assist
             if assister == opp_player:
                 continue
-            elif not foul and assister.has_skill(Skill.GUARD):
-                n_assist_against += 1
-            elif not assister.can_assist():
+            if not assister.can_assist():
                 continue
+            if not foul and assister.has_skill(Skill.GUARD):
+                n_assist_against += 1
             else:
                 # Check if in a tackle zone of anyone besides player (at either original square, or "position")
                 adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
@@ -1654,7 +1654,7 @@ class Game:
         n_assists_for: int = 0
         for assister in assisters:
             # For each opponent, check if they can assist
-            if assister.has_skill(Skill.GUARD) and not foul:
+            if not foul and assister.has_skill(Skill.GUARD):
                 n_assists_for += 1
             elif not assister.can_assist():
                 continue
@@ -1662,6 +1662,8 @@ class Game:
                 adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
                 found_adjacent = False
                 for adjacent_to_assister in adjacent_to_assisters:
+                    if adjacent_to_assister == opp_player:
+                        continue
                     if not adjacent_to_assister.can_assist():
                         continue
                     else:
