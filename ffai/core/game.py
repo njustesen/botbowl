@@ -1662,7 +1662,7 @@ class Game:
                 adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
                 found_adjacent = False
                 for adjacent_to_assister in adjacent_to_assisters:
-                    if not adjacent_to_assister.can_assist():
+                    if adjacent_to_assister.position == opp_player.position or not adjacent_to_assister.can_assist():
                         continue
                     else:
                         found_adjacent = True
