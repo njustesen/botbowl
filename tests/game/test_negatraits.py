@@ -286,11 +286,8 @@ def test_wild_animal_passes_when_block_or_blitz(mock_game, action_type):
         D6.FixedRolls.clear()
         D6.fix_result(2)  # fails without block/blitz
         result = proc.step(None)
-        assert result is True  # trait is done without reroll
+        assert result is True  # negatrait is done without reroll
 
-        proc = stack.peek()
-        assert isinstance(proc, EndPlayerTurn)
-        assert proc.done is False
         # check state
-        assert not player.state.really_stupid
+        assert not player.state.wild_animal
 

@@ -3038,8 +3038,10 @@ class WildAnimal(Negatrait):
         self.fail_outcome = OutcomeType.FAILED_WILD_ANIMAL
 
     def get_target(self):
-        return 4
-        # todo: if the player is blitzing or blocking then target is 2
+        target = 4
+        if self.player_action.player_action_type is PlayerActionType.BLITZ or self.player_action.player_action_type is PlayerActionType.BLOCK:
+            target = 2
+        return target
 
     def apply_fail_state(self):
         self.player.state.wild_animal = True

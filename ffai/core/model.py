@@ -168,7 +168,8 @@ class PlayerState:
             'moves': self.moves,
             'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
             'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None,
-            'squares_moved': [square.to_json() for square in self.squares_moved]
+            'squares_moved': [square.to_json() for square in self.squares_moved],
+            'wild_animal':self.wild_animal
         }
 
     def reset(self):
