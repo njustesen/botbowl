@@ -149,6 +149,7 @@ class PlayerState:
         self.ejected = False
         self.casualty_effect = None
         self.casualty_type = None
+        self.wild_animal = False
         self.used_skills = []
         self.squares_moved = []
 

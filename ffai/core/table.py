@@ -57,6 +57,7 @@ class RollType(Enum):
     SWELTERING_HEAT_ROLL = 23
     BONE_HEAD_ROLL = 24
     REALLY_STUPID_ROLL = 25
+    WILD_ANIMAL_ROLL = 26
 
 
 class OutcomeType(Enum):
@@ -191,6 +192,8 @@ class OutcomeType(Enum):
     SUCCESSFUL_BONE_HEAD = 138
     FAILED_REALLY_STUPID = 139
     SUCCESSFUL_REALLY_STUPID = 140
+    FAILED_WILD_ANIMAL = 141
+    SUCCESSFUL_WILD_ANIMAL = 142
 
 
 class PlayerActionType(Enum):

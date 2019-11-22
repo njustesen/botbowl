@@ -2761,6 +2761,8 @@ class Turn(Procedure):
             Bonehead(self.game, player, player_action)
         if player.has_skill(Skill.REALLY_STUPID):
             ReallyStupid(self.game, player, player_action)
+        if player.has_skill(Skill.WILD_ANIMAL):
+            WildAnimal(self.game, player, player_action)
 
     def step(self, action):
 
@@ -3027,3 +3029,20 @@ class ReallyStupid(Negatrait):
         self.player.state.really_stupid = False
 
 
+class WildAnimal(Negatrait):
+    def __init__(self, game, player, player_action):
+        super().__init__(game, player, player_action)
+        self.roll_type = RollType.WILD_ANIMAL_ROLL
+        self.skill = Skill.WILD_ANIMAL
+        self.success_outcome = OutcomeType.SUCCESSFUL_WILD_ANIMAL
+        self.fail_outcome = OutcomeType.FAILED_WILD_ANIMAL
+
+    def get_target(self):
+        return 4
+        # todo: if the player is blitzing or blocking then target is 2
+
+    def apply_fail_state(self):
+        self.player.state.wild_animal = True
+
+    def remove_fail_state(self):
+        self.player.state.wild_animal = False
