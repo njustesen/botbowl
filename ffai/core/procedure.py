@@ -7,6 +7,7 @@ This module contains all the procedures. Procedures contain the core part of the
 responsible for an isolated part of the game. Procedures are added to a stack, and the top-most procedure must finish
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
+from abc import abstractmethod, ABCMeta
 
 from ffai.core.model import *
 from ffai.core.table import *
@@ -2758,6 +2759,8 @@ class Turn(Procedure):
         self.game.report(Outcome(outcome_type, player=player))
         if player.has_skill(Skill.BONE_HEAD):
             Bonehead(self.game, player, player_action)
+        if player.has_skill(Skill.REALLY_STUPID):
+            ReallyStupid(self.game, player, player_action)
 
     def step(self, action):
 
@@ -2899,7 +2902,7 @@ class WeatherTable(Procedure):
         return []
 
 
-class Bonehead(Procedure):
+class Negatrait(Procedure, metaclass=ABCMeta):
     def __init__(self, game, player, player_action):
         super().__init__(game)
         self.game = game
@@ -2910,28 +2913,49 @@ class Bonehead(Procedure):
         self.roll = None
         self.player_action = player_action
 
+        self.roll_type = None
+        self.skill = None
+        self.success_outcome = None
+        self.fail_outcome = None
+
+    @abstractmethod
+    def get_target(self):
+        pass
+
+    @abstractmethod
+    def apply_fail_state(self):
+        pass
+
+    @abstractmethod
+    def remove_fail_state(self):
+        pass
+
+    def trigger_failure(self):
+        self.apply_fail_state()
+        self.end_turn()
+
     def step(self, action):
         # If player hasn't rolled
         if not self.rolled:
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.BONE_HEAD_ROLL)
-            self.roll.target = 2
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=self.roll_type)
+            self.roll.target = self.get_target()
             self.rolled = True
 
             if self.roll.is_d6_success():
                 # Success
-                self.player.state.bone_headed = False
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_BONE_HEAD, player=self.player, rolls=[self.roll]))
+                self.remove_fail_state()
+                self.game.report(Outcome(self.success_outcome, player=self.player, rolls=[self.roll]))
                 return True
             else:
-                self.game.report(Outcome(OutcomeType.FAILED_BONE_HEAD, player=self.player, skill=Skill.BONE_HEAD, rolls=[self.roll]))
+                self.game.report(Outcome(self.fail_outcome, player=self.player, skill=self.skill, rolls=[self.roll]))
                 # Check if reroll available
                 if self.game.can_use_reroll(self.player.team):
                     self.awaiting_reroll = True
                     return False
 
                 # Player forgets what to do
-                self.trigger_bonehead()
+                self.trigger_failure()
                 return True
 
         # If reroll used
@@ -2944,11 +2968,10 @@ class Bonehead(Procedure):
                 return self.step(None)
             else:
                 # Player forgets what to do
-                self.trigger_bonehead()
+                self.trigger_failure()
                 return True
 
-    def trigger_bonehead(self):
-        self.player.state.bone_headed = True
+    def end_turn(self):
         # mark player turn as over
         EndPlayerTurn(self.game, self.player)
         # don't let the intended action happen
@@ -2960,3 +2983,47 @@ class Bonehead(Procedure):
                     ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
 
         return []
+
+
+class Bonehead(Negatrait):
+    def __init__(self, game, player, player_action):
+        super().__init__(game, player, player_action)
+        self.roll_type = RollType.BONE_HEAD_ROLL
+        self.skill = Skill.BONE_HEAD
+        self.success_outcome = OutcomeType.SUCCESSFUL_BONE_HEAD
+        self.fail_outcome = OutcomeType.FAILED_BONE_HEAD
+
+    def get_target(self):
+        return 2
+
+    def apply_fail_state(self):
+        self.player.state.bone_headed = True
+
+    def remove_fail_state(self):
+        self.player.state.bone_headed = False
+
+
+class ReallyStupid(Negatrait):
+    def __init__(self, game, player, player_action):
+        super().__init__(game, player, player_action)
+        self.roll_type = RollType.REALLY_STUPID_ROLL
+        self.skill = Skill.REALLY_STUPID
+        self.success_outcome = OutcomeType.SUCCESSFUL_REALLY_STUPID
+        self.fail_outcome = OutcomeType.FAILED_REALLY_STUPID
+
+    def get_target(self):
+        target = 4  # default target for player alone
+        team_mates = self.game.get_adjacent_teammates(self.player)
+        if team_mates:
+            for team_mate in team_mates:
+                if not team_mate.has_skill(Skill.REALLY_STUPID):
+                    target = 2  # a non-stupid neighbour improves the odds
+        return target
+
+    def apply_fail_state(self):
+        self.player.state.really_stupid = True
+
+    def remove_fail_state(self):
+        self.player.state.really_stupid = False
+
+

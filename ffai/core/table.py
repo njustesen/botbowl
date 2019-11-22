@@ -56,6 +56,7 @@ class RollType(Enum):
     KO_READY_ROLL = 22
     SWELTERING_HEAT_ROLL = 23
     BONE_HEAD_ROLL = 24
+    REALLY_STUPID_ROLL = 25
 
 
 class OutcomeType(Enum):
@@ -188,6 +189,9 @@ class OutcomeType(Enum):
     END_OF_GAME_DISQUALIFICATION = 136
     FAILED_BONE_HEAD = 137
     SUCCESSFUL_BONE_HEAD = 138
+    FAILED_REALLY_STUPID = 139
+    SUCCESSFUL_REALLY_STUPID = 140
+
 
 class PlayerActionType(Enum):
     MOVE = 1
