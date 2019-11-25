@@ -207,7 +207,7 @@ appServices.factory('GameLogService', function() {
             "INTERCEPTION_FAILED": "<player> failed to intercept the pass.",
             "THROW_IN_OUT_OF_BOUNDS": "The ball was thrown out of bounds again.",
             "THROW_IN": "The ball was thrown back in by the fans.",
-            "BLITZ_bonSTART": "<team> makes a <b>blitz</b>.",
+            "BLITZ_START": "<team> makes a <b>blitz</b>.",
             "QUICK_SNAP": "<team> makes a <b>quick snap</b>.",
             "TEAM_SPECTATORS": "<team> has <b><n> fans</b> cheering for them.",
             "END_OF_GAME_DISQUALIFICATION": "<team> was <b>disqualified</b>.",
