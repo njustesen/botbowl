@@ -20,8 +20,7 @@ def test_no_dodge():
     assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
 
 
-@pytest.mark.parametrize("ag", list(range(11)))
-def test_dodge_fail_one(ag):
+def test_dodge_fail_one():
     game = get_game_turn()
     current_team = game.get_agent_team(game.actor)
 
@@ -43,6 +42,41 @@ def test_dodge_fail_one(ag):
     assert player.position == to
     assert not player.state.up
     assert game.has_report_of_type(OutcomeType.FAILED_DODGE)
+
+
+def test_dodge_skill_reroll_single_use_limit():
+    game = get_game_turn()
+    current_team = game.get_agent_team(game.actor)
+
+    players = game.get_players_on_pitch(team=current_team)
+    player = players[1]
+    player.extra_skills = [Skill.DODGE]
+    # make sure we don't get stuck waiting for reroll actions
+    game.state.teams[0].state.rerolls = 0
+
+    opponents = game.get_players_on_pitch(game.get_opp_team(current_team))
+    game.put(player, Square(11, 11))
+
+    opp_player = opponents[1]
+    game.put(opp_player, Square(12, 12))
+    game.step(Action(ActionType.START_MOVE, player=player))
+    from_square = player.position
+    to = Square(11, 12)
+    assert game.get_player_at(to) is None
+    D6.fix_result(1)  # fail first dodge
+    D6.fix_result(4)  # pass on dodge skill
+    D6.fix_result(1)  # fail second dodge
+    D6.fix_result(6)  # second dodge skill use will pass - if the code is wrong!
+    game.step(Action(ActionType.MOVE, player=player, position=to))
+    assert player.position == to
+    assert player.state.up
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
+
+    # check for single use - attempt second dodge out of opponents tackle zone
+    to2 = Square(10, 12)
+    game.step(Action(ActionType.MOVE, player=player, position=to2))
+    assert player.position == to2
+    assert not player.state.up
 
 
 def test_dodge_no_modifier():

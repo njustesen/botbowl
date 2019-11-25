@@ -149,6 +149,7 @@ class PlayerState:
         self.ejected = False
         self.casualty_effect = None
         self.casualty_type = None
+        self.used_skills = []
 
     def to_json(self):
         return {
@@ -175,6 +176,12 @@ class PlayerState:
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
+        self.used_skills.clear()
+
+    def reset_turn(self):
+        self.moves = 0
+        self.used = False
+        self.used_skills.clear()
 
 
 class Agent:
@@ -781,6 +788,9 @@ class Player(Piece):
 
     def has_skill(self, skill):
         return skill in self.get_skills()
+
+    def has_used_skill(self, skill):
+        return skill in self.state.used_skills
 
     def get_skills(self):
         return self.role.skills + self.extra_skills

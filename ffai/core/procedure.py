@@ -1517,9 +1517,10 @@ class Dodge(Procedure):
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[roll]))
 
                 # Check if dodge
-                if self.player.has_skill(Skill.DODGE) and not self.dodge_used and len(tacklers) == 0:
+                if self.player.has_skill(Skill.DODGE) and not self.player.has_used_skill(Skill.DODGE) and not self.dodge_used and len(tacklers) == 0:
                     self.dodge_used = True
                     self.awaiting_dodge = True
+                    self.player.state.used_skills.append(Skill.DODGE)
                     self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.DODGE))
                     return False
 
@@ -2717,9 +2718,8 @@ class EndTurn(Procedure):
         if self.game.state.current_team is not None:
             self.game.state.current_team.state.reset_turn()
             for player in self.game.state.current_team.players:
-                player.state.moves = 0
-                if player.state.used:
-                    player.state.used = False
+                player.state.reset_turn()
+
 
         # Add kickoff procedure - if there are more turns left
         if self.kickoff and self.game.get_opp_team(self.game.state.current_team).state.turn < self.game.config.rounds:
