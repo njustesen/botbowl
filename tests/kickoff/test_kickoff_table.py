@@ -71,7 +71,7 @@ def test_perfect_defence():
             assert game.get_player_at(square) == player
 
 
-def get_empty_square_without_adjacent_players(game):
+def get_empty_square_without_adjacent_players(game, x=None, y=None):
     for action_choice in game.state.available_actions:
         for square in action_choice.positions:
             if game.get_player_at(square) is None:
@@ -79,7 +79,8 @@ def get_empty_square_without_adjacent_players(game):
                     if game.get_player_at(adjacent) is not None:
                         break
                 else:
-                    return square
+                    if (x is None or square.x == x) and (y is None or square.y == y):
+                        return square
     return None
 
 
@@ -89,7 +90,7 @@ def test_high_kick():
     D8.fix_result(6)  # Scatter
     D6.fix_result(3)
     D6.fix_result(2)
-    ball_placed_at = get_empty_square_without_adjacent_players(game)
+    ball_placed_at = get_empty_square_without_adjacent_players(game, y=6)
     assert ball_placed_at is not None
     game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
     proc = game.state.stack.peek()
@@ -99,6 +100,7 @@ def test_high_kick():
     assert game.actor == game.get_team_agent(team)
     catcher = None
     for action_choice in game.state.available_actions:
+        print(action_choice.action_type)
         assert action_choice.action_type in [ActionType.SELECT_PLAYER, ActionType.SELECT_NONE]
         if action_choice.action_type == ActionType.SELECT_NONE:
             continue
@@ -107,13 +109,31 @@ def test_high_kick():
             assert game.num_tackle_zones_in(player) == 0
             catcher = player
         for player in game.get_players_on_pitch(team):
-            if game.num_tackle_zones_in(player) > 0:
+            if game.num_tackle_zones_in(player) == 0:
                 assert player in action_choice.players
             else:
                 assert player not in action_choice.players
     if catcher is not None:
+        D6.fix_result(6)  # Catch
         game.step(Action(ActionType.SELECT_PLAYER, player=catcher))
-        assert catcher.position == ball_placed_at
+        assert game.has_ball(catcher)
+
+
+def test_high_kick_touchback():
+    game = get_game_kickoff()
+    D6.fix_result(6)  # Scatter
+    D8.fix_result(2)  # Scatter
+    D6.fix_result(3)
+    D6.fix_result(2)
+    ball_placed_at = get_empty_square_without_adjacent_players(game, y=1)
+    assert ball_placed_at is not None
+    game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
+    proc = game.state.stack.peek()
+    assert game.has_report_of_type(OutcomeType.KICKOFF_HIGH_KICK)
+    assert game.has_report_of_type(OutcomeType.TOUCHBACK)
+    assert type(proc) == Touchback
+    team = game.get_receiving_team()
+    assert game.actor == game.get_team_agent(team)
 
 
 def test_blitz():

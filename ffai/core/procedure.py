@@ -205,39 +205,6 @@ class Armor(Procedure):
 
 class Block(Procedure):
 
-    @staticmethod
-    def dice_and_favor(game, attacker, defender, blitz=False, dauntless_success=False):
-
-        # Determine dice and favor
-        st_from = attacker.get_st()
-        st_to = defender.get_st()
-
-        # Horns
-        if blitz and attacker.has_skill(Skill.HORNS):
-            st_from += 1
-
-        # Dauntless
-        if dauntless_success:
-            st_from = st_to
-
-        # Find assists
-        assists_from = game.get_assisting_players(attacker, defender)
-        assists_to = game.get_assisting_players(defender, attacker)
-        st_from = st_from + len(assists_from)
-        st_to = st_to + len(assists_to)
-
-        # Determine dice and favor
-        if st_from * 2 < st_to:
-            return 3, defender.team
-        elif st_from < st_to:
-            return 2, defender.team
-        elif st_from == st_to:
-            return 1, attacker.team
-        elif st_from > st_to * 2:
-            return 3, attacker.team
-        elif st_from > st_to:
-            return 2, attacker.team
-
     def __init__(self, game, attacker, defender, blitz=False, frenzy=False, gfi=False):
         super().__init__(game)
         self.attacker = attacker
@@ -290,12 +257,13 @@ class Block(Procedure):
             if self.blitz and self.attacker.has_skill(Skill.HORNS):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.HORNS))
 
-            dice, self.favor = Block.dice_and_favor(self.game, self.attacker, self.defender,
-                                                    blitz=self.blitz, dauntless_success=self.dauntless_success)
+            dice = self.game.num_block_dice(self.attacker, self.defender, blitz=self.blitz,
+                                            dauntless_success=self.dauntless_success)
+            self.favor = self.attacker.team if dice > 0 else self.defender.team
 
             # Roll
             self.roll = DiceRoll([], roll_type=RollType.BLOCK_ROLL)
-            for i in range(dice):
+            for i in range(abs(dice)):
                 self.roll.dice.append(BBDie(self.game.rnd))
 
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
@@ -303,9 +271,8 @@ class Block(Procedure):
 
             # Add secondary clock if opponent has the favor
             if not self.game.can_use_reroll(self.attacker.team):
-                if self.favor != self.game.state.current_team:
-                    if self.game.state.current_team != self.favor:
-                        self.game.add_secondary_clock(self.favor)
+                if self.favor == self.defender.team:
+                    self.game.add_secondary_clock(self.favor)
 
             return False
 
@@ -393,8 +360,8 @@ class Block(Procedure):
             disable_dice_pick = False
             if self.game.can_use_reroll(self.attacker.team) and not self.reroll_decision_made:
                 actions.append(ActionChoice(ActionType.USE_REROLL, self.attacker.team))
+                actions.append(ActionChoice(ActionType.DONT_USE_REROLL, self.attacker.team))
                 if self.favor != self.attacker.team:
-                    actions.append(ActionChoice(ActionType.DONT_USE_REROLL, self.attacker.team))
                     disable_dice_pick = True
 
             for die in self.roll.dice:
@@ -1088,29 +1055,34 @@ class HighKick(Procedure):
 
     def setup(self):
         self.game.add_secondary_clock(self.receiving_team)
-        self.standing_players = self.game.get_players_on_pitch(self.receiving_team, up=True)
+        self.available_players = []
+        for player in self.game.get_players_on_pitch(self.receiving_team, up=True):
+            if self.game.num_tackle_zones_in(player) == 0:
+                self.available_players.append(player)
 
     def step(self, action):
         self.game.remove_secondary_clocks()
-        if len(self.standing_players) == 0:
+        if not self.game.is_team_side(self.ball.position, self.receiving_team) or \
+            self.game.get_player_at(self.ball.position) is not None:
             return True
-        if action.action_type == ActionType.PLACE_PLAYER:
+        if len(self.available_players) == 0:
+            return True
+        if action.action_type == ActionType.SELECT_PLAYER:
             self.game.move(action.player, self.ball.position)
-            self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, position=action.position, team=self.receiving_team))
+            self.game.report(Outcome(OutcomeType.PLAYER_PLACED_HIGH_KICK, position=self.game.get_ball_position(), team=self.receiving_team))
         elif action.action_type == ActionType.END_SETUP:
             self.game.report(Outcome(OutcomeType.SETUP_DONE, team=self.receiving_team))
         return True
 
     def available_actions(self):
-        if len(self.standing_players) == 0:
+        if len(self.available_players) == 0:
             return []
         if self.game.is_team_side(self.ball.position, self.receiving_team) and \
                 self.game.get_player_at(self.ball.position) is None:
-            return [ActionChoice(ActionType.PLACE_PLAYER, team=self.receiving_team,
-                                 players=self.standing_players),
+            return [ActionChoice(ActionType.SELECT_PLAYER, team=self.receiving_team,
+                                 players=self.available_players),
                     ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
-        else:
-            return [ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
+        return []
 
 
 class CheeringFans(Procedure):
@@ -2033,11 +2005,9 @@ class PlayerAction(Procedure):
                 block_rolls = []
                 for player_to in self.game.get_adjacent_opponents(self.player, down=False):
                     block_positions.append(player_to.position)
-                    dice, favor = Block.dice_and_favor(self.game, attacker=self.player, defender=player_to,
+                    dice = self.game.num_block_dice(attacker=self.player, defender=player_to,
                                                        blitz=self.player_action_type == PlayerActionType.BLITZ,
                                                        dauntless_success=False)
-                    if favor != self.player.team:
-                        dice *= -1
                     block_rolls.append(dice)
                 if len(block_positions) > 0:
                     agi_rolls = [([2] if gfi else []) for _ in block_positions]
@@ -2197,7 +2167,7 @@ class FollowUp(Procedure):
 
     def step(self, action):
 
-        if action.position == self.pos_to:
+        if self.player.has_skill(Skill.FRENZY) or action.position == self.pos_to:
             self.game.move(self.player, self.pos_to)
             self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.player))
 
@@ -2205,7 +2175,7 @@ class FollowUp(Procedure):
 
     def available_actions(self):
         if self.player.has_skill(Skill.FRENZY):
-            return [ActionChoice(ActionType.FOLLOW_UP, team=self.player.team, positions=[self.pos_to])]
+            return []
         else:
             return [ActionChoice(ActionType.FOLLOW_UP, team=self.player.team,
                                  positions=[self.player.position, self.pos_to])]
@@ -2256,8 +2226,6 @@ class Push(Procedure):
 
             # Chain push
             if not self.chain:
-                if self.game.get_player_at(self.follow_to) is not None:
-                    raise Exception("")
                 FollowUp(self.game, self.pusher, self.follow_to)
 
             return True

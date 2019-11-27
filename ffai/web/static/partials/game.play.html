@@ -153,6 +153,7 @@
 
 <div class="game-free" ng-if="!loading">
 
+
     <div class="gamecontent">
 
         <div ng-if="replaying" class="text-center">
@@ -260,7 +261,7 @@
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].roll">
                             <img src="static/img/icons/game/dice_small.png" class="transparent dice" />
                         </div>
-                        <div class="ballicon align-middle text-center">
+                        <div class="block_roll_icon align-middle text-center">
                             <img src="static/img/icons/decorations/block1dagainst.gif" class="blockDice" ng-if="local_state.board[$parent.$index+1][$index+1].block_roll == -1" />
                             <img src="static/img/icons/decorations/block2dagainst.gif" class="blockDice" ng-if="local_state.board[$parent.$index+1][$index+1].block_roll == -2" />
                             <img src="static/img/icons/decorations/block3dagainst.gif" class="blockDice" ng-if="local_state.board[$parent.$index+1][$index+1].block_roll == -3" />

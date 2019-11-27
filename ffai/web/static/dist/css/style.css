@@ -649,6 +649,12 @@ a:hover {
   width: 90%;
   object-fit: scale-down;
 }
+.gamecontent .gameboard .block_roll_icon {
+  position: absolute;
+  line-height: 30px;
+  top: 0px;
+  left: 2px;
+}
 .gamecontent .gameboard .stateicon {
   position: absolute;
   top: 1px;

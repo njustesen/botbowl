@@ -809,6 +809,13 @@ class Game:
         ball = self.get_ball_at(player.position)
         return True if ball is not None and ball.is_carried else False
 
+    def get_ball(self):
+        """
+        :return: A ball on the pitch or None.
+        """
+        for ball in self.state.pitch.balls:
+            return ball.position
+
     def is_touchdown(self, player):
         """
         :param player:
@@ -1608,17 +1615,17 @@ class Game:
             return 2
         elif st_for == st_against:
             return 1
-        elif st_for < 2*st_against:
+        elif st_for*2 < st_against:
             return -3
         elif st_for < st_against:
             return -2
 
-    def num_assists_at(self, player, opp_player, position, foul: bool = False):
+    def num_assists_at(self, attacker, defender, position, foul: bool = False):
         '''
         Return net assists for a block of player on opp_player when player has moved to position first.  Required for
         calculating assists after moving in a Blitz action.
-        :param player: Player
-        :param opp_player: Player
+        :param attacker: Player
+        :param defender: Player
         :param position: Square
         :param ignore_guard: bool
         :return: int - Net # of assists
@@ -1626,11 +1633,11 @@ class Game:
 
         # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
         # Assists against
-        opp_assisters = self.get_adjacent_players(position, team=self.get_opp_team(player.team), down=False)
+        opp_assisters = self.get_adjacent_players(position, team=self.get_opp_team(attacker.team), down=False)
         n_assist_against: int = 0
         for assister in opp_assisters:
             # For each opponent, check if they can assist
-            if assister == opp_player:
+            if assister == defender:
                 continue
             if not assister.can_assist():
                 continue
@@ -1642,7 +1649,7 @@ class Game:
                 found_adjacent = False
                 for adjacent_to_assister in adjacent_to_assisters:
                     # Need to make sure we take into account the blocking/blitzing player may be in a different square than currently represented on the board.
-                    if adjacent_to_assister.position == position or adjacent_to_assister.position == player.position or not adjacent_to_assister.can_assist():
+                    if adjacent_to_assister.position == position or adjacent_to_assister.position == attacker.position or not adjacent_to_assister.can_assist():
                         continue
                     else:
                         found_adjacent = True
@@ -1650,10 +1657,11 @@ class Game:
                 if not found_adjacent:
                     n_assist_against += 1
         # Assists for
-        assisters = self.get_adjacent_opponents(opp_player, down=False)
+        assisters = self.get_adjacent_opponents(defender, down=False)
         n_assists_for: int = 0
         for assister in assisters:
-            # For each opponent, check if they can assist
+            if assister == attacker:
+                continue
             if not foul and assister.has_skill(Skill.GUARD):
                 n_assists_for += 1
             elif not assister.can_assist():
@@ -1662,7 +1670,7 @@ class Game:
                 adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
                 found_adjacent = False
                 for adjacent_to_assister in adjacent_to_assisters:
-                    if adjacent_to_assister == opp_player:
+                    if adjacent_to_assister == defender:
                         continue
                     if not adjacent_to_assister.can_assist():
                         continue

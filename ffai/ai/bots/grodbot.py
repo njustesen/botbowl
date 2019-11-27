@@ -243,7 +243,7 @@ class GrodBot(Agent):
             if players_available:
                 players_sorted = sorted(players_available, key=lambda x: player_blitz_ability(game, x), reverse=True)
                 player = players_sorted[0]
-                return Action(ActionType.PLACE_PLAYER, player=player, position=ball_pos)
+                return Action(ActionType.SELECT_PLAYER, player=player)
         return Action(ActionType.SELECT_NONE)
 
     def touchback(self, game: Game):
