@@ -205,7 +205,7 @@ class Armor(Procedure):
 
 class Block(Procedure):
 
-    def __init__(self, game, attacker, defender, blitz=False, frenzy=False, gfi=False):
+    def __init__(self, game, attacker, defender, blitz=False, frenzy_block=False, gfi=False):
         super().__init__(game)
         self.attacker = attacker
         self.defender = defender
@@ -213,7 +213,7 @@ class Block(Procedure):
         self.roll = None
         self.blitz = blitz
         self.gfi = gfi
-        self.frenzy = frenzy
+        self.frenzy_block = frenzy_block
         self.waiting_wrestle_attacker = False
         self.waiting_wrestle_defender = False
         self.selected_die = None
@@ -221,7 +221,7 @@ class Block(Procedure):
         self.favor = None
         self.dauntless_roll = None
         self.dauntless_success = False
-        self.frenzy_check = False
+        self.frenzy_checked = False
         self.waiting_gfi = False
 
     def step(self, action):
@@ -233,13 +233,16 @@ class Block(Procedure):
             return False
 
         # Frenzy check
-        if self.frenzy and not self.frenzy_check:
-            # Check if player was not pushed out of bounds
-            if self.defender.position is None:
+        if self.frenzy_block and not self.frenzy_checked:
+            # End frenzy block procedure if plays is not on the field or not standing
+            if self.defender.position is None or not self.defender.state.up:
                 return True
-            #self.game.report(Outcome(OutcomeType.FRENZY_USED, player=self.attacker, opp_player=self.defender,
-            #                         team=self.attacker.team))
-            self.frenzy_check = True
+            # If not adjacent to defender - e.g. in case of fend
+            if self.defender not in self.game.get_adjacent_opponents(self.attacker):
+                return True
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.FRENZY))
+            self.attacker.state.used_skills.append(Skill.FRENZY)
+            self.frenzy_checked = True
 
         # Roll
         if self.roll is None:
@@ -325,7 +328,7 @@ class Block(Procedure):
             KnockDown(self.game, self.attacker, inflictor=self.defender)
             return True
 
-        if self.selected_die == BBDieResult.BOTH_DOWN:
+        elif self.selected_die == BBDieResult.BOTH_DOWN:
             if not self.attacker.has_skill(Skill.BLOCK):
                 Turnover(self.game)
                 KnockDown(self.game, self.attacker, inflictor=self.defender)
@@ -337,16 +340,16 @@ class Block(Procedure):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.defender, skill=Skill.BLOCK))
             return True
 
-        if self.selected_die == BBDieResult.DEFENDER_DOWN:
+        elif self.selected_die == BBDieResult.DEFENDER_DOWN:
             Push(self.game, self.attacker, self.defender, knock_down=True, blitz=self.blitz)
             return True
 
-        if self.selected_die == BBDieResult.DEFENDER_STUMBLES:
+        elif self.selected_die == BBDieResult.DEFENDER_STUMBLES:
             Push(self.game, self.attacker, self.defender, knock_down=(not self.defender.has_skill(Skill.DODGE)) or self.attacker.has_skill(Skill.TACKLE),
                  blitz=self.blitz)
             return True
 
-        if self.selected_die == BBDieResult.PUSH:
+        elif self.selected_die == BBDieResult.PUSH:
             Push(self.game, self.attacker, self.defender, knock_down=False, blitz=self.blitz)
             return True
 
@@ -1830,6 +1833,7 @@ class EndPlayerTurn(Procedure):
         self.player.state.moves = 0
         self.game.report(Outcome(OutcomeType.END_PLAYER_TURN, player=self.player))
         self.game.state.active_player = None
+        self.player.state.squares_moved.clear()
         return True
 
     def available_actions(self):
@@ -1844,12 +1848,11 @@ class PlayerAction(Procedure):
         self.player_action_type = player_action_type
         self.blitz_block = False
         self.turn = turn
-        self.squares = []
 
     def step(self, action):
 
-        if len(self.squares) == 0:
-            self.squares.append(self.player.position)
+        if len(self.player.state.squares_moved) == 0:
+            self.player.state.squares_moved.append(self.player.position)
 
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
@@ -1860,7 +1863,7 @@ class PlayerAction(Procedure):
             StandUp(self.game, self.player, roll=self.player.get_ma() < 3)
             self.player.state.moves += min(self.player.get_ma(), 3)
             for i in range(3):
-                self.squares.append(self.player.position)
+                self.player.state.squares_moved.append(self.player.position)
 
             return False
 
@@ -1885,7 +1888,7 @@ class PlayerAction(Procedure):
 
             # Add proc
             Move(self.game, self.player, action.position, gfi, dodge)
-            self.squares.append(action.position)
+            self.player.state.squares_moved.append(action.position)
 
             self.player.state.moves += 1
 
@@ -1893,25 +1896,33 @@ class PlayerAction(Procedure):
 
         elif action.action_type == ActionType.BLOCK:
 
+            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
+
             # Check GFI
             gfi = False
+            gfi_frenzy = False
+            frenzy_allowed = True
             if self.player_action_type == PlayerActionType.BLITZ:
                 move_needed = 3 if not self.player.state.up else 1
+                gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
                 gfi = self.player.state.moves + move_needed > self.player.get_ma()
-                # Use movement
+                gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
+                frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
                 self.player.state.moves += move_needed
-                for i in range(move_needed):
-                    self.squares.append(self.player.position)
-                    self.player.state.up = True
-
-            # TODO: Check frenzy
+                if not self.player.state.up:
+                    for i in range(move_needed-1):
+                        self.player.state.squares_moved.append(self.player.position)
+                self.player.state.up = True
 
             # End turn after block - if not a blitz action
             if self.player_action_type == PlayerActionType.BLOCK:
                 EndPlayerTurn(self.game, self.player)
 
-            # Block
-            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
+            # Frenzy second block
+            if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
+                Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi_frenzy, frenzy_block=True)
+
+            # Regular block
             Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
 
             if self.player_action_type == PlayerActionType.BLOCK:
@@ -2169,7 +2180,10 @@ class FollowUp(Procedure):
 
         if self.player.has_skill(Skill.FRENZY) or action.position == self.pos_to:
             self.game.move(self.player, self.pos_to)
+            self.player.state.squares_moved.append(self.pos_to)
             self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.player))
+        else:
+            self.player.state.squares_moved.append(self.player.position)
 
         return True
 

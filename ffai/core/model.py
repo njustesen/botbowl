@@ -150,6 +150,7 @@ class PlayerState:
         self.casualty_effect = None
         self.casualty_type = None
         self.used_skills = []
+        self.squares_moved = []
 
     def to_json(self):
         return {
@@ -165,7 +166,8 @@ class PlayerState:
             'spp_earned': self.spp_earned,
             'moves': self.moves,
             'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
-            'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None
+            'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None,
+            'squares_moved': [square.to_json() for square in self.squares_moved]
         }
 
     def reset(self):
@@ -177,11 +179,13 @@ class PlayerState:
         self.really_stupid = False
         self.heated = False
         self.used_skills.clear()
+        self.squares_moved.clear()
 
     def reset_turn(self):
         self.moves = 0
         self.used = False
         self.used_skills.clear()
+        self.squares_moved.clear()
 
 
 class Agent:

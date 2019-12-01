@@ -292,16 +292,22 @@ class Game:
                     print("Illegal action type")
                     return False
                 if action.player is not None and not isinstance(action.player, Player):
-                    print("Illegal player", action.action_type, action.player.to_json(), self.state.stack.peek())
+                    print("Illegal player type", action.action_type, action, self.state.stack.peek())
                     return False
                 if action.position is not None and not isinstance(action.position, Square):
-                    print("ition", action.position.to_json(), action.action_type.name)
+                    print("Illegal position type", action.position, action.action_type.name)
                     return False
                 if len(action_choice.players) > 0 and action.player not in action_choice.players:
-                    print("Illegal player", action.action_type, action.player, self.state.stack.peek())
+                    if action.player is None:
+                        print("Player player: None")
+                    else:
+                        print("Illegal player", action.action_type, action.player, self.state.stack.peek())
                     return False
                 if len(action_choice.positions) > 0 and action.position not in action_choice.positions:
-                    print("Illegal position", action.position.to_json(), action.action_type.name)
+                    if action.position is None:
+                        print("Player position: None")
+                    else:
+                        print("Illegal position", action.position.to_json(), action.action_type.name)
                     return False
                 return True
         return False
@@ -339,17 +345,18 @@ class Game:
         """
         :return: The squares moved by the active player in json - used by the web app.
         """
-        for proc in self.state.stack.items:
-            if isinstance(proc, PlayerAction):
-                out = []
-                for square in proc.squares:
-                    out.append(square)
-                if proc.player is not None and proc.player.position is not None:
-                    if len(out) > 0 and out[-1] != proc.player.position:
-                        out = out[:-1]
-                out = [sq.to_json() for sq in out]
-                return out
-        return []
+        '''
+        for square in self.state.active_player.state.squares_moved:
+            out.append(square)
+        if proc.player is not None and proc.player.position is not None:
+            if len(out) > 0 and out[-1] != proc.player.position:
+                out = out[:-1]
+        '''
+        if self.state.active_player is None:
+            return []
+        out = [sq.to_json() for sq in self.state.active_player.state.squares_moved]
+        return out
+        #return []
 
     def _one_step(self, action):
         """
