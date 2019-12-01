@@ -2171,28 +2171,30 @@ class PreKickOff(Procedure):
 
 class FollowUp(Procedure):
 
-    def __init__(self, game, player, pos_to):
+    def __init__(self, game, attacker, defender, pos_to):
         super().__init__(game)
-        self.player = player
+        self.attacker = attacker
+        self.defender = defender
         self.pos_to = pos_to
 
     def step(self, action):
-
-        if self.player.has_skill(Skill.FRENZY) or action.position == self.pos_to:
-            self.game.move(self.player, self.pos_to)
-            self.player.state.squares_moved.append(self.pos_to)
-            self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.player))
+        if self.defender.has_skill(Skill.FEND):
+            self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.FEND, player=self.defender))
+            self.attacker.state.squares_moved.append(self.attacker.position)
+        elif self.attacker.has_skill(Skill.FRENZY) or action.position == self.pos_to:
+            self.game.move(self.attacker, self.pos_to)
+            self.attacker.state.squares_moved.append(self.pos_to)
+            self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.attacker))
         else:
-            self.player.state.squares_moved.append(self.player.position)
-
+            self.attacker.state.squares_moved.append(self.attacker.position)
         return True
 
     def available_actions(self):
-        if self.player.has_skill(Skill.FRENZY):
+        if self.attacker.has_skill(Skill.FRENZY) or self.defender.has_skill(Skill.FEND):
             return []
         else:
-            return [ActionChoice(ActionType.FOLLOW_UP, team=self.player.team,
-                                 positions=[self.player.position, self.pos_to])]
+            return [ActionChoice(ActionType.FOLLOW_UP, team=self.attacker.team,
+                                 positions=[self.attacker.position, self.pos_to])]
 
 
 class Push(Procedure):
@@ -2211,6 +2213,7 @@ class Push(Procedure):
         self.push_to = None
         self.follow_to = None
         self.squares = None
+        self.selector = pusher
         self.crowd = False
 
     def step(self, action):
@@ -2240,39 +2243,41 @@ class Push(Procedure):
 
             # Chain push
             if not self.chain:
-                FollowUp(self.game, self.pusher, self.follow_to)
+                FollowUp(self.game, self.pusher, self.player, self.follow_to)
 
             return True
 
         # Use stand firm
-        '''
         if self.waiting_stand_firm:
             if action.action_type == ActionType.USE_STAND_FIRM:
                 return True
             else:
                 self.waiting_stand_firm = False
                 self.stand_firm_used = True
-        '''
-
-        # Get possible squares
-        if self.squares is None:
-            # Side step lets the defender choose
-            if self.player.has_skill(Skill.SIDE_STEP):
-                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
-                self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
-                if len(self.squares) > 0:
-                    if self.player.team != self.game.state.current_team:
-                        self.game.add_secondary_clock(self.player.team)
-            # If not side step or no free squares
-            if self.squares is None or len(self.squares) == 0:
-                self.squares = self.game.get_push_squares(self.pusher.position, self.player.position)
-            return False
 
         # Stand firm
         if self.player.has_skill(Skill.STAND_FIRM) and not self.stand_firm_used:
-            if not (self.blitz and self.pusher.has_skill(Skill.JUGGERNAUT)):
+            if not self.pusher.has_skill(Skill.JUGGERNAUT):
                 self.waiting_stand_firm = True
                 return False
+
+        # Get possible squares
+        if self.squares is None:
+            # Sidestep and grab cancels out eachother - otherwise let the grabber or sidestepper select adjacent square
+            if self.player.has_skill(Skill.SIDE_STEP) and not self.pusher.has_skill(Skill.GRAB):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
+                self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
+                self.selector = self.player
+                if len(self.squares) > 0:
+                    if self.player.team != self.game.state.current_team:
+                        self.game.add_secondary_clock(self.player.team)
+            elif self.pusher.has_skill(Skill.GRAB) and not self.player.has_skill(Skill.SIDE_STEP):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.GRAB))
+                self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
+            # If no free squares
+            if self.squares is None or len(self.squares) == 0:
+                self.squares = self.game.get_push_squares(self.pusher.position, self.player.position)
+            return False
 
         if action.action_type == ActionType.PUSH:
 
@@ -2310,10 +2315,10 @@ class Push(Procedure):
     def available_actions(self):
         actions = []
         if self.squares is not None:
-            if self.player.has_skill(Skill.SIDE_STEP):
-                actions.append(ActionChoice(ActionType.PUSH, team=self.player.team, positions=self.squares))
-            else:
-                actions.append(ActionChoice(ActionType.PUSH, team=self.game.state.current_team, positions=self.squares))
+            actions.append(ActionChoice(ActionType.PUSH, team=self.selector.team, positions=self.squares))
+        elif self.waiting_stand_firm:
+            actions.append(ActionChoice(ActionType.USE_SKILL, team=self.player.team))
+            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team))
         return actions
 
 

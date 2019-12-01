@@ -67,6 +67,7 @@ appServices.factory('BigGuyService', function($http){
             "Troll",
             "Minotaur",
             "Ogre",
+            "Treeman",
             "Bull Centaur",
             "Chaos Troll",
             "Chaos Ogre",
@@ -236,6 +237,13 @@ appServices.factory('IconService', function() {
                 'Blitzer': 'heblitzer',
                 'Thrower': 'hethrower',
                 'Catcher': 'hecatcher'
+            },
+            'Wood Elf':{
+                'Lineman': 'welineman',
+                'Wardancer': 'weblitzer',
+                'Thrower': 'wethrower',
+                'Catcher': 'wecatcher',
+                'Treeman': 'treeman'
             },
             'Human': {
                 'Lineman': 'hlineman',
