@@ -1605,7 +1605,11 @@ appServices.factory('GameLogService', function() {
             "TEAM_SPECTATORS": "<team> has <b><n> fans</b> cheering for them.",
             "END_OF_GAME_DISQUALIFICATION": "<team> was <b>disqualified</b>.",
             "FAILED_BONE_HEAD": "<player> failed a <b>bonehead</b> roll",
-            "SUCCESSFUL_BONE_HEAD": "<player> passed a <b>bonehead</b> roll"
+            "SUCCESSFUL_BONE_HEAD": "<player> passed a <b>bonehead</b> roll",
+            "FAILED_REALLY_STUPID": "<player> failed a <b>really stupid</b> roll",
+            "SUCCESSFUL_REALLY_STUPID": "<player> passed a <b>really stupid</b> roll",
+            "FAILED_WILD_ANIMAL": "<player> failed a <b>wild animal</b> roll",
+            "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll"
         }
     };
 });
