@@ -2914,6 +2914,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
         self.rolled = False
         self.roll = None
         self.player_action = player_action
+        self.reroll = None
 
         self.roll_type = None
         self.skill = None
@@ -2951,25 +2952,20 @@ class Negatrait(Procedure, metaclass=ABCMeta):
                 return True
             else:
                 self.game.report(Outcome(self.fail_outcome, player=self.player, skill=self.skill, rolls=[self.roll]))
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team):
-                    self.awaiting_reroll = True
-                    return False
-
-                # Player forgets what to do
-                self.trigger_failure()
-                return True
+                # check reroll
+                self.reroll = ReRoll(self.game, self.player)
+                self.awaiting_reroll = True
+                return False
 
         # If reroll used
         if self.awaiting_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                # Remove reroll and roll again - recursive call
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.player.team.state.use_reroll()
+            self.awaiting_reroll = False
+            if self.reroll.result:
+                # reroll allowed
                 self.rolled = False
                 return self.step(None)
             else:
-                # Player forgets what to do
+                # no reroll
                 self.trigger_failure()
                 return True
 
@@ -2980,10 +2976,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
         self.player_action.done = True
 
     def available_actions(self):
-        if self.awaiting_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
-
+        # there are no available actions here - rerolls are handled by ReRoll procedure
         return []
 
 
@@ -3048,3 +3041,99 @@ class WildAnimal(Negatrait):
 
     def remove_fail_state(self):
         self.player.state.wild_animal = False
+
+
+class ReRoll(Procedure):
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.awaiting_input = False
+        self.result = False  # not a success by default
+        self.chosen = False
+        self.awaiting_loner = False
+        self.loner = None
+
+    def step(self, action):
+        # if first time:
+        if not self.chosen:
+            # 1. determine if team re-rolls are available
+            if self.game.can_use_reroll(self.player.team):
+                self.awaiting_input = True
+                self.chosen = True
+                return False
+            else:
+                return True
+
+        if self.awaiting_input:
+            self.awaiting_input = False  # don't ask for input again
+
+            if action.action_type is ActionType.USE_REROLL:
+                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
+                self.player.team.state.use_reroll()
+                # loner test - loner fail => result = false
+                if self.player.has_skill(Skill.LONER):
+                    self.loner = Loner(self.game, self.player)
+                    self.awaiting_loner = True
+                    return False
+
+                self.result = True
+            if action.action_type is ActionType.DONT_USE_REROLL:
+                self.result = False
+
+            return True
+
+        if self.awaiting_loner:
+            self.result = self.loner.result
+            return True
+
+    def available_actions(self):
+        if self.awaiting_input:
+            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
+                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
+
+        return []
+
+
+class Loner(Procedure):
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.result = False
+        self.rolled = False
+        self.roll = None
+        self.player = player
+        self.reroll = None
+        self.awaiting_reroll = False
+
+    def step(self, action):
+        if not self.rolled:
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.LONER_ROLL)
+            self.roll.target = 4
+            self.rolled = True
+
+            if self.roll.is_d6_success():
+                # Success
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_LONER, player=self.player, rolls=[self.roll]))
+                self.result = True
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_LONER, player=self.player, skill=Skill.LONER, rolls=[self.roll]))
+                #  put a reroll here in preparation for Pro / Leader skills
+                self.reroll = ReRoll(self.game, self.player)
+                self.awaiting_reroll = True
+                return False
+
+        # If reroll used
+        if self.awaiting_reroll:
+            self.awaiting_reroll = False
+            if self.reroll.result:
+                # reroll allowed
+                self.rolled = False
+                return self.step(None)
+            else:
+                # no reroll
+                self.result = False
+                return True
+
+    def available_actions(self):
+        return []

@@ -216,7 +216,10 @@ appServices.factory('GameLogService', function() {
             "FAILED_REALLY_STUPID": "<player> failed a <b>really stupid</b> roll",
             "SUCCESSFUL_REALLY_STUPID": "<player> passed a <b>really stupid</b> roll",
             "FAILED_WILD_ANIMAL": "<player> failed a <b>wild animal</b> roll",
-            "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll"
+            "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll",
+            "FAILED_LONER": "<player> failed a <b>loner</b> roll",
+            "SUCCESSFUL_LONER": "<player> passed a <b>loner</b> roll"
+
         }
     };
 });
