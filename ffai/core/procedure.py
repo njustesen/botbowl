@@ -21,6 +21,7 @@ class Procedure:
         self.game.state.stack.push(self)
         self.done = False
         self.initialized = False
+        self.has_context = True
 
     def setup(self):
         """
@@ -3046,6 +3047,8 @@ class WildAnimal(Negatrait):
 class ReRoll(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
+        self.has_context = False
+
         self.player = player
         self.awaiting_input = False
         self.result = False  # not a success by default

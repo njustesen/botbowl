@@ -11,13 +11,13 @@ def test_coin_toss(action_type):
             return
         game = get_game_coin_toss()
         game.step(Action(ActionType.START_GAME))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
         assert type(proc) is CoinTossFlip
         actor_id = game.actor.agent_id
         acting_team = game.get_agent_team(game.actor)
         game.set_seed(i)
         game.step(Action(action_type))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
         assert type(proc) is CoinTossKickReceive
         if action_type == ActionType.HEADS:
             if game.has_report_of_type(OutcomeType.HEADS_WON):
@@ -56,13 +56,13 @@ def test_kick_receive(action_type):
         game.set_seed(i)
         game.step(Action(ActionType.START_GAME))
         game.step(Action(ActionType.HEADS))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
         assert type(proc) is CoinTossKickReceive
         selector = game.actor
         selecting_team = game.get_agent_team(game.actor)
         actors.add(game.home_agent == selector)
         game.step(Action(action_type))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
         assert type(proc) is Setup
         if action_type == ActionType.KICK:
             assert game.has_report_of_type(

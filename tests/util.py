@@ -21,7 +21,7 @@ def get_game_turn(seed=0, empty=False):
     game.step(Action(ActionType.SETUP_FORMATION_WEDGE))
     game.step(Action(ActionType.END_SETUP))
     random_agent = RandomBot("home")
-    while type(game.state.stack.peek()) is not Turn and not game.is_quick_snap() and not game.is_blitz():
+    while type(game.get_procedure_context()) is not Turn and not game.is_quick_snap() and not game.is_blitz():
         action = random_agent.act(game)
         game.step(action)
     if empty:

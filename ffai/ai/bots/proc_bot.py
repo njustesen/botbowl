@@ -17,7 +17,7 @@ class ProcBot(Agent):
     def act(self, game):
 
         # Get current procedure
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
 
         # Call private function
         if isinstance(proc, CoinTossFlip):

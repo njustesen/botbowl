@@ -52,7 +52,7 @@ def test_perfect_defence():
     D6.fix_result(2)
     D6.fix_result(2)
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert game.has_report_of_type(OutcomeType.KICKOFF_PERFECT_DEFENSE)
     assert type(proc) == Setup
     team = game.get_agent_team(game.actor)
@@ -93,7 +93,7 @@ def test_high_kick():
     ball_placed_at = get_empty_square_without_adjacent_players(game, y=6)
     assert ball_placed_at is not None
     game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert game.has_report_of_type(OutcomeType.KICKOFF_HIGH_KICK)
     assert type(proc) == HighKick
     team = game.get_receiving_team()
@@ -128,7 +128,7 @@ def test_high_kick_touchback():
     ball_placed_at = get_empty_square_without_adjacent_players(game, y=1)
     assert ball_placed_at is not None
     game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert game.has_report_of_type(OutcomeType.KICKOFF_HIGH_KICK)
     assert game.has_report_of_type(OutcomeType.TOUCHBACK)
     assert type(proc) == Touchback

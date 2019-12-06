@@ -61,7 +61,7 @@ class GrodBot(Agent):
         self.actions_available.append(available)
 
         # Get current procedure
-        proc = game.state.stack.peek()
+        proc = game.get_procedure_context()
 
         # Call private function
         if isinstance(proc, CoinTossFlip):
@@ -134,8 +134,8 @@ class GrodBot(Agent):
         Move players from the reserves to the pitch
         """
 
-        if isinstance(game.state.stack.peek(), Setup):
-            proc: Setup = game.state.stack.peek()
+        if isinstance(game.get_procedure_context(), Setup):
+            proc: Setup = game.get_procedure_context()
         else:
             raise ValueError('Setup procedure expected')
 

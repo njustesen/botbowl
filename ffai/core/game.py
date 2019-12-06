@@ -1812,3 +1812,12 @@ class Game:
             self.pitch_to_reserves(player)
         for player in self.get_players_on_pitch(self.state.away_team):
             self.pitch_to_reserves(player)
+
+    def get_procedure_context(self):
+        proc = None
+        for i in reversed(range(self.state.stack.size())):
+            proc = self.state.stack.items[i]
+            if proc.has_context:
+                return proc
+
+        return proc

@@ -43,6 +43,13 @@ def test_bonehead_reroll_success():
     D6.fix_result(1)  # fail first bonehead
     D6.fix_result(4)  # pass on re-roll
     game.step(Action(ActionType.START_MOVE, player=player))  # should bonehead and present reroll choice
+
+    # check that in a reroll context the game domain context is still Bonehead
+    proc = game.get_procedure_context()
+    assert isinstance(proc, Bonehead)
+    # but that the top of the stack is a reroll proc
+    assert isinstance(game.state.stack.peek(), ReRoll)
+
     game.step(Action(ActionType.USE_REROLL))  # use reroll
 
     assert not player.state.bone_headed

@@ -20,7 +20,7 @@ def clear_board(game):
 def test_scrimmage_setup(home_team):
     game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert type(proc) == Setup
 
     # Empty board
@@ -65,7 +65,7 @@ def test_scrimmage_setup(home_team):
 def test_wings_setup(home_team):
     game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert type(proc) == Setup
 
     # Top Wing
@@ -97,7 +97,7 @@ def test_wings_setup(home_team):
 def test_player_count_setup(home_team):
     game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure_context()
     assert type(proc) == Setup
     assert not game.is_setup_legal_count(team)
     # Max players
