@@ -657,6 +657,10 @@ class BBDie(Die):
         else:
             raise ValueError("Fixed result of BBDie must be a BBDieResult")
 
+    @staticmethod
+    def clear_fixes():
+        BBDie.FixedRolls.clear()
+
     def __init__(self, rnd):
         if len(BBDie.FixedRolls) > 0:
             self.value = BBDie.FixedRolls.pop(0)
