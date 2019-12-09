@@ -226,6 +226,9 @@ class Block(Procedure):
         self.frenzy_checked = False
         self.waiting_gfi = False
 
+        self.awaiting_reroll = False
+        self.reroll = None
+
     def step(self, action):
 
         # GfI
@@ -236,7 +239,7 @@ class Block(Procedure):
 
         # Frenzy check
         if self.frenzy_block and not self.frenzy_checked:
-            # End frenzy block procedure if plays is not on the field or not standing
+            # End frenzy block procedure if player is not on the field or not standing
             if self.defender.position is None or not self.defender.state.up:
                 return True
             # If not adjacent to defender - e.g. in case of fend
@@ -274,11 +277,10 @@ class Block(Procedure):
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
                                      rolls=[self.roll]))
 
-            # Add secondary clock if opponent has the favor
-            if not self.game.can_use_reroll(self.attacker.team):
-                if self.favor == self.defender.team:
-                    self.game.add_secondary_clock(self.favor)
-
+            # check for reroll
+            actions = self.available_actions()
+            self.reroll = ReRoll(self.game, self.attacker, additional_actions=actions)
+            self.awaiting_reroll = True
             return False
 
         elif self.waiting_wrestle_defender:
@@ -287,37 +289,42 @@ class Block(Procedure):
             self.waiting_wrestle_defender = False
             self.selected_die = BBDieResult.BOTH_DOWN
 
-        elif action.action_type == ActionType.USE_REROLL:
-
-            # Roll again
-            self.reroll_decision_made = True
-            self.attacker.team.state.use_reroll()
-            self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.attacker.team))
-            self.roll = None
-            return self.step(None)
-
-        elif action.action_type == ActionType.DONT_USE_REROLL:
-            # Roll again
+        # If reroll used
+        elif self.awaiting_reroll:
+            self.awaiting_reroll = False
             self.reroll_decision_made = True
 
-            # Add secondary clock if opponent has the favor
-            if self.favor != self.game.state.current_team:
-                if self.game.state.current_team != self.favor:
+            if self.reroll.result is None or self.reroll.result == ActionType.DONT_USE_REROLL:
+                # Add secondary clock if opponent has the favor
+                if self.favor == self.defender.team:
                     self.game.add_secondary_clock(self.favor)
 
+                return False
+
+            elif self.reroll.result == ActionType.USE_REROLL:
+                # reroll!
+                self.roll = None
+                return self.step(None)
+
+            else:
+                return self.handle_dice_actions(self.reroll.result)
+        else:
+            return self.handle_dice_actions(action.action_type)
+
+    def handle_dice_actions(self, action_type):
         #elif action.action_type == ActionType.USE_JUGGERNAUT:
         #    self.selected_die = BBDieResult.PUSH
 
         # Select die
-        elif action.action_type == ActionType.SELECT_ATTACKER_DOWN:
+        if action_type == ActionType.SELECT_ATTACKER_DOWN:
             self.selected_die = BBDieResult.ATTACKER_DOWN
-        elif action.action_type == ActionType.SELECT_BOTH_DOWN:
+        elif action_type == ActionType.SELECT_BOTH_DOWN:
             self.selected_die = BBDieResult.BOTH_DOWN
-        elif action.action_type == ActionType.SELECT_PUSH:
+        elif action_type == ActionType.SELECT_PUSH:
             self.selected_die = BBDieResult.PUSH
-        elif action.action_type == ActionType.SELECT_DEFENDER_STUMBLES:
+        elif action_type == ActionType.SELECT_DEFENDER_STUMBLES:
             self.selected_die = BBDieResult.DEFENDER_STUMBLES
-        elif action.action_type == ActionType.SELECT_DEFENDER_DOWN:
+        elif action_type == ActionType.SELECT_DEFENDER_DOWN:
             self.selected_die = BBDieResult.DEFENDER_DOWN
 
         # Remove secondary clocks
@@ -360,26 +367,23 @@ class Block(Procedure):
     def available_actions(self):
 
         actions = []
-
-        if self.roll is not None and self.selected_die is None:
-            disable_dice_pick = False
-            if self.game.can_use_reroll(self.attacker.team) and not self.reroll_decision_made:
-                actions.append(ActionChoice(ActionType.USE_REROLL, self.attacker.team))
-                actions.append(ActionChoice(ActionType.DONT_USE_REROLL, self.attacker.team))
-                if self.favor != self.attacker.team:
+        if not self.awaiting_reroll:
+            if self.roll is not None and self.selected_die is None:
+                disable_dice_pick = False
+                if not self.reroll_decision_made and self.favor != self.attacker.team:
                     disable_dice_pick = True
 
-            for die in self.roll.dice:
-                if die.get_value() == BBDieResult.ATTACKER_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_ATTACKER_DOWN, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.BOTH_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_BOTH_DOWN, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.PUSH:
-                    actions.append(ActionChoice(ActionType.SELECT_PUSH, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.DEFENDER_STUMBLES:
-                    actions.append(ActionChoice(ActionType.SELECT_DEFENDER_STUMBLES, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.DEFENDER_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_DEFENDER_DOWN, self.favor, disabled=disable_dice_pick))
+                for die in self.roll.dice:
+                    if die.get_value() == BBDieResult.ATTACKER_DOWN:
+                        actions.append(ActionChoice(ActionType.SELECT_ATTACKER_DOWN, self.favor, disabled=disable_dice_pick))
+                    if die.get_value() == BBDieResult.BOTH_DOWN:
+                        actions.append(ActionChoice(ActionType.SELECT_BOTH_DOWN, self.favor, disabled=disable_dice_pick))
+                    if die.get_value() == BBDieResult.PUSH:
+                        actions.append(ActionChoice(ActionType.SELECT_PUSH, self.favor, disabled=disable_dice_pick))
+                    if die.get_value() == BBDieResult.DEFENDER_STUMBLES:
+                        actions.append(ActionChoice(ActionType.SELECT_DEFENDER_STUMBLES, self.favor, disabled=disable_dice_pick))
+                    if die.get_value() == BBDieResult.DEFENDER_DOWN:
+                        actions.append(ActionChoice(ActionType.SELECT_DEFENDER_DOWN, self.favor, disabled=disable_dice_pick))
 
         return actions
 
@@ -2961,7 +2965,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
         # If reroll used
         if self.awaiting_reroll:
             self.awaiting_reroll = False
-            if self.reroll.result:
+            if self.reroll.result == ActionType.USE_REROLL:
                 # reroll allowed
                 self.rolled = False
                 return self.step(None)
@@ -3045,21 +3049,23 @@ class WildAnimal(Negatrait):
 
 
 class ReRoll(Procedure):
-    def __init__(self, game, player):
+    def __init__(self, game, player, additional_actions=[]):
         super().__init__(game)
         self.has_context = False
 
         self.player = player
         self.awaiting_input = False
-        self.result = False  # not a success by default
+        self.result = None
         self.chosen = False
         self.awaiting_loner = False
         self.loner = None
 
+        self.additional_actions = additional_actions
+
     def step(self, action):
-        # if first time:
+        # if first call - player has not chosen
         if not self.chosen:
-            # 1. determine if team re-rolls are available
+            # Determine if team re-rolls are available
             if self.game.can_use_reroll(self.player.team):
                 self.awaiting_input = True
                 self.chosen = True
@@ -3067,8 +3073,10 @@ class ReRoll(Procedure):
             else:
                 return True
 
+        # waiting for player choice
         if self.awaiting_input:
             self.awaiting_input = False  # don't ask for input again
+            self.result = action.action_type
 
             if action.action_type is ActionType.USE_REROLL:
                 self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
@@ -3079,22 +3087,24 @@ class ReRoll(Procedure):
                     self.awaiting_loner = True
                     return False
 
-                self.result = True
-            if action.action_type is ActionType.DONT_USE_REROLL:
-                self.result = False
-
             return True
 
+        # waiting for loner result when reroll chosen
         if self.awaiting_loner:
-            self.result = self.loner.result
+            if self.loner.result:
+                self.result = ActionType.USE_REROLL
+            else:
+                self.result = ActionType.DONT_USE_REROLL
             return True
 
     def available_actions(self):
+        actions = []
         if self.awaiting_input:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
+            actions.append(ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team))
+            actions.append(ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team))
+            actions.extend(self.additional_actions)
 
-        return []
+        return actions
 
 
 class Loner(Procedure):
