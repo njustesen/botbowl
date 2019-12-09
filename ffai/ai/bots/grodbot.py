@@ -104,6 +104,8 @@ class GrodBot(Agent):
             return self.dodge(game)
         if isinstance(proc, Pickup):
             return self.pickup(game)
+        if isinstance(proc, Negatrait):
+            return self.negatrait(game)
 
         raise Exception("Unknown procedure")
 
@@ -408,9 +410,10 @@ class GrodBot(Agent):
         """
         # Loop through available dice results
         active_player: Player = game.state.active_player
-        attacker: Player = game.state.stack.items[-1].attacker
-        defender: Player = game.state.stack.items[-1].defender
-        favor: Team = game.state.stack.items[-1].favor
+        block_context = game.get_procedure_context()
+        attacker: Player = block_context.attacker
+        defender: Player = block_context.defender
+        favor: Team = block_context.favor
 
         actions: List[ActionSequence] = []
         check_reroll = False
@@ -532,6 +535,13 @@ class GrodBot(Agent):
             print("I ({}) won".format(self.name))
         else:
             print("I ({}) lost".format(self.name))
+
+    def negatrait(self, game):
+        """
+        Reroll or not.
+        """
+        # return Action(ActionType.USE_REROLL)
+        return Action(ActionType.DONT_USE_REROLL)
 
 
 def block_favourability(block_result: ActionType, team: Team, active_player: Player, attacker: Player, defender: Player, favor: Team) -> float:
