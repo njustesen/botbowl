@@ -4,6 +4,7 @@ from ffai import Action, ActionType, Square
 from ffai import ProcBot
 from ffai.core.load import *
 from ffai.ai.registry import register_bot, make_bot
+from ffai.core.game import Game
 import time
 
 
@@ -103,7 +104,8 @@ class MyScriptedBot(ProcBot):
                 adjacent_players = game.get_adjacent_opponents(player, down=False)
                 if player.state.up and len(adjacent_players) > 0:
                     opp_player = adjacent_players[0]
-                    dice, favor = Block.dice_and_favor(game, player, opp_player)
+                    dice = game.num_block_dice(player, opp_player)
+                    favor = player.team if dice > 0 else opp_player.team
                     if favor == self.my_team and dice > 1:
                         return Action(ActionType.START_BLOCK, player=player)
 
