@@ -145,11 +145,8 @@ class FFAIEnv(gym.Env):
         FollowUp,
         Apothecary,
         PassAction,
-        Catch,
         Interception,
-        GFI,
-        Dodge,
-        Pickup
+        Reroll
     ]
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
@@ -345,7 +342,7 @@ class FFAIEnv(gym.Env):
 
         # Procedure
         if game.state.stack.size() > 0:
-            procedure = game.state.stack.peek()
+            procedure = game.get_procedure()
             assert procedure.__class__ in FFAIEnv.procedures
             proc_idx = FFAIEnv.procedures.index(procedure.__class__)
             obs['procedure'][proc_idx] = 1.0
@@ -376,7 +373,7 @@ class FFAIEnv(gym.Env):
         return self._observation(self.game)
 
     def available_action_types(self):
-        if isinstance(self.game.state.stack.peek(), Setup):
+        if isinstance(self.game.get_procedure(), Setup):
             if self.game.get_kicking_team().team_id == self.team_id:
                 return [self.actions.index(action_type) for action_type in self.defensive_formation_action_types]
             else:

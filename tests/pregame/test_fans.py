@@ -13,7 +13,7 @@ for i in range(1, 7, 1):
 def test_spectators(dice_roll):
     game = get_game_fans()
     proc = Fans(game)
-    proc.setup()
+    proc.start()
     D6.fix_result(dice_roll[0])
     D6.fix_result(dice_roll[1])
     D6.fix_result(dice_roll[0])
@@ -34,7 +34,7 @@ def test_spectators(dice_roll):
 def test_fame(dice_roll):
     game = get_game_fans()
     proc = Fans(game)
-    proc.setup()
+    proc.start()
     # Home
     D6.fix_result(dice_roll[0])
     D6.fix_result(dice_roll[0])

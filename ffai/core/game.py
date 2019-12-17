@@ -410,7 +410,7 @@ class Game:
             print("Done={}".format(proc.done))
             print(f"DONE={self.state.stack.peek().done}")
 
-        # Used if players was accidently cloned
+        # Used if players was accidentally cloned
         if self.config.debug_mode:
             for y in range(len(self.state.pitch.board)):
                 for x in range(len(self.state.pitch.board)):
@@ -426,6 +426,8 @@ class Game:
         while not self.state.stack.is_empty() and self.state.stack.peek().done:
             if self.config.debug_mode:
                 print("--Proc={}".format(self.state.stack.peek()))
+            # Call end before popping
+            self.state.stack.peek().end()
             self.state.stack.pop()
 
         # Is game over
@@ -438,7 +440,7 @@ class Game:
         # Initialize if not
         if not self.state.stack.peek().initialized:
             proc = self.state.stack.peek()
-            proc.setup()
+            proc.start()
             proc.initialized = True
 
         # Update available actions
@@ -1812,3 +1814,6 @@ class Game:
             self.pitch_to_reserves(player)
         for player in self.get_players_on_pitch(self.state.away_team):
             self.pitch_to_reserves(player)
+
+    def get_procedure(self):
+        return self.state.stack.peek()

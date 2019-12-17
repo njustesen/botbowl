@@ -13,7 +13,7 @@ for i in range(1, 7, 1):
 def test_weather_table(dice_roll):
     game = get_game_weather_table()
     proc = WeatherTable(game)
-    proc.setup()
+    proc.start()
     D6.fix_result(dice_roll[0])
     D6.fix_result(dice_roll[1])
     proc.step(None)

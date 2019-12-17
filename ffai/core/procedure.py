@@ -16,15 +16,22 @@ import time
 
 class Procedure:
 
-    def __init__(self, game):
+    def __init__(self, game, context=None):
         self.game = game
+        self.context = context
         self.game.state.stack.push(self)
         self.done = False
         self.initialized = False
 
-    def setup(self):
+    def start(self):
         """
-        Is called just before step() is called the first time. The Game clas will set initialized to True.
+        Is called just before step() is called the first time. The Game class will set initialized to True.
+        """
+        pass
+
+    def end(self):
+        """
+        Is called when the procedure is done, i.e. right after step() returns True.
         """
         pass
 
@@ -34,13 +41,13 @@ class Procedure:
         :param action: an action performed by an agent - will be None if there are no available actions.
         :return: a bool indicating whether the procedure is done.
         """
-        pass
+        raise Exception("Must be implemented by subclass")
 
     def available_actions(self):
         """
         :return: a list of available actions. This can vary based on the state of the procedure.
         """
-        pass
+        return []
 
 
 class Apothecary(Procedure):
@@ -59,7 +66,7 @@ class Apothecary(Procedure):
         self.casualty_second = None
         self.effect_second = None
 
-    def setup(self):
+    def start(self):
         if self.game.state.current_team != self.player.team:
             self.game.add_opp_clock(self.player.team)
 
@@ -200,9 +207,6 @@ class Armor(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class Block(Procedure):
 
@@ -210,15 +214,16 @@ class Block(Procedure):
         super().__init__(game)
         self.attacker = attacker
         self.defender = defender
-        self.reroll_decision_made = False
         self.roll = None
+        self.reroll = None
         self.blitz = blitz
         self.gfi = gfi
         self.frenzy_block = frenzy_block
         self.waiting_wrestle_attacker = False
         self.waiting_wrestle_defender = False
+        self.waiting_juggernaut = False
+        self.juggernaut_checked = False
         self.selected_die = None
-        self.wrestle = False
         self.favor = None
         self.dauntless_roll = None
         self.dauntless_success = False
@@ -235,15 +240,46 @@ class Block(Procedure):
 
         # Frenzy check
         if self.frenzy_block and not self.frenzy_checked:
-            # End frenzy block procedure if plays is not on the field or not standing
+            # End frenzy block procedure if player is not on the field or not standing
             if self.defender.position is None or not self.defender.state.up:
                 return True
             # If not adjacent to defender - e.g. in case of fend
             if self.defender not in self.game.get_adjacent_opponents(self.attacker):
                 return True
             self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.FRENZY))
-            self.attacker.state.used_skills.append(Skill.FRENZY)
+            self.attacker.use_skill(Skill.FRENZY)
             self.frenzy_checked = True
+
+        # Juggernaut
+        if self.waiting_juggernaut:
+            if action.action_type == ActionType.USE_SKILL:
+                self.selected_die = BBDieResult.PUSH
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.JUGGERNAUT))
+            self.waiting_juggernaut = False
+            self.juggernaut_checked = True
+            return False
+
+        # Attacker wrestle action
+        if self.waiting_wrestle_attacker:
+            if action.action_type == ActionType.USE_SKILL:
+                KnockDown(self.game, self.attacker, armor_roll=False, injury_roll=False, inflictor=self.defender)
+                KnockDown(self.game, self.defender, armor_roll=False, injury_roll=False, inflictor=self.attacker)
+                self.waiting_wrestle_attacker = False
+            elif self.waiting_wrestle_defender:
+                return False
+            else:
+                return self.both_down()
+
+        # Defender wrestle action
+        if self.waiting_wrestle_defender:
+            if action.action_type == ActionType.USE_SKILL:
+                KnockDown(self.game, self.defender, armor_roll=False, injury_roll=False,
+                          inflictor=self.attacker)
+                KnockDown(self.game, self.attacker, armor_roll=False, injury_roll=False,
+                          inflictor=self.defender)
+                self.waiting_wrestle_defender = False
+            else:
+                return self.both_down()
 
         # Roll
         if self.roll is None:
@@ -273,55 +309,44 @@ class Block(Procedure):
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
                                      rolls=[self.roll]))
 
-            # Add secondary clock if opponent has the favor
-            if not self.game.can_use_reroll(self.attacker.team):
-                if self.favor == self.defender.team:
-                    self.game.add_secondary_clock(self.favor)
-
+            # check for re-roll
+            self.reroll = Reroll(self.game, self.attacker, context=self)
             return False
 
-        elif self.waiting_wrestle_defender:
-
-            #self.wrestle = action.action_type == ActionType.USE_WRESTLE
-            self.waiting_wrestle_defender = False
-            self.selected_die = BBDieResult.BOTH_DOWN
-
-        elif action.action_type == ActionType.USE_REROLL:
-
-            # Roll again
-            self.reroll_decision_made = True
-            self.attacker.team.state.use_reroll()
-            self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.attacker.team))
-            self.roll = None
-            return self.step(None)
-
-        elif action.action_type == ActionType.DONT_USE_REROLL:
-            # Roll again
-            self.reroll_decision_made = True
-
-            # Add secondary clock if opponent has the favor
-            if self.favor != self.game.state.current_team:
-                if self.game.state.current_team != self.favor:
+        # If re-roll decision is made
+        elif self.reroll is not None:
+            if self.reroll.use_reroll:
+                # reroll!
+                self.roll = None
+                self.reroll = None
+                return False
+            elif self.reroll.block_action:
+                # If block die was selected in Reroll
+                action = self.reroll.block_action
+            else:
+                # Add secondary clock if opponent has the favor
+                if self.favor == self.defender.team:
                     self.game.add_secondary_clock(self.favor)
+                self.reroll = None
+                return False
+        return self.handle_block_die(action.action_type)
 
-        #elif action.action_type == ActionType.USE_JUGGERNAUT:
-        #    self.selected_die = BBDieResult.PUSH
-
+    def handle_block_die(self, action_type):
         # Select die
-        elif action.action_type == ActionType.SELECT_ATTACKER_DOWN:
+        if action_type == ActionType.SELECT_ATTACKER_DOWN:
             self.selected_die = BBDieResult.ATTACKER_DOWN
-        elif action.action_type == ActionType.SELECT_BOTH_DOWN:
+        elif action_type == ActionType.SELECT_BOTH_DOWN:
             self.selected_die = BBDieResult.BOTH_DOWN
-        elif action.action_type == ActionType.SELECT_PUSH:
+        elif action_type == ActionType.SELECT_PUSH:
             self.selected_die = BBDieResult.PUSH
-        elif action.action_type == ActionType.SELECT_DEFENDER_STUMBLES:
+        elif action_type == ActionType.SELECT_DEFENDER_STUMBLES:
             self.selected_die = BBDieResult.DEFENDER_STUMBLES
-        elif action.action_type == ActionType.SELECT_DEFENDER_DOWN:
+        elif action_type == ActionType.SELECT_DEFENDER_DOWN:
             self.selected_die = BBDieResult.DEFENDER_DOWN
 
         # Remove secondary clocks
-        if self.selected_die is not None:
-            self.game.remove_secondary_clocks()
+        assert self.selected_die is not None
+        self.game.remove_secondary_clocks()
 
         # Dice result
         if self.selected_die == BBDieResult.ATTACKER_DOWN:
@@ -330,16 +355,26 @@ class Block(Procedure):
             return True
 
         elif self.selected_die == BBDieResult.BOTH_DOWN:
-            if not self.attacker.has_skill(Skill.BLOCK):
-                Turnover(self.game)
-                KnockDown(self.game, self.attacker, inflictor=self.defender)
-            else:
-                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.BLOCK))
-            if not self.defender.has_skill(Skill.BLOCK):
-                KnockDown(self.game, self.defender, inflictor=self.attacker)
-            else:
-                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.defender, skill=Skill.BLOCK))
-            return True
+
+            if self.blitz and self.attacker.has_skill(Skill.JUGGERNAUT) and not self.juggernaut_checked:
+                self.waiting_juggernaut = True
+                return False
+
+            # Attacker wrestle - Don't use if only one with Block skill
+            if self.attacker.has_skill(Skill.WRESTLE) and not (self.attacker.has_skill(Skill.BLOCK) and not self.defender.has_skill(Skill.BLOCK)):
+                self.waiting_wrestle_attacker = True
+
+            # Defender wrestle - Don't use if only one with Block skill
+            if self.defender.has_skill(Skill.WRESTLE) and not (self.defender.has_skill(Skill.BLOCK) and not self.attacker.has_skill(Skill.BLOCK)):
+                if self.blitz and self.attacker.has_skill(Skill.JUGGERNAUT):
+                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.JUGGERNAUT))
+                else:
+                    self.waiting_wrestle_defender = True
+
+            if self.waiting_wrestle_attacker or self.waiting_wrestle_defender:
+                return False
+
+            return self.both_down()
 
         elif self.selected_die == BBDieResult.DEFENDER_DOWN:
             Push(self.game, self.attacker, self.defender, knock_down=True, blitz=self.blitz)
@@ -356,30 +391,56 @@ class Block(Procedure):
 
         return False
 
+    def both_down(self):
+        # Attacker down
+        if not self.attacker.has_skill(Skill.BLOCK):
+            Turnover(self.game)
+            KnockDown(self.game, self.attacker, inflictor=self.defender)
+        else:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.BLOCK))
+        # Defender down
+        if not self.defender.has_skill(Skill.BLOCK):
+            KnockDown(self.game, self.defender, inflictor=self.attacker)
+        else:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.defender, skill=Skill.BLOCK))
+        return True
+
     def available_actions(self):
-
         actions = []
-
-        if self.roll is not None and self.selected_die is None:
-            disable_dice_pick = False
-            if self.game.can_use_reroll(self.attacker.team) and not self.reroll_decision_made:
-                actions.append(ActionChoice(ActionType.USE_REROLL, self.attacker.team))
-                actions.append(ActionChoice(ActionType.DONT_USE_REROLL, self.attacker.team))
-                if self.favor != self.attacker.team:
-                    disable_dice_pick = True
-
-            for die in self.roll.dice:
-                if die.get_value() == BBDieResult.ATTACKER_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_ATTACKER_DOWN, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.BOTH_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_BOTH_DOWN, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.PUSH:
-                    actions.append(ActionChoice(ActionType.SELECT_PUSH, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.DEFENDER_STUMBLES:
-                    actions.append(ActionChoice(ActionType.SELECT_DEFENDER_STUMBLES, self.favor, disabled=disable_dice_pick))
-                if die.get_value() == BBDieResult.DEFENDER_DOWN:
-                    actions.append(ActionChoice(ActionType.SELECT_DEFENDER_DOWN, self.favor, disabled=disable_dice_pick))
-
+        if self.roll is None:
+            return actions
+        if self.reroll is not None and self.reroll.done:
+            return actions
+        if self.waiting_juggernaut:
+            return [
+                ActionChoice(ActionType.USE_SKILL, self.attacker.team, skill=Skill.JUGGERNAUT),
+                ActionChoice(ActionType.DONT_USE_SKILL, self.attacker.team, skill=Skill.JUGGERNAUT)
+            ]
+        if self.waiting_wrestle_attacker:
+            return [
+                ActionChoice(ActionType.USE_SKILL, self.attacker.team, skill=Skill.WRESTLE),
+                ActionChoice(ActionType.DONT_USE_SKILL, self.attacker.team, skill=Skill.WRESTLE)
+            ]
+        if self.waiting_wrestle_defender:
+            return [
+                ActionChoice(ActionType.USE_SKILL, self.defender.team, skill=Skill.WRESTLE),
+                ActionChoice(ActionType.DONT_USE_SKILL, self.defender.team, skill=Skill.WRESTLE)
+            ]
+        assert self.selected_die is None
+        disable_dice_pick = False
+        if self.reroll is not None and self.reroll.use_reroll is None and self.favor != self.attacker.team:
+            disable_dice_pick = True
+        for die in self.roll.dice:
+            if die.get_value() == BBDieResult.ATTACKER_DOWN:
+                actions.append(ActionChoice(ActionType.SELECT_ATTACKER_DOWN, self.favor, disabled=disable_dice_pick))
+            if die.get_value() == BBDieResult.BOTH_DOWN:
+                actions.append(ActionChoice(ActionType.SELECT_BOTH_DOWN, self.favor, disabled=disable_dice_pick))
+            if die.get_value() == BBDieResult.PUSH:
+                actions.append(ActionChoice(ActionType.SELECT_PUSH, self.favor, disabled=disable_dice_pick))
+            if die.get_value() == BBDieResult.DEFENDER_STUMBLES:
+                actions.append(ActionChoice(ActionType.SELECT_DEFENDER_STUMBLES, self.favor, disabled=disable_dice_pick))
+            if die.get_value() == BBDieResult.DEFENDER_DOWN:
+                actions.append(ActionChoice(ActionType.SELECT_DEFENDER_DOWN, self.favor, disabled=disable_dice_pick))
         return actions
 
 
@@ -492,24 +553,21 @@ class Casualty(Procedure):
 
 class Catch(Procedure):
 
-    def __init__(self, game, player, ball, accurate=False, interception=False, handoff=False, kick=False):
+    def __init__(self, game, player, ball, accurate=False, handoff=False, kick=False, passer=None):
         super().__init__(game)
         self.player = player
         self.ball = ball
         self.accurate = accurate
         self.handoff = handoff
-        self.rolled = False
-        self.reroll_used = False
-        self.catch_used = False
+        self.roll = None
+        self.reroll = None
         self.kick = kick
-        self.waiting_for_reroll = False
-        self.waiting_for_catch = False
-        self.interception = interception
+        self.passer = passer
 
     def step(self, action):
 
         # Otherwise roll if player hasn't rolled
-        if not self.rolled:
+        if self.roll is None:
 
             # Can player even catch ball?
             if self.player.has_skill(Skill.NO_HANDS) or not self.player.can_catch():
@@ -517,81 +575,123 @@ class Catch(Procedure):
                 self.game.report(Outcome(OutcomeType.BALL_DROPPED, player=self.player))
                 return True
 
-            # Set modifiers
-            modifiers = self.game.get_catch_modifiers(self.player, accurate=self.accurate,
-                                              interception=self.interception, handoff=self.handoff)
-
             # Roll
-            roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            roll.modifiers = modifiers
-            roll.target = Rules.agility_table[self.player.get_ag()]
-            self.rolled = True
-            if roll.is_d6_success():
-                if self.interception:
-                    self.game.report(Outcome(OutcomeType.INTERCEPTION, player=self.player, rolls=[roll]))
-                    self.ball.move_to(self.player.position)
-                    self.ball.is_carried = True
-                    if self.game.is_touchdown(self.player):
-                        Touchdown(self.game, self.player)
-                    else:
-                        Turnover(self.game)
-                else:
-                    self.game.report(Outcome(OutcomeType.CATCH, player=self.player, rolls=[roll]))
-                    self.ball.is_carried = True
-                    if self.game.is_touchdown(self.player):
-                        Touchdown(self.game, self.player)
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.modifiers = self.game.get_catch_modifiers(self.player, accurate=self.accurate, handoff=self.handoff)
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.CATCH, player=self.player, rolls=[self.roll]))
+                self.ball.is_carried = True
+                if self.game.is_touchdown(self.player):
+                    Touchdown(self.game, self.player)
                 return True
             else:
+                self.game.report(Outcome(OutcomeType.CATCH_FAILED, player=self.player, rolls=[self.roll]))
+                # Check for re-roll
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False
 
-                if self.interception:
-                    self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.player, rolls=[roll]))
-                    return True
-
-                self.game.report(Outcome(OutcomeType.CATCH_FAILED, player=self.player, rolls=[roll]))
-
-                # Check if catch
-                if self.player.has_skill(Skill.CATCH) and not self.catch_used:
-                    self.catch_used = True
-                    self.waiting_for_catch = True
-                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.CATCH))
-                    return False
-
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team) and not self.catch_used:
-                    self.waiting_for_reroll = True
-                    if self.player.team != self.game.state.current_team:
-                        self.game.add_secondary_clock(self.player.team)
-                    return False
-
-                Bounce(self.game, self.ball, kick=self.kick)
-                return True
-
-        # If catch used
-        if self.waiting_for_catch:
-            self.catch_used = True
-            self.rolled = False
-            return self.step(None)
+        assert self.reroll is not None
 
         # If re-roll used
-        if self.waiting_for_reroll:
-            if self.player.team != self.game.state.current_team:
-                self.game.remove_secondary_clocks()
-            if action.action_type == ActionType.USE_REROLL:
-                self.reroll_used = True
-                self.player.team.state.use_reroll()
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.rolled = False
-                return self.step(None)
-            else:
-                Bounce(self.game, self.ball, kick=self.kick)
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+        else:
+            Bounce(self.game, self.ball, kick=self.kick)
 
         return True
 
-    def available_actions(self):
-        if self.waiting_for_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.player.team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)]
-        return []
+
+class Intercept(Procedure):
+
+    def __init__(self, game, intercepter, ball, passer=None):
+        super().__init__(game)
+        self.intercepter = intercepter
+        self.ball = ball
+        self.roll = None
+        self.reroll = None
+        self.safe_throw_reroll = None
+        self.passer = passer
+        self.waiting_safe_throw = False
+
+    def step(self, action):
+
+        # If waiting for interception re-roll due to Safe Throw skill
+        if self.waiting_safe_throw:
+            # Make agility roll for passer
+            safe_throw_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            safe_throw_roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.game.report(
+                Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW, rolls=[safe_throw_roll]))
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.intercepter, rolls=[self.roll]))
+                return True
+            else:
+                # Check for re-roll
+                self.safe_throw_reroll = Reroll(self.game, self.passer, context=self)
+                self.waiting_safe_throw = False
+                return False
+                # TODO: Check for safe-throw in Reroll
+
+        # If safe throw re-roll decision made
+        if self.safe_throw_reroll is not None:
+            if self.safe_throw_reroll.use_reroll:
+                self.safe_throw_reroll = None
+                self.waiting_safe_throw = True
+                self.roll = None
+                return False
+            else:
+                self.ball.move_to(self.intercepter.position)
+                self.ball.is_carried = True
+                if self.game.is_touchdown(self.intercepter):
+                    Touchdown(self.game, self.intercepter)
+                else:
+                    Turnover(self.game)
+                return True
+
+        # Otherwise roll if player hasn't rolled
+        if self.roll is None:
+
+            # Can player even catch ball?
+            if self.intercepter.has_skill(Skill.NO_HANDS) or not self.intercepter.can_catch():
+                return True
+
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.modifiers = self.game.get_catch_modifiers(self.intercepter, interception=True)
+            self.roll.target = Rules.agility_table[self.intercepter.get_ag()]
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.INTERCEPTION, player=self.intercepter, rolls=[self.roll]))
+                if self.passer is not None and self.passer.has_skill(Skill.SAFE_THROW):
+                    self.waiting_safe_throw = True
+                    return False
+                self.ball.move_to(self.intercepter.position)
+                self.ball.is_carried = True
+                if self.game.is_touchdown(self.intercepter):
+                    Touchdown(self.game, self.intercepter)
+                else:
+                    Turnover(self.game)
+                return True
+
+            else:
+
+                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.intercepter, rolls=[self.roll]))
+
+                # Check for re-roll
+                self.reroll = Reroll(self.game, self.intercepter, context=self)
+                return False
+
+        assert self.reroll is not None
+
+        # If re-roll used
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+
+        return True
 
 
 class CoinTossFlip(Procedure):
@@ -599,7 +699,7 @@ class CoinTossFlip(Procedure):
     def __init__(self, game):
         super().__init__(game)
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.game.state.away_team)
 
     def step(self, action):
@@ -636,7 +736,7 @@ class CoinTossKickReceive(Procedure):
                    ActionChoice(ActionType.RECEIVE,
                                 team=self.game.state.coin_toss_winner)]
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.game.state.coin_toss_winner)
 
     def step(self, action):
@@ -729,8 +829,8 @@ class Half(Procedure):
 
         # If second half
         if not self.prepared and self.half > 1:
-            PreKickOff(self.game, self.game.get_kicking_team(self.half))
-            PreKickOff(self.game, self.game.get_receiving_team(self.half))
+            PreKickoff(self.game, self.game.get_kicking_team(self.half))
+            PreKickoff(self.game, self.game.get_receiving_team(self.half))
             self.prepared = True
             return False
 
@@ -844,20 +944,20 @@ class Injury(Procedure):
 
 class Interception(Procedure):
 
-    def __init__(self, game, team, ball, interceptors):
+    def __init__(self, game, team, ball, interceptors, passer):
         super().__init__(game)
         self.team = team
+        self.passer = passer
         self.ball = ball
         self.interceptors = interceptors
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.team)
 
     def step(self, action):
 
         if action.action_type == ActionType.INTERCEPTION:
-            self.ball.move_to(action.player.position)
-            Catch(self.game, action.player, self.ball, interception=True)
+            Intercept(self.game, action.player, self.ball, passer=self.passer)
 
         self.game.remove_secondary_clocks()
         return True
@@ -878,7 +978,7 @@ class Touchback(Procedure):
         super().__init__(game)
         self.ball = ball
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.game.state.receiving_this_drive)
         self.players_on_pitch_standing = self.game.get_players_on_pitch(self.game.state.receiving_this_drive, up=True)
 
@@ -1057,7 +1157,7 @@ class HighKick(Procedure):
         self.ball = ball
         self.receiving_team = self.game.get_receiving_team()
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.receiving_team)
         self.available_players = []
         for player in self.game.get_players_on_pitch(self.receiving_team, up=True):
@@ -1357,7 +1457,7 @@ class Move(Procedure):
                 Bounce(self.game, ball)
                 return True
             else:
-                Pickup(self.game, ball, self.player, cause_turnover=True)
+                Pickup(self.game, ball, self.player)
                 return True
 
         elif self.game.has_ball(self.player) and self.game.is_touchdown(self.player):
@@ -1377,165 +1477,105 @@ class GFI(Procedure):
         super().__init__(game)
         self.player = player
         self.position = position
-        self.awaiting_reroll = False
-        self.sure_feet_used = False
-        self.reroll_used = False
-        self.rolled = False
+        self.reroll = None
+        self.roll = None
 
     def step(self, action):
 
         # If player hasn't rolled
-        if not self.rolled:
+        if self.roll is None:
 
             # Roll
-            roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.GFI_ROLL)
-            self.rolled = True
-            roll.target = 2
-            roll.modifiers = 1 if self.game.state.weather == WeatherType.BLIZZARD else 0
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.GFI_ROLL)
+            self.roll.target = 2
+            self.roll.modifiers = 1 if self.game.state.weather == WeatherType.BLIZZARD else 0
 
-            if roll.is_d6_success():
+            if self.roll.is_d6_success():
 
                 # Success
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_GFI, player=self.player, position=self.position, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_GFI, player=self.player, position=self.position, rolls=[self.roll]))
                 return True
 
             else:
 
                 # Fail
-                self.game.report(Outcome(OutcomeType.FAILED_GFI, player=self.player, position=self.position, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_GFI, player=self.player, position=self.position, rolls=[self.roll]))
 
-                # Check if sure feet
-                if self.player.has_skill(Skill.SURE_FEET) and not self.sure_feet_used:
-                    self.sure_feet_used = True
-                    self.rolled = False
-                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SURE_FEET))
-                    return self.step(None)
+                # Check re-roll
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False
 
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team) and not self.sure_feet_used:
-                    self.awaiting_reroll = True
-                    return False
-
-                # Player trips
-                if not self.player.position == self.position:
-                    self.game.move(self.player, self.position)
-                KnockDown(self.game, self.player, self.position, turnover=True)
-                return True
+        assert self.reroll is not None
 
         # If reroll used
-        if self.awaiting_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                # Remove reroll and roll again - recursive call
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.rolled = False
-                self.player.team.state.use_reroll()
-                return self.step(None)
-            else:
-                # Player trips
-                if not self.player.position == self.position:
-                    self.game.move(self.player, self.position)
-                KnockDown(self.game, self.player, turnover=True)
-                return True
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
 
-    def available_actions(self):
-        if self.awaiting_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
-
-        return []
+        # Player trips
+        if not self.player.position == self.position:
+            self.game.move(self.player, self.position)
+        KnockDown(self.game, self.player, turnover=True)
+        return True
 
 
 class Dodge(Procedure):
 
-    def __init__(self, game, player, position, cause_turnover=True):
+    def __init__(self, game, player, position):
         super().__init__(game)
         self.player = player
         self.position = position
-        self.dodge_used = False
-        self.awaiting_dodge = False
-        self.awaiting_reroll = False
-        self.rolled = False
-        self.cause_turnover = cause_turnover
+        self.reroll = None
+        self.roll = None
 
     def step(self, action):
 
         # If player hasn't rolled
-        if not self.rolled:
+        if self.roll is None:
 
             # TODO: Allow player to select if shadowing and diving tackle
             # TODO: Put diving tackle, shadowing proc or tentacles on stack
             # TODO: Auto-use other skills
 
             # Roll
-            roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.rolled = True
-            roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position)
-
-            # Get players with tackle
-            tacklers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.TACKLE)
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position)
 
             # Break tackle - use st instead of ag
             attribute = self.player.get_ag()
             if self.player.has_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_st():
                 attribute = self.player.get_st()
 
-            roll.target = Rules.agility_table[attribute]
+            self.roll.target = Rules.agility_table[attribute]
 
-            if roll.is_d6_success():
+            if self.roll.is_d6_success():
 
                 # Success
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
                 return True
 
             else:
 
                 # Fail
-                self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
 
-                # Check if dodge
-                if self.player.has_skill(Skill.DODGE) and not self.player.has_used_skill(Skill.DODGE) and not self.dodge_used and len(tacklers) == 0:
-                    self.dodge_used = True
-                    self.awaiting_dodge = True
-                    self.player.state.used_skills.append(Skill.DODGE)
-                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.DODGE))
-                    return False
+                # Check for reroll
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False
 
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team) and not self.dodge_used:
-                    self.awaiting_reroll = True
-                    return False
+        assert self.reroll is not None
 
-                # Player trips
-                self.game.move(self.player, self.position)
-                KnockDown(self.game, self.player, turnover=self.cause_turnover)
+        # If dodge failed and re-roll decision made
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
 
-                return True
-
-        # If has dodge
-        if self.awaiting_dodge:
-            self.dodge_used = True
-            self.rolled = False
-            return self.step(None)
-
-        # If reroll used
-        if self.awaiting_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                # Remove reroll and roll again - recursive call
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.player.team.state.use_reroll()
-                self.rolled = False
-                return self.step(None)
-            else:
-                # Player trips
-                self.game.move(self.player, self.position)
-                KnockDown(self.game, self.player, turnover=self.cause_turnover)
-                return True
-
-    def available_actions(self):
-        if self.awaiting_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.player.team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)]
-        return []
+        # If dodge failed and no re-roll -> Player trips
+        self.game.move(self.player, self.position)
+        KnockDown(self.game, self.player, turnover=True)
+        return True
 
 
 class TurnoverIfPossessionLost(Procedure):
@@ -1573,9 +1613,6 @@ class Handoff(Procedure):
         self.game.report(Outcome(OutcomeType.HANDOFF, player=self.player, opp_player=self.catcher))
         return True
 
-    def available_actions(self):
-        return []
-
 
 class PassAction(Procedure):
 
@@ -1586,42 +1623,38 @@ class PassAction(Procedure):
         self.catcher = catcher
         self.position = position
         self.pass_distance = pass_distance
-        self.pass_roll = None
-        self.reroll_used = False
-        self.pass_used = False
-        self.waiting_for_reroll = False
-        self.waiting_for_pass = False
+        self.roll = None
+        self.reroll = False
         self.fumble = False
         self.interception_tried = False
 
     def step(self, action):
 
         # Otherwise roll if player hasn't rolled
-        if self.pass_roll is None:
+        if self.roll is None:
 
             self.ball.is_carried = False
 
             # Check for interception
             if not self.interception_tried:
                 interceptors = self.game.get_interceptors(self.passer.position, self.position, team=self.game.get_opp_team(self.passer.team))
-                # TODO: Implement option to intercept for all opponent teams
                 if len(interceptors) > 0:
-                    Interception(self.game, interceptors[0].team, self.ball, interceptors)
+                    Interception(self.game, interceptors[0].team, self.ball, interceptors, self.passer)
                     self.interception_tried = True
                     return False
 
             self.ball.move_to(self.passer.position)
 
             # Roll
-            self.pass_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.pass_roll.target = Rules.agility_table[self.passer.get_ag()]
-            self.pass_roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance)
-            result = self.pass_roll.get_sum()
-            mod_result = result + self.pass_roll.modifiers
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance)
+            result = self.roll.get_sum()
+            mod_result = result + self.roll.modifiers
 
-            if result == 6 or (result != 1 and mod_result >= self.pass_roll.target):
+            if result == 6 or (result != 1 and mod_result >= self.roll.target):
                 # Accurate pass
-                self.game.report(Outcome(OutcomeType.ACCURATE_PASS, player=self.passer, rolls=[self.pass_roll]))
+                self.game.report(Outcome(OutcomeType.ACCURATE_PASS, player=self.passer, rolls=[self.roll]))
                 self.ball.move_to(self.position)
                 TurnoverIfPossessionLost(self.game, self.ball)
                 if self.catcher is not None:
@@ -1630,147 +1663,83 @@ class PassAction(Procedure):
                     Bounce(self.game, self.ball)
                 return True
 
-            elif result == 1 or mod_result <= 1:
+            if result == 1 or (mod_result <= 1 and not self.passer.has_skill(Skill.SAFE_THROW)):
                 # Fumble
                 self.fumble = True
-                self.game.report(Outcome(OutcomeType.FUMBLE, player=self.passer, rolls=[self.pass_roll]))
+                self.game.report(Outcome(OutcomeType.FUMBLE, player=self.passer, rolls=[self.roll]))
+            elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
+                self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
             else:
-                # Inaccurate pass
-                self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.pass_roll]))
+                self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
 
-            # Check if player has pass
-            if self.passer.has_skill(Skill.PASS) and not self.pass_used:
-                self.pass_used = True
-                self.pass_roll = None
-                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.PASS))
-                self.fumble = False
-                return self.step(None)
-
-            # Check if reroll available
-            if self.game.can_use_reroll(self.passer.team) and not self.pass_used and not self.reroll_used:
-                self.waiting_for_reroll = True
-                return False
-
-            # Effect
-            if self.fumble:
-                Turnover(self.game)
-                Bounce(self.game, self.ball)
-            else:
-                TurnoverIfPossessionLost(self.game, self.ball)
-                self.ball.move_to(self.position)
-                Scatter(self.game, self.ball, is_pass=True)
-
-            return True
+            # Check if re-roll available
+            self.reroll = Reroll(self.game, self.passer, context=self.context)
+            return False
 
         # If re-roll used
-        if self.waiting_for_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                self.reroll_used = True
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.passer.team))
-                self.passer.team.state.use_reroll()
-                self.fumble = False
-                self.pass_roll = None
-                return self.step(None)
-            elif self.fumble:
-                Turnover(self.game)
-                Bounce(self.game, self.ball)
-                return True
+        assert self.reroll is not None
 
-            TurnoverIfPossessionLost(self.game, self.ball)
-            self.ball.move_to(self.position)
-            Scatter(self.game, self.ball, is_pass=True)
+        if self.reroll.use_reroll:
+            self.reroll = None
+            self.roll = None
+            self.fumble = False
+            return False
+
+        if self.fumble:
+            Turnover(self.game)
+            Bounce(self.game, self.ball)
             return True
 
+        TurnoverIfPossessionLost(self.game, self.ball)
+        self.ball.move_to(self.position)
+        Scatter(self.game, self.ball, is_pass=True)
         return True
-
-    def available_actions(self):
-
-        if self.waiting_for_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.passer.team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.passer.team)]
-        return []
 
 
 class Pickup(Procedure):
 
-    def __init__(self, game, ball, player, cause_turnover=True):
+    def __init__(self, game, ball, player):
         super().__init__(game)
         self.ball = ball
         self.player = player
-        self.rolled = False
-        self.sure_hands_used = False
-        self.waiting_for_reroll = False
-        self.waiting_for_sure_hands = False
-        self.cause_turnover = cause_turnover
+        self.roll = None
+        self.reroll = None
 
     def step(self, action):
 
         # Otherwise roll if player hasn't rolled
-        if not self.rolled:
+        if self.roll is None:
 
-            roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            roll.target = Rules.agility_table[self.player.get_ag()]
-            roll.modifiers = self.game.get_pickup_modifiers(self.player, self.ball.position)
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            self.roll.modifiers = self.game.get_pickup_modifiers(self.player, self.ball.position)
 
             # Roll
-            self.rolled = True
-            if roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.SUCCESSFUL_PICKUP, player=self.player, rolls=[roll]))
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_PICKUP, player=self.player, rolls=[self.roll]))
                 self.ball.is_carried = True
                 if self.game.is_touchdown(self.player):
                     Touchdown(self.game, self.player)
                 return True
             else:
                 self.game.report(Outcome(OutcomeType.FAILED_PICKUP, player=self.player, position=self.player.position,
-                                         rolls=[roll]))
-                # Check if sure hands
-                if self.player.has_skill(Skill.SURE_HANDS) and not self.sure_hands_used:
-                    self.sure_hands_used = True
-                    self.waiting_for_sure_hands = True
-                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, position=self.player.position,
-                                             rolls=[roll], skill=Skill.SURE_HANDS))
-                    return False
+                                         rolls=[self.roll]))
+                # Check re-roll
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False
 
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team) and not self.sure_hands_used:
-                    self.waiting_for_reroll = True
-                    return False
+        assert self.reroll is not None
 
-                # Turnover?
-                if self.cause_turnover:
-                    Turnover(self.game)
+        # If re-roll is used
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
 
-                Bounce(self.game, self.ball)
-                self.game.report(Outcome(OutcomeType.FAILED_PICKUP, player=self.player, rolls=[roll]))
-
-                return True
-
-        # If has sure hands
-        if self.waiting_for_sure_hands:
-            self.sure_hands_used = True
-            self.rolled = False
-            return self.step(None)
-
-        # If re-roll used
-        if self.waiting_for_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                self.player.team.state.use_reroll()
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.rolled = False
-                return self.step(None)
-            else:
-                # Turnover?
-                if self.cause_turnover:
-                    Turnover(self.game)
-                Bounce(self.game, self.ball)
-
+        Turnover(self.game)
+        Bounce(self.game, self.ball)
         return True
-
-    def available_actions(self):
-        if self.waiting_for_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.player.team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)]
-        return []
 
 
 class StandUp(Procedure):
@@ -1795,9 +1764,6 @@ class StandUp(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class PlaceBall(Procedure):
 
@@ -1806,7 +1772,7 @@ class PlaceBall(Procedure):
         self.ball = ball
         self.aa = None
 
-    def setup(self):
+    def start(self):
         self.game.add_secondary_clock(self.game.get_kicking_team())
         self.aa = [ActionChoice(ActionType.PLACE_BALL, team=self.game.get_kicking_team(),
                                 positions=self.game.get_team_side(self.game.get_receiving_team()))]
@@ -1836,9 +1802,6 @@ class EndPlayerTurn(Procedure):
         self.game.state.active_player = None
         self.player.state.squares_moved.clear()
         return True
-
-    def available_actions(self):
-        return []
 
 
 class PlayerAction(Procedure):
@@ -2116,9 +2079,6 @@ class EndGame(Procedure):
             self.game.report(Outcome(OutcomeType.END_OF_GAME_DRAW))
         return True
 
-    def available_actions(self):
-        return []
-
 
 class Pregame(Procedure):
 
@@ -2140,11 +2100,8 @@ class Pregame(Procedure):
             team.state.turn = 0
         return True
 
-    def available_actions(self):
-        return []
 
-
-class PreKickOff(Procedure):
+class PreKickoff(Procedure):
 
     def __init__(self, game, team):
         super().__init__(game)
@@ -2165,9 +2122,6 @@ class PreKickOff(Procedure):
                 self.game.report(Outcome(OutcomeType.PLAYER_NOT_READY, player=player, rolls=[roll]))
                 return False
         return True
-
-    def available_actions(self):
-        return []
 
 
 class FollowUp(Procedure):
@@ -2251,6 +2205,7 @@ class Push(Procedure):
         # Use stand firm
         if self.waiting_stand_firm:
             if action.action_type == ActionType.USE_STAND_FIRM:
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.STAND_FIRM))
                 return True
             else:
                 self.waiting_stand_firm = False
@@ -2258,7 +2213,9 @@ class Push(Procedure):
 
         # Stand firm
         if self.player.has_skill(Skill.STAND_FIRM) and not self.stand_firm_used:
-            if not self.pusher.has_skill(Skill.JUGGERNAUT):
+            if self.pusher.has_skill(Skill.JUGGERNAUT) and self.blitz:
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.pusher, skill=Skill.JUGGERNAUT))
+            else:
                 self.waiting_stand_firm = True
                 return False
 
@@ -2318,8 +2275,8 @@ class Push(Procedure):
         if self.squares is not None:
             actions.append(ActionChoice(ActionType.PUSH, team=self.selector.team, positions=self.squares))
         elif self.waiting_stand_firm:
-            actions.append(ActionChoice(ActionType.USE_SKILL, team=self.player.team))
-            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team))
+            actions.append(ActionChoice(ActionType.USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team))
+            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team))
         return actions
 
 
@@ -2433,9 +2390,6 @@ class Scatter(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class ClearBoard(Procedure):
 
@@ -2463,9 +2417,6 @@ class ClearBoard(Procedure):
                             self.game.report(Outcome(OutcomeType.PLAYER_NOT_HEATED, player=player, rolls=[roll]))
         return True
 
-    def available_actions(self):
-        return []
-
 
 class Setup(Procedure):
 
@@ -2479,7 +2430,7 @@ class Setup(Procedure):
         self.started = False
         self.aa = []
 
-    def setup(self):
+    def start(self):
         # Set current team
         self.game.state.current_team = self.team
         # Add clock
@@ -2626,9 +2577,6 @@ class ThrowIn(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class Turnover(Procedure):
 
@@ -2640,9 +2588,6 @@ class Turnover(Procedure):
         self.game.state.active_player = None
         EndTurn(self.game)
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Touchdown(Procedure):
@@ -2661,9 +2606,6 @@ class Touchdown(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class TurnStunned(Procedure):
 
@@ -2680,9 +2622,6 @@ class TurnStunned(Procedure):
                 players.append(player)
         self.game.report(Outcome(OutcomeType.STUNNED_TURNED))
         return True
-
-    def available_actions(self):
-        return []
 
 
 class EndTurn(Procedure):
@@ -2720,7 +2659,7 @@ class EndTurn(Procedure):
             Setup(self.game, self.game.state.kicking_this_drive)
 
             for team in self.game.state.teams:
-                PreKickOff(self.game, team)
+                PreKickoff(self.game, team)
 
             ClearBoard(self.game)
 
@@ -2728,9 +2667,6 @@ class EndTurn(Procedure):
         self.game.remove_clocks()
 
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Turn(Procedure):
@@ -2748,7 +2684,7 @@ class Turn(Procedure):
         self.handoff_available = not quick_snap
         self.foul_available = not quick_snap
 
-    def setup(self):
+    def start(self):
         self.game.state.current_team = self.team
 
     def start_player_action(self, outcome_type, player_action_type, player):
@@ -2900,20 +2836,18 @@ class WeatherTable(Procedure):
             self.game.report(Outcome(OutcomeType.WEATHER_BLIZZARD, rolls=[roll]))
         return True
 
-    def available_actions(self):
-        return []
-
 
 class Negatrait(Procedure, metaclass=ABCMeta):
     def __init__(self, game, player, player_action):
         super().__init__(game)
         self.game = game
         self.player = player
-        self.awaiting_reroll = False
+        self.waiting_reroll = False
         self.reroll_used = False
         self.rolled = False
         self.roll = None
         self.player_action = player_action
+        self.reroll = None
 
         self.roll_type = None
         self.skill = None
@@ -2951,40 +2885,27 @@ class Negatrait(Procedure, metaclass=ABCMeta):
                 return True
             else:
                 self.game.report(Outcome(self.fail_outcome, player=self.player, skill=self.skill, rolls=[self.roll]))
-                # Check if reroll available
-                if self.game.can_use_reroll(self.player.team):
-                    self.awaiting_reroll = True
-                    return False
+                # check reroll
+                self.reroll = Reroll(self.game, self.player, self)
+                return False
 
-                # Player forgets what to do
-                self.trigger_failure()
-                return True
-
-        # If reroll used
-        if self.awaiting_reroll:
-            if action.action_type == ActionType.USE_REROLL:
-                # Remove reroll and roll again - recursive call
-                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
-                self.player.team.state.use_reroll()
-                self.rolled = False
-                return self.step(None)
-            else:
-                # Player forgets what to do
-                self.trigger_failure()
-                return True
+        # Is re-roll used?
+        assert self.reroll is not None
+        if self.reroll.use_reroll:
+            # re-roll allowed
+            self.rolled = False
+            self.reroll = None
+            return self.step(None)
+        else:
+            # no re-roll
+            self.trigger_failure()
+            return True
 
     def end_turn(self):
         # mark player turn as over
         EndPlayerTurn(self.game, self.player)
         # don't let the intended action happen
         self.player_action.done = True
-
-    def available_actions(self):
-        if self.awaiting_reroll:
-            return [ActionChoice(ActionType.USE_REROLL, team=self.game.state.current_team),
-                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.game.state.current_team)]
-
-        return []
 
 
 class Bonehead(Negatrait):
@@ -3048,3 +2969,247 @@ class WildAnimal(Negatrait):
 
     def remove_fail_state(self):
         self.player.state.wild_animal = False
+
+
+class Reroll(Procedure):
+
+    def __init__(self, game, player, context):
+        super().__init__(game, context=context)
+        self.player = player
+        self.use_reroll = None
+        self.loner = None
+        self.can_use_team_reroll = False
+        self.can_use_pro = False
+        self.pro = None
+        self.secondary_clock = False
+        self.skill = None
+        self.block_actions = []
+        self.block_action = None
+
+    def start(self):
+
+        # Collect block dice actions if context is block
+        if type(self.context) == Block:
+            self.block_actions.extend(self.context.available_actions())
+
+        # Pro skill
+        if self.player.has_skill(Skill.PRO) and not self.player.has_used_skill(Skill.PRO):
+            self.can_use_pro = True
+
+        # Determine if team re-rolls are available
+        self.can_use_team_reroll = self.game.can_use_reroll(self.player.team)
+
+        # Check for automatic skill re-rolls
+        self.skill = None
+        if type(self.context) == Dodge and self.player.can_use_skill(Skill.DODGE):
+            # Get players with tackle
+            tacklers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.TACKLE)
+            if len(tacklers) == 0:
+                self.player.use_skill(Skill.DODGE)
+                self.use_reroll = True
+                self.skill = Skill.DODGE
+        if type(self.context) == PassAction and self.player.can_use_skill(Skill.PASS):
+            self.use_reroll = True
+            self.skill = Skill.PASS
+        if type(self.context) == Intercept:
+            # Make sure it is not a safe throw agility re-roll
+            if self.context.safe_throw_reroll is None and self.player.can_use_skill(Skill.CATCH):
+                self.use_reroll = True
+                self.skill = Skill.CATCH
+        if type(self.context) == Catch:
+            if self.player.can_use_skill(Skill.CATCH):
+                self.use_reroll = True
+                self.skill = Skill.CATCH
+        if type(self.context) == Pickup and self.player.can_use_skill(Skill.SURE_HANDS):
+            self.use_reroll = True
+            self.skill = Skill.SURE_HANDS
+        if type(self.context) == GFI and self.player.can_use_skill(Skill.SURE_FEET):
+            self.player.use_skill(Skill.SURE_FEET)
+            self.use_reroll = True
+            self.skill = Skill.SURE_FEET
+
+        # Add secondary clock if waiting for opponent decision
+        if self.skill is None and self.player.team != self.game.state.current_team:
+            self.game.add_secondary_clock(self.player.team)
+            self.secondary_clock = True
+
+    def step(self, action):
+
+        # If skill
+        if self.skill is not None:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=self.skill))
+            return True
+
+        # If no re-rolls are available
+        if not self.can_use_team_reroll and not self.can_use_pro:
+            return True
+
+        # Did use of Pro skill succeed?
+        if self.pro is not None:
+            self.use_reroll = self.pro.success
+            # If Pro (with possible re-rolls) failed - team re-rolls are not allowed.
+            return True
+
+        # Use Pro skill?
+        if self.can_use_pro:
+            if action.action_type == ActionType.USE_SKILL:
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.PRO))
+                self.pro = Pro(self.game, self.player, context=self)
+                return False
+            elif action.action_type == ActionType.DONT_USE_SKILL:
+                self.can_use_pro = False
+
+        # Did Loner roll succeed?
+        if self.loner is not None:
+            self.use_reroll = self.loner.success
+            return True
+
+        # If action is among parent actions
+        if action is not None:
+            for action_choice in self.block_actions:
+                if action_choice.action_type == action.action_type:
+                    self.block_action = action
+                    return True
+
+        # Team re-roll
+        if self.can_use_team_reroll:
+            if action.action_type == ActionType.USE_REROLL:
+                self.use_reroll = True
+                self.player.team.state.use_reroll()
+                self.game.report(Outcome(OutcomeType.REROLL_USED, team=self.player.team))
+                if self.player.has_skill(Skill.LONER):
+                    self.loner = Loner(self.game, self.player, context=self)
+                    return False
+            elif action.action_type == ActionType.DONT_USE_REROLL:
+                self.use_reroll = False
+            return True
+
+        # If neither Pro or team re-rolls can be used
+        self.use_reroll = False
+        return True
+
+    def end(self):
+        # Stop clock ff decision is opponent's
+        if self.secondary_clock:
+            self.game.remove_secondary_clocks()
+
+    def available_actions(self):
+        """
+        If bot, take actions in several steps: 1. Pro, 2. Reroll, 3. Go back to context
+        If human, show all actions at once, but hide uneccessary don't use/reroll actions.
+        """
+        actions = []
+        if self.skill is not None or self.loner is not None:
+            return actions
+        if not self.game.get_team_agent(self.player.team).human:
+            if self.can_use_pro:
+                actions = [
+                    ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team),
+                    ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team)
+                ]
+            elif self.can_use_team_reroll:
+                actions = [
+                    ActionChoice(ActionType.USE_REROLL, team=self.player.team),
+                    ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)
+                ]
+        else:
+            if len(self.block_actions) == 0 or self.context.favor != self.player.team:
+                if self.can_use_pro:
+                    actions = [
+                        ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team)
+                    ]
+                    if not self.can_use_team_reroll:
+                        actions.append(ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team))
+                if self.can_use_team_reroll:
+                    actions = [
+                        ActionChoice(ActionType.USE_REROLL, team=self.player.team),
+                        ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)
+                    ]
+            else:
+                if self.can_use_pro:
+                    actions = [
+                        ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team)
+                    ]
+                if self.can_use_team_reroll:
+                    actions = [
+                        ActionChoice(ActionType.USE_REROLL, team=self.player.team)
+                    ]
+
+            if len(self.block_actions) > 0 and len(actions) > 0:
+                actions.extend(self.block_actions)
+
+        return actions
+
+
+class Pro(Procedure):
+    def __init__(self, game, player, context):
+        super().__init__(game, context=context)
+        self.success = False
+        self.roll = None
+        self.player = player
+        self.reroll = None
+
+    def step(self, action):
+        if self.roll is None:
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.PRO)
+            self.roll.target = 4
+
+            if self.roll.is_d6_success():
+                # Success
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_PRO, player=self.player, rolls=[self.roll]))
+                self.success = True
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_PRO, player=self.player, skill=Skill.LONER, rolls=[self.roll]))
+                # Team re-rolls can be used to re-roll a failed Pro roll
+                self.reroll = Reroll(self.game, self.player, context=self.context)
+                return False
+
+        # If re-roll used
+        assert self.reroll is not None
+        if self.reroll.use_reroll:
+            # re-roll
+            self.roll = None
+            return self.step(None)
+        else:
+            # no reroll
+            self.result = False
+            return True
+
+
+class Loner(Procedure):
+    def __init__(self, game, player, context):
+        super().__init__(game, context=context)
+        self.success = False
+        self.roll = None
+        self.player = player
+        self.reroll = None
+
+    def step(self, action):
+        if self.roll is None:
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.LONER_ROLL)
+            self.roll.target = 4
+
+            if self.roll.is_d6_success():
+                # Success
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_LONER, player=self.player, rolls=[self.roll]))
+                self.success = True
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_LONER, player=self.player, skill=Skill.LONER, rolls=[self.roll]))
+                # Failed loner rolls can be re-rolled if the player has the Pro skill
+                self.reroll = Reroll(self.game, self.player, context=self.context)
+                return False
+
+        # If re-roll used
+        assert self.reroll is not None
+        if self.reroll.use_reroll:
+            # re-roll
+            self.roll = None
+            return self.step(None)
+        else:
+            # no re-roll
+            self.result = False
+            return True

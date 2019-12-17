@@ -222,7 +222,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 line = line.replace("<score-sorted>", Math.max($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) + " - " + Math.min($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) );
 
                 if (report.skill !== null){
-                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill) + '</span>');
+                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill.replace("_", " ")) + '</span>');
                 }
                 let n = report.n;
                 if (typeof(n) === "string"){

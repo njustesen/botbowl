@@ -87,6 +87,7 @@ def test_d8_fixation():
 
 
 def test_bb_fixation():
+    BBDie.clear_fixes()
     for seed in range(10):
         rnd = np.random.RandomState(seed)
         BBDie.fix_result(BBDieResult.ATTACKER_DOWN)
