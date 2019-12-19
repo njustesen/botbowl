@@ -1817,3 +1817,6 @@ class Game:
 
     def get_procedure(self):
         return self.state.stack.peek()
+
+    def get_weather(self):
+        return self.sate.weather
