@@ -66,7 +66,7 @@ A race is supported if all positions can be used and all their starting skills a
 
 | Skill             | Implemented | Has Test(s) |
 |-------------------|-------------|-----------|
-| Accurate          | YES         | NO        |
+| **Accurate**      | YES         | YES       |
 | Always Hungry     | NO          | NO        |
 | Animosity         | NO          | NO        |
 | Ball & Chain      | PARTIALLY   | NO        |
@@ -75,8 +75,8 @@ A race is supported if all positions can be used and all their starting skills a
 | Blood Lust        | NO          | NO        |
 | Bombardier        | NO          | NO        |
 | **Bone-head**     | YES         | YES       |
-| **Break Tackle**  | YES         | NO        |
-| Catch             | YES         | NO        |
+| Break Tackle      | PARTIALLY   | NO        |
+| **Catch**         | YES         | YES       |
 | Chainsaw          | NO          | NO        |
 | Claws             | YES         | NO        |
 | Dauntless         | YES         | NO        |
@@ -120,7 +120,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Really Stupid** | YES         | YES       |
 | Regeneration      | NO          | NO        |
 | Right Stuff       | NO          | NO        |
-| Safe Throw        | YES         | NO        |
+| **Safe Throw**    | YES         | YES       |
 | Secret Weapon     | NO          | NO        |
 | Shadowing         | NO          | NO        |
 | Side Step         | YES         | NO        |
@@ -130,7 +130,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Stakes            | NO          | NO        |
 | Stand Firm        | YES         | NO        |
 | Strip Ball        | NO          | NO        |
-| Strong Arm        | YES         | NO        |
+| **Strong Arm**    | YES         | YES       |
 | Stunty            | YES         | NO        |
 | Sure Feet         | YES         | NO        |
 | Sure Hands        | YES         | NO        |
@@ -143,7 +143,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Timmm-ber!        | NO          | NO        |
 | Titchy            | PARTIALLY   | NO        |
 | Two Heads         | YES         | NO        |
-| Very Long Legs    | NO          | NO        |
+| Very Long Legs    | NO          | PARTIALLY |
 | Weeping Dagger    | NO          | NO        |
 | **Wild Animals**  | YES         | YES       |
 | Wrestle           | YES         | NO        |

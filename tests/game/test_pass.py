@@ -71,3 +71,40 @@ def test_pass_distances_and_modifiers(data):
     elif pass_distance == PassDistance.LONG_BOMB:
         assert pass_mods == -3
 
+
+def test_accurate_pass():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.skills = []
+    passer.role.ag = 3
+    catcher = team.players[1]
+    game.put(passer, Square(1, 1))
+    game.state.weather = WeatherType.NICE
+    catcher_position = Square(passer.position.x + 7, passer.position.y + 0)
+    game.put(catcher, catcher_position)
+    pass_distance = game.get_pass_distance(passer.position, catcher.position)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
+    passer.role.skills = [Skill.ACCURATE]
+    accurate_pass_mods = game.get_pass_modifiers(passer, pass_distance)
+    assert pass_mods + 1 == accurate_pass_mods
+
+
+def test_strong_arm():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.ag = 3
+    game.put(passer, Square(1, 1))
+    game.state.weather = WeatherType.NICE
+    for pass_distance in [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB, PassDistance.HAIL_MARY]:
+        passer.role.skills = []
+        pass_mods = game.get_pass_modifiers(passer, pass_distance)
+        passer.role.skills = [Skill.STRONG_ARM]
+        strong_arm_mods = game.get_pass_modifiers(passer, pass_distance)
+        if pass_distance in [PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]:
+            assert pass_mods + 1 == strong_arm_mods
+        else:
+            assert pass_mods == strong_arm_mods

@@ -823,7 +823,7 @@ class Game:
         :return: A ball on the pitch or None.
         """
         for ball in self.state.pitch.balls:
-            return ball.position
+            return ball
 
     def is_touchdown(self, player):
         """
@@ -984,20 +984,20 @@ class Game:
         self.state.pitch.board[piece.position.y][piece.position.x] = None
         piece.position = None
 
-    def move(self, piece, position):
+    def move(self, player, position):
         """
-        Move a piece already on the board on the board. If the piece is a ball carrier, the ball is moved as well.
-        :param piece:
+        Move a player already on the board on the board. If the piece is a ball carrier, the ball is moved as well.
+        :param player:
         :param position:
         :return:
         """
-        assert piece.position is not None
+        assert player.position is not None
         assert self.state.pitch.board[position.y][position.x] is None
         for ball in self.state.pitch.balls:
-            if ball.position == piece.position and ball.is_carried:
+            if ball.position == player.position and ball.is_carried:
                 ball.move_to(position)
-        self.remove(piece)
-        self.put(piece, position)
+        self.remove(player)
+        self.put(player, position)
 
     def swap(self, piece_a, piece_b):
         """
@@ -1025,7 +1025,7 @@ class Game:
         """
         modifiers = 1 if accurate or handoff else 0
         modifiers = -2 if interception else modifiers
-        if interception and player.has_skill(Skill.LONG_LEGS):
+        if interception and player.has_skill(Skill.VERY_LONG_LEGS):
             modifiers += 1
         # opposing tackle zones
         if not player.has_skill(Skill.NERVES_OF_STEEL):

@@ -606,12 +606,13 @@ class Catch(Procedure):
 
 class Intercept(Procedure):
 
-    def __init__(self, game, intercepter, ball, passer=None):
+    def __init__(self, game, interceptor, ball, passer=None):
         super().__init__(game)
-        self.intercepter = intercepter
+        self.interceptor = interceptor
         self.ball = ball
         self.roll = None
         self.reroll = None
+        self.safe_throw_roll = None
         self.safe_throw_reroll = None
         self.passer = passer
         self.waiting_safe_throw = False
@@ -621,12 +622,12 @@ class Intercept(Procedure):
         # If waiting for interception re-roll due to Safe Throw skill
         if self.waiting_safe_throw:
             # Make agility roll for passer
-            safe_throw_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            safe_throw_roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.safe_throw_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.safe_throw_roll.target = Rules.agility_table[self.passer.get_ag()]
             self.game.report(
-                Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW, rolls=[safe_throw_roll]))
-            if self.roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.intercepter, rolls=[self.roll]))
+                Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW, rolls=[self.safe_throw_roll]))
+            if self.safe_throw_roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.interceptor))
                 return True
             else:
                 # Check for re-roll
@@ -643,10 +644,10 @@ class Intercept(Procedure):
                 self.roll = None
                 return False
             else:
-                self.ball.move_to(self.intercepter.position)
+                self.ball.move_to(self.interceptor.position)
                 self.ball.is_carried = True
-                if self.game.is_touchdown(self.intercepter):
-                    Touchdown(self.game, self.intercepter)
+                if self.game.is_touchdown(self.interceptor):
+                    Touchdown(self.game, self.interceptor)
                 else:
                     Turnover(self.game)
                 return True
@@ -655,32 +656,37 @@ class Intercept(Procedure):
         if self.roll is None:
 
             # Can player even catch ball?
-            if self.intercepter.has_skill(Skill.NO_HANDS) or not self.intercepter.can_catch():
+            if self.interceptor.has_skill(Skill.NO_HANDS) or not self.interceptor.can_catch():
                 return True
 
             # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.roll.modifiers = self.game.get_catch_modifiers(self.intercepter, interception=True)
-            self.roll.target = Rules.agility_table[self.intercepter.get_ag()]
+            self.roll.modifiers = self.game.get_catch_modifiers(self.interceptor, interception=True)
+            self.roll.target = Rules.agility_table[self.interceptor.get_ag()]
             if self.roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.INTERCEPTION, player=self.intercepter, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.INTERCEPTION, player=self.interceptor, rolls=[self.roll]))
                 if self.passer is not None and self.passer.has_skill(Skill.SAFE_THROW):
-                    self.waiting_safe_throw = True
-                    return False
-                self.ball.move_to(self.intercepter.position)
+                    if self.interceptor.has_skill(Skill.VERY_LONG_LEGS):
+                        self.game.report(
+                            Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
+                        self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.interceptor, skill=Skill.VERY_LONG_LEGS))
+                    else:
+                        self.waiting_safe_throw = True
+                        return False
+                self.ball.move_to(self.interceptor.position)
                 self.ball.is_carried = True
-                if self.game.is_touchdown(self.intercepter):
-                    Touchdown(self.game, self.intercepter)
+                if self.game.is_touchdown(self.interceptor):
+                    Touchdown(self.game, self.interceptor)
                 else:
                     Turnover(self.game)
                 return True
 
             else:
 
-                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.intercepter, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.interceptor, rolls=[self.roll]))
 
                 # Check for re-roll
-                self.reroll = Reroll(self.game, self.intercepter, context=self)
+                self.reroll = Reroll(self.game, self.interceptor, context=self)
                 return False
 
         assert self.reroll is not None
