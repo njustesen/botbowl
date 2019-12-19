@@ -203,7 +203,7 @@ appServices.factory('GameLogService', function() {
             "SKILL_USED": "<player> uses the <skill> skill.<b>",
             "PLAYER_EJECTED": "<player> was <b>ejected!</b>",
             "BLOCK_ROLL": "<player> blocks <opp_player>",
-            "REROLL_USED": "<team> uses a <b>reroll</b>.",
+            "REROLL_USED": "<team> uses a team <b>re-roll</b>.",
             "INTERCEPTION_FAILED": "<player> failed to intercept the pass.",
             "THROW_IN_OUT_OF_BOUNDS": "The ball was thrown out of bounds again.",
             "THROW_IN": "The ball was thrown back in by the fans.",
@@ -216,7 +216,12 @@ appServices.factory('GameLogService', function() {
             "FAILED_REALLY_STUPID": "<player> failed a <b>really stupid</b> roll",
             "SUCCESSFUL_REALLY_STUPID": "<player> passed a <b>really stupid</b> roll",
             "FAILED_WILD_ANIMAL": "<player> failed a <b>wild animal</b> roll",
-            "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll"
+            "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll",
+            "FAILED_LONER": "<player> failed a <b>loner</b> roll",
+            "SUCCESSFUL_LONER": "<player> passed a <b>loner</b> roll",
+            "FAILED_RPO": "<player> failed a <b>pro</b> roll",
+            "SUCCESSFUL_RPO": "<player> passed a <b>pro</b> roll"
+
         }
     };
 });

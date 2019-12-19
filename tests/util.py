@@ -21,7 +21,7 @@ def get_game_turn(seed=0, empty=False):
     game.step(Action(ActionType.SETUP_FORMATION_WEDGE))
     game.step(Action(ActionType.END_SETUP))
     random_agent = RandomBot("home")
-    while type(game.state.stack.peek()) is not Turn and not game.is_quick_snap() and not game.is_blitz():
+    while type(game.get_procedure()) is not Turn and not game.is_quick_snap() and not game.is_blitz():
         action = random_agent.act(game)
         game.step(action)
     if empty:
@@ -111,3 +111,19 @@ def get_game_weather_table(seed=0):
     game.set_seed(seed)
     #game.init()
     return game
+
+
+def get_block_players(game, team):
+    # get a player
+    players = game.get_players_on_pitch(team, False, True)
+    attacker = None
+    defender = None
+    for p in players:
+        if p.team != team:
+            continue
+        attacker = p
+        adjacent = game.get_adjacent_opponents(attacker)
+        if len(adjacent) > 0:
+            defender = adjacent[0]
+            break
+    return attacker, defender

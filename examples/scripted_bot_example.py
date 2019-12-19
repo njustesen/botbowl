@@ -5,6 +5,7 @@ from ffai import ProcBot
 from ffai.core.load import *
 from ffai.ai.registry import register_bot, make_bot
 from ffai.core.game import Game
+from ffai.core.procedure import Block, PassAction, Pickup, GFI, Catch, Dodge
 import time
 
 
@@ -48,6 +49,31 @@ class MyScriptedBot(ProcBot):
         y = 3
         x = 13 if game.is_team_side(Square(13, 3), self.my_team) else 14
         return Action(ActionType.PLACE_PLAYER, player=player, position=Square(x, y + i))
+
+    def reroll(self, game):
+        """
+        Select between USE_REROLL and DONT_USE_REROLL
+        """
+        context = game.get_procedure().context
+        if type(context) == Block:
+            # Check if you get to pick: context.favor == my_team
+            if len(context.roll.dice) == 1 and context.roll.dice[0].get_value() == BBDieResult.ATTACKER_DOWN:
+                return Action(ActionType.USE_REROLL)
+        elif type(context) == PassAction:
+            if context.roll.target <= 3:
+                return Action(ActionType.USE_REROLL)
+        elif type(context) == Dodge:
+            if context.roll.target <= 2:
+                return Action(ActionType.USE_REROLL)
+        elif type(context) == GFI:
+            if game.has_ball(context.player):
+                return Action(ActionType.USE_REROLL)
+        elif type(context) == Catch:
+            if context.roll.target <= 2:
+                return Action(ActionType.USE_REROLL)
+            elif game.is_touchdown(context.player):
+                return Action(ActionType.USE_REROLL)
+        return Action(ActionType.DONT_USE_REROLL)
 
     def place_ball(self, game):
         """
@@ -289,6 +315,26 @@ class MyScriptedBot(ProcBot):
         return Action(ActionType.USE_REROLL)
         # return Action(ActionType.DONT_USE_REROLL)
 
+    def use_juggernaut(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_wrestle(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_stand_firm(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_pro(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return
+
     def end_game(self, game):
         """
         Called when a game endw.
@@ -310,7 +356,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = load_config("bot-bowl-ii")
-    config.competition_mode = True
+    config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")

@@ -8,6 +8,7 @@ import examples.scripted_bot_example
 
 # Load configurations, rules, arena and teams
 config = load_config("bot-bowl-i.json")
+config.competition_mode = False
 ruleset = load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
 arena = load_arena(config.arena)
 home = load_team_by_filename("human", ruleset)

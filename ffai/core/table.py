@@ -58,6 +58,7 @@ class RollType(Enum):
     BONE_HEAD_ROLL = 24
     REALLY_STUPID_ROLL = 25
     WILD_ANIMAL_ROLL = 26
+    LONER_ROLL = 27
 
 
 class OutcomeType(Enum):
@@ -194,6 +195,10 @@ class OutcomeType(Enum):
     SUCCESSFUL_REALLY_STUPID = 140
     FAILED_WILD_ANIMAL = 141
     SUCCESSFUL_WILD_ANIMAL = 142
+    SUCCESSFUL_LONER = 143
+    FAILED_LONER = 144
+    SUCCESSFUL_PRO = 145
+    FAILED_PRO = 146
 
 
 class PlayerActionType(Enum):
@@ -415,6 +420,7 @@ class Skill(Enum):
     SWOOP = 75
     FAN_FAVOURITE = 76
     SWIFT_REACTION = 77
+    PRO = 78
 
 
 class PassDistance(Enum):

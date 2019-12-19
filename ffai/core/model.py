@@ -150,7 +150,7 @@ class PlayerState:
         self.casualty_effect = None
         self.casualty_type = None
         self.wild_animal = False
-        self.used_skills = []
+        self.used_skills = set()
         self.squares_moved = []
 
     def to_json(self):
@@ -413,7 +413,7 @@ class Pitch:
 
 class ActionChoice:
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
@@ -422,6 +422,7 @@ class ActionChoice:
         self.block_rolls = [] if block_rolls is None else block_rolls
         self.disabled = disabled
         self.agi_rolls = [] if agi_rolls is None else agi_rolls
+        self.skill = skill
 
     def to_json(self):
         return {
@@ -432,6 +433,7 @@ class ActionChoice:
             "block_rolls": self.block_rolls,
             "agi_rolls": self.agi_rolls,
             'player_ids': [player.player_id for player in self.players],
+            "skill": self.skill.name if self.skill is not None else None,
             "disabled": self.disabled
         }
 
@@ -657,6 +659,10 @@ class BBDie(Die):
         else:
             raise ValueError("Fixed result of BBDie must be a BBDieResult")
 
+    @staticmethod
+    def clear_fixes():
+        BBDie.FixedRolls.clear()
+
     def __init__(self, rnd):
         if len(BBDie.FixedRolls) > 0:
             self.value = BBDie.FixedRolls.pop(0)
@@ -797,6 +803,12 @@ class Player(Piece):
 
     def has_used_skill(self, skill):
         return skill in self.state.used_skills
+
+    def can_use_skill(self, skill):
+        return self.has_skill(skill) and not self.has_used_skill(skill)
+
+    def use_skill(self, skill):
+        return self.state.used_skills.add(skill)
 
     def get_skills(self):
         return self.role.skills + self.extra_skills

@@ -61,7 +61,7 @@ class GrodBot(Agent):
         self.actions_available.append(available)
 
         # Get current procedure
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
 
         # Call private function
         if isinstance(proc, CoinTossFlip):
@@ -82,30 +82,52 @@ class GrodBot(Agent):
             return self.blitz(game)
         if isinstance(proc, Turn):
             return self.turn(game)
+        if isinstance(proc, Reroll):
+            if proc.can_use_pro:
+                return self.use_pro(game)
+            return self.reroll(game)
         if isinstance(proc, PlayerAction):
             return self.player_action(game)
         if isinstance(proc, Block):
+            if proc.waiting_juggernaut:
+                return self.use_juggernaut(game)
+            if proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
+                return self.use_wrestle(game)
             return self.block(game)
         if isinstance(proc, Push):
+            if proc.waiting_stand_firm:
+                return self.use_stand_firm(game)
             return self.push(game)
         if isinstance(proc, FollowUp):
             return self.follow_up(game)
         if isinstance(proc, Apothecary):
             return self.apothecary(game)
-        if isinstance(proc, PassAction):
-            return self.pass_action(game)
-        if isinstance(proc, Catch):
-            return self.catch(game)
         if isinstance(proc, Interception):
             return self.interception(game)
-        if isinstance(proc, GFI):
-            return self.gfi(game)
-        if isinstance(proc, Dodge):
-            return self.dodge(game)
-        if isinstance(proc, Pickup):
-            return self.pickup(game)
+        if isinstance(proc, Negatrait):
+            return self.negatrait(game)
 
         raise Exception("Unknown procedure")
+
+    def use_juggernaut(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_wrestle(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_stand_firm(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return action
+
+    def use_pro(self, game):
+        for action in game.get_available_actions():
+            if action.action_type == ActionType.USE_SKILL:
+                return
 
     def new_game(self, game: Game, team):
         """
@@ -129,13 +151,42 @@ class GrodBot(Agent):
         return Action(ActionType.RECEIVE)
         # return Action(ActionType.KICK)
 
+    def reroll(self, game: Game):
+        """
+        Decide whether to use reroll.
+        """
+        reroll_proc = game.get_procedure()
+        player = reroll_proc.player
+        context = reroll_proc.context
+        if type(context) == Dodge:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == Pickup:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == PassAction:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == Catch:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == GFI:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == Block:
+            attacker_down = False
+            defender = context.defender
+            for die in context.roll.dice:
+                if die.get_value() == BBDieResult.ATTACKER_DOWN:
+                    attacker_down = True
+                elif die.get_value() == BBDieResult.BOTH_DOWN and not player.has_skill(Skill.BLOCK) and not player.has_skill(Skill.WRESTLE):
+                    attacker_down = True
+            if attacker_down:
+                return Action(ActionType.USE_REROLL)
+            return Action(ActionType.DONT_USE_REROLL)
+
     def setup(self, game: Game) -> Action:
         """
         Move players from the reserves to the pitch
         """
 
-        if isinstance(game.state.stack.peek(), Setup):
-            proc: Setup = game.state.stack.peek()
+        if isinstance(game.get_procedure(), Setup):
+            proc: Setup = game.get_procedure()
         else:
             raise ValueError('Setup procedure expected')
 
@@ -408,9 +459,10 @@ class GrodBot(Agent):
         """
         # Loop through available dice results
         active_player: Player = game.state.active_player
-        attacker: Player = game.state.stack.items[-1].attacker
-        defender: Player = game.state.stack.items[-1].defender
-        favor: Team = game.state.stack.items[-1].favor
+        block_context = game.get_procedure()
+        attacker: Player = block_context.attacker
+        defender: Player = block_context.defender
+        favor: Team = block_context.favor
 
         actions: List[ActionSequence] = []
         check_reroll = False
@@ -478,41 +530,6 @@ class GrodBot(Agent):
                     return Action(ActionType.INTERCEPTION, player=player)
         return Action(ActionType.SELECT_NONE)
 
-    def pass_action(self, game: Game):
-        """
-        Reroll or not.
-        """
-        return Action(ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def catch(self, game: Game):
-        """
-        Reroll or not.
-        """
-        return Action(ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def gfi(self, game: Game):
-        """
-        Reroll or not.
-        """
-        return Action(ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def dodge(self, game: Game):
-        """
-        Reroll or not.
-        """
-        return Action(ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def pickup(self, game: Game):
-        """
-        Reroll or not.
-        """
-        return Action(ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
     def end_game(self, game: Game):
         """
         Called when a game end.
@@ -532,6 +549,13 @@ class GrodBot(Agent):
             print("I ({}) won".format(self.name))
         else:
             print("I ({}) lost".format(self.name))
+
+    def negatrait(self, game):
+        """
+        Reroll or not.
+        """
+        # return Action(ActionType.USE_REROLL)
+        return Action(ActionType.DONT_USE_REROLL)
 
 
 def block_favourability(block_result: ActionType, team: Team, active_player: Player, attacker: Player, defender: Player, favor: Team) -> float:
