@@ -70,7 +70,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Always Hungry     | NO          | NO        |
 | Animosity         | NO          | NO        |
 | Ball & Chain      | PARTIALLY   | NO        |
-| Big Hand          | YES         | NO        |
+| **Big Hand**      | YES         | YES       |
 | **Block**         | YES         | YES       |
 | Blood Lust        | NO          | NO        |
 | Bombardier        | NO          | NO        |
@@ -87,7 +87,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Diving Tackle     | NO          | NO        |
 | **Dodge**         | YES         | YES       |
 | Dump-Off          | NO          | NO        |
-| Extra Arms        | YES         | NO        |
+| **Extra Arms**    | YES         | YES       |
 | Fan Favorite      | NO          | NO        |
 | Fend              | YES         | NO        |
 | Filthy Rich       | NO          | NO        |
@@ -133,7 +133,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Strong Arm**    | YES         | YES       |
 | Stunty            | YES         | NO        |
 | Sure Feet         | YES         | NO        |
-| Sure Hands        | YES         | NO        |
+| **Sure Hands**    | YES         | YES       |
 | Swoop             | NO          | NO        |
 | Tackle            | YES         | NO        |
 | Take Root         | NO          | NO        |

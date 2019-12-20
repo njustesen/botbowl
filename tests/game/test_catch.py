@@ -33,6 +33,9 @@ def test_catch_modifiers(weather):
     assert mods == 0 + weather_mod
     mods = game.get_catch_modifiers(catcher, handoff=True)
     assert mods == 0 + weather_mod
+    catcher.role.skills = [Skill.EXTRA_ARMS]
+    mods = game.get_catch_modifiers(catcher, handoff=True)
+    assert mods == 1 + weather_mod
 
 
 def test_catch_team_reroll():

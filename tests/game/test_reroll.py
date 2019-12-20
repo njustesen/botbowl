@@ -7,6 +7,7 @@ def test_dodge_reroll_success():
 
     players = game.get_players_on_pitch(team=current_team)
     player = players[1]
+    assert not player.has_skill(Skill.DODGE)
     # allow a team reroll
     game.state.teams[0].state.rerolls = 1
 
@@ -18,6 +19,7 @@ def test_dodge_reroll_success():
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(11, 12)
     assert game.get_player_at(to) is None
+    assert len(D6.FixedRolls) == 0
     D6.fix_result(1)  # fail first dodge
     D6.fix_result(4)  # pass on re-roll
 
@@ -63,6 +65,9 @@ def test_gfi_reroll_success():
 
     players = game.get_players_on_pitch(team=current_team)
     player = players[1]
+    player.role.skills = []
+    player.extra_skills = []
+    assert not player.has_skill(Skill.SURE_FEET)
     player.state.moves = player.get_ma()
 
     game.state.teams[0].state.rerolls = 1
@@ -87,6 +92,9 @@ def test_gfi_reroll_fail():
 
     players = game.get_players_on_pitch(team=current_team)
     player = players[1]
+    player.role.skills = []
+    player.extra_skills = []
+    assert not player.has_skill(Skill.SURE_FEET)
     player.extra_ma = - player.get_ma()
 
     game.state.teams[0].state.rerolls = 1
@@ -111,6 +119,7 @@ def test_bonehead_loner_reroll_success():
 
     players = game.get_players_on_pitch(team=current_team)
     player = players[1]
+    player.role.skills = []
     player.extra_skills = [Skill.BONE_HEAD, Skill.LONER]
 
     # make sure we don't get stuck waiting for re-roll actions
@@ -136,6 +145,7 @@ def test_bonehead_loner_reroll_fail():
 
     players = game.get_players_on_pitch(team=current_team)
     player = players[1]
+    player.role.skills = []
     player.extra_skills = [Skill.BONE_HEAD, Skill.LONER]
 
     # make sure we don't get stuck waiting for re-roll actions

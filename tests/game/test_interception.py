@@ -162,4 +162,6 @@ def test_interception_modifiers():
     interceptor.extra_skills = [Skill.VERY_LONG_LEGS]
     mod = game.get_catch_modifiers(interceptor, interception=True)
     assert mod == -1
-
+    interceptor.extra_skills = [Skill.EXTRA_ARMS]
+    mod = game.get_catch_modifiers(interceptor, interception=True)
+    assert mod == -1
