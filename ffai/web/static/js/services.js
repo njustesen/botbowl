@@ -219,8 +219,10 @@ appServices.factory('GameLogService', function() {
             "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll",
             "FAILED_LONER": "<player> failed a <b>loner</b> roll",
             "SUCCESSFUL_LONER": "<player> passed a <b>loner</b> roll",
-            "FAILED_RPO": "<player> failed a <b>pro</b> roll",
-            "SUCCESSFUL_RPO": "<player> passed a <b>pro</b> roll"
+            "FAILED_PRO": "<player> failed a <b>pro</b> roll",
+            "SUCCESSFUL_PRO": "<player> passed a <b>pro</b> roll",
+            "FAILED_REGENERATION": "<player> failed a <b>Regeneration</b> roll",
+            "SUCCESSFUL_REGENERATION": "<player> passed a <b>Regeneration</b> roll"
 
         }
     };

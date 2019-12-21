@@ -113,14 +113,7 @@ class Apothecary(Procedure):
                 roll = self.roll_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.roll_second
 
                 # Apply casualty
-                self.game.pitch_to_casualties(self.player, casualty, effect, apothecary=True)
-                if effect == CasualtyEffect.NONE:
-                    self.game.report(Outcome(OutcomeType.BADLY_HURT, player=self.player, team=self.player.team, rolls=[roll]))
-                elif effect in Casualty.miss_next_game:
-                    self.game.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=self.player, team=self.player.team,
-                                             rolls=[roll]))
-                elif effect == CasualtyEffect.DEAD:
-                    self.game.report(Outcome(OutcomeType.DEAD, player=self.player, team=self.player.team, rolls=[roll]))
+                self.game.apply_casualty(self.player, self.inflictor, casualty, effect, roll)
 
         return True
 
@@ -534,16 +527,7 @@ class Casualty(Procedure):
                        casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
         else:
             # Apply casualty
-            self.game.pitch_to_casualties(self.player, self.casualty, self.effect)
-            if self.effect == CasualtyEffect.NONE:
-                self.game.report(Outcome(OutcomeType.BADLY_HURT, player=self.player, opp_player=self.inflictor, team=self.player.team,
-                                         rolls=[self.roll]))
-            elif self.effect in Casualty.miss_next_game:
-                self.game.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=self.player, opp_player=self.inflictor, team=self.player.team,
-                                         rolls=[self.roll], n=self.effect.name))
-            elif self.effect == CasualtyEffect.DEAD:
-                self.game.report(Outcome(OutcomeType.DEAD, player=self.player, opp_player=self.inflictor, team=self.player.team,
-                                         rolls=[self.roll]))
+            self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
 
         return True
 

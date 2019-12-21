@@ -59,6 +59,7 @@ class RollType(Enum):
     REALLY_STUPID_ROLL = 25
     WILD_ANIMAL_ROLL = 26
     LONER_ROLL = 27
+    REGENERATION_ROLL = 28
 
 
 class OutcomeType(Enum):
@@ -199,6 +200,8 @@ class OutcomeType(Enum):
     FAILED_LONER = 144
     SUCCESSFUL_PRO = 145
     FAILED_PRO = 146
+    FAILED_REGENERATION = 147
+    SUCCESSFUL_REGENERATION = 148
 
 
 class PlayerActionType(Enum):
