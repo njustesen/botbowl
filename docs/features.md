@@ -186,6 +186,13 @@ A race is supported if all positions can be used and all their starting skills a
 
 Some of these steps should be done in a league manager rather than in FFAI if humans are playing.
 
+## Coaching Staff
+| Staff                     | Implemented | Has Test(s) |
+|---------------------------|-------------|-------------|
+| 1. Head Coach (Argue the call) | NO     | NO          |
+| 2. Assistant Coaches      | YES         | YES         |
+| 3. Cheerleaders           | YES         | YES         |
+| 4. Apothecary             | PARTIALLY   | NO          |
+
 ## Star Players
 Star players are not supported - mostly because the pre-match sequence isn't implemented yet.
-
