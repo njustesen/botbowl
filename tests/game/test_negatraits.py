@@ -57,8 +57,44 @@ def test_negatrait_fail_ends_turn(trait):
         assert player.state.really_stupid
 
 
+def test_take_root_fail_does_not_end_turn():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+
+    D6.FixedRolls.clear()
+    D6.fix_result(1)  # fail trait test
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+
+    # check the player turn has not ended
+    assert game.state.active_player is player
+
+
+def test_take_root_fail_reduces_movement():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+
+    D6.FixedRolls.clear()
+    D6.fix_result(1)  # fail trait test
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+
+    # check the player ma is now 0
+    assert player.get_ma() == 0
+
+
 # no wild animal test as wild animal has no state impact
-@pytest.mark.parametrize("trait", [[Skill.BONE_HEAD, Bonehead], [Skill.REALLY_STUPID, ReallyStupid]])
+@pytest.mark.parametrize("trait", [Skill.BONE_HEAD, Skill.REALLY_STUPID, Skill.TAKE_ROOT])
 def test_negatrait_success_resets_player_state(trait):
         game = get_game_turn()
         team = game.get_agent_team(game.actor)
@@ -66,12 +102,14 @@ def test_negatrait_success_resets_player_state(trait):
 
         players = game.get_players_on_pitch(team)
         player = players[1]
-        player.extra_skills = [trait[0]]
+        player.extra_skills = [trait]
 
-        if trait[0] is Skill.BONE_HEAD:
+        if trait is Skill.BONE_HEAD:
             player.state.bone_headed = True
-        elif trait[0] is Skill.REALLY_STUPID:
+        elif trait is Skill.REALLY_STUPID:
             player.state.really_stupid = True
+        elif trait is Skill.TAKE_ROOT:
+            player.state.taken_root = True
 
         D6.FixedRolls.clear()
         D6.fix_result(6)  # pass trait test
@@ -82,10 +120,11 @@ def test_negatrait_success_resets_player_state(trait):
         assert game.state.active_player is player
 
         # check the player state
-        if trait[0] is Skill.BONE_HEAD:
+        if trait is Skill.BONE_HEAD:
             assert not player.state.bone_headed
-        elif trait[0] is Skill.REALLY_STUPID:
+        elif trait is Skill.REALLY_STUPID:
             assert not player.state.really_stupid
+        # Note: no reset for taken root
 
 
 @pytest.mark.parametrize("dice_value", [1,2,3])
@@ -214,4 +253,77 @@ def test_wild_animal_passes_when_block_or_blitz(action_type):
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_WILD_ANIMAL)
 
 
+def test_take_root_doesnt_trigger_if_rooted():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
 
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.taken_root = True
+
+    D6.FixedRolls.clear()
+    D6.fix_result(2)  # pass take root if it happens
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+
+    assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_TAKE_ROOT)
+
+
+def test_take_root_not_removed_on_end_turn():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.taken_root = True
+
+    game.step(Action(ActionType.END_TURN))
+
+    assert player.state.taken_root
+
+
+def test_take_root_removed_on_touchdown():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.taken_root = True
+
+    scoring_player = players[2]
+    scoring_player.position = Square(2, 5)
+    game.get_ball().move_to(scoring_player.position)
+    game.get_ball().is_carried = True
+    assert not game.arena.is_in_opp_endzone(scoring_player.position, scoring_player.team == game.state.home_team)
+
+    to = Square(1, 5)
+    game.step(Action(ActionType.START_MOVE, player=scoring_player))
+    game.step(Action(ActionType.MOVE, player=scoring_player, position=to))
+
+    assert game.has_report_of_type(OutcomeType.TOUCHDOWN)
+    assert not player.state.taken_root
+
+
+def test_take_root_removed_on_new_half():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.taken_root = True
+
+    i = 0
+    while game.state.half == 1 and i < 18:
+        game.step(Action(ActionType.END_TURN))
+        i += 1
+
+    assert game.has_report_of_type(OutcomeType.END_OF_FIRST_HALF)
+    assert not player.state.taken_root

@@ -2825,6 +2825,8 @@ class Turn(Procedure):
             ReallyStupid(self.game, player, player_action)
         if player.has_skill(Skill.WILD_ANIMAL):
             WildAnimal(self.game, player, player_action)
+        if player.has_skill(Skill.TAKE_ROOT) and not player.state.taken_root:
+            TakeRoot(self.game, player, player_action)
 
     def step(self, action):
 
@@ -2964,7 +2966,7 @@ class WeatherTable(Procedure):
 
 
 class Negatrait(Procedure, metaclass=ABCMeta):
-    def __init__(self, game, player, player_action):
+    def __init__(self, game, player, player_action, ends_turn=True):
         super().__init__(game)
         self.game = game
         self.player = player
@@ -2979,6 +2981,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
         self.skill = None
         self.success_outcome = None
         self.fail_outcome = None
+        self.ends_turn = ends_turn
 
     @abstractmethod
     def get_target(self):
@@ -2994,7 +2997,8 @@ class Negatrait(Procedure, metaclass=ABCMeta):
 
     def trigger_failure(self):
         self.apply_fail_state()
-        self.end_turn()
+        if self.ends_turn:
+            self.end_turn()
 
     def step(self, action):
         # If player hasn't rolled
@@ -3095,6 +3099,24 @@ class WildAnimal(Negatrait):
 
     def remove_fail_state(self):
         self.player.state.wild_animal = False
+
+
+class TakeRoot(Negatrait):
+    def __init__(self, game, player, player_action):
+        super().__init__(game, player, player_action, ends_turn=False)
+        self.roll_type = RollType.TAKE_ROOT_ROLL
+        self.skill = Skill.TAKE_ROOT
+        self.success_outcome = OutcomeType.SUCCESSFUL_TAKE_ROOT
+        self.fail_outcome = OutcomeType.FAILED_TAKE_ROOT
+
+    def get_target(self):
+        return 2
+
+    def apply_fail_state(self):
+        self.player.state.taken_root = True
+
+    def remove_fail_state(self):
+        pass  # taken_root is only reset upon end of drive
 
 
 class Reroll(Procedure):

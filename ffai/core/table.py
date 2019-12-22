@@ -60,6 +60,7 @@ class RollType(Enum):
     WILD_ANIMAL_ROLL = 26
     LONER_ROLL = 27
     REGENERATION_ROLL = 28
+    TAKE_ROOT_ROLL = 29
 
 
 class OutcomeType(Enum):
@@ -204,6 +205,8 @@ class OutcomeType(Enum):
     SUCCESSFUL_REGENERATION = 148
     SUCCESSFUL_LEAP = 149
     FAILED_LEAP = 150
+    SUCCESSFUL_TAKE_ROOT = 151
+    FAILED_TAKE_ROOT = 152
 
 
 class PlayerActionType(Enum):

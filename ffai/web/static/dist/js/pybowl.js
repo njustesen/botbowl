@@ -1661,7 +1661,9 @@ appServices.factory('GameLogService', function() {
             "FAILED_REGENERATION": "<player> failed a <b>Regeneration</b> roll",
             "SUCCESSFUL_REGENERATION": "<player> passed a <b>Regeneration</b> roll",
             "FAILED_LEAP": "<player> failed to <b>leap</b>",
-            "SUCCESSFUL_LEAP": "<player> successfully <b>leaped</b>."
+            "SUCCESSFUL_LEAP": "<player> successfully <b>leaped</b>.",
+            "SUCCESSFUL_TAKE_ROOT": "<player> passed a <b>take root</b> roll",
+            "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll"
         }
     };
 });
