@@ -3,26 +3,32 @@ from ffai.core.model import D3, D6, D8, BBDie
 from ffai.core.table import BBDieResult
 import numpy as np
 
-n = 10000
 
-
-@pytest.mark.parametrize("die", [D3, D6, D8])
+@pytest.mark.parametrize("die", [D3, D6, D8, BBDie])
 def test_d_die(die):
-    results = {}
-    for seed in range(n):
-        rnd = np.random.RandomState(seed)
+    results = []
+    n = 6
+    if die == D3:
+        n = 3
+    elif die == D8:
+        n = 8
+    elif die == BBDieResult:
+        n = 5  # Two push results
+    for i in range(100):
+        rnd = np.random.RandomState(0)
         result = die(rnd).value
-        if result in results.keys():
-            results[result] += 1
-        else:
-            results[result] = 1
-    l = len(results.keys())
-    assert l == 3 if die == D3 else True
-    assert l == 6 if die == D6 else True
-    assert l == 8 if die == D8 else True
-    for key in results.keys():
-        assert 0 < key <= l
-        assert (n / (l+1)) < results[key] < (n / (l-1))
+        if die == D3:
+            assert result in [1, 2, 3]
+        elif die == D6:
+            assert result in [1, 2, 3, 4, 5, 6]
+        elif die == D8:
+            assert result in [1, 2, 3, 4, 5, 6, 7, 8]
+        elif die == BBDie:
+            assert result in [BBDieResult.ATTACKER_DOWN, BBDieResult.BOTH_DOWN, BBDieResult.PUSH, BBDieResult.DEFENDER_STUMBLES, BBDieResult.DEFENDER_DOWN]
+        results.append(result)
+        if len(results) == n:
+            break
+    assert len(results) == n
 
 
 def test_d3_fixation():
@@ -102,26 +108,3 @@ def test_bb_fixation():
         assert BBDie(rnd).value == BBDieResult.DEFENDER_DOWN
     with pytest.raises(ValueError):
         BBDie.fix_result(1)
-
-
-def test_bb_die():
-    results = {}
-    for seed in range(n):
-        rnd = np.random.RandomState(seed)
-        result = BBDie(rnd).value
-        if result in results.keys():
-            results[result] += 1
-        else:
-            results[result] = 1
-    l = len(results.keys())
-    assert l == 5
-    for key in results.keys():
-        assert key in [BBDieResult.ATTACKER_DOWN,
-                       BBDieResult.BOTH_DOWN,
-                       BBDieResult.DEFENDER_DOWN,
-                       BBDieResult.DEFENDER_STUMBLES,
-                       BBDieResult.PUSH]
-        if key == BBDieResult.PUSH:
-            assert (n / (6+1))*2 < results[key] < (n / (6-1))*2
-        else:
-            assert (n / (6 + 1)) < results[key] < (n / (6 - 1))
