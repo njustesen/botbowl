@@ -39,28 +39,28 @@ A race is supported if all positions can be used and all their starting skills a
 | Dark Elf          | Assassin, Witch Elf     | Shadowing, Stab, Jump Up, Dump-off | YES           |
 | Dwarf Slayer      | Skaven Slayer           | Nerves of Steel                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Leap, Very Long Legs, Always Hungry, Regeneration, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
+| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Leap, Very Long Legs, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
 | Halfling          | Halfling, Treeman       | Right stuff, Take Root, Throw Team-Mate, Timmm-ber! | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
 | Human Nobility    |                         |                                    | NO            |
-| Khemri            | Skeletons, Thro-Ras, Blitz-Ras, Tomb Guardians | Regeneration, Decay | YES           |  
-| Khorne            | Bloodletters, Bloodthirster | Regeneration                   | NO           |  
+| Khemri            | Tomb Guardians          | Decay                              | YES           |  
+| Khorne            |                         | Regeneration                       | NO           |  
 | **Lizardmen**     |                         |                                    | YES           |
-| Necromantic       | Zombies, Wights, Flesh Golems, Werewolves | Regeneration     | NO           |
-| Norse             | Berserkers, Ulfwerener, Yhetee | Regeneration, Jump Up, Disturbing Presence | YES        |
-| Nurgle            | Rotters | Decay, Nurgle's Rot, Foul Appearance, Regeneration, Disturbing Presence, Tentacles | NO            |
+| Necromantic       |                         |                                    | NO           |
+| Norse             | Berserkers, Yhetee      | Jump Up, Disturbing Presence            | YES        |
+| Nurgle            | Rotters | Decay, Nurgle's Rot, Foul Appearance, Disturbing Presence, Tentacles | NO            |
 | **Orc**           |                          |                                    | YES           |
 | Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
 | **Skaven**        |                         |                                    | YES           |
-| Savage Orc        | Swamp Troll                        | Nerves of Steel, Regeneration           | NO            |
+| Savage Orc        | Throwers                | Nerves of Steel                    | NO            |
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
-| Undead            | Skeleton, Zombie, Wight, Mummy | Regeneration         | YES
-| Vampire           | Vampire | Blood Lust, Hypnotic Gaze, Regeneration         | YES
+| **Undead**        |                         |                                    | YES
+| Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
 | Wood Elf          | Wardancer               | Leap                               | YES              |         
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             | Lineman, Catchers, Blitzers | Leap, Very Long Legs, Diving Catch, Jump Up, Diving Tackle | NO              |         
-| Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Regeneration, Throw Team-Mate | MAYBE?              |         
+| Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
 
 ## Skills
 
@@ -118,7 +118,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Prehensile Tail   | YES         | NO        |
 | Pro               | YES         | NO        |
 | **Really Stupid** | YES         | YES       |
-| Regeneration      | NO          | NO        |
+| **Regeneration**  | YES         | YES       |
 | Right Stuff       | NO          | NO        |
 | **Safe Throw**    | YES         | YES       |
 | Secret Weapon     | NO          | NO        |
