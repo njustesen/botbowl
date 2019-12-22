@@ -274,7 +274,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 line = line.replace("<score-sorted>", Math.max($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) + " - " + Math.min($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) );
 
                 if (report.skill !== null){
-                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill) + '</span>');
+                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill.replace("_", " ")) + '</span>');
                 }
                 let n = report.n;
                 if (typeof(n) === "string"){
@@ -1596,7 +1596,7 @@ appServices.factory('GameLogService', function() {
             "SKILL_USED": "<player> uses the <skill> skill.<b>",
             "PLAYER_EJECTED": "<player> was <b>ejected!</b>",
             "BLOCK_ROLL": "<player> blocks <opp_player>",
-            "REROLL_USED": "<team> uses a <b>reroll</b>.",
+            "REROLL_USED": "<team> uses a team <b>re-roll</b>.",
             "INTERCEPTION_FAILED": "<player> failed to intercept the pass.",
             "THROW_IN_OUT_OF_BOUNDS": "The ball was thrown out of bounds again.",
             "THROW_IN": "The ball was thrown back in by the fans.",
@@ -1611,7 +1611,12 @@ appServices.factory('GameLogService', function() {
             "FAILED_WILD_ANIMAL": "<player> failed a <b>wild animal</b> roll",
             "SUCCESSFUL_WILD_ANIMAL": "<player> passed a <b>wild animal</b> roll",
             "FAILED_LONER": "<player> failed a <b>loner</b> roll",
-            "SUCCESSFUL_LONER": "<player> passed a <b>loner</b> roll"
+            "SUCCESSFUL_LONER": "<player> passed a <b>loner</b> roll",
+            "FAILED_PRO": "<player> failed a <b>pro</b> roll",
+            "SUCCESSFUL_PRO": "<player> passed a <b>pro</b> roll",
+            "FAILED_REGENERATION": "<player> failed a <b>Regeneration</b> roll",
+            "SUCCESSFUL_REGENERATION": "<player> passed a <b>Regeneration</b> roll"
+
         }
     };
 });

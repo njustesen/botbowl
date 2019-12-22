@@ -946,6 +946,7 @@ class Game:
         :param apothecary: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
         :return:
         """
+
         self.remove(player)
         player.state.up = True
         if apothecary and effect == CasualtyEffect.NONE:
@@ -1819,4 +1820,27 @@ class Game:
         return self.state.stack.peek()
 
     def get_weather(self):
-        return self.sate.weather
+        return self.state.weather
+
+    def apply_casualty(self, player, inflictor, casualty, effect, roll, apothecary=False):
+        if player.has_skill(Skill.REGENERATION):
+            regen_roll = DiceRoll([D6(self.rnd)], target=4, roll_type=RollType.REGENERATION_ROLL)
+            if regen_roll.is_d6_success():
+                self.report(Outcome(OutcomeType.SUCCESSFUL_REGENERATION, player=player, rolls=[regen_roll]))
+                self.pitch_to_reserves(player)
+                return
+            else:
+                self.report(Outcome(OutcomeType.FAILED_REGENERATION, player=player, rolls=[regen_roll]))
+
+        self.pitch_to_casualties(player, casualty, effect, apothecary)
+        if effect == CasualtyEffect.NONE:
+            self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
+                                rolls=[roll]))
+        elif effect in Casualty.miss_next_game:
+            self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
+                                rolls=[roll], n=effect.name))
+        elif effect == CasualtyEffect.DEAD:
+            self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
+                                rolls=[roll]))
+
+
