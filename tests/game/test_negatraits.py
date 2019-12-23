@@ -327,3 +327,27 @@ def test_take_root_removed_on_new_half():
 
     assert game.has_report_of_type(OutcomeType.END_OF_FIRST_HALF)
     assert not player.state.taken_root
+
+
+def test_take_root_removed_on_knockdown():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    attacker, defender = get_block_players(game, team)
+
+    defender.extra_skills = [Skill.TAKE_ROOT]
+    defender.state.taken_root = True
+    assert not defender.has_skill(Skill.BLOCK)
+    attacker.extra_skills = [Skill.BLOCK]
+
+    BBDie.clear_fixes()
+    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+
+    game.step(Action(ActionType.START_BLOCK, player=attacker))
+    game.step(Action(ActionType.BLOCK, position=defender.position))
+    game.step(Action(ActionType.SELECT_BOTH_DOWN))
+
+    assert not defender.state.up
+    assert game.has_report_of_type(OutcomeType.KNOCKED_DOWN)
+    assert not defender.state.taken_root

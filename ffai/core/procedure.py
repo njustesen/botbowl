@@ -79,7 +79,7 @@ class Apothecary(Procedure):
                 # Player is moved to reserves
                 self.player.team.state.apothecary_available = False
                 self.player.state.stunned = True
-                self.player.state.up = False
+                self.player.place_prone()
                 self.game.report(Outcome(OutcomeType.APOTHECARY_USED_KO, player=self.player, team=self.player.team))
 
             else:
@@ -922,8 +922,8 @@ class Injury(Procedure):
                 if self.in_crowd:
                     self.game.pitch_to_reserves(self.player)
                 else:
+                    self.player.place_prone()
                     self.player.state.stunned = True
-                    self.player.state.up = False
 
         # CASUALTY
         elif result + stunty + mighty_blow + dirty_player >= 10:
@@ -1293,8 +1293,8 @@ class PitchInvasionRoll(Procedure):
                 self.game.report(Outcome(OutcomeType.KNOCKED_OUT, rolls=[roll], player=self.player, team=self.team))
                 KnockOut(self.game, self.player, roll=roll)
             else:
+                self.player.place_prone()
                 self.player.state.stunned = True
-                self.player.state.up = False
                 self.game.report(Outcome(OutcomeType.STUNNED, rolls=[roll], player=self.player, team=self.team))
         else:
             self.game.report(Outcome(OutcomeType.PLAYER_READY, rolls=[roll], player=self.player, team=self.team))
@@ -1377,7 +1377,7 @@ class KnockDown(Procedure):
     def step(self, action):
 
         # Knock down player
-        self.player.state.up = False
+        self.player.place_prone()
         if self.player.team == self.game.state.current_team:
             self.player.state.used = True
 
@@ -1824,7 +1824,7 @@ class StandUp(Procedure):
                 self.player.state.up = True
                 self.game.report(Outcome(OutcomeType.PLAYER_STAND_UP_SUCCESS, rolls=[roll], player=self.player))
             else:
-                self.player.state.up = False
+                self.player.place_prone()
                 self.game.report(Outcome(OutcomeType.PLAYER_STAND_UP_FAILURE, rolls=[roll], player=self.player))
         else:
             self.player.state.up = True
