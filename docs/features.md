@@ -45,7 +45,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Human**         |                         |                                    | YES           |
 | Human Nobility    |                         |                                    | NO            |
 | Khemri            | Tomb Guardians          | Decay                              | YES           |  
-| Khorne            |                         | Regeneration                       | NO           |  
+| Khorne            |                         |                                    | NO           |  
 | **Lizardmen**     |                         |                                    | YES           |
 | Necromantic       |                         |                                    | NO           |
 | Norse             | Berserkers, Yhetee      | Jump Up, Disturbing Presence            | YES        |
