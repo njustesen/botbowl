@@ -23,7 +23,7 @@ def test_interception_success():
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
-    game.step(Action(ActionType.INTERCEPTION, player=interceptor))
+    game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.get_ball_carrier() == interceptor
 
@@ -52,7 +52,7 @@ def test_interception_safe_throw_success():
     D6.fix_result(6)  # Pass
     D6.fix_result(6)  # Catch
     game.step(Action(ActionType.PASS, position=catcher.position))
-    game.step(Action(ActionType.INTERCEPTION, player=interceptor))
+    game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
     assert game.has_report_of_type(OutcomeType.CATCH)
@@ -82,7 +82,7 @@ def test_interception_safe_throw_fail():
     D6.fix_result(3)  # Safe throw agility roll
     D6.fix_result(3)  # Safe throw agility re-roll
     game.step(Action(ActionType.PASS, position=catcher.position))
-    game.step(Action(ActionType.INTERCEPTION, player=interceptor))
+    game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     game.step(Action(ActionType.USE_REROLL))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
@@ -110,7 +110,7 @@ def test_interception_safe_throw_very_long_legs_fail():
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
-    game.step(Action(ActionType.INTERCEPTION, player=interceptor))
+    game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
     assert game.get_ball_carrier() == interceptor
@@ -139,7 +139,7 @@ def test_interception_fail():
     D6.fix_result(6)  # Pass
     D6.fix_result(6)  # Catch
     game.step(Action(ActionType.PASS, position=catcher.position))
-    game.step(Action(ActionType.INTERCEPTION, player=interceptor))
+    game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert not game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.has_report_of_type(OutcomeType.CATCH)
     assert game.get_ball_carrier() == catcher

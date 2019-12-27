@@ -946,7 +946,7 @@ class Interception(Procedure):
 
     def step(self, action):
 
-        if action.action_type == ActionType.INTERCEPTION:
+        if action.action_type == ActionType.SELECT_PLAYER:
             Intercept(self.game, action.player, self.ball, passer=self.passer)
 
         self.game.remove_secondary_clocks()
@@ -957,7 +957,7 @@ class Interception(Procedure):
         for interceptor in self.interceptors:
             modifier = self.game.get_catch_modifiers(interceptor, interception=True)
             agi_rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
-        return [ActionChoice(ActionType.INTERCEPTION, team=self.team,
+        return [ActionChoice(ActionType.SELECT_PLAYER, team=self.team,
                              players=self.interceptors, agi_rolls=agi_rolls),
                 ActionChoice(ActionType.SELECT_NONE, team=self.team)]
 
@@ -1423,6 +1423,65 @@ class KnockOut(Procedure):
         return []
 
 
+class Leap(Procedure):
+
+    def __init__(self, game, player, position, gfis):
+        super().__init__(game)
+        self.player = player
+        self.position = position
+        self.roll = None
+        self.reroll = None
+        for i in range(gfis):
+            GFI(game, player, position)
+
+    def start(self):
+        assert Skill.LEAP not in self.player.state.used_skills
+        self.player.state.used_skills.add(Skill.LEAP)
+
+    def step(self, action):
+
+        if self.roll is None:
+
+            # Agility roll
+            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            self.roll.modifiers = self.game.get_leap_modifiers(self.player)
+
+            if self.roll.is_d6_success():
+                self.game.move(self.player, self.position)
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_LEAP, player=self.player, rolls=[self.roll]))
+                # Check if player moved onto the ball
+                ball = self.game.get_ball_at(self.player.position)
+                if ball is not None and not ball.is_carried:
+                    # Attempt to pick up the ball - unless no hands
+                    if self.player.has_skill(Skill.NO_HANDS):
+                        Bounce(self.game, ball)
+                    else:
+                        Pickup(self.game, ball, self.player)
+                elif self.game.has_ball(self.player) and self.game.is_touchdown(self.player):
+                    # Touchdown if player had the ball with him/her
+                    Touchdown(self.game, self.player)
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_LEAP, player=self.player, rolls=[self.roll]))
+                self.reroll = Reroll(self.game, self.player, self)
+                return False
+
+        if self.reroll is not None:
+            if self.reroll.use_reroll:
+                self.roll = None
+                self.reroll = None
+                return False
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_LEAP))
+                self.game.move(self.player, self.position)
+                KnockDown(self.game, self.player, turnover=True)
+        return True
+
+    def available_actions(self):
+        return []
+
+
 class Move(Procedure):
 
     def __init__(self, game, player, position, gfi, dodge):
@@ -1824,7 +1883,24 @@ class PlayerAction(Procedure):
         # Action attributes
         player_to = self.game.get_player_at(action.position)
 
-        if action.action_type == ActionType.MOVE:
+        if action.action_type == ActionType.LEAP:
+
+            # Distance to position
+            distance = self.player.position.distance(action.position)
+            assert 1 <= distance <= 2
+
+            # Check GFI
+            gfis = (self.player.state.moves + distance) - self.player.get_ma() if self.player.state.moves + distance > self.player.get_ma() else 0
+
+            # Add proc
+            Leap(self.game, self.player, action.position, gfis)
+            self.player.state.squares_moved.append(action.position)
+
+            self.player.state.moves += 2
+
+            return False
+
+        elif action.action_type == ActionType.MOVE:
 
             # Check GFI
             gfi = self.player.state.moves + 1 > self.player.get_ma()
@@ -1920,23 +1996,24 @@ class PlayerAction(Procedure):
             move_needed = 1 if not self.player.state.up else 1
             gfi = self.player.state.moves + move_needed > self.player.get_ma()
             sprints = 3 if self.player.has_skill(Skill.SPRINT) else 2
+            gfi_roll = 3 if self.game.state.weather == WeatherType.BLIZZARD else 2
             if not self.player.state.up:
                 if self.player.get_ma() < 3:
                     agi_rolls.append([4])
                 else:
                     agi_rolls.append([])
                 actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))
-                # TODO: Check if position is necessary here? ^^
             elif (not self.turn.quick_snap
                   and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
                     or (self.turn.quick_snap and self.player.state.moves == 0):
+                # Regular movement
                 for square in self.game.get_adjacent_squares(self.player.position, occupied=False):
                     ball_at = self.game.get_ball_at(square)
                     move_positions.append(square)
                     rolls = []
                     if not self.turn.quick_snap:
                         if gfi:
-                            rolls.append(2)
+                            rolls.append(gfi_roll)
                         if self.game.num_tackle_zones_in(self.player) > 0:
                             modifiers = self.game.get_dodge_modifiers(self.player, square)
                             target = Rules.agility_table[self.player.get_ag()]
@@ -1949,6 +2026,30 @@ class PlayerAction(Procedure):
                 if len(move_positions) > 0:
                     actions.append(ActionChoice(ActionType.MOVE, team=self.player.team,
                                                 positions=move_positions, agi_rolls=agi_rolls))
+                # Leap
+                if self.player.can_use_skill(Skill.LEAP) and not self.turn.quick_snap:
+                    leap_agi_rolls = []
+                    leap_positions = []
+                    modifiers = 0 if self.player.has_skill(Skill.VERY_LONG_LEGS) else 0
+                    target = Rules.agility_table[self.player.get_ag()]
+                    leap_roll = min(6, max(2, target - modifiers))
+                    for square in self.game.get_adjacent_squares(self.player.position, occupied=False, distance=2):
+                        distance = self.player.position.distance(square)
+                        if self.player.state.moves + distance <= self.player.get_ma() + sprints:
+                            rolls = []
+                            leap_positions.append(square)
+                            gfis = max(0, (self.player.state.moves + distance) - self.player.get_ma())
+                            for gfi in range(gfis):
+                                rolls.append(gfi_roll)
+                            rolls.append(leap_roll)
+                            ball_at = self.game.get_ball_at(square)
+                            if ball_at is not None and ball_at.on_ground:
+                                modifiers = self.game.get_pickup_modifiers(self.player, square)
+                                rolls.append(min(6, max(2, target - modifiers)))
+                            leap_agi_rolls.append(rolls)
+                    if len(leap_positions) > 0:
+                        actions.append(ActionChoice(ActionType.LEAP, team=self.player.team,
+                                                positions=leap_positions, agi_rolls=leap_agi_rolls))
 
         # Block actions
         if self.player_action_type == PlayerActionType.BLOCK or (self.player_action_type == PlayerActionType.BLITZ

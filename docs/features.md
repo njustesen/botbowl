@@ -39,7 +39,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Dark Elf          | Assassin, Witch Elf     | Shadowing, Stab, Jump Up, Dump-off | YES           |
 | Dwarf Slayer      | Skaven Slayer           | Nerves of Steel                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Leap, Very Long Legs, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
+| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Very Long Legs, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
 | Halfling          | Halfling, Treeman       | Right stuff, Take Root, Throw Team-Mate, Timmm-ber! | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
@@ -57,9 +57,9 @@ A race is supported if all positions can be used and all their starting skills a
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
 | **Undead**        |                         |                                    | YES
 | Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
-| Wood Elf          | Wardancer               | Leap                               | YES              |         
+| **Wood Elf**      |                         |                                    | YES              |         
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
-| Slann             | Lineman, Catchers, Blitzers | Leap, Very Long Legs, Diving Catch, Jump Up, Diving Tackle | NO              |         
+| Slann             | Catchers, Blitzers | Diving Catch, Jump Up, Diving Tackle   | NO              |         
 | Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
 
 ## Skills
@@ -104,7 +104,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Kick Team-Mate    | NO          | NO        |
 | Kick-Off Return   | NO          | NO        |
 | Leader            | NO          | NO        |
-| Leap              | NO          | NO        |
+| **Leap**          | YES         | YES       |
 | Loner             | YES         | NO        |
 | Mighty Blow       | YES         | NO        |
 | Multiple Block    | NO          | NO        |
@@ -143,7 +143,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Timmm-ber!        | NO          | NO        |
 | Titchy            | PARTIALLY   | NO        |
 | Two Heads         | YES         | NO        |
-| Very Long Legs    | NO          | PARTIALLY |
+| **Very Long Legs**| YES         | YES       |
 | Weeping Dagger    | NO          | NO        |
 | **Wild Animals**  | YES         | YES       |
 | Wrestle           | YES         | NO        |

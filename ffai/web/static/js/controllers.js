@@ -123,7 +123,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.modalVisible = false;
         $scope.modelError = false;
         $scope.passOptions = false;
+        $scope.leapOptions = false;
         $scope.passHint = false;
+        $scope.leapHint = false;
         $scope.gridClass = 'none';
         $scope.opp_turn = false;
         $scope.clock = "";
@@ -150,6 +152,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.getAvailable = function getAvailable(square){
             if (square.special_action_type === "PASS" && $scope.passOptions) {
                 return square.special_available;
+            } else if (square.leap_action_type === "LEAP" && $scope.leapOptions) {
+                return square.leap_available;
             } else {
                 return square.available;
             }
@@ -158,6 +162,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.getAgiRolls = function getAgiRolls(square){
             if (square.special_action_type === "PASS" && $scope.passOptions) {
                 return square.special_agi_rolls;
+            } else if (square.leap_action_type === "LEAP" && $scope.leapOptions) {
+                return square.leap_agi_rolls;
             } else {
                 return square.agi_rolls;
             }
@@ -166,6 +172,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.getActionType = function getActionType(square){
             if (square.special_action_type === "PASS" && $scope.passOptions) {
                 return square.special_action_type;
+            } else if (square.leap_action_type === "LEAP" && $scope.leapOptions) {
+                return square.leap_action_type;
             } else {
                 return square.action_type;
             }
@@ -174,6 +182,16 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         document.addEventListener('keydown', function(event) {
             if (event.ctrlKey){
                 $scope.passOptions = !$scope.passOptions;
+                if ($scope.passOptions){
+                    $scope.leapOptions = false;
+                }
+                $scope.$apply();
+            }
+            if (event.shiftKey){
+                $scope.leapOptions = !$scope.leapOptions;
+                if ($scope.leapOptions){
+                    $scope.passOptions = false;
+                }
                 $scope.$apply();
             }
         });
@@ -343,8 +361,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 special_available: false,
                 action_type: undefined,
                 special_action_type: undefined,
-                agi_roll: 0,
-                special_agi_roll: 0,
+                leap_action_type: undefined,
+                agi_rolls: [],
+                leap_rolls: [],
+                special_agi_rolls: [],
                 roll: false,
                 block_roll: 0,
                 area: area,
@@ -365,11 +385,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.setAvailablePositions = function setAvailablePositions(){
             $scope.available_select_positions = [];
             $scope.available_move_positions = [];
+            $scope.available_leap_positions = [];
             $scope.available_block_positions = [];
             $scope.available_handoff_positions = [];
             $scope.available_pass_positions = [];
             $scope.available_foul_positions = [];
             $scope.available_dodge_rolls = [];
+            $scope.available_leap_rolls = [];
             $scope.available_block_rolls = [];
             $scope.available_block_agi_rolls = [];
             $scope.available_handoff_rolls = [];
@@ -380,6 +402,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_special_pass_actions = [];
             $scope.available_special_rolls = [];
             $scope.passHint = false;
+            $scope.leapHint = false;
+            $scope.leapOptions = false;
+            $scope.passOptions = false;
             $scope.main_action = null;
             $scope.blocked = false;
             for (let idx in $scope.game.state.available_actions){
@@ -406,6 +431,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         } else if (action.action_type === "MOVE"){
                             $scope.available_move_positions = action.positions;
                             $scope.available_dodge_rolls = action.agi_rolls;
+                        }  else if (action.action_type === "LEAP"){
+                            $scope.available_leap_positions = action.positions;
+                            $scope.available_leap_rolls = action.agi_rolls;
+                            $scope.leapHint = true;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -417,7 +446,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     let stand_up_position = active_player.position;
                     $scope.available_select_positions = [stand_up_position];
                 }
-                if (action.action_type === "INTERCEPTION") {
+                if (action.action_type === "SELECT_PLAYER" && action.agi_rolls.length > 0) {
                     $scope.available_interception_players = action.player_ids;
                     $scope.available_interception_rolls = action.agi_rolls;
                     $scope.main_action = action;
@@ -516,7 +545,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 let player_id = $scope.available_interception_players[i];
                 let position = $scope.local_state.player_positions[player_id];
                 $scope.local_state.board[position.y][position.x].available = true;
-                $scope.local_state.board[position.y][position.x].action_type = "INTERCEPTION";
+                $scope.local_state.board[position.y][position.x].action_type = "SELECT_PLAYER";
                 if ($scope.available_interception_rolls.length > i){
                     $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_interception_rolls[i];
                 }
@@ -529,6 +558,16 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.local_state.board[pos.y][pos.x].action_type = "MOVE";
                 if ($scope.available_dodge_rolls.length > i){
                     $scope.local_state.board[pos.y][pos.x].agi_rolls = $scope.available_dodge_rolls[i];
+                }
+            }
+
+            // Leap squares
+            for (let i in $scope.available_leap_positions) {
+                let pos = $scope.available_leap_positions[i];
+                $scope.local_state.board[pos.y][pos.x].leap_available = true;
+                $scope.local_state.board[pos.y][pos.x].leap_action_type = "LEAP";
+                if ($scope.available_leap_rolls.length > i){
+                    $scope.local_state.board[pos.y][pos.x].leap_agi_rolls = $scope.available_leap_rolls[i];
                 }
             }
 
@@ -888,8 +927,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             // If position is available
             if ($scope.main_action != null && $scope.getAvailable(square)){
 
-                // Hot-fix for interceptions
-                if ($scope.main_action.action_type === 'INTERCEPTION' || $scope.main_action.action_type === "SELECT_PLAYER"){
+                // Select player
+                if ($scope.main_action.action_type === "SELECT_PLAYER"){
                     $scope.selected_square = square;
                 }
 

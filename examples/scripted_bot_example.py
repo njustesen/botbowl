@@ -275,9 +275,9 @@ class MyScriptedBot(ProcBot):
         Select interceptor.
         """
         for action in game.state.available_actions:
-            if action.action_type == ActionType.INTERCEPTION:
+            if action.action_type == ActionType.SELECT_PLAYER:
                 for player, agi_rolls in zip(action.players, action.agi_rolls):
-                    return Action(ActionType.INTERCEPTION, player=player)
+                    return Action(ActionType.SELECT_PLAYER, player=player)
         return Action(ActionType.SELECT_NONE)
 
     def pass_action(self, game):

@@ -178,7 +178,9 @@
 
         <div class="square-row">
             <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
-            <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to show move actions.</div>
+            <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to hide all pass actions.</div>
+            <div class="hint text-left" ng-if="leapHint && !leapOptions">Press Shift to show leap actions.</div>
+            <div class="hint text-left" ng-if="leapHint && leapOptions">Press Shift to hide leap actions.</div>
             <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
             <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
             <div class="hint text-center" ng-if="get">Press Ctrl to show move actions.</div>

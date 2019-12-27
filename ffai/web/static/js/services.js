@@ -222,8 +222,9 @@ appServices.factory('GameLogService', function() {
             "FAILED_PRO": "<player> failed a <b>pro</b> roll",
             "SUCCESSFUL_PRO": "<player> passed a <b>pro</b> roll",
             "FAILED_REGENERATION": "<player> failed a <b>Regeneration</b> roll",
-            "SUCCESSFUL_REGENERATION": "<player> passed a <b>Regeneration</b> roll"
-
+            "SUCCESSFUL_REGENERATION": "<player> passed a <b>Regeneration</b> roll",
+            "FAILED_LEAP": "<player> failed to <b>leap</b>",
+            "SUCCESSFUL_LEAP": "<player> successfully <b>leaped</b>."
         }
     };
 });

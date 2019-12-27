@@ -172,19 +172,21 @@ Actions consists of 31 action types. Some action types, denoted by `<position>` 
 17. ActionType.PLACE_BALL`<Position>`
 18. ActionType.PUSH`<Position>`
 19. ActionType.FOLLOW_UP`<Position>` 
-20. ActionType.INTERCEPTION`<Position>` (position of the player)
-21. ActionType.SELECT_PLAYER`<Position>` (position of the player)
-22. ActionType.MOVE`<Position>`
-23. ActionType.BLOCK`<Position>`
-24. ActionType.PASS`<Position>`
-25. ActionType.FOUL`<Position>`
-26. ActionType.HANDOFF`<Position>`
-27. ActionType.START_MOVE`<Position>` (position of the player)
-28. ActionType.START_BLOCK`<Position>` (position of the player)
-29. ActionType.START_BLITZ`<Position>` (position of the player)
-30. ActionType.START_PASS`<Position>` (position of the player)
-31. ActionType.START_FOUL`<Position>` (position of the player)
-32. ActionType.START_HANDOFF`<Position>` (position of the player)
+20. ActionType.SELECT_PLAYER`<Position>` (position of the player)
+21. ActionType.MOVE`<Position>`
+22. ActionType.BLOCK`<Position>`
+23. ActionType.PASS`<Position>`
+24. ActionType.FOUL`<Position>`
+25. ActionType.HANDOFF`<Position>`
+24. ActionType.LEAP
+25. ActionType.START_MOVE`<Position>` (position of the player)
+26. ActionType.START_BLOCK`<Position>` (position of the player)
+27. ActionType.START_BLITZ`<Position>` (position of the player)
+28. ActionType.START_PASS`<Position>` (position of the player)
+29. ActionType.START_FOUL`<Position>` (position of the player)
+30. ActionType.START_HANDOFF`<Position>` (position of the player)
+31. ActionType.USE_SKILL
+32. ActionType.DONT_USE_SKILL
 33. ActionType.SETUP_FORMATION_WEDGE
 34. ActionType.SETUP_FORMATION_LINE
 35. ActionType.SETUP_FORMATION_SPREAD

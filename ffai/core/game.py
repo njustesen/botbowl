@@ -1066,6 +1066,13 @@ class Game:
 
         return modifiers
 
+    def get_leap_modifiers(self, player):
+        """
+        :param player:
+        :return: the modifier to be added to the leap roll.
+        """
+        return 1 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
+
     def get_dodge_modifiers(self, player, position):
         """
         :param player:
