@@ -2037,6 +2037,7 @@ class PlayerAction(Procedure):
                     agi_rolls.append([])
                 actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))
             elif (not self.turn.quick_snap
+                  and not self.player.state.taken_root
                   and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
                     or (self.turn.quick_snap and self.player.state.moves == 0):
                 # Regular movement
@@ -2262,7 +2263,7 @@ class FollowUp(Procedure):
         if self.defender.has_skill(Skill.FEND):
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.FEND, player=self.defender))
             self.attacker.state.squares_moved.append(self.attacker.position)
-        elif self.attacker.has_skill(Skill.FRENZY) or action.position == self.pos_to:
+        elif self.attacker.has_skill(Skill.FRENZY) or (action and action.position == self.pos_to):
             self.game.move(self.attacker, self.pos_to)
             self.attacker.state.squares_moved.append(self.pos_to)
             self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.attacker))
@@ -2271,12 +2272,17 @@ class FollowUp(Procedure):
         return True
 
     def available_actions(self):
-        if self.attacker.has_skill(Skill.FRENZY) or self.defender.has_skill(Skill.FEND):
+        if self.must_follow_up(self.attacker) or self.follow_up_not_allowed(self.attacker, self.defender):
             return []
         else:
             return [ActionChoice(ActionType.FOLLOW_UP, team=self.attacker.team,
                                  positions=[self.attacker.position, self.pos_to])]
 
+    def follow_up_not_allowed(self, attacker, defender):
+        return defender.has_skill(Skill.FEND) or attacker.state.taken_root
+
+    def must_follow_up(self, attacker):
+        return attacker.has_skill(Skill.FRENZY)
 
 class Push(Procedure):
 
@@ -2326,6 +2332,11 @@ class Push(Procedure):
             if not self.chain:
                 FollowUp(self.game, self.pusher, self.player, self.follow_to)
 
+            return True
+
+        # Taken root players cannot be pushed
+        if self.player.state.taken_root:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.TAKE_ROOT))
             return True
 
         # Use stand firm
@@ -2906,8 +2917,9 @@ class Turn(Procedure):
                 if self.game.num_tackle_zones_in(player) > 0:
                     continue
             if not player.state.used:
-                move_players.append(player)
-                if self.blitz_available:
+                if not player.state.taken_root:
+                    move_players.append(player)
+                if self.blitz_available and not player.state.taken_root:
                     blitz_players.append(player)
                 if self.pass_available:
                     pass_players.append(player)

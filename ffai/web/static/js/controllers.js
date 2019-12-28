@@ -326,7 +326,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (action.player_ids.indexOf($scope.selectedPlayer().player_id) === -1) {
                     continue;
                 }
-                if (action.action_type.indexOf("START_") >= 0 && action.action_type.split("START_")[1].toLowerCase() === typeName){
+                if (action.action_type.indexOf("START_") >= 0 && (typeName === '' || action.action_type.split("START_")[1].toLowerCase() === typeName)){
                     return true;
                 }
             }

@@ -856,8 +856,8 @@ class Player(Piece):
         return self.player_id.__hash__()
 
     def place_prone(self):
-        self.player.state.up = False
-        self.player.state.taken_root = False
+        self.state.up = False
+        self.state.taken_root = False
 
 
 class Square:

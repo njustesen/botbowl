@@ -57,7 +57,24 @@ def test_negatrait_fail_ends_turn(trait):
         assert player.state.really_stupid
 
 
-def test_take_root_fail_does_not_end_turn():
+def test_take_root_fail_does_not_end_block_action():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    attacker, defender = get_block_players(game, team)
+    attacker.extra_skills = [Skill.TAKE_ROOT]
+
+    D6.FixedRolls.clear()
+    D6.fix_result(1)  # fail take root test
+
+    game.step(Action(ActionType.START_BLOCK, player=attacker))
+
+    # check the player turn has not ended
+    assert game.state.active_player is attacker
+
+
+def test_take_root_ends_move_turn():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
     team.state.rerolls = 0  # ensure no reroll prompt
@@ -72,10 +89,10 @@ def test_take_root_fail_does_not_end_turn():
     game.step(Action(ActionType.START_MOVE, player=player))
 
     # check the player turn has not ended
-    assert game.state.active_player is player
+    assert game.state.active_player is not player
 
 
-def test_take_root_fail_reduces_movement():
+def test_take_root_fail_reduces_ma_and_prevents_movement():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
     team.state.rerolls = 0  # ensure no reroll prompt
@@ -91,10 +108,12 @@ def test_take_root_fail_reduces_movement():
 
     # check the player ma is now 0
     assert player.get_ma() == 0
+    for action in game.get_available_actions():
+        assert not action.action_type == ActionType.MOVE
 
 
 # no wild animal test as wild animal has no state impact
-@pytest.mark.parametrize("trait", [Skill.BONE_HEAD, Skill.REALLY_STUPID, Skill.TAKE_ROOT])
+@pytest.mark.parametrize("trait", [Skill.BONE_HEAD, Skill.REALLY_STUPID])
 def test_negatrait_success_resets_player_state(trait):
         game = get_game_turn()
         team = game.get_agent_team(game.actor)
@@ -108,8 +127,6 @@ def test_negatrait_success_resets_player_state(trait):
             player.state.bone_headed = True
         elif trait is Skill.REALLY_STUPID:
             player.state.really_stupid = True
-        elif trait is Skill.TAKE_ROOT:
-            player.state.taken_root = True
 
         D6.FixedRolls.clear()
         D6.fix_result(6)  # pass trait test
@@ -124,7 +141,6 @@ def test_negatrait_success_resets_player_state(trait):
             assert not player.state.bone_headed
         elif trait is Skill.REALLY_STUPID:
             assert not player.state.really_stupid
-        # Note: no reset for taken root
 
 
 @pytest.mark.parametrize("dice_value", [1,2,3])
@@ -271,6 +287,39 @@ def test_take_root_doesnt_trigger_if_rooted():
     assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_TAKE_ROOT)
 
 
+def test_rooted_players_cannot_start_a_move_or_blitz():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    player, defender = get_block_players(game, team)  # need adjacent players here.
+
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.taken_root = True
+
+    # need to end turn here as available actions were set before taken_root happened.
+    game.step(Action(ActionType.END_TURN))
+    game.step(Action(ActionType.END_TURN))
+
+    actions = game.get_available_actions()
+    assert len(actions) == 7  # (6 & end turn)
+
+    for action in actions:
+        if action.action_type is ActionType.START_MOVE:
+            assert player not in action.players
+        if action.action_type is ActionType.START_BLITZ:
+            assert player not in action.players
+        if action.action_type is ActionType.START_BLOCK:
+            assert player in action.players
+        # todo: these are more complicated - should depend on holding the ball, or being next to a prone opponent.
+        if action.action_type is ActionType.START_PASS:
+            assert player in action.players
+        if action.action_type is ActionType.START_HANDOFF:
+            assert player in action.players
+        if action.action_type is ActionType.START_FOUL:
+            assert player in action.players
+
+
 def test_take_root_not_removed_on_end_turn():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
@@ -351,3 +400,75 @@ def test_take_root_removed_on_knockdown():
     assert not defender.state.up
     assert game.has_report_of_type(OutcomeType.KNOCKED_DOWN)
     assert not defender.state.taken_root
+
+def test_taken_root_players_may_not_follow_up():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0
+
+    attacker, defender = get_block_players(game, team)
+    attacker.extra_skills = [Skill.TAKE_ROOT]
+    attacker.state.taken_root = True
+    attacker.extra_st = defender.get_st() - attacker.get_st() + 1  # make this a 2 die block.
+
+    # it's a 2 dice block
+    BBDie.clear_fixes()
+    BBDie.fix_result(BBDieResult.DEFENDER_DOWN)
+
+    game.step(Action(ActionType.START_BLOCK, player=attacker))
+    game.step(Action(ActionType.BLOCK, position=defender.position))
+    game.step(Action(ActionType.SELECT_DEFENDER_DOWN))
+    game.step(Action(ActionType.PUSH, position=game.get_available_actions()[0].positions[0]))
+    for action in game.get_available_actions():
+        assert action.action_type is not ActionType.FOLLOW_UP
+
+
+def test_taken_root_players_may_not_follow_up_push():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0
+
+    attacker, defender = get_block_players(game, team)
+    attacker.extra_skills = [Skill.TAKE_ROOT]
+    attacker.state.taken_root = True
+    attacker.extra_st = defender.get_st() - attacker.get_st() + 1  # make this a 2 die block.
+
+    # it's a 2 dice block
+    BBDie.clear_fixes()
+    BBDie.fix_result(BBDieResult.PUSH)
+
+    game.step(Action(ActionType.START_BLOCK, player=attacker))
+    game.step(Action(ActionType.BLOCK, position=defender.position))
+    game.step(Action(ActionType.SELECT_PUSH))
+    game.step(Action(ActionType.PUSH, position=game.get_available_actions()[0].positions[0]))
+    for action in game.get_available_actions():
+        assert action.action_type is not ActionType.FOLLOW_UP
+
+
+def test_taken_root_players_may_not_be_pushed():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0
+
+    attacker, defender = get_block_players(game, team)
+    defender.extra_skills = [Skill.TAKE_ROOT]
+    defender.state.taken_root = True
+    attacker.extra_st = defender.get_st() - attacker.get_st() + 1  # make this a 2 die block.
+    def_pos = defender.position
+
+    # it's a 2 dice block
+    BBDie.clear_fixes()
+    BBDie.fix_result(BBDieResult.PUSH)
+    BBDie.fix_result(BBDieResult.PUSH)
+
+    game.step(Action(ActionType.START_BLOCK, player=attacker))
+    game.step(Action(ActionType.BLOCK, position=defender.position))
+    game.step(Action(ActionType.SELECT_PUSH))
+    for action in game.get_available_actions():
+        assert action.action_type is not ActionType.PUSH
+    # game.step(Action(ActionType.PUSH, position=game.get_available_actions()[0].positions[0]))
+    for action in game.get_available_actions():
+        assert action.action_type is not ActionType.FOLLOW_UP
+
+    assert defender.position is def_pos
+
