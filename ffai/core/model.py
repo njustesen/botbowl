@@ -504,11 +504,12 @@ class Die:
 
 class DiceRoll:
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None):
         self.dice = dice
         self.sum = 0
         self.d68 = d68
         self.target = target
+        self.alternative_target = alternative_target
         self.modifiers = modifiers
         self.roll_type = roll_type
         # Roll dice
@@ -527,6 +528,7 @@ class DiceRoll:
             'dice': dice,
             'sum': self.sum,
             'target': self.target,
+            'alyernative_target': self.alternative_target,
             'modifiers': self.modifiers,
             'modified_target': self.modified_target(),
             'result': self.get_result(),
@@ -553,13 +555,15 @@ class DiceRoll:
     def get_result(self):
         return self.sum + self.modifiers
 
-    def is_d6_success(self):
+    def is_d6_success(self, alternative=False):
         if self.sum == 1:
             return False
 
         if self.sum == 6:
             return True
 
+        if alternative:
+            return self.sum + self.modifiers >= self.alternative_target
         return self.sum + self.modifiers >= self.target
 
     def same(self):

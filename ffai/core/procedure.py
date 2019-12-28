@@ -1587,8 +1587,26 @@ class Dodge(Procedure):
         self.position = position
         self.reroll = None
         self.roll = None
+        self.waiting_break_tackle = False
 
     def step(self, action):
+
+        # Break tackle
+        if self.waiting_break_tackle:
+            if action.action_type == ActionType.DONT_USE_SKILL:
+                # Check for re-roll
+                self.reroll = Reroll(self.game, self.player, context=self)
+                self.waiting_break_tackle = False
+                return False
+            elif action.action_type == ActionType.USE_SKILL:
+                # Success
+                self.player.use_skill(Skill.BREAK_TACKLE)
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.BREAK_TACKLE))
+                self.roll.target = self.roll.alternative_target
+                self.roll.alternative_target = None
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position,
+                                         rolls=[self.roll]))
+                return True
 
         # If player hasn't rolled
         if self.roll is None:
@@ -1601,12 +1619,10 @@ class Dodge(Procedure):
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position)
 
-            # Break tackle - use st instead of ag
-            attribute = self.player.get_ag()
-            if self.player.has_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_st():
-                attribute = self.player.get_st()
-
-            self.roll.target = Rules.agility_table[attribute]
+            agility_target = Rules.agility_table[self.player.get_ag()]
+            self.roll.target = agility_target
+            if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag():
+                self.roll.alternative_target = Rules.agility_table[self.player.get_st()]
 
             if self.roll.is_d6_success():
 
@@ -1618,6 +1634,9 @@ class Dodge(Procedure):
 
                 # Fail
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
+                if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag() and self.roll.is_d6_success(alternative=True):
+                    self.waiting_break_tackle = True
+                    return False
 
                 # Check for re-roll
                 self.reroll = Reroll(self.game, self.player, context=self)
@@ -1635,6 +1654,12 @@ class Dodge(Procedure):
         self.game.move(self.player, self.position)
         KnockDown(self.game, self.player, turnover=True)
         return True
+
+    def available_actions(self):
+        if self.waiting_break_tackle:
+            return [ActionChoice(ActionType.USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team),
+                    ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team)]
+        return []
 
 
 class TurnoverIfPossessionLost(Procedure):

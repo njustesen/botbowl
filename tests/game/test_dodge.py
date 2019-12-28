@@ -172,3 +172,105 @@ def test_prehensile_tail_modifier():
     modifier = game.get_dodge_modifiers(player, target)
     assert modifier == 0
 
+
+def test_dodge_use_break_tackle():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    # get a player
+    players = game.get_players_on_pitch(team, False, True)
+    player = players[1]
+    player.role.skills = []
+    player.extra_skills = [Skill.BREAK_TACKLE]
+    player.role.st = 4
+    player.role.ag = 3
+    game.put(player, Square(11, 11))
+
+    opponents = game.get_players_on_pitch(game.get_opp_team(team))
+    opp_player = opponents[0]
+    game.put(opp_player, Square(12, 11))
+
+    # make sure there is one enemy in tackle zone
+    assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+    to = Square(player.position.x + 1, player.position.y + 1)
+    D6.fix_result(3)
+    game.step(Action(ActionType.MOVE, player=player, position=to))
+    assert game.has_report_of_type(OutcomeType.FAILED_DODGE)
+    game.step(Action(ActionType.USE_SKILL))
+    assert player.position == to
+    assert player.state.up
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
+    assert game.has_report_of_type(OutcomeType.SKILL_USED)
+
+
+def test_break_tackle_reroll():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    # get a player
+    players = game.get_players_on_pitch(team, False, True)
+    player = players[1]
+    player.role.skills = []
+    player.extra_skills = [Skill.BREAK_TACKLE]
+    player.role.st = 3
+    player.role.ag = 2
+    game.put(player, Square(11, 11))
+
+    opponents = game.get_players_on_pitch(game.get_opp_team(team))
+    opp_player = opponents[0]
+    game.put(opp_player, Square(12, 11))
+
+    # make sure there is one enemy in tackle zone
+    assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+    to = Square(player.position.x + 1, player.position.y + 1)
+    D6.fix_result(3)
+    game.step(Action(ActionType.MOVE, player=player, position=to))
+    assert game.has_report_of_type(OutcomeType.FAILED_DODGE)
+    D6.fix_result(4)
+    game.step(Action(ActionType.USE_REROLL))
+    assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
+    game.step(Action(ActionType.USE_SKILL))
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
+    assert player.position == to
+    assert player.state.up
+    assert game.has_report_of_type(OutcomeType.FAILED_DODGE)
+
+
+def test_break_tackle_twice():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    # get a player
+    players = game.get_players_on_pitch(team, False, True)
+    player = players[1]
+    player.role.skills = []
+    player.extra_skills = [Skill.BREAK_TACKLE]
+    player.role.st = 3
+    player.role.ag = 2
+    game.put(player, Square(11, 11))
+
+    opponents = game.get_players_on_pitch(game.get_opp_team(team))
+    opp_player = opponents[0]
+    game.put(opp_player, Square(12, 11))
+
+    # make sure there is one enemy in tackle zone
+    assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+    to = Square(player.position.x + 1, player.position.y + 1)
+    D6.fix_result(4)
+    game.step(Action(ActionType.MOVE, player=player, position=to))
+    assert game.has_report_of_type(OutcomeType.FAILED_DODGE)
+    game.step(Action(ActionType.USE_SKILL))
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_DODGE)
+    assert game.has_report_of_type(OutcomeType.SKILL_USED)
+    # make sure there is one enemy in tackle zone
+    assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
+    D6.fix_result(4)
+    to_second = Square(player.position.x - 1, player.position.y - 1)
+    game.step(Action(ActionType.MOVE, player=player, position=to_second))
+    game.step(Action(ActionType.DONT_USE_REROLL))
+    assert player.position == to_second
+    assert not player.state.up
+    assert game.has_report_of_type(OutcomeType.FAILED_DODGE)

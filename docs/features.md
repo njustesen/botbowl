@@ -36,8 +36,8 @@ A race is supported if all positions can be used and all their starting skills a
 | **Bretonnia**     |                         |                                    | YES           |
 | **Chaos**         |                         |                                    | YES           |
 | **Chaos Dwarf**   |                         |                                    | YES           |
-| Dark Elf          | Assassin, Witch Elf     | Shadowing, Stab, Jump Up, Dump-off | YES           |
-| Dwarf Slayer      | Skaven Slayer           | Nerves of Steel                    | NO            |
+| Dark Elf          | Assassin                | Shadowing, Stab,                   | YES           |
+| Dwarf Slayer      |                         |                                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
 | Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
 | Halfling          | Halfling, Treeman       | Right stuff, Throw Team-Mate, Timmm-ber! | YES     |
@@ -48,18 +48,18 @@ A race is supported if all positions can be used and all their starting skills a
 | Khorne            |                         |                                    | NO           |  
 | **Lizardmen**     |                         |                                    | YES           |
 | Necromantic       |                         |                                    | NO           |
-| Norse             | Berserkers, Yhetee      | Jump Up, Disturbing Presence            | YES        |
+| Norse             | Yhetee                  | Disturbing Presence            | YES        |
 | Nurgle            | Rotters | Decay, Nurgle's Rot, Foul Appearance, Disturbing Presence, Tentacles | NO            |
 | **Orc**           |                          |                                    | YES           |
 | Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
 | **Skaven**        |                         |                                    | YES           |
-| Savage Orc        | Throwers                | Nerves of Steel                    | NO            |
+| Savage Orc        |                         |                                    | NO            |
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
 | **Undead**        |                         |                                    | YES
 | Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
 | **Wood Elf**      |                         |                                    | YES              |
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
-| Slann             | Catchers, Blitzers | Diving Catch, Jump Up, Diving Tackle   | NO              |         
+| Slann             | Catchers, Blitzers | Diving Catch, Diving Tackle             | NO              |         
 | Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
 
 ## Skills
@@ -75,7 +75,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Blood Lust        | NO          | NO        |
 | Bombardier        | NO          | NO        |
 | **Bone-head**     | YES         | YES       |
-| Break Tackle      | PARTIALLY   | NO        |
+| **Break Tackle**  | YES         | YES       |
 | **Catch**         | YES         | YES       |
 | Chainsaw          | NO          | NO        |
 | Claws             | YES         | NO        |
@@ -109,7 +109,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Mighty Blow       | YES         | NO        |
 | Multiple Block    | NO          | NO        |
 | Monstrous Mouth   | NO          | NO        |
-| Nerves of Steel   | YES         | YES        |
+| **Nerves of Steel**| YES         | YES       |
 | No Hands          | YES         | NO        |
 | Nurgle's Rot      | NO          | NO        |
 | Pass              | YES         | NO        |
