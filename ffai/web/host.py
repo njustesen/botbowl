@@ -73,9 +73,7 @@ class InMemoryHost:
             file = file.lower()
             if ".ffai" not in file:
                 continue
-            file = file.split(".ffai")[0]
-            if "/" in file:
-                file = file.split("/")[-1]
+            file = os.path.split(file)[1].split(".")[0]
             out.append(file)
         return out
 

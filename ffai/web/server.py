@@ -47,7 +47,9 @@ def create():
 def save():
     game_id = json.loads(request.data)['game_id']
     name = json.loads(request.data)['name']
-    team_id = json.loads(request.data)['team_id']
+    # todo: team_id needed?
+    team_id = ""  # json.loads(request.data)['team_id']
+
     if len(name) > 2 and len(name) < 40 and not api.save_game_exists(name):
         api.save_game(game_id, name, team_id)
         return json.dumps("Game was successfully saved")
