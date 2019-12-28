@@ -1698,15 +1698,15 @@ class Game:
                     n_assists_for += 1
         return (n_assists_for, n_assist_against)
 
-    def get_pass_distances(self, passer):
+    def get_pass_distances(self, passer, dump_off=False):
         """
         :param passer:
         :param weather:
         :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to.
         """
-        return self.get_pass_distances_at(passer, passer.position)
+        return self.get_pass_distances_at(passer, passer.position, dump_off=dump_off)
 
-    def get_pass_distances_at(self, passer, position):
+    def get_pass_distances_at(self, passer, position, dump_off=False):
         """
         :param passer:
         :param weather:
@@ -1714,12 +1714,15 @@ class Game:
         """
         squares = []
         distances = []
-        distances_allowed = [PassDistance.QUICK_PASS,
-                             PassDistance.SHORT_PASS,
-                             PassDistance.LONG_PASS,
-                             PassDistance.LONG_BOMB,
-                             PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
-            else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
+        if dump_off:
+            distances_allowed = [PassDistance.QUICK_PASS]
+        else:
+            distances_allowed = [PassDistance.QUICK_PASS,
+                                 PassDistance.SHORT_PASS,
+                                 PassDistance.LONG_PASS,
+                                 PassDistance.LONG_BOMB,
+                                 PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
+                else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
         if self.state.weather == WeatherType.BLIZZARD:
             distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
         for y in range(len(self.state.pitch.board)):
@@ -1850,4 +1853,9 @@ class Game:
             self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll]))
 
-
+    def get_current_turn_proc(self):
+        for i in range(len(self.state.stack.items)):
+            idx = len(self.state.stack.items) - 1 - i
+            if type(self.state.stack.items[idx]) == Turn:
+                return self.state.stack.items[idx]
+        return None

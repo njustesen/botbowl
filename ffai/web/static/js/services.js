@@ -244,6 +244,13 @@ appServices.factory('IconService', function() {
                 'Bull Centaur': 'centaur',
                 'Minotaur': 'minotaur'
             },
+            'Dark Elf':{
+                'Lineman': 'delineman',
+                'Blitzer': 'deblitzer',
+                'Witch Elf': 'dewitchelf',
+                'Runner': 'dethrower',
+                'Assassin': 'dehorkon'
+            },
             'High Elf':{
                 'Lineman': 'helineman',
                 'Blitzer': 'heblitzer',

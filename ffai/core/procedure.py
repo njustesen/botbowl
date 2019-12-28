@@ -222,6 +222,10 @@ class Block(Procedure):
         self.dauntless_success = False
         self.frenzy_checked = False
         self.waiting_gfi = False
+        self.waiting_dump_off = False
+
+    def start(self):
+        self.waiting_dump_off = self.defender.has_skill(Skill.DUMP_OFF) and not self.frenzy_block
 
     def step(self, action):
 
@@ -229,6 +233,12 @@ class Block(Procedure):
         if self.gfi:
             self.gfi = False
             GFI(self.game, self.attacker, self.attacker.position)
+            return False
+
+        # Dump-off
+        if self.waiting_dump_off:
+            PlayerAction(self.game, self.defender, PlayerActionType.PASS, self.game.get_current_turn_proc(), dump_off=True)
+            self.waiting_dump_off = False
             return False
 
         # Frenzy check
@@ -1665,7 +1675,7 @@ class Handoff(Procedure):
 
 class PassAction(Procedure):
 
-    def __init__(self, game, ball, passer, catcher, position, pass_distance):
+    def __init__(self, game, ball, passer, catcher, position, pass_distance, dump_off=False):
         super().__init__(game)
         self.ball = ball
         self.passer = passer
@@ -1676,6 +1686,11 @@ class PassAction(Procedure):
         self.reroll = False
         self.fumble = False
         self.interception_tried = False
+        self.dump_off = dump_off
+
+    def start(self):
+        if self.dump_off:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.DUMP_OFF, player=self.passer))
 
     def step(self, action):
 
@@ -1705,7 +1720,8 @@ class PassAction(Procedure):
                 # Accurate pass
                 self.game.report(Outcome(OutcomeType.ACCURATE_PASS, player=self.passer, rolls=[self.roll]))
                 self.ball.move_to(self.position)
-                TurnoverIfPossessionLost(self.game, self.ball)
+                if not self.dump_off:
+                    TurnoverIfPossessionLost(self.game, self.ball)
                 if self.catcher is not None:
                     Catch(self.game, self.catcher, self.ball, accurate=True)
                 else:
@@ -1740,7 +1756,9 @@ class PassAction(Procedure):
             Bounce(self.game, self.ball)
             return True
 
-        TurnoverIfPossessionLost(self.game, self.ball)
+        if not self.dump_off:
+            TurnoverIfPossessionLost(self.game, self.ball)
+
         self.ball.move_to(self.position)
         Scatter(self.game, self.ball, is_pass=True)
         return True
@@ -1855,14 +1873,24 @@ class EndPlayerTurn(Procedure):
 
 class PlayerAction(Procedure):
 
-    def __init__(self, game, player, player_action_type, turn):
+    def __init__(self, game, player, player_action_type, turn, dump_off=False):
         super().__init__(game)
         self.player = player
         self.player_action_type = player_action_type
         self.blitz_block = False
         self.turn = turn
+        self.dump_off = dump_off
+
+    def start(self):
+        if self.dump_off:
+            self.game.add_secondary_clock(self.player.team)
 
     def step(self, action):
+
+        if self.dump_off:
+            self.game.remove_secondary_clocks()
+            if action.action_type == ActionType.DONT_USE_SKILL:
+                return True
 
         if len(self.player.state.squares_moved) == 0:
             self.player.state.squares_moved.append(self.player.position)
@@ -1979,9 +2007,10 @@ class PlayerAction(Procedure):
 
             # Check distance
             pass_distance = self.game.get_pass_distance(self.player.position, action.position)
-            EndPlayerTurn(self.game, self.player)
+            if not self.dump_off:
+                EndPlayerTurn(self.game, self.player)
             PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.position,
-                       pass_distance)
+                       pass_distance, dump_off=True)
             self.turn.pass_available = False
 
             return True
@@ -1990,7 +2019,7 @@ class PlayerAction(Procedure):
         actions = []
 
         # Move actions
-        if self.player_action_type != PlayerActionType.BLOCK:
+        if self.player_action_type != PlayerActionType.BLOCK and not self.dump_off:
             move_positions = []
             agi_rolls = []
             move_needed = 1 if not self.player.state.up else 1
@@ -2113,7 +2142,7 @@ class PlayerAction(Procedure):
 
         # Pass actions
         if self.player_action_type == PlayerActionType.PASS and self.game.has_ball(self.player):
-            positions, distances = self.game.get_pass_distances(self.player)
+            positions, distances = self.game.get_pass_distances(self.player, dump_off=self.dump_off)
             agi_rolls = []
             cache = {}
             for i in range(len(distances)):
@@ -2134,8 +2163,10 @@ class PlayerAction(Procedure):
             if len(positions) > 0:
                 actions.append(ActionChoice(ActionType.PASS, team=self.player.team,
                                             positions=positions, agi_rolls=agi_rolls))
-
-        actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+        if self.dump_off:
+            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))
+        else:
+            actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
         return actions
 
 

@@ -86,7 +86,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Diving Catch      | NO          | NO        |
 | Diving Tackle     | NO          | NO        |
 | **Dodge**         | YES         | YES       |
-| Dump-Off          | NO          | NO        |
+| Dump-Off          | YES         | NO        |
 | **Extra Arms**    | YES         | YES       |
 | Fan Favorite      | NO          | NO        |
 | Fend              | YES         | NO        |

@@ -520,23 +520,28 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
 
             // Pass squares
-            for (let i in $scope.available_pass_positions) {
-                let position = $scope.available_pass_positions[i];
-                let player = $scope.local_state.board[position.y][position.x].player;
-                if (player !== null){
-                    let team = $scope.teamOfPlayer(player);
-                    if (team.team_id === $scope.local_state.current_team_id && player.state.up) {
-                        $scope.local_state.board[position.y][position.x].available = true;
-                        $scope.local_state.board[position.y][position.x].action_type = "PASS";
-                        if ($scope.available_pass_rolls.length > i) {
-                            $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_pass_rolls[i];
+            if ($scope.available_pass_positions.length > 0) {
+                let ballPos = $scope.game.state.pitch.balls[0].position;
+                let passer = $scope.local_state.board[ballPos.y][ballPos.x].player;
+                        let passerTeam = $scope.teamOfPlayer(passer);
+                for (let i in $scope.available_pass_positions) {
+                    let position = $scope.available_pass_positions[i];
+                    let player = $scope.local_state.board[position.y][position.x].player;
+                    if (player !== null) {
+                        let catcherTeam = $scope.teamOfPlayer(player);
+                        if (catcherTeam.team_id === passerTeam.team_id && player.state.up) {
+                            $scope.local_state.board[position.y][position.x].available = true;
+                            $scope.local_state.board[position.y][position.x].action_type = "PASS";
+                            if ($scope.available_pass_rolls.length > i) {
+                                $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_pass_rolls[i];
+                            }
                         }
                     }
-                }
-                $scope.local_state.board[position.y][position.x].special_available = true;
-                $scope.local_state.board[position.y][position.x].special_action_type = "PASS";
-                if ($scope.available_pass_rolls.length > i) {
-                    $scope.local_state.board[position.y][position.x].special_agi_rolls = $scope.available_pass_rolls[i];
+                    $scope.local_state.board[position.y][position.x].special_available = true;
+                    $scope.local_state.board[position.y][position.x].special_action_type = "PASS";
+                    if ($scope.available_pass_rolls.length > i) {
+                        $scope.local_state.board[position.y][position.x].special_agi_rolls = $scope.available_pass_rolls[i];
+                    }
                 }
             }
 
