@@ -1900,10 +1900,13 @@ class PlayerAction(Procedure):
             return True
 
         if action.action_type == ActionType.STAND_UP:
-
-            StandUp(self.game, self.player, roll=self.player.get_ma() < 3)
-            self.player.state.moves += min(self.player.get_ma(), 3)
-            for i in range(3):
+            moves = 3
+            if self.player.has_skill(Skill.JUMP_UP):
+                moves = 1
+                self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
+            StandUp(self.game, self.player, roll=self.player.get_ma() < moves)
+            self.player.state.moves += min(self.player.get_ma(), moves)
+            for i in range(moves):
                 self.player.state.squares_moved.append(self.player.position)
 
             return False
@@ -2027,7 +2030,8 @@ class PlayerAction(Procedure):
             sprints = 3 if self.player.has_skill(Skill.SPRINT) else 2
             gfi_roll = 3 if self.game.state.weather == WeatherType.BLIZZARD else 2
             if not self.player.state.up:
-                if self.player.get_ma() < 3:
+                moves = 1 if self.player.has_skill(Skill.JUMP_UP) else 0
+                if self.player.get_ma() < moves:
                     agi_rolls.append([4])
                 else:
                     agi_rolls.append([])
@@ -2084,7 +2088,7 @@ class PlayerAction(Procedure):
         if self.player_action_type == PlayerActionType.BLOCK or (self.player_action_type == PlayerActionType.BLITZ
                                                                  and not self.blitz_block):
 
-            can_block = self.player.state.up    # Ignore JUMP_UP for now
+            can_block = self.player.state.up
             # Check movement left if blitz,
             gfi = False
             if self.player_action_type == PlayerActionType.BLITZ:
