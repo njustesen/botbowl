@@ -99,7 +99,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Horns             | YES         | NO        |
 | Hypnotic Gaze     | NO          | NO        |
 | Juggernaut        | YES         | NO        |
-| Jump Up           | NO          | NO        |
+| Jump Up           | YES         | NO        |
 | Kick              | NO          | NO        |
 | Kick Team-Mate    | NO          | NO        |
 | Kick-Off Return   | NO          | NO        |
