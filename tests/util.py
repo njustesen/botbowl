@@ -1,9 +1,23 @@
 from ffai.core.load import *
 from ffai.core.game import *
 from ffai.ai.bots.random_bot import *
+from copy import deepcopy
+
+game_turn_empty = {}
+game_turn_full = {}
 
 
 def get_game_turn(seed=0, empty=False):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
+    if empty:
+        if seed in game_turn_empty:
+            return deepcopy(game_turn_empty[seed])
+    else:
+        if seed in game_turn_full:
+            return deepcopy(game_turn_full[seed])
     config = load_config("ff-11")
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
@@ -26,10 +40,18 @@ def get_game_turn(seed=0, empty=False):
         game.step(action)
     if empty:
         game.clear_board()
+    if empty:
+        game_turn_empty[seed] = deepcopy(game)
+    else:
+        game_turn_full[seed] = deepcopy(game)
     return game
 
 
 def get_game_kickoff(seed=0):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
     config = load_config("ff-11")
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
@@ -50,6 +72,10 @@ def get_game_kickoff(seed=0):
 
 
 def get_game_setup(home_team, seed=0):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
     config = load_config("ff-11")
     config.kick_off_table = False
     ruleset = load_rule_set(config.ruleset)
@@ -76,6 +102,10 @@ def get_game_setup(home_team, seed=0):
 
 
 def get_game_coin_toss(seed=0):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
     config = load_config("ff-11")
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
@@ -89,6 +119,10 @@ def get_game_coin_toss(seed=0):
 
 
 def get_game_fans(seed=0):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
     config = load_config("ff-11")
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
@@ -101,6 +135,10 @@ def get_game_fans(seed=0):
 
 
 def get_game_weather_table(seed=0):
+    D3.FixedRolls = []
+    D6.FixedRolls = []
+    D8.FixedRolls = []
+    BBDie.FixedRolls = []
     config = load_config("ff-11")
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
