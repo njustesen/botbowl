@@ -108,3 +108,28 @@ def test_strong_arm():
             assert pass_mods + 1 == strong_arm_mods
         else:
             assert pass_mods == strong_arm_mods
+
+
+def test_pass_nerves_of_steel():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.skills = []
+    passer.role.ag = 3
+    catcher = team.players[1]
+    game.put(passer, Square(1, 1))
+    opponent = game.get_opp_team(team).players[0]
+    game.put(opponent, Square(1, 2))
+    # one TZ on the thrower
+    assert len(game.get_adjacent_opponents(passer, down=False, stunned=False)) == 1
+
+    game.state.weather = WeatherType.NICE
+    catcher_position = Square(passer.position.x + 7, passer.position.y + 0)
+    game.put(catcher, catcher_position)
+    pass_distance = game.get_pass_distance(passer.position, catcher.position)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
+    passer.role.skills = [Skill.NERVES_OF_STEEL]
+    nos_pass_mods = game.get_pass_modifiers(passer, pass_distance)
+    # nos removes the 1 TZ impact
+    assert pass_mods + 1 == nos_pass_mods

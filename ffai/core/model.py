@@ -150,6 +150,7 @@ class PlayerState:
         self.casualty_effect = None
         self.casualty_type = None
         self.wild_animal = False
+        self.taken_root = False
         self.used_skills = set()
         self.squares_moved = []
 
@@ -169,7 +170,8 @@ class PlayerState:
             'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
             'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None,
             'squares_moved': [square.to_json() for square in self.squares_moved],
-            'wild_animal':self.wild_animal
+            'wild_animal': self.wild_animal,
+            'taken_root' : self.taken_root
         }
 
     def reset(self):
@@ -177,6 +179,8 @@ class PlayerState:
         self.used = False
         self.stunned = False
         self.bone_headed = False
+        self.wild_animal = False
+        self.taken_root = False
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
@@ -355,6 +359,7 @@ class GameState:
         self.game_over = False
         self.available_actions = []
         self.clocks = []
+        self.rerolled_procs = set()
 
     def to_json(self):
         return {
@@ -793,7 +798,10 @@ class Player(Piece):
         return self.role.st + self.extra_st
 
     def get_ma(self):
-        return self.role.ma + self.extra_ma
+        if self.state.taken_root:
+            return 0
+        else:
+            return self.role.ma + self.extra_ma
 
     def get_av(self):
         return self.role.av + self.extra_av
@@ -847,6 +855,10 @@ class Player(Piece):
 
     def __hash__(self):
         return self.player_id.__hash__()
+
+    def place_prone(self):
+        self.state.up = False
+        self.state.taken_root = False
 
 
 class Square:

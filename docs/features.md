@@ -40,7 +40,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Dwarf Slayer      | Skaven Slayer           | Nerves of Steel                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
 | Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
-| Halfling          | Halfling, Treeman       | Right stuff, Take Root, Throw Team-Mate, Timmm-ber! | YES     |
+| Halfling          | Halfling, Treeman       | Right stuff, Throw Team-Mate, Timmm-ber! | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
 | Human Nobility    |                         |                                    | NO            |
@@ -57,7 +57,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
 | **Undead**        |                         |                                    | YES
 | Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
-| Wood Elf          | Treeman                 | Take Root                          | YES              |         
+| **Wood Elf**      |                         |                                    | YES              |
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             | Catchers, Blitzers | Diving Catch, Jump Up, Diving Tackle   | NO              |         
 | Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
@@ -109,7 +109,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Mighty Blow       | YES         | NO        |
 | Multiple Block    | NO          | NO        |
 | Monstrous Mouth   | NO          | NO        |
-| Nerves of Steel   | YES         | NO        |
+| Nerves of Steel   | YES         | YES        |
 | No Hands          | YES         | NO        |
 | Nurgle's Rot      | NO          | NO        |
 | Pass              | YES         | NO        |
@@ -136,7 +136,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Sure Hands**    | YES         | YES       |
 | Swoop             | NO          | NO        |
 | Tackle            | YES         | NO        |
-| Take Root         | NO          | NO        |
+| **Take Root**     | YES         | YES       |
 | Tentacles         | NO          | NO        |
 | Thick Skull       | YES         | NO        |
 | Throw Team-Mate   | NO          | NO        |

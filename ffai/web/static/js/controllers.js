@@ -326,7 +326,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (action.player_ids.indexOf($scope.selectedPlayer().player_id) === -1) {
                     continue;
                 }
-                if (action.action_type.indexOf("START_") >= 0 && action.action_type.split("START_")[1].toLowerCase() === typeName){
+                if (action.action_type.indexOf("START_") >= 0 && (typeName === '' || action.action_type.split("START_")[1].toLowerCase() === typeName)){
                     return true;
                 }
             }
@@ -401,6 +401,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_interception_rolls = [];
             $scope.available_special_pass_actions = [];
             $scope.available_special_rolls = [];
+            $scope.available_select_rolls = [];
             $scope.passHint = false;
             $scope.leapHint = false;
             $scope.leapOptions = false;
@@ -445,6 +446,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     let active_player = $scope.getPlayer(active_player_id);
                     let stand_up_position = active_player.position;
                     $scope.available_select_positions = [stand_up_position];
+                    $scope.available_select_rolls = action.agi_rolls;
                 }
                 if (action.action_type === "SELECT_PLAYER" && action.agi_rolls.length > 0) {
                     $scope.available_interception_players = action.player_ids;
@@ -473,6 +475,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             // Select squares
             for (let i in $scope.available_select_positions){
                 let position = $scope.available_select_positions[i];
+                let roll = null;
+                if ($scope.available_select_rolls.length > i){
+                    roll = $scope.available_select_rolls[i];
+                }
                 // Reserves positions
                 if (position == null && $scope.selected_square != null && $scope.selected_square.area === 'pitch'){
                     if ($scope.main_action.team_id === $scope.game.state.home_team.team_id){
@@ -497,6 +503,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     // Pitch positions
                 } else if (position != null) {
                     $scope.local_state.board[position.y][position.x].available = true;
+                    $scope.local_state.board[position.y][position.x].agi_rolls = roll;
                     if ($scope.main_action !== null) {
                         $scope.local_state.board[position.y][position.x].action_type = $scope.main_action.action_type;
                     }
