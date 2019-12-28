@@ -138,7 +138,7 @@ class OutcomeType(Enum):
     ACCURATE_PASS = 80
     INACCURATE_PASS = 81
     FUMBLE = 82
-    CATCH_FAILED = 83
+    FAILED_CATCH = 83
     HOME_RECEIVE = 84
     AWAY_RECEIVE = 85
     TAILS_WON = 86
@@ -164,8 +164,8 @@ class OutcomeType(Enum):
     PLAYER_NOT_READY = 107
     CATCH = 108
     SKILL_USED = 109
-    PLAYER_STAND_UP_SUCCESS = 110
-    PLAYER_STAND_UP_FAILURE = 111
+    STAND_UP = 110
+    FAILED_STAND_UP = 111
     BALL_OUT_OF_BOUNDS = 112
     FOLLOW_UP = 113
     FOUL = 114
@@ -174,7 +174,7 @@ class OutcomeType(Enum):
     DEAD = 117
     REROLL_USED = 118
     BLOCK_ROLL = 119
-    INTERCEPTION_FAILED = 120
+    FAILED_INTERCEPTION = 120
     TURN_ADDED = 121
     TURN_SKIPPED = 122
     BALL_BOUNCED = 123
@@ -207,6 +207,8 @@ class OutcomeType(Enum):
     FAILED_LEAP = 150
     SUCCESSFUL_TAKE_ROOT = 151
     FAILED_TAKE_ROOT = 152
+    JUMP_UP = 153
+    FAILED_JUMP_UP = 154
 
 
 class PlayerActionType(Enum):

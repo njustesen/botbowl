@@ -302,7 +302,6 @@ def test_rooted_players_cannot_start_a_move_or_blitz():
     game.step(Action(ActionType.END_TURN))
 
     actions = game.get_available_actions()
-    assert len(actions) == 7  # (6 & end turn)
 
     for action in actions:
         if action.action_type is ActionType.START_MOVE:
@@ -311,14 +310,15 @@ def test_rooted_players_cannot_start_a_move_or_blitz():
             assert player not in action.players
         if action.action_type is ActionType.START_BLOCK:
             assert player in action.players
-        # todo: these are more complicated - should depend on holding the ball, or being next to a prone opponent.
         if action.action_type is ActionType.START_PASS:
-            assert player in action.players
+            if game.get_ball_carrier() == player:
+                assert player in action.players
         if action.action_type is ActionType.START_HANDOFF:
-            assert player in action.players
+            if game.get_ball_carrier() == player:
+                assert player in action.players
         if action.action_type is ActionType.START_FOUL:
-            assert player in action.players
-
+            if len(game.get_adjacent_opponents(player, down=True, standing=False)) > 0:
+                assert player in action.players
 
 def test_take_root_not_removed_on_end_turn():
     game = get_game_turn()

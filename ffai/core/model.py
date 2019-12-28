@@ -359,6 +359,7 @@ class GameState:
         self.game_over = False
         self.available_actions = []
         self.clocks = []
+        self.rerolled_procs = set()
 
     def to_json(self):
         return {

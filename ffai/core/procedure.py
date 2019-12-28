@@ -580,7 +580,7 @@ class Catch(Procedure):
                     Touchdown(self.game, self.player)
                 return True
             else:
-                self.game.report(Outcome(OutcomeType.CATCH_FAILED, player=self.player, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_CATCH, player=self.player, rolls=[self.roll]))
                 # Check for re-roll
                 self.reroll = Reroll(self.game, self.player, context=self)
                 return False
@@ -621,7 +621,7 @@ class Intercept(Procedure):
             self.game.report(
                 Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW, rolls=[self.safe_throw_roll]))
             if self.safe_throw_roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.interceptor))
+                self.game.report(Outcome(OutcomeType.FAILED_INTERCEPTION, player=self.interceptor))
                 return True
             else:
                 # Check for re-roll
@@ -677,7 +677,7 @@ class Intercept(Procedure):
 
             else:
 
-                self.game.report(Outcome(OutcomeType.INTERCEPTION_FAILED, player=self.interceptor, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_INTERCEPTION, player=self.interceptor, rolls=[self.roll]))
 
                 # Check for re-roll
                 self.reroll = Reroll(self.game, self.interceptor, context=self)
@@ -1619,7 +1619,7 @@ class Dodge(Procedure):
                 # Fail
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
 
-                # Check for reroll
+                # Check for re-roll
                 self.reroll = Reroll(self.game, self.player, context=self)
                 return False
 
@@ -1811,24 +1811,41 @@ class Pickup(Procedure):
 
 class StandUp(Procedure):
 
-    def __init__(self, game, player, roll=False):
+    def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-        self.roll = roll
+        self.roll_required = False
+        self.moves_required = 3
+        self.reroll = None
+        self.roll = None
+
+    def start(self):
+        self.moves_required = 0 if self.player.has_skill(Skill.JUMP_UP) else 3
+        self.roll_required = self.player.get_ma() < self.moves_required
 
     def step(self, action):
-
-        if self.roll:
-            roll = DiceRoll([D6(self.game.rnd)], target=4, roll_type=RollType.STAND_UP_ROLL)
-            if roll.is_d6_success():
+        if self.roll_required and self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)], target=4, roll_type=RollType.STAND_UP_ROLL)
+            if self.roll.is_d6_success():
                 self.player.state.up = True
-                self.game.report(Outcome(OutcomeType.PLAYER_STAND_UP_SUCCESS, rolls=[roll], player=self.player))
+                self.game.report(Outcome(OutcomeType.STAND_UP, rolls=[self.roll], player=self.player))
+                return True
             else:
-                self.player.place_prone()
-                self.game.report(Outcome(OutcomeType.PLAYER_STAND_UP_FAILURE, rolls=[roll], player=self.player))
-        else:
+                self.game.report(Outcome(OutcomeType.FAILED_STAND_UP, rolls=[self.roll], player=self.player))
+                self.reroll = Reroll(self.game, self.player, self)
+                return False
+        elif not self.roll_required:
             self.player.state.up = True
+            return True
 
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.reroll = None
+            return False
+        else:
+            self.player.place_prone()
+            self.game.report(Outcome(OutcomeType.FAILED_STAND_UP, rolls=[self.roll], player=self.player))
         return True
 
 
@@ -1871,6 +1888,41 @@ class EndPlayerTurn(Procedure):
         return True
 
 
+class JumpUpToBlock(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.roll = None
+        self.reroll = None
+
+    def step(self, action):
+
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            self.roll.modifiers = 2
+            if self.roll.is_d6_success():
+                self.player.state.up = True
+                self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player, rolls=[self.roll]))
+                return True
+            else:
+                self.game.report(
+                    Outcome(OutcomeType.FAILED_JUMP_UP, player=self.player, rolls=[self.roll]))
+                self.reroll = Reroll(self.game, self.player, self)
+                return False
+
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+        else:
+            EndPlayerTurn(self.game, self.player)
+        return True
+
+
 class PlayerAction(Procedure):
 
     def __init__(self, game, player, player_action_type, turn, dump_off=False):
@@ -1887,6 +1939,11 @@ class PlayerAction(Procedure):
 
     def step(self, action):
 
+        if self.player_action_type == PlayerActionType.BLOCK and not self.player.state.up:
+            assert self.player.has_skill(Skill.JUMP_UP)
+            JumpUpToBlock(self.game, self.player)
+            return False
+
         if self.dump_off:
             self.game.remove_secondary_clocks()
             if action.action_type == ActionType.DONT_USE_SKILL:
@@ -1902,9 +1959,9 @@ class PlayerAction(Procedure):
         if action.action_type == ActionType.STAND_UP:
             moves = 3
             if self.player.has_skill(Skill.JUMP_UP):
-                moves = 1
+                moves = 0
                 self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
-            StandUp(self.game, self.player, roll=self.player.get_ma() < moves)
+            StandUp(self.game, self.player)
             self.player.state.moves += min(self.player.get_ma(), moves)
             for i in range(moves):
                 self.player.state.squares_moved.append(self.player.position)
@@ -2030,7 +2087,7 @@ class PlayerAction(Procedure):
             sprints = 3 if self.player.has_skill(Skill.SPRINT) else 2
             gfi_roll = 3 if self.game.state.weather == WeatherType.BLIZZARD else 2
             if not self.player.state.up:
-                moves = 1 if self.player.has_skill(Skill.JUMP_UP) else 0
+                moves = 0 if self.player.has_skill(Skill.JUMP_UP) else 3
                 if self.player.get_ma() < moves:
                     agi_rolls.append([4])
                 else:
@@ -2086,10 +2143,11 @@ class PlayerAction(Procedure):
                                                 positions=leap_positions, agi_rolls=leap_agi_rolls))
 
         # Block actions
-        if self.player_action_type == PlayerActionType.BLOCK or (self.player_action_type == PlayerActionType.BLITZ
-                                                                 and not self.blitz_block):
+        if self.player_action_type == PlayerActionType.BLOCK or \
+                (self.player_action_type == PlayerActionType.BLITZ and not self.blitz_block):
 
             can_block = self.player.state.up
+
             # Check movement left if blitz,
             gfi = False
             if self.player_action_type == PlayerActionType.BLITZ:
@@ -2272,17 +2330,18 @@ class FollowUp(Procedure):
         return True
 
     def available_actions(self):
-        if self.must_follow_up(self.attacker) or self.follow_up_not_allowed(self.attacker, self.defender):
+        if self.must_follow_up(self.attacker) or not self.can_follow_up(self.attacker, self.defender):
             return []
         else:
             return [ActionChoice(ActionType.FOLLOW_UP, team=self.attacker.team,
                                  positions=[self.attacker.position, self.pos_to])]
 
-    def follow_up_not_allowed(self, attacker, defender):
-        return defender.has_skill(Skill.FEND) or attacker.state.taken_root
+    def can_follow_up(self, attacker, defender):
+        return not defender.has_skill(Skill.FEND) and not attacker.state.taken_root
 
     def must_follow_up(self, attacker):
         return attacker.has_skill(Skill.FRENZY)
+
 
 class Push(Procedure):
 
@@ -2337,12 +2396,16 @@ class Push(Procedure):
         # Taken root players cannot be pushed
         if self.player.state.taken_root:
             self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.TAKE_ROOT))
+            if self.knock_down:
+                KnockDown(self.game, self.player, in_crowd=False, armor_roll=True)
             return True
 
         # Use stand firm
         if self.waiting_stand_firm:
-            if action.action_type == ActionType.USE_STAND_FIRM:
+            if action.action_type == ActionType.USE_SKILL:
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.STAND_FIRM))
+                if self.knock_down:
+                    KnockDown(self.game, self.player, in_crowd=False, armor_roll=True)
                 return True
             else:
                 self.waiting_stand_firm = False
@@ -2802,7 +2865,7 @@ class EndTurn(Procedure):
 
         self.game.state.current_team = None
         self.game.remove_clocks()
-
+        self.rerolled_procs = set()
         return True
 
 
@@ -2922,12 +2985,15 @@ class Turn(Procedure):
                 if self.blitz_available and not player.state.taken_root:
                     blitz_players.append(player)
                 if self.pass_available:
-                    pass_players.append(player)
+                    if not player.state.taken_root or self.game.get_ball_carrier() == player:
+                        pass_players.append(player)
                 if self.handoff_available:
-                    handoff_players.append(player)
+                    if not player.state.taken_root or self.game.get_ball_carrier() == player:
+                        handoff_players.append(player)
                 if self.foul_available:
-                    foul_players.append(player)
-                if not self.quick_snap and not self.blitz and player.state.up:
+                    if not player.state.taken_root or self.game.get_adjacent_opponents(player, down=True, standing=False):
+                        foul_players.append(player)
+                if not self.quick_snap and not self.blitz and (player.state.up or player.has_skill(Skill.JUMP_UP)):
                     if self.game.get_adjacent_opponents(player, down=False):
                         block_players.append(player)
 
@@ -3148,12 +3214,18 @@ class Reroll(Procedure):
 
     def start(self):
 
+        # If procedure was already re-rolled, don't re-roll
+        if self.context in self.game.state.rerolled_procs:
+            self.can_use_pro = False
+            self.can_use_team_reroll = False
+            return
+
         # Collect block dice actions if context is block
         if type(self.context) == Block:
             self.block_actions.extend(self.context.available_actions())
 
         # Pro skill
-        if self.player.has_skill(Skill.PRO) and not self.player.has_used_skill(Skill.PRO):
+        if self.player.can_use_skill(Skill.PRO):
             self.can_use_pro = True
 
         # Determine if team re-rolls are available
@@ -3253,6 +3325,10 @@ class Reroll(Procedure):
         if self.secondary_clock:
             self.game.remove_secondary_clocks()
 
+        # Add context to set of re-rolled procs
+        if self.use_reroll:
+            self.game.state.rerolled_procs.add(self.context)
+
     def available_actions(self):
         """
         If bot, take actions in several steps: 1. Pro, 2. Reroll, 3. Go back to context
@@ -3309,6 +3385,10 @@ class Pro(Procedure):
         self.player = player
         self.reroll = None
 
+    def start(self):
+        assert self.player.can_use_skill(Skill.PRO)
+        self.player.use_skill(Skill.PRO)
+
     def step(self, action):
         if self.roll is None:
             # Roll
@@ -3321,7 +3401,7 @@ class Pro(Procedure):
                 self.success = True
                 return True
             else:
-                self.game.report(Outcome(OutcomeType.FAILED_PRO, player=self.player, skill=Skill.LONER, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_PRO, player=self.player, rolls=[self.roll]))
                 # Team re-rolls can be used to re-roll a failed Pro roll
                 self.reroll = Reroll(self.game, self.player, context=self.context)
                 return False
@@ -3333,8 +3413,7 @@ class Pro(Procedure):
             self.roll = None
             return self.step(None)
         else:
-            # no reroll
-            self.result = False
+            # no re-roll - self.success is already False
             return True
 
 

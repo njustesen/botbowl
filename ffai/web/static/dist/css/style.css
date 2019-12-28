@@ -503,7 +503,7 @@ a:hover {
 }
 .gamecontent .game-info .player-info .stats-box .skill-box {
   overflow: scroll;
-  width: 74%;
+  width: 273px;
 }
 .gamecontent .game-info .action-bar {
   border-color: #080808;

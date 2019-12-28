@@ -188,7 +188,7 @@ appServices.factory('GameLogService', function() {
             'ACCURATE_PASS': "<player> threw an <b>accurate</b> pass.",
             'INACCURATE_PASS': "<player> threw an <b>inaccurate</b> pass.",
             'FUMBLE': "<player> <b>fumbled</b> the ball</b>",
-            'CATCH_FAILED': "<player> failed to catch the ball.",
+            'FAILED_CATCH': "<player> failed to catch the ball.",
             "CATCH": " <player> <b>caught</b> the ball.",
             'BALL_SCATTER': "The ball scattered.",
             "BALL_BOUNCED": "The ball bounced",
@@ -204,7 +204,7 @@ appServices.factory('GameLogService', function() {
             "PLAYER_EJECTED": "<player> was <b>ejected!</b>",
             "BLOCK_ROLL": "<player> blocks <opp_player>",
             "REROLL_USED": "<team> uses a team <b>re-roll</b>.",
-            "INTERCEPTION_FAILED": "<player> failed to intercept the pass.",
+            "FAILED_INTERCEPTION": "<player> failed to intercept the pass.",
             "THROW_IN_OUT_OF_BOUNDS": "The ball was thrown out of bounds again.",
             "THROW_IN": "The ball was thrown back in by the fans.",
             "BLITZ_START": "<team> makes a <b>blitz</b>.",
@@ -226,7 +226,10 @@ appServices.factory('GameLogService', function() {
             "FAILED_LEAP": "<player> failed to <b>leap</b>",
             "SUCCESSFUL_LEAP": "<player> successfully <b>leaped</b>.",
             "SUCCESSFUL_TAKE_ROOT": "<player> passed a <b>take root</b> roll",
-            "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll"
+            "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll",
+            "STAND_UP": "<player> stood up.",
+            "FAILED_STAND_UP": "<player> failed to stand up",
+            "FAILED_JUMP_UP": "<player> failed to jump up"
         }
     };
 });

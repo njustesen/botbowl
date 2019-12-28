@@ -57,7 +57,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
 | **Undead**        |                         |                                    | YES
 | Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
-| Wood Elf          |                         |                                    | YES              |
+| **Wood Elf**      |                         |                                    | YES              |
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             | Catchers, Blitzers | Diving Catch, Jump Up, Diving Tackle   | NO              |         
 | Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
@@ -136,7 +136,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Sure Hands**    | YES         | YES       |
 | Swoop             | NO          | NO        |
 | Tackle            | YES         | NO        |
-| Take Root         | YES         | YES       |
+| **Take Root**     | YES         | YES       |
 | Tentacles         | NO          | NO        |
 | Thick Skull       | YES         | NO        |
 | Throw Team-Mate   | NO          | NO        |
