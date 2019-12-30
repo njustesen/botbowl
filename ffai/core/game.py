@@ -228,7 +228,10 @@ class Game:
                         print(f"Forcing action: {self.action.to_json() if self.action is not None else 'None'}")
                     self.action = action
                     break
-            
+
+        if not clock.is_running():
+            clock.resume()
+
     def _end_game(self):
         '''
         End the game

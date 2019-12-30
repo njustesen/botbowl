@@ -18,6 +18,7 @@ class Save:
 
     def __init__(self, game, team_id):
         self.game = game
+        game.pause_clocks()
         self.team_id = team_id
 
     def to_json(self):
@@ -55,12 +56,14 @@ class InMemoryHost:
         pickle.dump(save, open(filename, "wb"))
         print("Game saved")
 
+    # loads Save object from file
     def load_file(self, filename):
         print("Loading game")
         save = pickle.load(open(filename, "rb"))
         print("Game loaded")
         return save
 
+    # creates Game from Save
     def load_game(self, name):
         save = self.load_file(get_data_path("saves/" + name.lower() + ".ffai"))
         self.games[save.game.game_id] = save.game
