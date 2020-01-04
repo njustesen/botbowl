@@ -225,7 +225,7 @@ class Block(Procedure):
         self.waiting_dump_off = False
 
     def start(self):
-        self.waiting_dump_off = self.defender.has_skill(Skill.DUMP_OFF) and not self.frenzy_block
+        self.waiting_dump_off = self.game.get_ball_carrier() == self.defender and self.defender.has_skill(Skill.DUMP_OFF) and not self.frenzy_block
 
     def step(self, action):
 
@@ -237,7 +237,8 @@ class Block(Procedure):
 
         # Dump-off
         if self.waiting_dump_off:
-            PlayerAction(self.game, self.defender, PlayerActionType.PASS, self.game.get_current_turn_proc(), dump_off=True)
+            if action.action_type == ActionType.USE_SKILL:
+                PlayerAction(self.game, self.defender, PlayerActionType.PASS, self.game.get_current_turn_proc(), dump_off=True)
             self.waiting_dump_off = False
             return False
 
@@ -335,6 +336,7 @@ class Block(Procedure):
         return self.handle_block_die(action.action_type)
 
     def handle_block_die(self, action_type):
+
         # Select die
         if action_type == ActionType.SELECT_ATTACKER_DOWN:
             self.selected_die = BBDieResult.ATTACKER_DOWN
@@ -409,11 +411,17 @@ class Block(Procedure):
         return True
 
     def available_actions(self):
-        actions = []
+        if self.waiting_dump_off:
+            return [
+                ActionChoice(ActionType.USE_SKILL, skill=Skill.DUMP_OFF, players=[self.defender],
+                             team=self.defender.team),
+                ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.DUMP_OFF, players=[self.defender],
+                             team=self.defender.team)
+            ]
         if self.roll is None:
-            return actions
+            return []
         if self.reroll is not None and self.reroll.done:
-            return actions
+            return []
         if self.waiting_juggernaut:
             return [
                 ActionChoice(ActionType.USE_SKILL, self.attacker.team, skill=Skill.JUGGERNAUT),
@@ -433,6 +441,7 @@ class Block(Procedure):
         disable_dice_pick = False
         if self.reroll is not None and self.reroll.use_reroll is None and self.favor != self.attacker.team:
             disable_dice_pick = True
+        actions = []
         for die in self.roll.dice:
             if die.get_value() == BBDieResult.ATTACKER_DOWN:
                 actions.append(ActionChoice(ActionType.SELECT_ATTACKER_DOWN, self.favor, disabled=disable_dice_pick))
@@ -1492,6 +1501,74 @@ class Leap(Procedure):
         return []
 
 
+class Shadowing(Procedure):
+
+    def __init__(self, game, player, position, shadowers):
+        super().__init__(game)
+        self.player = player
+        self.position = position
+        self.shadowers = shadowers
+        self.shadower = None
+        self.team = self.game.get_opp_team(player.team)
+        self.roll = None
+        self.reroll = None
+
+    def start(self):
+        able_players = []
+        for player in self.shadowers:
+            if player.has_tackle_zone() and not player.state.taken_root:
+                able_players.append(player)
+        self.shadowers = able_players
+        self.shadower = self.shadowers[0] if self.shadowers else None
+        self.game.add_secondary_clock(self.team)
+
+    def step(self, action):
+        if not self.shadowers:
+            return True
+
+        if self.roll is None and action.action_type == ActionType.USE_SKILL:
+            self.roll = DiceRoll(dice=[D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.SHADOWING_ROLL)
+            self.roll.target = 7
+            self.roll.modifiers = self.player.get_ma() - action.player.get_ma()
+            self.roll.target_higher = False
+            self.roll.target_lower = True
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=action.player, skill=Skill.SHADOWING, rolls=[self.roll]))
+            if self.roll.is_d6_success(lowest_always_fail=False, highest_always_succeed=False):
+                self.game.move(action.player, self.position)
+                return True
+            else:
+                self.reroll = Reroll(self.game, action.player, context=self)
+                return False
+
+        if self.reroll is not None:
+            if self.reroll.use_reroll:
+                self.roll = None
+                self.reroll = None
+                return False
+            return True
+
+        # Dont use shadow
+        self.shadowers.remove(self.shadower)
+        self.game.remove_secondary_clocks()
+        if self.shadowers:
+            self.shadower = self.shadowers[0]
+            self.game.add_secondary_clock(self.team)
+            return False
+
+        return True
+
+    def end(self):
+        self.game.remove_secondary_clocks()
+
+    def available_actions(self):
+        if self.shadower is None or self.reroll is not None:
+            return []
+        return [
+            ActionChoice(ActionType.USE_SKILL, team=self.team, players=[self.shadower], skill=Skill.SHADOWING),
+            ActionChoice(ActionType.DONT_USE_SKILL, team=self.team, players=[self.shadower], skill=Skill.SHADOWING)
+        ]
+
+
 class Move(Procedure):
 
     def __init__(self, game, player, position, gfi, dodge):
@@ -1505,6 +1582,12 @@ class Move(Procedure):
 
     def step(self, action):
 
+        # If this is reached then Dodge and GFI was passed
+
+        # Shadowing
+        shadowers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.SHADOWING)
+        position = self.player.position
+
         self.game.move(self.player, self.position)
 
         # Check if player moved onto the ball
@@ -1514,15 +1597,18 @@ class Move(Procedure):
             # Attempt to pick up the ball - unless no hands
             if self.player.has_skill(Skill.NO_HANDS):
                 Bounce(self.game, ball)
-                return True
             else:
                 Pickup(self.game, ball, self.player)
-                return True
 
         elif self.game.has_ball(self.player) and self.game.is_touchdown(self.player):
 
             # Touchdown if player had the ball with him/her
             Touchdown(self.game, self.player)
+            shadowers = None
+
+        # Shadowing
+        if shadowers:
+            Shadowing(self.game, self.player, position, shadowers)
 
         return True
 
@@ -1572,10 +1658,19 @@ class GFI(Procedure):
             self.reroll = None
             return False
 
+        # Shadowing
+        shadowers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.SHADOWING)
+        shadow_position = self.player.position
+
         # Player trips
         if not self.player.position == self.position:
             self.game.move(self.player, self.position)
+
         KnockDown(self.game, self.player, turnover=True)
+
+        if shadowers:
+            Shadowing(self.game, self.player, shadow_position, shadowers)
+
         return True
 
 
@@ -1650,9 +1745,17 @@ class Dodge(Procedure):
             self.reroll = None
             return False
 
+        # Shadowing
+        shadowers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.SHADOWING)
+        shadow_position = self.player.position
+
         # If dodge failed and no re-roll -> Player trips
         self.game.move(self.player, self.position)
         KnockDown(self.game, self.player, turnover=True)
+
+        if shadowers:
+            Shadowing(self.game, self.player, shadow_position, shadowers)
+
         return True
 
     def available_actions(self):
@@ -1777,7 +1880,8 @@ class PassAction(Procedure):
             return False
 
         if self.fumble:
-            Turnover(self.game)
+            if not self.dump_off:
+                Turnover(self.game)
             Bounce(self.game, self.ball)
             return True
 
@@ -2347,9 +2451,18 @@ class FollowUp(Procedure):
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.FEND, player=self.defender))
             self.attacker.state.squares_moved.append(self.attacker.position)
         elif self.attacker.has_skill(Skill.FRENZY) or (action and action.position == self.pos_to):
+            shadowers = self.game.get_adjacent_opponents(self.attacker, down=False, skill=Skill.SHADOWING)
+            position = self.attacker.position
             self.game.move(self.attacker, self.pos_to)
             self.attacker.state.squares_moved.append(self.pos_to)
             self.game.report(Outcome(OutcomeType.FOLLOW_UP, position=self.pos_to, player=self.attacker))
+            # Touchdown?
+            if self.game.has_ball(self.attacker) and self.game.is_touchdown(self.attacker):
+                Touchdown(self.game, self.attacker)
+                shadowers = None
+            # Shadowing
+            if shadowers:
+                Shadowing(self.game, self.attacker, position, shadowers)
         else:
             self.attacker.state.squares_moved.append(self.attacker.position)
         return True

@@ -504,7 +504,7 @@ class Die:
 
 class DiceRoll:
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None, target_higher=True, target_lower=False):
         self.dice = dice
         self.sum = 0
         self.d68 = d68
@@ -512,6 +512,8 @@ class DiceRoll:
         self.alternative_target = alternative_target
         self.modifiers = modifiers
         self.roll_type = roll_type
+        self.target_higher = target_higher
+        self.target_lower = target_lower
         # Roll dice
         for d in self.dice:
             if not isinstance(d, BBDie):
@@ -532,7 +534,9 @@ class DiceRoll:
             'modifiers': self.modifiers,
             'modified_target': self.modified_target(),
             'result': self.get_result(),
-            'roll_type': self.roll_type.name
+            'roll_type': self.roll_type.name,
+            'target_higher': self.target_higher,
+            'target_lower': self.target_lower
         }
 
     def modified_target(self):
@@ -555,11 +559,11 @@ class DiceRoll:
     def get_result(self):
         return self.sum + self.modifiers
 
-    def is_d6_success(self, alternative=False):
-        if self.sum == 1:
+    def is_d6_success(self, alternative=False, lowest_always_fail=True, highest_always_succeed=True):
+        if lowest_always_fail and self.sum == 1:
             return False
 
-        if self.sum == 6:
+        if highest_always_succeed and self.sum == 6:
             return True
 
         if alternative:

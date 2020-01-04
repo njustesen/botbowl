@@ -343,6 +343,21 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return "";
         };
 
+        $scope.clickSkillAction = function clickSkillAction(event, skillAction){
+            event.stopPropagation();
+            for (let idx in $scope.game.state.available_actions) {
+                let a = $scope.game.state.available_actions[idx];
+                if (a.disabled){
+                    continue;
+                }
+                if (a.action_type === "USE_SKILL" && skillAction === 'use'){
+                    $scope.pickActionType(a);
+                } else if (a.action_type === "DONT_USE_SKILL" && skillAction === 'dont-use'){
+                    $scope.pickActionType(a);
+                }
+            }
+        };
+
         $scope.clickAction = function clickAction(event, action){
             event.stopPropagation();
             for (let idx in $scope.game.state.available_actions) {
@@ -383,6 +398,23 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 }
             }
             return false;
+        };
+
+        $scope.playerSkillAction = function playerSkillAction(x, y){
+            for (let idx in $scope.game.state.available_actions){
+                let action = $scope.game.state.available_actions[idx];
+                if ($scope.agent_id != null && $scope.agent_id !== action.agent_id){
+                    action.disabled = true;
+                }
+                let player =  $scope.local_state.board[y][x].player;
+                if (player === null || action.player_ids.indexOf(player.player_id) === -1) {
+                    continue;
+                }
+                if (action.action_type.indexOf("USE_SKILL") >= 0){
+                    return $scope.title(action.skill).toLowerCase();
+                }
+            }
+            return null;
         };
 
         $scope.newSquare = function newSquare(player_id, x, y, area, sub_area, number){
@@ -1240,6 +1272,18 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
             if (action.action_type === "SELECT_DEFENDER_DOWN"){
                 return false;
+            }
+            if (action.action_type === "USE_SKILL"){
+                return false;
+            }
+            if (action.action_type === "DONT_USE_SKILL"){
+                for (let idx in $scope.game.state.available_actions) {
+                    let a = $scope.game.state.available_actions[idx];
+                    if (a.action_type === "USE_SKILL"){
+                        return false;  // Dump off exception
+                    }
+                }
+                return true;
             }
             if (action.action_type !== "START_GAME" && action.action_type.indexOf("START_") > -1){
                 return false;
