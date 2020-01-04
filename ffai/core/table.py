@@ -61,6 +61,7 @@ class RollType(Enum):
     LONER_ROLL = 27
     REGENERATION_ROLL = 28
     TAKE_ROOT_ROLL = 29
+    SHADOWING_ROLL = 30
 
 
 class OutcomeType(Enum):

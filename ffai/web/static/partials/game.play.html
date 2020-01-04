@@ -240,6 +240,19 @@
                                 </div>
                             </span>
                         </div>
+                        <div class="player-action-bar" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
+                            <span class="action-text">Use {{ playerSkillAction($index+1, $parent.$parent.$index+1) }}?</span>
+                            <span class="action-dot active right">
+                                <div ng-click="clickSkillAction($event, 'dont-use')">
+                                    <img src="static/img/icons/actions/dont-use.gif">
+                                </div>
+                            </span>
+                            <span class="action-dot active right">
+                                <div ng-click="clickSkillAction($event, 'use')">
+                                    <img src="static/img/icons/actions/use.gif">
+                                </div>
+                            </span>
+                        </div>
                         <div class="movedot" id="movedot-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" ng-if="local_state.board[$parent.$index+1][$index+1].number >= 0">
 
                         </div>
