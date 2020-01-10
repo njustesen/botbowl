@@ -99,6 +99,7 @@ class Apothecary(Procedure):
                 n = min(61, max(38, result))
                 self.casualty_second = CasualtyType(n)
                 self.effect_second = Rules.casualty_effect[self.casualty_second]
+
                 self.player.team.state.apothecary_available = False
                 self.game.report(Outcome(OutcomeType.CASUALTY_APOTHECARY, player=self.player, team=self.player.team,
                                          rolls=[self.roll_first, self.roll_second]))

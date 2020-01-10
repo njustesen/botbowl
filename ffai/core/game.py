@@ -952,13 +952,7 @@ class Game:
 
         self.remove(player)
         player.state.up = True
-        if apothecary and effect == CasualtyEffect.NONE:
-            # Apothecary puts badly hurt players in the reserves
-            self.get_reserves(player.team).append(player)
-        else:
-            player.state.casualty = casualty
-            player.state.casualty_effect = effect
-            self.get_casualties(player.team).append(player)
+        self.get_casualties(player.team).append(player)
 
     def pitch_to_dungeon(self, player):
         """
@@ -1835,6 +1829,14 @@ class Game:
     def get_weather(self):
         return self.state.weather
 
+    def get_casualty_roll(self):
+        roll = DiceRoll([D6(self.rnd), D8(self.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
+        result = roll.get_sum()
+        n = min(61, max(38, result))
+        casualty = CasualtyType(n)
+        effect = Rules.casualty_effect[casualty]
+        return CasualtyResult(roll, casualty, effect)
+
     def apply_casualty(self, player, inflictor, casualty, effect, roll, apothecary=False):
         if player.has_skill(Skill.REGENERATION):
             regen_roll = DiceRoll([D6(self.rnd)], target=4, roll_type=RollType.REGENERATION_ROLL)
@@ -1845,16 +1847,34 @@ class Game:
             else:
                 self.report(Outcome(OutcomeType.FAILED_REGENERATION, player=player, rolls=[regen_roll]))
 
+        if apothecary and effect == CasualtyEffect.NONE:
+            # Apothecary puts badly hurt players in the reserves
+            self.pitch_to_reserves(player)
+            return
+
+        # apply casualty effects to the player
+        player.state.casualty = casualty
+        player.state.casualty_effects.append(effect)
+
+        if player.has_skill(Skill.DECAY):
+            casualty_roll = self.get_casualty_roll()
+            # only allowed one copy of mng
+            if (casualty_roll.effect is not CasualtyEffect.MNG) or (CasualtyEffect.MNG not in player.state.casualty_effects):
+                player.state.casualty_effects.append(casualty_roll.effect)
+
+        for casualty_effect in player.state.casualty_effects:
+            if casualty_effect == CasualtyEffect.NONE:
+                self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
+                                    rolls=[roll]))
+            elif casualty_effect in Casualty.miss_next_game:
+                self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
+                                    rolls=[roll], n=effect.name))
+            elif casualty_effect == CasualtyEffect.DEAD:
+                self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
+                                    rolls=[roll]))
+
+        # move to the casualty bin
         self.pitch_to_casualties(player, casualty, effect, apothecary)
-        if effect == CasualtyEffect.NONE:
-            self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
-                                rolls=[roll]))
-        elif effect in Casualty.miss_next_game:
-            self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
-                                rolls=[roll], n=effect.name))
-        elif effect == CasualtyEffect.DEAD:
-            self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
-                                rolls=[roll]))
 
     def get_current_turn_proc(self):
         for i in range(len(self.state.stack.items)):

@@ -147,7 +147,7 @@ class PlayerState:
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.casualty_effect = None
+        self.casualty_effects = []
         self.casualty_type = None
         self.wild_animal = False
         self.taken_root = False
@@ -168,7 +168,7 @@ class PlayerState:
             'spp_earned': self.spp_earned,
             'moves': self.moves,
             'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
-            'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None,
+            'casualty_effects': [effect.name for effect in self.casualty_effects],
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
             'taken_root' : self.taken_root
@@ -1109,3 +1109,10 @@ class Formation:
                     actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
                     positions_used.append(position)
         return actions
+
+
+class CasualtyResult:
+    def __init__(self, roll, casualty, effect):
+        self.roll = roll
+        self.casualty = casualty
+        self.effect = effect
