@@ -36,25 +36,25 @@ A race is supported if all positions can be used and all their starting skills a
 | **Bretonnia**     |                         |                                    | YES           |
 | **Chaos**         |                         |                                    | YES           |
 | **Chaos Dwarf**   |                         |                                    | YES           |
-| Dark Elf          | Assassin                | Shadowing, Stab,                   | YES           |
+| **Dark Elf**      |                         |                                    | YES           |
 | Dwarf Slayer      |                         |                                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Always Hungry, Throw Team-mate, Disturbing Presence, Swoop, Fan Favorite | SOME?      |
+| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Always Hungry, Throw Team-mate, Swoop, Fan Favorite | SOME?      |
 | Halfling          | Halfling, Treeman       | Right stuff, Throw Team-Mate, Timmm-ber! | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
 | Human Nobility    |                         |                                    | NO            |
-| Khemri            | Tomb Guardians          | Decay                              | YES           |  
+| **Khemri**        |                         |                                    | YES           |
 | Khorne            |                         |                                    | NO           |  
 | **Lizardmen**     |                         |                                    | YES           |
 | Necromantic       |                         |                                    | NO           |
-| Norse             | Yhetee                  | Disturbing Presence            | YES        |
-| Nurgle            | Rotters | Decay, Nurgle's Rot, Foul Appearance, Disturbing Presence, Tentacles | NO            |
+| Norse             | Yhetee                  |                                    | YES        |
+| Nurgle            | Rotters | Nurgle's Rot, Foul Appearance, Tentacles           | NO            |
 | **Orc**           |                          |                                    | YES           |
 | Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
 | **Skaven**        |                         |                                    | YES           |
 | Savage Orc        |                         |                                    | NO            |
-| Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Disturbing Presence, Bombardier, Secret Weapon, Stab | NO        |
+| Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Bombardier, Secret Weapon  | NO        |
 | **Undead**        |                         |                                    | YES
 | Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
 | **Wood Elf**      |                         |                                    | YES              |
@@ -80,9 +80,9 @@ A race is supported if all positions can be used and all their starting skills a
 | Chainsaw          | NO          | NO        |
 | Claws             | YES         | NO        |
 | Dauntless         | YES         | NO        |
-| Decay             | NO          | NO        |
+| **Decay**         | YES         | NO        |
 | Dirty Player      | YES         | NO        |
-| Disturbing Presence | NO        | NO        |
+| Disturbing Presence | YES       | NO        |
 | Diving Catch      | NO          | NO        |
 | Diving Tackle     | NO          | NO        |
 | **Dodge**         | YES         | YES       |
@@ -126,8 +126,8 @@ A race is supported if all positions can be used and all their starting skills a
 | Side Step         | YES         | NO        |
 | Sneaky Git        | NO          | NO        |
 | Sprint            | YES         | NO        |
-| Stab              | NO          | NO        |
-| Stakes            | NO          | NO        |
+| Stab              | YES         | NO        |
+| Stakes            | YES         | NO        |
 | Stand Firm        | YES         | NO        |
 | Strip Ball        | NO          | NO        |
 | **Strong Arm**    | YES         | YES       |
@@ -192,7 +192,7 @@ Some of these steps should be done in a league manager rather than in FFAI if hu
 | 1. Head Coach (Argue the call) | NO     | NO          |
 | 2. Assistant Coaches      | YES         | YES         |
 | 3. Cheerleaders           | YES         | YES         |
-| 4. Apothecary             | PARTIALLY   | NO          |
+| 4. Apothecary             | YES         | NO          |
 
 ## Star Players
 Star players are not supported - mostly because the pre-match sequence isn't implemented yet.

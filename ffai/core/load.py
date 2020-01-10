@@ -175,7 +175,7 @@ def load_team(path, ruleset):
     f.close()
     data = json.loads(jsonStr)
     team_id = str(uuid.uuid1())
-    team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
+    team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecaries=data['apothecaries'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)
         player_id = str(uuid.uuid1())

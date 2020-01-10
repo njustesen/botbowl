@@ -2,7 +2,7 @@
   "name": "Dark Elf Team",
   "race": "Dark Elf",
   "treasury": 0,
-  "apothecary": false,
+  "apothecaries": 0,
   "rerolls": 2,
   "fan_factor": 2,
   "ass_coaches": 0,

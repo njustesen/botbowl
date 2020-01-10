@@ -234,7 +234,7 @@ class TeamState:
     def __init__(self, team):
         self.bribes = 0
         self.babes = 0
-        self.apothecary_available = team.apothecary
+        self.apothecaries = team.apothecaries
         self.wizard_available = False
         self.masterchef = False
         self.score = 0
@@ -251,7 +251,7 @@ class TeamState:
         return {
             'bribes': self.bribes,
             'babes': self.babes,
-            'apothecary_available': self.apothecary_available,
+            'apothecaries': self.apothecaries,
             'masterchef': self.masterchef,
             'score': self.score,
             'turn': self.turn,
@@ -913,14 +913,14 @@ class Race:
 
 class Team:
 
-    def __init__(self, team_id, name, race, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
+    def __init__(self, team_id, name, race, players=None, treasury=0, apothecaries=0, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
         self.team_id = team_id
         self.name = name
         self.race = race
         self.players = players if players is not None else []
         self.treasury = treasury
-        self.apothecary = apothecary
+        self.apothecaries = apothecaries
         self.rerolls = rerolls
         self.fan_factor = fan_factor
         self.ass_coaches = ass_coaches
@@ -938,7 +938,7 @@ class Team:
             'name': self.name,
             'race': self.race,
             'treasury': self.treasury,
-            'apothecary': self.apothecary,
+            'apothecaries': self.apothecaries,
             'rerolls': self.rerolls,
             'ass_coaches': self.ass_coaches,
             'cheerleaders': self.cheerleaders,

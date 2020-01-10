@@ -22,6 +22,7 @@ class Procedure:
         self.game.state.stack.push(self)
         self.done = False
         self.initialized = False
+        # TODO: Rename to started
 
     def start(self):
         """
@@ -50,13 +51,32 @@ class Procedure:
         return []
 
 
+class Regeneration(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.regenerates = False
+
+    def step(self, action):
+        if self.player.has_skill(Skill.REGENERATION):
+            regen_roll = DiceRoll([D6(self.game.rnd)], target=4, roll_type=RollType.REGENERATION_ROLL)
+            if regen_roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_REGENERATION, player=self.player, rolls=[regen_roll]))
+                # self.game.pitch_to_reserves(self.player)
+                self.regenerates = True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_REGENERATION, player=self.player, rolls=[regen_roll]))
+        return True
+
+
 class Apothecary(Procedure):
 
-    def __init__(self, game, player, roll, outcome, inflictor, casualty=None, effect=None):
+    def __init__(self, game, player, roll, outcome, inflictor, casualty=None, effect=None, decay=False):
         super().__init__(game)
-        self.game = game
         self.player = player
         self.inflictor = inflictor
+        self.decay = decay
         self.waiting_apothecary = False
         self.roll_first = roll
         self.roll_second = roll
@@ -65,6 +85,10 @@ class Apothecary(Procedure):
         self.effect_first = effect
         self.casualty_second = None
         self.effect_second = None
+        self.regeneration = None
+        self.effect = None
+        self.casualty = None
+        self.roll = None
 
     def start(self):
         if self.game.state.current_team != self.player.team:
@@ -77,7 +101,7 @@ class Apothecary(Procedure):
             if action.action_type == ActionType.USE_APOTHECARY:
 
                 # Player is moved to reserves
-                self.player.team.state.apothecary_available = False
+                self.player.team.state.apothecaries -= 1
                 self.player.state.stunned = True
                 self.player.place_prone()
                 self.game.report(Outcome(OutcomeType.APOTHECARY_USED_KO, player=self.player, team=self.player.team))
@@ -99,7 +123,7 @@ class Apothecary(Procedure):
                 n = min(61, max(38, result))
                 self.casualty_second = CasualtyType(n)
                 self.effect_second = Rules.casualty_effect[self.casualty_second]
-                self.player.team.state.apothecary_available = False
+                self.player.team.state.apothecaries -= 1
                 self.game.report(Outcome(OutcomeType.CASUALTY_APOTHECARY, player=self.player, team=self.player.team,
                                          rolls=[self.roll_first, self.roll_second]))
                 self.waiting_apothecary = True
@@ -108,23 +132,38 @@ class Apothecary(Procedure):
 
             if action.action_type == ActionType.SELECT_FIRST_ROLL or ActionType.SELECT_SECOND_ROLL:
 
-                effect = self.effect_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.effect_second
-                casualty = self.casualty_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.casualty_second
-                roll = self.roll_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.roll_second
+                self.effect = self.effect_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.effect_second
+                self.casualty = self.casualty_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.casualty_second
+                self.roll = self.roll_first if action.action_type == ActionType.SELECT_FIRST_ROLL else self.roll_second
+
+                # Regeneration
+                if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
+                    self.regeneration = Regeneration(self.game, self.player)
+                    return False
+
+                if self.regeneration and self.regeneration.regenerates:
+                    self.game.pitch_to_reserves(self.player)
+                    return True
 
                 # Apply casualty
-                self.game.apply_casualty(self.player, self.inflictor, casualty, effect, roll)
+                self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
+
+                # Decay
+                if self.decay:
+                    Casualty(self.game, self.player, self.inflictor)
 
         return True
 
     def available_actions(self):
-        if self.outcome == OutcomeType.KNOCKED_OUT or self.waiting_apothecary:
+        if self.regeneration:
+            return []
+        elif not self.waiting_apothecary and self.player.team.state.apothecaries > 0:
             return [ActionChoice(ActionType.USE_APOTHECARY, team=self.player.team),
                     ActionChoice(ActionType.DONT_USE_APOTHECARY, team=self.player.team)]
-        else:
-            # TODO: Does not really work
+        elif self.waiting_apothecary:
             return [ActionChoice(ActionType.SELECT_FIRST_ROLL, team=self.player.team),
                     ActionChoice(ActionType.SELECT_SECOND_ROLL, team=self.player.team)]
+        return []
 
 
 class Armor(Procedure):
@@ -201,6 +240,38 @@ class Armor(Procedure):
         return True
 
 
+class Stab(Procedure):
+
+    def __init__(self, game, attacker, defender, blitz=False, gfi=False):
+        super().__init__(game)
+        self.attacker = attacker
+        self.defender = defender
+        self.roll = None
+        self.reroll = None
+        self.blitz = blitz
+        self.gfi = gfi
+
+    def step(self, action):
+        # GfI
+        if self.gfi:
+            self.gfi = False
+            GFI(self.game, self.attacker, self.attacker.position)
+            return False
+
+        # Stab!
+        self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)])
+        self.roll.target = self.defender.get_av()
+        if self.attacker.has_skill(Skill.STAKES) and self.defender.team.race in \
+                ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker))
+            self.roll.modifiers += 1
+        if self.roll.is_d6_success(lowest_always_fail=False, highest_always_succeed=False):
+            KnockDown(self.game, player=self.defender, armor_roll=False, inflictor=self.attacker)
+        self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker, rolls=[self.roll]))
+        # Can Stab be re-rolled?
+        return True
+
+
 class Block(Procedure):
 
     def __init__(self, game, attacker, defender, blitz=False, frenzy_block=False, gfi=False):
@@ -221,7 +292,6 @@ class Block(Procedure):
         self.dauntless_roll = None
         self.dauntless_success = False
         self.frenzy_checked = False
-        self.waiting_gfi = False
         self.waiting_dump_off = False
 
     def start(self):
@@ -517,18 +587,16 @@ class Bounce(Procedure):
 
 class Casualty(Procedure):
 
-    miss_next_game = [CasualtyEffect.MNG, CasualtyEffect.AG, CasualtyEffect.AV, CasualtyEffect.MA, CasualtyEffect.ST,
-                      CasualtyEffect.NI]
-
-    def __init__(self, game, player, roll, inflictor=None):
+    def __init__(self, game, player, roll, inflictor=None, decay=False):
         super().__init__(game)
-        self.game = game
         self.player = player
         self.inflictor = inflictor
         self.waiting_apothecary = False
         self.roll = roll
         self.casualty = None
         self.effect = None
+        self.decay = decay
+        self.regeneration = None
 
     def step(self, action):
 
@@ -538,15 +606,31 @@ class Casualty(Procedure):
         self.casualty = CasualtyType(n)
         self.effect = Rules.casualty_effect[self.casualty]
 
-        if self.player.team.state.apothecary_available:
-            self.game.report(
-                Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team, n=self.effect.name,
-                        rolls=[self.roll]))
+        self.game.report(
+            Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
+                    n=self.effect.name,
+                    rolls=[self.roll]))
+
+        if self.player.team.state.apothecaries > 1:
             Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
                        casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
         else:
+            # Regeneration
+            if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
+                self.regeneration = Regeneration(self.game, self.player)
+                return False
+
+            if self.regeneration and self.regeneration.regenerates:
+                self.game.pitch_to_reserves(self.player)
+                return True
+
             # Apply casualty
             self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
+
+            # Decay
+            if self.decay:
+                self.game.report(Outcome(OutcomeType.DECAYING, player=self.player))
+                Casualty(self.game, self.player, self.inflictor)
 
         return True
 
@@ -881,7 +965,6 @@ class Injury(Procedure):
     def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False,
                  ejected=False, in_crowd=False):
         super().__init__(game)
-        self.game = game
         self.player = player
         self.inflictor = inflictor
         self.injury_rolled = False
@@ -938,7 +1021,7 @@ class Injury(Procedure):
         elif result + stunty + mighty_blow + dirty_player >= 10:
             roll.modifiers = stunty + mighty_blow + dirty_player
             self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[roll]))
-            Casualty(self.game, self.player, roll, inflictor=self.inflictor)
+            Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY))
 
         # KOD
         else:
@@ -1420,13 +1503,12 @@ class KnockOut(Procedure):
 
     def __init__(self, game, player, roll, inflictor=None):
         super().__init__(game)
-        self.game = game
         self.player = player
         self.inflictor = inflictor
         self.roll = roll
 
     def step(self, action):
-        if self.player.team.state.apothecary_available:
+        if self.player.team.state.apothecaries > 0:
             Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.KNOCKED_OUT,
                        inflictor=self.inflictor)
             return True
@@ -1437,9 +1519,6 @@ class KnockOut(Procedure):
                                      opp_player=self.inflictor))
 
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Leap(Procedure):
@@ -1496,9 +1575,6 @@ class Leap(Procedure):
                 self.game.move(self.player, self.position)
                 KnockDown(self.game, self.player, turnover=True)
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Shadowing(Procedure):
@@ -1611,9 +1687,6 @@ class Move(Procedure):
             Shadowing(self.game, self.player, position, shadowers)
 
         return True
-
-    def available_actions(self):
-        return []
 
 
 class GFI(Procedure):
@@ -1778,9 +1851,6 @@ class TurnoverIfPossessionLost(Procedure):
         elif player_at.team != self.game.state.current_team:
             Turnover(self.game)
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Handoff(Procedure):
@@ -2141,7 +2211,7 @@ class PlayerAction(Procedure):
 
             return False
 
-        elif action.action_type == ActionType.BLOCK:
+        elif action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
 
             self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
 
@@ -2165,12 +2235,16 @@ class PlayerAction(Procedure):
             if self.player_action_type == PlayerActionType.BLOCK:
                 EndPlayerTurn(self.game, self.player)
 
-            # Frenzy second block
-            if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
-                Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi_frenzy, frenzy_block=True)
+            if action.action_type == ActionType.BLOCK:
+                # Frenzy second block
+                if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
+                    # Second block cannot be a stab - should it?
+                    Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi_frenzy, frenzy_block=True)
 
-            # Regular block
-            Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
+                # Regular block
+                Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
+            elif action.action_type == ActionType.STAB:
+                Stab(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
 
             if self.player_action_type == PlayerActionType.BLOCK:
                 return True
@@ -2290,17 +2364,28 @@ class PlayerAction(Procedure):
             if can_block:
                 block_positions = []
                 block_rolls = []
+                stab_rolls = []
                 for player_to in self.game.get_adjacent_opponents(self.player, down=False):
                     block_positions.append(player_to.position)
                     dice = self.game.num_block_dice(attacker=self.player, defender=player_to,
                                                        blitz=self.player_action_type == PlayerActionType.BLITZ,
                                                        dauntless_success=False)
                     block_rolls.append(dice)
+                    if self.player.has_skill(Skill.STAB):
+                        roll = player_to.get_av() + 1
+                        if self.player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
+                            roll += 1
+                        stab_rolls.append(roll)
                 if len(block_positions) > 0:
                     agi_rolls = [([2] if gfi else []) for _ in block_positions]
                     actions.append(ActionChoice(ActionType.BLOCK, team=self.player.team,
                                                 positions=block_positions, block_rolls=block_rolls,
                                                 agi_rolls=agi_rolls))
+                if self.player.has_skill(Skill.STAB):
+                    stab_agi_rolls = [([2, stab_rolls[i]] if gfi else [stab_rolls[i]]) for i in range(len(block_positions))]
+                    actions.append(ActionChoice(ActionType.STAB, team=self.player.team,
+                                                positions=block_positions,
+                                                agi_rolls=stab_agi_rolls))
 
         # Foul actions
         if self.player_action_type == PlayerActionType.FOUL:
@@ -2932,7 +3017,6 @@ class Touchdown(Procedure):
 
     def __init__(self, game, player):
         super().__init__(game)
-        self.game = game
         self.player = player
 
     def step(self, action):
@@ -2984,7 +3068,6 @@ class EndTurn(Procedure):
             self.game.state.current_team.state.reset_turn()
             for player in self.game.state.current_team.players:
                 player.state.reset_turn()
-
 
         # Add kickoff procedure - if there are more turns left
         if self.kickoff and self.game.get_opp_team(self.game.state.current_team).state.turn < self.game.config.rounds:
@@ -3184,7 +3267,6 @@ class WeatherTable(Procedure):
 class Negatrait(Procedure, metaclass=ABCMeta):
     def __init__(self, game, player, player_action, ends_turn=True):
         super().__init__(game)
-        self.game = game
         self.player = player
         self.waiting_reroll = False
         self.reroll_used = False

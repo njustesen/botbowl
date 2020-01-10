@@ -114,8 +114,8 @@
         <div class="row scoreboard-content">
             <div class="col-xs-4">
                 <div class="team-icons text-right">
-                    <span class="team-icon" ng-if="game.state.away_team.state.wizard_available"><img src="static/img/icons/sidebar/resources/apothecary_38x38.png" class="available" title="Wizard" width="20px" height="20px" /></span>
-                    <span class="team-icon" ng-if="game.state.away_team.state.apothecary_available"><img src="static/img/icons/sidebar/resources/wizard_38x38.png" class="available" title="Apothecary" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-if="game.state.away_team.state.wizard_available"><img src="static/img/icons/sidebar/resources/wizard_38x38.png" class="available" title="Wizard" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-repeat="n in [] | range:game.state.away_team.state.apothecaries"><img src="static/img/icons/sidebar/resources/apothecary_38x38.png" class="available" title="Apothecary" width="20px" height="20px" /></span>
                     <span class="team-icon" ng-repeat="n in [] | range:game.state.away_team.state.bribes"><img src="static/img/icons/sidebar/resources/bribe_38x38.png" class="available" title="Bribe" width="20px" height="20px" /></span>
                     <span class="team-icon" ng-repeat="n in [] | range:game.state.away_team.state.babes"><img src="static/img/icons/sidebar/resources/bloodweiser_babe_38x38.png" class="available" title="Bloodweiser babe" width="20px" height="20px" /></span>
                     <span class="team-icon" ng-if="game.state.away_team.state.masterchef"><img src="static/img/icons/sidebar/resources/master_chef_38x38.png" class="available" title="Master chef" width="20px" height="20px" /></span>
@@ -132,11 +132,11 @@
             </div>
             <div class="col-xs-4">
                 <div class="team-icons">
-                    <span class="team-icon"><img src="static/img/icons/sidebar/resources/apothecary_38x38.png" ng-if="game.state.home_team.state.wizard_available" class="available" title="Wizard" width="20px" height="20px" /></span>
-                    <span class="team-icon"><img src="static/img/icons/sidebar/resources/wizard_38x38.png" ng-if="game.state.home_team.state.apothecary_available" class="available" title="Apothecary" width="20px" height="20px" /></span>
-                    <span class="team-icon"><img src="static/img/icons/sidebar/resources/bribe_38x38.png" ng-repeat="n in [] | range:game.state.home_team.state.bribes" class="available" title="Bribe" width="20px" height="20px" /></span>
-                    <span class="team-icon"><img src="static/img/icons/sidebar/resources/bloodweiser_babe_38x38.png" ng-repeat="n in [] | range:game.state.home_team.state.babes" class="available" title="Bloodweiser babe" width="20px" height="20px" /></span>
-                    <span class="team-icon"><img src="static/img/icons/sidebar/resources/master_chef_38x38.png" ng-if="game.state.home_team.state.masterchef" class="available" title="Master chef" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-if="game.state.home_team.state.wizard_available"><img src="static/img/icons/sidebar/resources/wizard_38x38.png" class="available" title="Wizard" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-repeat="n in [] | range:game.state.home_team.state.apothecaries"><img src="static/img/icons/sidebar/resources/apothecary_38x38.png" class="available" title="Apothecary" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-repeat="n in [] | range:game.state.home_team.state.bribes"><img src="static/img/icons/sidebar/resources/bribe_38x38.png" class="available" title="Bribe" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-repeat="n in [] | range:game.state.home_team.state.babes"><img src="static/img/icons/sidebar/resources/bloodweiser_babe_38x38.png" title="Bloodweiser babe" width="20px" height="20px" /></span>
+                    <span class="team-icon" ng-if="game.state.home_team.state.masterchef"><img src="static/img/icons/sidebar/resources/master_chef_38x38.png" class="available" title="Master chef" width="20px" height="20px" /></span>
                 </div>
             </div>
         </div>

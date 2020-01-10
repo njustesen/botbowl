@@ -1019,7 +1019,7 @@ class Game:
         self.state.pitch.board[pos_a.y][pos_a.x] = piece_b
         self.state.pitch.board[pos_b.y][pos_b.x] = piece_a
 
-    def get_catch_modifiers(game, player, accurate=False, interception=False, handoff=False):
+    def get_catch_modifiers(self, catcher, accurate=False, interception=False, handoff=False):
         """
         :param catcher:
         :param accurate: whether it is an accurate pass.
@@ -1029,15 +1029,19 @@ class Game:
         """
         modifiers = 1 if accurate or handoff else 0
         modifiers = -2 if interception else modifiers
-        if interception and player.has_skill(Skill.VERY_LONG_LEGS):
+        if interception and catcher.has_skill(Skill.VERY_LONG_LEGS):
             modifiers += 1
         # opposing tackle zones
-        if not player.has_skill(Skill.NERVES_OF_STEEL):
-            modifiers -= game.num_tackle_zones_in(player)
-        if game.state.weather == WeatherType.POURING_RAIN:
+        if not catcher.has_skill(Skill.NERVES_OF_STEEL):
+            modifiers -= self.num_tackle_zones_in(catcher)
+        if self.state.weather == WeatherType.POURING_RAIN:
             modifiers -= 1
-        if player.has_skill(Skill.EXTRA_ARMS):
+        if catcher.has_skill(Skill.EXTRA_ARMS):
             modifiers += 1
+        # Disturbing presence
+        for opp_player in self.get_opp_team(catcher.team).players:
+            if opp_player.has_skill(Skill.DISTURBING_PRESENCE) and opp_player.position and opp_player.position.distance(catcher.position) <= 3:
+                modifiers -= 1
         return modifiers
 
     def get_pass_modifiers(self, passer, pass_distance):
@@ -1066,6 +1070,11 @@ class Game:
 
         if passer.has_skill(Skill.STUNTY):
             modifiers -= 1
+
+        # Disturbing presence
+        for opp_player in self.get_opp_team(passer.team).players:
+            if opp_player.has_skill(Skill.DISTURBING_PRESENCE) and opp_player.position and opp_player.position.distance(passer.position) <= 3:
+                modifiers -= 1
 
         return modifiers
 
@@ -1836,20 +1845,11 @@ class Game:
         return self.state.weather
 
     def apply_casualty(self, player, inflictor, casualty, effect, roll, apothecary=False):
-        if player.has_skill(Skill.REGENERATION):
-            regen_roll = DiceRoll([D6(self.rnd)], target=4, roll_type=RollType.REGENERATION_ROLL)
-            if regen_roll.is_d6_success():
-                self.report(Outcome(OutcomeType.SUCCESSFUL_REGENERATION, player=player, rolls=[regen_roll]))
-                self.pitch_to_reserves(player)
-                return
-            else:
-                self.report(Outcome(OutcomeType.FAILED_REGENERATION, player=player, rolls=[regen_roll]))
-
         self.pitch_to_casualties(player, casualty, effect, apothecary)
         if effect == CasualtyEffect.NONE:
             self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll]))
-        elif effect in Casualty.miss_next_game:
+        elif effect in Rules.miss_next_game:
             self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll], n=effect.name))
         elif effect == CasualtyEffect.DEAD:

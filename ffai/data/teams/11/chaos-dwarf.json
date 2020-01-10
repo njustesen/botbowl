@@ -2,7 +2,7 @@
     "name": "Chaos Dwarf Team",
     "race": "Chaos Dwarf",
     "treasury": 0,
-    "apothecary": false,
+    "apothecaries": 0,
     "rerolls": 2,
     "fan_factor": 0,
     "ass_coaches": 0,

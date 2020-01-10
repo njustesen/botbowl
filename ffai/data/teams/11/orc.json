@@ -2,7 +2,7 @@
   "name": "Orc Team",
   "race": "Orc",
   "treasury": 0,
-  "apothecary": false,
+  "apothecaries": 0,
   "rerolls": 2,
   "fan_factor": 5,
   "ass_coaches": 2,

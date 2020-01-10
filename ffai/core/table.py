@@ -210,6 +210,7 @@ class OutcomeType(Enum):
     FAILED_TAKE_ROOT = 152
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
+    DECAYING = 155
 
 
 class PlayerActionType(Enum):
@@ -334,6 +335,7 @@ class ActionType(Enum):
     SETUP_FORMATION_SPREAD = 54
     FOLLOW_UP = 55
     LEAP = 56
+    STAB = 57
 
 
 class WeatherType(Enum):
@@ -492,3 +494,6 @@ class Rules:
 
     #                0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
     agility_table = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
+
+    miss_next_game = [CasualtyEffect.MNG, CasualtyEffect.AG, CasualtyEffect.AV, CasualtyEffect.MA, CasualtyEffect.ST,
+                      CasualtyEffect.NI]
