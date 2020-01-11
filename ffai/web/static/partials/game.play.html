@@ -1,10 +1,5 @@
-<nav class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<nav class="navbar navbar-default nav-bar-trans">
     <div class="container-fluid">
-        <div class="navbar-header">
-            <a class="navbar-brand" href="#/">
-                <i class="fab fa-python"></i> Fantasy Football AI
-            </a>
-        </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li>
@@ -19,11 +14,13 @@
                     </ul>
                 <li>
             </ul>
+            <!--
             <ul class="nav navbar-nav navbar-right">
                 <li>
                     <a class="nav-link" ng-click="modalVisible=true" style="cursor: pointer;"><span class="glyphicon glyphicon-floppy-{{ saved ? 'saved' : 'disk' }}"></span> Save</a>
                 </li>
             </ul>
+            -->
         </div>
     </div>
 </nav>
@@ -60,11 +57,6 @@
 </div>
 
 <div class="game-free" ng-if="!loading">
-    <div class="options">
-        <a href="/#/"><span class="glyphicon glyphicon-arrow-left"></span></a>
-
-        <div ng-click="saveGame()"></div>
-    </div>
     <div class="scoreboard">
         <div class="row scoreboard-content">
             <div>
