@@ -145,7 +145,6 @@
 
 <div class="game-free" ng-if="!loading">
 
-
     <div class="gamecontent">
 
         <div ng-if="replaying" class="text-center">
@@ -169,14 +168,30 @@
         </div>
 
         <div class="square-row">
-            <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
-            <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to hide all pass actions.</div>
-            <div class="hint text-left" ng-if="leapHint && !leapOptions">Press Shift to show leap actions.</div>
-            <div class="hint text-left" ng-if="leapHint && leapOptions">Press Shift to hide leap actions.</div>
-            <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
-            <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
-            <div class="hint text-center" ng-if="get">Press Ctrl to show move actions.</div>
-            <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
+            <div class="row-divider">
+                <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
+            </div>
+            <div class="row-divider">
+                <span ng-repeat="action in game.state.available_actions">
+                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
+                        {{ prettify(action.action_type) }}
+                    </button>
+                    <span>
+                        <button type="button" ng-if="showActionAsDice(action)" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}} die" ng-click="act(action)" ng-disabled="refreshing || action.disabled">
+                            <img src="static/img/dice/attacker_down.png" ng-show="action.action_type=='SELECT_ATTACKER_DOWN'" />
+                            <img src="static/img/dice/both_down.png" ng-show="action.action_type=='SELECT_BOTH_DOWN'" />
+                            <img src="static/img/dice/push.png" ng-show="action.action_type=='SELECT_PUSH'" />
+                            <img src="static/img/dice/defender_down.png" ng-show="action.action_type=='SELECT_DEFENDER_DOWN'" />
+                            <img src="static/img/dice/defender_stumbles.png" ng-show="action.action_type=='SELECT_DEFENDER_STUMBLES'" />
+                        </button>
+                    </span>
+                </span>
+            </div>
+            <div class="row-divider text-center">
+                <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
+                <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
+            </div>
+
         </div>
 
         <div class="gameboard">
@@ -385,22 +400,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="action-bar text-center">
-                <span ng-repeat="action in game.state.available_actions">
-                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
-                        {{ prettify(action.action_type) }}
-                    </button>
-                    <span>
-                        <button type="button" ng-if="showActionAsDice(action)" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}} die" ng-click="act(action)" ng-disabled="refreshing || action.disabled">
-                            <img src="static/img/dice/attacker_down.png" ng-show="action.action_type=='SELECT_ATTACKER_DOWN'" />
-                            <img src="static/img/dice/both_down.png" ng-show="action.action_type=='SELECT_BOTH_DOWN'" />
-                            <img src="static/img/dice/push.png" ng-show="action.action_type=='SELECT_PUSH'" />
-                            <img src="static/img/dice/defender_down.png" ng-show="action.action_type=='SELECT_DEFENDER_DOWN'" />
-                            <img src="static/img/dice/defender_stumbles.png" ng-show="action.action_type=='SELECT_DEFENDER_STUMBLES'" />
-                        </button>
-                    </span>
-                </span>
             </div>
             <div id="gamelog" class="gamelog">
                 <div ng-repeat="report in game.state.reports | reverse | limitTo:reportsLimit" ng-if="showReport(report)" class="report">

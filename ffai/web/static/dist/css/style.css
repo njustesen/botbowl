@@ -94,6 +94,31 @@ a:hover {
 .dropdown-toggle {
   cursor: pointer;
 }
+.btn {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  height: 26px;
+  font-size: small;
+  line-height: 0.84;
+  border-radius: 2px;
+}
+.die {
+  background-color: white;
+  padding: 0px;
+  margin: 2px 0px 0px 2px;
+}
+.die img {
+  width: 28px;
+  height: 28px;
+}
+.btn-danger {
+  float: left;
+  margin-right: 2px;
+}
+.btn-primary {
+  float: right;
+  margin-left: 2px;
+}
 .rerolls {
   display: inline-block;
   height: 24px;
@@ -254,6 +279,10 @@ a:hover {
   color: #555;
   line-height: 2em;
 }
+.navbar-collapse {
+  padding-right: 5px;
+  padding-left: 0px;
+}
 .gamecontent {
   height: 454px;
 }
@@ -288,6 +317,11 @@ a:hover {
   width: 100%;
   margin: 0 auto;
   max-width: 900px;
+}
+.gamecontent .square-row .row-divider {
+  position: absolute;
+  width: 904px;
+  margin-left: -2px;
 }
 .gamecontent .square {
   width: 30px;
@@ -543,27 +577,6 @@ a:hover {
   color: white;
   margin-top: 2px;
   margin-bottom: 2px;
-}
-.gamecontent .game-info .action-bar .btn {
-  margin-top: 2px;
-  margin-bottom: 2px;
-}
-.gamecontent .game-info .action-bar .die {
-  background-color: white;
-  padding: 0px;
-  margin: 2px 0px 0px 2px;
-}
-.gamecontent .game-info .action-bar .die img {
-  width: 28px;
-  height: 28px;
-}
-.gamecontent .game-info .action-bar .btn-danger {
-  float: left;
-  margin-right: 2px;
-}
-.gamecontent .game-info .action-bar .btn-primary {
-  float: right;
-  margin-left: 2px;
 }
 .gamecontent .gameboard {
   width: 904px;
