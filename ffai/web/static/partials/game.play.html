@@ -173,7 +173,10 @@
             </div>
             <div class="row-divider">
                 <span ng-repeat="action in game.state.available_actions">
-                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
+                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{ action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
+                        {{ actionButtonName(action.action_type) }}
+                    </button>
+                    <button ng-if="showActionAsSpecialButton(action)" type="button" class="btn btn-sm btn-act btn-special {{ special_action_selected === action ? 'special-active' : '' }} {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="clickSpecialAction(action)" ng-disabled="refreshing || action.disabled">
                         {{ prettify(action.action_type) }}
                     </button>
                     <span>

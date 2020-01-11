@@ -141,14 +141,18 @@ a, a:focus, a:hover {
     border-radius: 2px;
 }
 
+*.btn:active, .btn:focus, .btn:active:focus, .btn.active:focus {
+    outline: none !important;
+}
+
 .die {
     background-color: white;
     padding: 0px;
     margin: 2px 0px 0px 2px;
 
     img {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
 
 }
@@ -156,11 +160,28 @@ a, a:focus, a:hover {
 .btn-danger {
     float: left;
     margin-right: 2px;
+
+    &.btn-special {
+        background: rgb(255,255,255);
+        color: red;
+        font-weight: bolder;
+        &.special-active {
+            background: rgb(255,220,220);
+        }
+    }
 }
 
 .btn-primary {
     float: right;
     margin-left: 2px;
+    &.btn-special {
+        background: rgb(255,255,255);
+        color: #235A9F;
+        font-weight: bolder;
+        &.special-active {
+            background: rgb(220,220,255);
+        }
+    }
 }
 
 .rerolls {
@@ -922,6 +943,7 @@ a, a:focus, a:hover {
                 font-size: 16px;
                 line-height: 18px;
                 text-align: center;
+
             }
 
             .die.BB-attacker_down {

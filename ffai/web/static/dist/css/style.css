@@ -102,22 +102,44 @@ a:hover {
   line-height: 0.84;
   border-radius: 2px;
 }
+*.btn:active,
+.btn:focus,
+.btn:active:focus,
+.btn.active:focus {
+  outline: none !important;
+}
 .die {
   background-color: white;
   padding: 0px;
   margin: 2px 0px 0px 2px;
 }
 .die img {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
 }
 .btn-danger {
   float: left;
   margin-right: 2px;
 }
+.btn-danger.btn-special {
+  background: #ffffff;
+  color: red;
+  font-weight: bolder;
+}
+.btn-danger.btn-special.special-active {
+  background: #ffdcdc;
+}
 .btn-primary {
   float: right;
   margin-left: 2px;
+}
+.btn-primary.btn-special {
+  background: #ffffff;
+  color: #235A9F;
+  font-weight: bolder;
+}
+.btn-primary.btn-special.special-active {
+  background: #dcdcff;
 }
 .rerolls {
   display: inline-block;

@@ -2199,7 +2199,7 @@ class PlayerAction(Procedure):
             if not self.dump_off:
                 EndPlayerTurn(self.game, self.player)
             PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.position,
-                       pass_distance, dump_off=True)
+                       pass_distance, dump_off=self.dump_off)
             self.turn.pass_available = False
 
             return True
