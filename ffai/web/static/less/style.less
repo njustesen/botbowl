@@ -432,6 +432,11 @@ a, a:focus, a:hover {
             width: 191px;
             background-color: rgba(0,0,0,0.33);
             border-radius: 16px;
+
+            &.disabled {
+                opacity: 0.5;
+            }
+
             .action-dot {
                 height: 28px;
                 width: 28px;
@@ -446,9 +451,12 @@ a, a:focus, a:hover {
                     filter: grayscale(100%);
                 }
                 &.active:hover {
-                    border: 1px solid black;
-                    background-color: rgba(100, 100, 100, 1);
+                    background-color: rgba(0,0,0,1);
+                    border: 1px solid rgba(0,0,0,1);
                     cursor: pointer;
+                    &.disabled {
+                        cursor: default;
+                    }
                 }
                 &.right {
                     float:right;

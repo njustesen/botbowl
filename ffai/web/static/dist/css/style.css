@@ -365,6 +365,9 @@ a:hover {
   background-color: rgba(0, 0, 0, 0.33);
   border-radius: 16px;
 }
+.gamecontent .square .player-action-bar.disabled {
+  opacity: 0.5;
+}
 .gamecontent .square .player-action-bar .action-dot {
   height: 28px;
   width: 28px;
@@ -380,9 +383,12 @@ a:hover {
   filter: grayscale(100%);
 }
 .gamecontent .square .player-action-bar .action-dot.active:hover {
-  border: 1px solid black;
-  background-color: #646464;
+  background-color: #000000;
+  border: 1px solid #000000;
   cursor: pointer;
+}
+.gamecontent .square .player-action-bar .action-dot.active:hover.disabled {
+  cursor: default;
 }
 .gamecontent .square .player-action-bar .action-dot.right {
   float: right;

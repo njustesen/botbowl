@@ -250,7 +250,7 @@
                                 </div>
                             </span>
                         </div>
-                        <div class="player-action-bar" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
+                        <div class="player-action-bar {{ local_state.current_team_id !== $scope.team_id ? 'disabled' : '' }}" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
                             <span class="action-text">Use {{ playerSkillAction($index+1, $parent.$parent.$index+1) }}?</span>
                             <span class="action-dot active right">
                                 <div ng-click="clickSkillAction($event, 'dont-use')">
@@ -411,7 +411,9 @@
 
                         </span>
                         <span ng-if="roll.modified_target != null" class="modifiers {{ roll.sum >= roll.modified_target ? 'success' : 'danger' }}">
-                            {{roll.roll_type === "AGILITY_ROLL" || roll.roll_type === "ARMOR_ROLL" || roll.roll_type === "GFI_ROLL" ? '(' + roll.modified_target + '+)' : '(' + roll.modified_target + ')' }}
+                            {{roll.target_higher ? '(' + roll.modified_target + '+)' : '' }}
+                            {{roll.target_lower ? '(' + roll.modified_target + '-)' : '' }}
+                            {{!roll.target_higher && !roll.target_lower ? '(' + roll.modified_target + ')' : '' }}
                         </span>
                     </div>
                     <div>
