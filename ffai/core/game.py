@@ -940,16 +940,12 @@ class Game:
         player.state.knocked_out = False
         player.state.up = True
 
-    def pitch_to_casualties(self, player, casualty, effect, apothecary=False):
+    def pitch_to_casualties(self, player):
         """
         Moves player from the pitch to the CAS section in the dugout and applies the casualty and effect to the player.
         :param player:
-        :param casualty:
-        :param effect:
-        :param apothecary: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
         :return:
         """
-
         self.remove(player)
         player.state.up = True
         self.get_casualties(player.team).append(player)
@@ -1853,28 +1849,30 @@ class Game:
             return
 
         # apply casualty effects to the player
+        self.report_casualty(effect, inflictor, player, roll)
         player.state.casualty = casualty
         player.state.casualty_effects.append(effect)
 
         if player.has_skill(Skill.DECAY):
+            self.report(Outcome(OutcomeType.SKILL_USED, player=player, skill=Skill.DECAY))
             casualty_roll = self.get_casualty_roll()
             # only allowed one copy of mng
             if (casualty_roll.effect is not CasualtyEffect.MNG) or (CasualtyEffect.MNG not in player.state.casualty_effects):
                 player.state.casualty_effects.append(casualty_roll.effect)
-
-        for casualty_effect in player.state.casualty_effects:
-            if casualty_effect == CasualtyEffect.NONE:
-                self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
-                                    rolls=[roll]))
-            elif casualty_effect in Casualty.miss_next_game:
-                self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
-                                    rolls=[roll], n=effect.name))
-            elif casualty_effect == CasualtyEffect.DEAD:
-                self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
-                                    rolls=[roll]))
+                self.report_casualty(casualty_roll.effect, inflictor, player, casualty_roll.roll)
 
         # move to the casualty bin
-        self.pitch_to_casualties(player, casualty, effect, apothecary)
+        self.pitch_to_casualties(player)
+
+    def report_casualty(self, casualty_effect, inflictor, player, roll):
+        if casualty_effect == CasualtyEffect.NONE:
+            self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
+                                rolls=[roll]))
+        elif casualty_effect in Casualty.miss_next_game:
+            self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
+                                rolls=[roll], n=casualty_effect.name))
+        elif casualty_effect == CasualtyEffect.DEAD:
+            self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team, rolls=[roll]))
 
     def get_current_turn_proc(self):
         for i in range(len(self.state.stack.items)):
