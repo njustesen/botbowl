@@ -408,7 +408,6 @@ a:hover {
   background-color: rgba(0, 0, 255, 0.1);
 }
 .gamecontent .player-info .stats-box .skill-box {
-  overflow: scroll;
   width: 100%;
 }
 .gamecontent .hint {
