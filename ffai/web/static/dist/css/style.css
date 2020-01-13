@@ -796,6 +796,9 @@ a:hover {
   -moz-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
   -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
   -o-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  position: absolute;
+  width: 904px;
+  margin-left: -2px;
 }
 .gamelog .report {
   margin: 4px;

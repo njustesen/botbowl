@@ -110,7 +110,7 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
 appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService', 'BigGuyService',
     function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService, BigGuyService) {
         $scope.RELOAD_TIME_SLOW = 1000;
-        $scope.RELOAD_TIME_FAST = 500;
+        $scope.RELOAD_TIME_FAST = 200;
         $scope.game = {};
         $scope.reportsLimit = 20;
         $scope.saved = false;

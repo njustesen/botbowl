@@ -444,10 +444,6 @@
 
         <div class="square-row">
             <div class="square {{ local_state.board[local_state.board.length-1][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[local_state.board.length-1].length + 2" ng-click="square(local_state.board[local_state.board.length-1][$index-1])"></div>
-        </div>
-
-        <div class="game-info">
-
             <div id="gamelog" class="gamelog">
                 <div ng-repeat="report in game.state.reports | reverse | limitTo:reportsLimit" ng-if="showReport(report)" class="report">
                     <div ng-repeat="roll in report.rolls | reverse" class="roll">
