@@ -227,21 +227,21 @@
                         <span>
                             <div class="attribute text-center">
                                 <div class="gamelabel">MA</div>
-                                <div class="value label label-success red" ng-if="playerInFocus(game.state.away_team).state.moves < playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
-                                <div class="value label label-danger red" ng-if="playerInFocus(game.state.away_team).state.moves == playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
-                                <div class="value label label-danger red" ng-if="playerInFocus(game.state.away_team).state.moves > playerInFocus(game.state.away_team).ma">+{{playerInFocus(game.state.away_team).state.moves - playerInFocus(game.state.away_team).ma}}</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves < playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves == playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves > playerInFocus(game.state.away_team).ma">+{{playerInFocus(game.state.away_team).state.moves - playerInFocus(game.state.away_team).ma}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">ST</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).st}}</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).st}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">AG</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).ag}}</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).ag}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">AV</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).av}}</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).av}}</div>
                             </div>
                         </span>
                     </div>
@@ -283,21 +283,21 @@
                         <span>
                             <div class="attribute text-center">
                                 <div class="gamelabel">MA</div>
-                                <div class="value label label-success blue" ng-if="playerInFocus(game.state.home_team).state.moves < playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
-                                <div class="value label label-danger blue" ng-if="playerInFocus(game.state.home_team).state.moves == playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
-                                <div class="value label label-danger blue" ng-if="playerInFocus(game.state.home_team).state.moves > playerInFocus(game.state.home_team).ma">+{{playerInFocus(game.state.home_team).state.moves - playerInFocus(game.state.home_team).ma}}</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves < playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves == playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves > playerInFocus(game.state.home_team).ma">+{{playerInFocus(game.state.home_team).state.moves - playerInFocus(game.state.home_team).ma}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">ST</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).st}}</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).st}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">AG</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).ag}}</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).ag}}</div>
                             </div>
                             <div class="attribute text-center">
                                 <div class="gamelabel">AV</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).av}}</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).av}}</div>
                             </div>
                         </span>
                     </div>
