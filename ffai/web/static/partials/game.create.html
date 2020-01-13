@@ -68,7 +68,7 @@
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
                                     <td class="text-center">{{ player.av }}</td>
-                                    <td><span class="" ng-repeat="skill in player.skills">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
+                                    <td><span class="" ng-repeat="skill in player.role_skills.concat(player.extra_skills)">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -157,7 +157,7 @@
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
                                     <td class="text-center">{{ player.av }}</td>
-                                    <td><span class="" ng-repeat="skill in player.skills">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
+                                    <td><span class="" ng-repeat="skill in player.role_skills.concat(player.extra_skills)">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
                                 </tr>
                             </tbody>
                         </table>
