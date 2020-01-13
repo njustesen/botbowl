@@ -1264,17 +1264,15 @@ class ThrowARock(Procedure):
     def step(self, action):
 
         rolls = []
-        rocks = []
         for team in self.game.state.teams:
             roll = DiceRoll([D3(self.game.rnd)], roll_type=RollType.THROW_A_ROCK_ROLL)
-            rolls.append(roll)
             roll.modifiers = team.state.fame
-            rocks.append(roll.get_result())
+            rolls.append(roll.get_result())
             self.game.report(Outcome(OutcomeType.THROW_A_ROCK_ROLL, team=team, rolls=[roll]))
 
         for i in range(len(self.game.state.teams)):
             team = self.game.state.teams[i]
-            if rocks[i] == 1:
+            if rolls[i] == np.min(rolls):
                 players = self.game.get_players_on_pitch(team)
                 if len(players) > 0:
                     player = self.game.rnd.choice(players)

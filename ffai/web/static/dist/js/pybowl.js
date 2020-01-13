@@ -1625,6 +1625,7 @@ appServices.factory('GameLogService', function() {
             'KICKOFF_BLITZ': "<b>Blitz!</b> The kicking team may take an action for every player not in a tackle zone.",
             'KICKOFF_THROW_A_ROCK': "<b>Throw a Rock!</b>",
             'KICKOFF_PITCH_INVASION': "<B>Pitch Invasion!</b>",
+            'THROW_A_ROCK_ROLL': "<team> rolls.",
             'EXTRA_BRIBE': "<team> gets a bribe",
             'TURN_SKIPPED': "Turn markers are moved one step forward.",
             'TURN_ADDED': "Turn markers are moved one step backward.",
