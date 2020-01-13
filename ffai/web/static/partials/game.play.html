@@ -369,14 +369,14 @@
                                 </div>
                             </span>
                         </div>
-                        <div class="player-action-bar {{ local_state.current_team_id !== $scope.team_id ? 'disabled' : '' }}" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
+                        <div class="player-action-bar {{ team_id !== undefined && team_id === local_state.current_team_id ? 'disabled' : '' }}" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
                             <span class="action-text">Use {{ playerSkillAction($index+1, $parent.$parent.$index+1) }}?</span>
-                            <span class="action-dot active right">
+                            <span class="action-dot {{ team_id !== undefined && team_id === local_state.current_team_id ? '' : 'active' }} right">
                                 <div ng-click="clickSkillAction($event, 'dont-use')">
                                     <img src="static/img/icons/actions/dont-use.gif">
                                 </div>
                             </span>
-                            <span class="action-dot active right">
+                            <span class="action-dot {{ team_id !== undefined && team_id === local_state.current_team_id ? '' : 'active' }} right">
                                 <div ng-click="clickSkillAction($event, 'use')">
                                     <img src="static/img/icons/actions/use.gif">
                                 </div>

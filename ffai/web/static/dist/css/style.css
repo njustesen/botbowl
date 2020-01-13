@@ -486,7 +486,7 @@ a:hover {
   filter: grayscale(100%);
 }
 .gamecontent .square .player-action-bar .action-dot.active:hover {
-  background-color: #000000;
+  background-color: #646464;
   border: 1px solid #000000;
   cursor: pointer;
 }
