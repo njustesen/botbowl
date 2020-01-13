@@ -366,7 +366,134 @@ a, a:focus, a:hover {
 
 .gamecontent {
 
-    height: 454px;
+    margin: auto;
+    width: 1200px;
+
+    .player-info {
+        height: 455px;
+        width: 148px;
+
+        &.away-box {
+            float:left;
+        }
+
+        &.home-box {
+            float:right;
+        }
+
+        .red {
+            background-color: rgba(255,0,0,0.1);
+        }
+
+        .blue {
+            background-color: rgba(0,0,255,0.1);
+        }
+
+        .team-box {
+            background-color: white;
+            height: 100%;
+            min-height: 64px;
+            border: 1px solid #ccc;
+        }
+
+        .home-info {
+            float: right;
+            width: 100%;
+        }
+
+        .away-info {
+            float: left;
+            width: 100%;
+        }
+
+        .icon-box {
+            float:left;
+            width: 36px;
+            padding: 4px;
+            margin-left: 4px;
+            margin-bottom: 4px;
+            border-radius: 2px;
+        }
+
+        .stats-box {
+            float:left;
+            font-size: 1.2em;
+            width: 100%;
+
+            .name-box {
+                padding: 2px;
+                font-weight: normal;
+                font-size: 0.9em;
+                color: black;
+                margin: 4px;
+                margin-bottom: 4px;
+                border-radius: 2px;
+
+                .small {
+                    font-size: 0.8em;
+                }
+
+                .tiny {
+                    font-size: 0.7em;
+                }
+
+            }
+
+            .role-box {
+                font-size: 0.8em;
+                color: rgba(0,0,0,0.5);
+            }
+
+            .attribute {
+                float: left;
+                margin-left: 4px;
+
+                .value {
+                    width: 16px;
+                    font-weight: normal;
+                    color: black;
+                    font-size: 0.785em;
+                    border-radius: 2px;
+                }
+
+                .skill {
+                    font-weight: normal;
+                    color: black;
+                    padding: 2px;
+                    padding-left: 4px;
+                    margin-bottom: 1px;
+                    margin-right: 8px;
+                    font-size: 0.785em;
+
+                    &.role-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.5);
+                        background-color: rgba(255, 0, 0, 0.1);
+                    }
+
+                    &.role-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.25);
+                        background-color: rgba(255, 0, 0, 0.1);
+                    }
+
+                    &.role-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.5);
+                        background-color: rgba(0, 0, 255, 0.1);
+                    }
+
+                    &.role-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.25);
+                        background-color: rgba(0, 0, 255, 0.1);
+                    }
+                }
+            }
+
+            .skill-box {
+                overflow: scroll;
+                width: 100%;
+            }
+        }
+
+    }
 
     .hint {
         position: relative;
@@ -627,86 +754,6 @@ a, a:focus, a:hover {
         width: 902px;
         margin: auto;
 
-        .player-info {
-            min-height: 64px;
-            margin-bottom: 4px;
-
-            .red {
-                background-color: rgba(255,0,0,0.1);
-            }
-
-            .blue {
-                background-color: rgba(0,0,255,0.1);
-            }
-
-            .team-box {
-                background-color: white;
-                width: 50%;
-                padding: 4px;
-                height: 100%;
-                min-height: 64px;
-                border: 1px solid #ccc;
-            }
-
-            .home {
-                float: right;
-            }
-
-            .away {
-                float: left;
-            }
-
-            .icon-box {
-                float:left;
-                width: 58px;
-                padding: 4px;
-                border-radius: .25em;
-                border-top-left-radius: 0.25em;
-                border-top-right-radius: 0.25em;
-                border-bottom-right-radius: 0.25em;
-                border-bottom-left-radius: 0.25em;
-            }
-
-            .stats-box {
-                float:left;
-                margin-left:4px;
-                font-size: 1.1em;
-                width: 375px;
-
-                .name-box {
-                    padding: 2px;
-                    font-weight: normal;
-                    font-size: 1.0em;
-                    color: black;
-                }
-
-                .attribute {
-                    float:left;
-                    margin-right: 4px;
-                    margin-top: 4px;
-
-                    .value {
-                        width: 16px;
-                        font-weight: normal;
-                        color: black;
-                    }
-
-                    .skill {
-                        margin-right: 2px;
-                        font-weight: normal;
-                        color: black;
-                        background-color: rgba(0, 255, 0, 0.4);
-                    }
-                }
-
-                .skill-box {
-                    overflow: scroll;
-                    width: 273px;
-                }
-            }
-
-        }
-
         .action-bar {
             border-color: #080808;
             min-height: 34px;
@@ -722,7 +769,7 @@ a, a:focus, a:hover {
 
         width: 904px;
         margin: auto;
-        height:100%;
+        height: 454px;
         box-shadow: 0 0 0px rgba(0,0,0,0.6);
         -moz-box-shadow: 0 0 0px rgba(0,0,0,0.6);
         -webkit-box-shadow: 0 0 0px rgba(0,0,0,0.6);

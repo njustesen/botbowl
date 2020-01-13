@@ -109,7 +109,8 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
 
 appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService', 'BigGuyService',
     function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService, BigGuyService) {
-        $scope.RELOAD_TIME = 20;
+        $scope.RELOAD_TIME_SLOW = 1000;
+        $scope.RELOAD_TIME_FAST = 500;
         $scope.game = {};
         $scope.reportsLimit = 20;
         $scope.saved = false;
@@ -1161,7 +1162,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
-                let time = $scope.game.state.reports.length > 0 && $scope.showReport($scope.game.state.reports[$scope.game.state.reports.length-1]) ? $scope.RELOAD_TIME : 0;
+                let time = $scope.game.state.reports.length > 0 && $scope.showReport($scope.game.state.reports[$scope.game.state.reports.length-1]) ? $scope.RELOAD_TIME_SLOW : $scope.RELOAD_TIME_FAST;
                 $scope.checkForReload(time);
                 $scope.saved = false;
                 $scope.blocked = false;
