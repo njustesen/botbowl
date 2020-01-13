@@ -337,7 +337,7 @@
                          ng-repeat="n in [] | range:row.length-2" ng-click="square(local_state.board[$parent.$index+1][$index+1])"
                          ng-mouseover="squareHover(local_state.board[$parent.$index+1][$index+1])"
                          style="{{ getCursor(local_state.board[$parent.$index+1][$index+1]) }}">
-                        <div class="player-action-bar" ng-if="playerStartAction($index+1, $parent.$index+1, '')">
+                        <div class="player-action-bar" ng-if="(team_id === undefined || team_id === local_state.current_team_id) && playerStartAction($index+1, $parent.$index+1, '')">
                             <span class="action-dot {{ playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'move') ? 'active' : 'transparent'}}">
                                 <div ng-click="clickAction($event, 'move')">
                                     <img src="static/img/icons/actions/move.gif">
