@@ -132,7 +132,7 @@
                 </div>
             </div>
         </div>
-        <div>
+        <div class="turnmarkers">
             <div class="turnmarker left">
                 <div id="turnmarker-away" class="turnmarker {{ game.state.away_team.team_id === game.state.current_team_id || game.actor_id == game.away_agent.agent_id ? 'turnmarker-away-turn' : 'turnmarker-away' }}"></div>
             </div>
@@ -203,13 +203,13 @@
                 <div class="away-info team-box" ng-if="playerInFocus(game.state.away_team) != null">
                     <div class="stats-box left">
                         <div class="name-box red text-center">
-                            <span class="text-center" ng-if="playerInFocus(game.state.away_team).name.length < 16">
+                            <span class="text-center" ng-if="playerInFocus(game.state.away_team).name.length < 18">
                                 {{playerInFocus(game.state.away_team).name}}
                             </span>
-                            <span class="text-center small" ng-if="playerInFocus(game.state.away_team).name.length >= 16 && playerInFocus(game.state.away_team).name.length <= 18">
+                            <span class="text-center small" ng-if="playerInFocus(game.state.away_team).name.length >= 18 && playerInFocus(game.state.away_team).name.length <= 20">
                                 {{playerInFocus(game.state.away_team).name}}
                             </span>
-                            <span class="text-center tiny" ng-if="playerInFocus(game.state.away_team).name.length > 18">
+                            <span class="text-center tiny" ng-if="playerInFocus(game.state.away_team).name.length > 20">
                                 {{playerInFocus(game.state.away_team).name}}
                             </span>
                             <div class="role-box text-center">

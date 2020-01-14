@@ -242,8 +242,8 @@ a:hover {
   padding-bottom: 4px;
 }
 .game-free .scoreboard .scoreboard-content {
-  min-width: 900px;
-  max-width: 900px;
+  min-width: 1200px;
+  max-width: 1200px;
   margin: auto;
   padding-bottom: 0px;
 }
@@ -276,19 +276,22 @@ a:hover {
 .game-free .scoreboard .turnpitch {
   height: 100%;
 }
-.game-free .scoreboard .turnmarker {
+.game-free .scoreboard .turnmarkers {
+  min-width: 1200px;
+}
+.game-free .scoreboard .turnmarkers .turnmarker {
   width: 50%;
   height: 4px;
   padding: 0px;
   margin: 0px;
   background-color: #ccc;
 }
-.game-free .scoreboard .turnmarker-home-turn {
+.game-free .scoreboard .turnmarkers .turnmarker-home-turn {
   width: 100%;
   background-color: rgba(0, 0, 255, 0.66);
   float: left;
 }
-.game-free .scoreboard .turnmarker-away-turn {
+.game-free .scoreboard .turnmarkers .turnmarker-away-turn {
   width: 100%;
   background-color: rgba(255, 0, 0, 0.66);
   float: right;
