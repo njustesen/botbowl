@@ -1193,6 +1193,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
         };
 
+        $scope.lastReportIdx = 0;
+
         $scope.act = function act(action){
             if ($scope.loading || $scope.refreshing){
                 return;
@@ -1214,8 +1216,24 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
-                let time = $scope.game.state.reports.length > 0 && $scope.showReport($scope.game.state.reports[$scope.game.state.reports.length-1]) ? $scope.RELOAD_TIME_SLOW : $scope.RELOAD_TIME_FAST;
-                $scope.checkForReload(time);
+                let time = 10;
+                if ($scope.game.state.reports.length > 0){
+                    let newestReport = $scope.game.state.reports[$scope.game.state.reports.length-1];
+                    if (newestReport.outcome_type in GameLogService.log_timouts){
+                        if ($scope.game.state.reports.length === $scope.lastReportIdx){
+                            time = 100;
+                        } else if ($scope.game.state.reports[$scope.game.state.reports.length-1].outcome_type in GameLogService.log_timouts){
+                            time = GameLogService.log_timouts[$scope.game.state.reports[$scope.game.state.reports.length-1]];
+
+                        } else {
+                            time = 10;
+                        }
+                        $scope.lastReportIdx = $scope.game.state.reports.length;
+                    }
+                }
+                if (time !== null){
+                    $scope.checkForReload(time);
+                }
                 $scope.saved = false;
                 $scope.blocked = false;
             }).error(function(status, data) {
@@ -1667,8 +1685,9 @@ appServices.factory('GameLogService', function() {
             'END_OF_TURN': "<team> ended their turn.",
             'END_OF_BLITZ': "<team> ended their blitz.",
             'END_OF_QUICK_SNAP': "<team> ended their quick snap.",
-            'END_OF_HALF': "END_OF_HALF",
-            'TOUCHDOWN': " <player> scored a <b>Touchdown</b>.",
+            'END_OF_FIRST_HALF': "<b>End of first half</b>.",
+            'END_OF_SECOND_HALF': "<b>End of second half</b>.",
+            'TOUCHDOWN': "<player> scored a <b>Touchdown</b>.",
             'TOUCHBACK': "<b>Touchback! </b> <team> can give the ball to any player on the pitch.",
             'TURNOVER': "<team> suffers a <b>turnover</b>",
             'CASUALTY': "<player> suffers a <b>casualty!</b>",
@@ -1682,7 +1701,7 @@ appServices.factory('GameLogService', function() {
             'INACCURATE_PASS': "<player> threw an <b>inaccurate</b> pass.",
             'FUMBLE': "<player> <b>fumbled</b> the ball</b>",
             'FAILED_CATCH': "<player> failed to catch the ball.",
-            "CATCH": " <player> <b>caught</b> the ball.",
+            "CATCH": "<player> <b>caught</b> the ball.",
             'BALL_SCATTER': "The ball scattered.",
             "BALL_BOUNCED": "The ball bounced",
             "GENTLE_GUST_OUT_OF_BOUNDS": "A gentle gust makes the ball scatter out of bounds.",
@@ -1723,9 +1742,158 @@ appServices.factory('GameLogService', function() {
             "STAND_UP": "<player> stood up.",
             "FAILED_STAND_UP": "<player> failed to stand up",
             "FAILED_JUMP_UP": "<player> failed to jump up"
+        },
+        log_timouts: {
+            'GAME_STARTED': 100,
+            'SPECTATORS': 200,
+            'FAME': 200,
+            'HEADS_WON': 1000,
+            'HEADS_LOSS': 1000,
+            'TAILS_WON': 1000,
+            'TAILS_LOSS': 1000,
+            'HOME_RECEIVE': 1000,
+            'AWAY_RECEIVE': 1000,
+            //'WEATHER_SWELTERING_HEAT': "<b>Sweltering Heat:</b> It’s so hot and humid that some players collapse from heat exhaustion. Roll a D6 for each player on the pitch at the end of a drive. On a roll of 1 the player collapses and may not be set up for the next kick-off.",
+            //'WEATHER_VERY_SUNNY': "<b>Very Sunny:</b> A glorious day, but the blinding sunshine causes a -1 modifier on all passing rolls.",
+            //'WEATHER_NICE': "<b>Nice weather:</b> Perfect Blood Bowl weather.",
+            //'WEATHER_POURING_RAIN': "<b>Pouring Rain:</b> It’s raining, making the ball slippery and difficult to hold. A -1 modifier applies to all catch, intercept, or pick-up rolls.",
+            //'WEATHER_BLIZZARD': "<b>Blizzard:</b> It’s cold and snowing! The ice on the pitch means that any player attempting to move an extra square (GFI) will slip and be Knocked Down on a roll of 1-3, while the snow means that only quick or short passes can be attempted.",
+            'WEATHER_SWELTERING_HEAT': 1000,
+            'WEATHER_VERY_SUNNY': 1000,
+            'WEATHER_NICE': 1000,
+            'WEATHER_POURING_RAIN': 1000,
+            'WEATHER_BLIZZARD': 1000,
+            'ILLEGAL_SETUP_NUM': 100,
+            'ILLEGAL_SETUP_SCRIMMAGE': 100,
+            'ILLEGAL_SETUP_WINGS': 100,
+            'BALL_PLACED': 100,
+            'TOUCHBACK_BALL_PLACED': 100,
+            //'KICKOFF_GET_THE_REF': "<b>Get the Ref:</b> The fans exact gruesome revenge on the referee for some of the dubious decisions he has made, either during this match or in the past. His replacement is so intimidated that he can be more easily persuaded to look the other way. Each team receives 1 additional Bribe to use during this game. A Bribe allows you to attempt to ignore one call by the referee for a player who has committed a foul to be sent off, or a player armed with a secret weapon to be banned from the match. Roll a D6: on a roll of 3-6 the bribe is effective (preventing a turnover if the player was ejected for fouling), but on a roll of 1 the bribe is wasted and the call still stands! Each bribe may be used once per match.",
+            //'KICKOFF_RIOT': "<b>Riot:</b> The trash talk between two opposing players explodes and rapidly degenerates, involving the rest of the players. If the receiving team’s turn marker is on turn 7 for the half, both teams move their turn marker back one space as the referee resets the clock back to before the fight started. If the receiving team has not yet taken a turn this half the referee lets the clock run on during the fight and both teams’ turn markers are moved forward one space. Otherwise roll a D6. On a 1-3, both teams’ turn markers are moved forward one space. On a 4-6, both team’s turn markers are moved back one space.",
+            //'KICKOFF_PERFECT_DEFENSE': "<b>Perfect Defence:</b> The kicking team’s coach may reorganize his players – in other words he can set them up again into another legal defence. The receiving team must remain in the set-up chosen by their coach.",
+            //'KICKOFF_HIGH_KICK': "<b>High Kick:</b> The ball is kicked very high, allowing a player on the receiving team time to move into the perfect position to catch it. Any one player on the receiving team who is not in an opposing player’s tackle zone may be moved into the square where the ball will land no matter what their MA may be, as long as the square is unoccupied.",
+            //'KICKOFF_CHEERING_FANS': "<b>Cheering Fans:</b> Each coach rolls a D3 and adds their team’s FAME (see page 18) and the number of cheerleaders on their team to the score. The team with the highest score is inspired by their fans' cheering and gets an extra re-roll this half. If both teams have the same score, then both teams get a re-roll.",
+            //'KICKOFF_CHANGING_WHEATHER': "<b>Changing Weather:</b> Make a new roll on the Weather table (see page 20). Apply the new Weather roll. If the new Weather roll was a ‘Nice’ result, then a gentle gust of wind makes the ball scatter one extra square in a random direction before landing.",
+            //'KICKOFF_BRILLIANT_COACHING': "<b>Brilliant Coaching:</b> Each coach rolls a D3 and adds their FAME (see page 18) and the number of assistant coaches on their team to the score. The team with the highest total gets an extra team re-roll this half thanks to the brilliant instruction provided by the coaching staff. In case of a tie both teams get an extra team re-roll.",
+            //'KICKOFF_QUICK_SNAP': "<b>Quick Snap!</b> The offence start their drive a fraction before the defence is ready, catching the kicking team flat-footed. All of the players on the receiving team are allowed to move one square. This is a free move and may be made into any adjacent empty square, ignoring tackle zones. It may be used to enter the opposing half of the pitch.",
+            //'KICKOFF_BLITZ': "<b>Blitz!</b> The defence start their drive a fraction before the offence is ready, catching the receiving team flat-footed. The kicking team receives a free ‘bonus’ turn: however, players that are in an enemy tackle zone at the beginning of this free turn may not perform an Action. The kicking team may use team re-rolls during a Blitz. If any player suffers a turnover then the bonus turn ends immediately.",
+            //'KICKOFF_THROW_A_ROCK': "<b>Throw a Rock:</b> An enraged fan hurls a large rock at one of the players on the opposing team. Each coach rolls a D6 and adds their FAME (see page 18) to the roll. The fans of the team that rolls higher are the ones that threw the rock. In the case of a tie a rock is thrown at each team! Decide randomly which player in the other team was hit (only players on the pitch are eligible) and roll for the effects of the injury straight away. No Armour roll is required.",
+            //'KICKOFF_PITCH_INVASION': "<B>Pitch Invasion:</b> Both coaches roll a D6 for each opposing player on the pitch and add their FAME (see page 18) to the roll. If a roll is 6 or more after modification then the player is Stunned (players with the Ball & Chain skill are KO'd). A roll of 1 before adding FAME will always have no effect.",
+            'KICKOFF_GET_THE_REF': 1000,
+            'KICKOFF_RIOT': 1000,
+            'KICKOFF_PERFECT_DEFENSE': 1000,
+            'KICKOFF_HIGH_KICK': 1000,
+            'KICKOFF_CHEERING_FANS':1000,
+            'KICKOFF_CHANGING_WHEATHER': 1000,
+            'KICKOFF_BRILLIANT_COACHING': 1000,
+            'KICKOFF_QUICK_SNAP': 1000,
+            'KICKOFF_BLITZ': 1000,
+            'KICKOFF_THROW_A_ROCK': 1000,
+            'KICKOFF_PITCH_INVASION': 1000,
+            'THROW_A_ROCK_ROLL': 1000,
+            'EXTRA_BRIBE': 1000,
+            'TURN_SKIPPED': 1000,
+            'TURN_ADDED': 1000,
+            'RIOT': 1000,
+            'HIGH_KICK': 1000,
+            'EXTRA_REROLL': 1000,
+            'PITCH_INVASION_ROLL': 1000,
+            'KICK_OUT_OF_BOUNDS': 1000,
+            'SETUP_DONE': 100,
+            'KNOCKED_DOWN': 10,
+            'ARMOR_BROKEN':  100,
+            'ARMOR_NOT_BROKEN': 10,
+            'HIT_BY_ROCK': 1000,
+            'STUNNED': 100,
+            'KNOCKED_OUT': 100,
+            'BADLY_HURT': 100,
+            'MISS_NEXT_GAME': 1000,
+            'DEAD': 1000,
+            'INTERCEPTION':  1000,
+            'BALL_CAUGhT':  100,
+            'BALL_DROPPED':  100,
+            'FAILED_DODGE':  100,
+            'SUCCESSFUL_DODGE': 10,
+            'FAILED_GFI': 100,
+            'SUCCESSFUL_GFI': 10,
+            'FAILED_PICKUP': 100,
+            'SUCCESSFUL_PICKUP': 10,
+            'HANDOFF':10,
+            'END_PLAYER_TURN': 100,
+            'MOVE_ACTION_STARTED': 10,
+            'BLOCK_ACTION_STARTED': 10,
+            'BLITZ_ACTION_STARTED': 10,
+            'PASS_ACTION_STARTED': 10,
+            'FOUL_ACTION_STARTED': 10,
+            'HANDOFF_ACTION_STARTED': 10,
+            'END_OF_GAME_WINNER': null,
+            'END_OF_GAME_DRAW': null,
+            'END_OF_PREGAME': 100,
+            'END_OF_TURN': 100,
+            'END_OF_BLITZ': 100,
+            'END_OF_QUICK_SNAP': 100,
+            'END_OF_HALF': 100,
+            'TOUCHDOWN': 1000,
+            'TOUCHBACK': 100,
+            'TURNOVER': 100,
+            'CASUALTY': 100,
+            'APOTHECARY_USED_KO': 100,
+            'APOTHECARY_USED_CASUALTY': 100,
+            'CASUALTY_APOTHECARY': 100,
+            'DAUNTLESS_USED': 10,
+            'PUSHED_INTO_CROWD': 10,
+            'PUSHED': 10,
+            'ACCURATE_PASS': 10,
+            'INACCURATE_PASS': 100,
+            'FUMBLE': 100,
+            'FAILED_CATCH': 100,
+            "CATCH": 10,
+            'BALL_SCATTER': 10,
+            "BALL_BOUNCED": 10,
+            "GENTLE_GUST_OUT_OF_BOUNDS": 100,
+            "GENTLE_GUST_OPP_pitch": 100,
+            "GENTLE_GUST_IN_BOUNDS": 10,
+            "TURN_START": 10,
+            "PLAYER_READY": 1000,
+            "PLAYER_NOT_READY": 1000,
+            "FOLLOW_UP": 10,
+            "BALL_OUT_OF_BOUNDS": 100,
+            "SKILL_USED": 10,
+            "PLAYER_EJECTED": 1000,
+            "BLOCK_ROLL": 10,
+            "REROLL_USED": 100,
+            "FAILED_INTERCEPTION": 100,
+            "THROW_IN_OUT_OF_BOUNDS": 100,
+            "THROW_IN": 10,
+            "BLITZ_START": 1000,
+            "QUICK_SNAP": 1000,
+            "TEAM_SPECTATORS": 10,
+            "END_OF_GAME_DISQUALIFICATION": null,
+            "FAILED_BONE_HEAD": 1000,
+            "SUCCESSFUL_BONE_HEAD": 100,
+            "FAILED_REALLY_STUPID": 1000,
+            "SUCCESSFUL_REALLY_STUPID": 100,
+            "FAILED_WILD_ANIMAL": 1000,
+            "SUCCESSFUL_WILD_ANIMAL": 100,
+            "FAILED_LONER": 1000,
+            "SUCCESSFUL_LONER": 100,
+            "FAILED_PRO": 1000,
+            "SUCCESSFUL_PRO": 100,
+            "FAILED_REGENERATION": 1000,
+            "SUCCESSFUL_REGENERATION": 1000,
+            "FAILED_LEAP": 1000,
+            "SUCCESSFUL_LEAP": 100,
+            "SUCCESSFUL_TAKE_ROOT": 100,
+            "FAILED_TAKE_ROOT": 1000,
+            "STAND_UP": 10,
+            "FAILED_STAND_UP": 1000,
+            "FAILED_JUMP_UP": 1000
         }
+
+
     };
 });
+
 
 appServices.factory('IconService', function() {
 

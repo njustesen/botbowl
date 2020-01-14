@@ -1141,6 +1141,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
         };
 
+        $scope.lastReportIdx = 0;
+
         $scope.act = function act(action){
             if ($scope.loading || $scope.refreshing){
                 return;
@@ -1162,8 +1164,24 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
-                let time = $scope.game.state.reports.length > 0 && $scope.showReport($scope.game.state.reports[$scope.game.state.reports.length-1]) ? $scope.RELOAD_TIME_SLOW : $scope.RELOAD_TIME_FAST;
-                $scope.checkForReload(time);
+                let time = 10;
+                if ($scope.game.state.reports.length > 0){
+                    let newestReport = $scope.game.state.reports[$scope.game.state.reports.length-1];
+                    if (newestReport.outcome_type in GameLogService.log_timouts){
+                        if ($scope.game.state.reports.length === $scope.lastReportIdx){
+                            time = 100;
+                        } else if ($scope.game.state.reports[$scope.game.state.reports.length-1].outcome_type in GameLogService.log_timouts){
+                            time = GameLogService.log_timouts[$scope.game.state.reports[$scope.game.state.reports.length-1]];
+
+                        } else {
+                            time = 10;
+                        }
+                        $scope.lastReportIdx = $scope.game.state.reports.length;
+                    }
+                }
+                if (time !== null){
+                    $scope.checkForReload(time);
+                }
                 $scope.saved = false;
                 $scope.blocked = false;
             }).error(function(status, data) {
