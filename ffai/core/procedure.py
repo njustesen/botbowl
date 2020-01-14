@@ -1969,10 +1969,12 @@ class StandUp(Procedure):
 
         if self.reroll.use_reroll:
             self.reroll = None
+            self.roll = None
             return False
         else:
             self.player.place_prone()
             self.game.report(Outcome(OutcomeType.FAILED_STAND_UP, rolls=[self.roll], player=self.player))
+            EndPlayerTurn(self.game, self.player)
         return True
 
 
@@ -2065,6 +2067,9 @@ class PlayerAction(Procedure):
             self.game.add_secondary_clock(self.player.team)
 
     def step(self, action):
+
+        if self.player.state.used:
+            return True
 
         if self.player_action_type == PlayerActionType.BLOCK and not self.player.state.up:
             assert self.player.has_skill(Skill.JUMP_UP)
@@ -2203,6 +2208,10 @@ class PlayerAction(Procedure):
             return True
 
     def available_actions(self):
+
+        if self.player.state.used:
+            return []
+
         actions = []
 
         # Move actions
