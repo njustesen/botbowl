@@ -1,10 +1,5 @@
-<nav class="navbar navbar-default navbar-fixed-top navbar-inverse">
+<nav class="navbar navbar-default nav-bar-trans">
     <div class="container-fluid">
-        <div class="navbar-header">
-            <a class="navbar-brand" href="#/">
-                <i class="fab fa-python"></i> Fantasy Football AI
-            </a>
-        </div>
         <div id="navbar" class="navbar-collapse collapse">
             <ul class="nav navbar-nav">
                 <li>
@@ -19,11 +14,13 @@
                     </ul>
                 <li>
             </ul>
+            <!--
             <ul class="nav navbar-nav navbar-right">
                 <li>
                     <a class="nav-link" ng-click="modalVisible=true" style="cursor: pointer;"><span class="glyphicon glyphicon-floppy-{{ saved ? 'saved' : 'disk' }}"></span> Save</a>
                 </li>
             </ul>
+            -->
         </div>
     </div>
 </nav>
@@ -60,11 +57,6 @@
 </div>
 
 <div class="game-free" ng-if="!loading">
-    <div class="options">
-        <a href="/#/"><span class="glyphicon glyphicon-arrow-left"></span></a>
-
-        <div ng-click="saveGame()"></div>
-    </div>
     <div class="scoreboard">
         <div class="row scoreboard-content">
             <div>
@@ -140,7 +132,7 @@
                 </div>
             </div>
         </div>
-        <div>
+        <div class="turnmarkers">
             <div class="turnmarker left">
                 <div id="turnmarker-away" class="turnmarker {{ game.state.away_team.team_id === game.state.current_team_id || game.actor_id == game.away_agent.agent_id ? 'turnmarker-away-turn' : 'turnmarker-away' }}"></div>
             </div>
@@ -152,7 +144,6 @@
 </div>
 
 <div class="game-free" ng-if="!loading">
-
 
     <div class="gamecontent">
 
@@ -177,15 +168,153 @@
         </div>
 
         <div class="square-row">
-            <div class="hint text-left" ng-if="passHint && !passOptions">Press Ctrl to show all pass actions.</div>
-            <div class="hint text-left" ng-if="passHint && passOptions">Press Ctrl to hide all pass actions.</div>
-            <div class="hint text-left" ng-if="leapHint && !leapOptions">Press Shift to show leap actions.</div>
-            <div class="hint text-left" ng-if="leapHint && leapOptions">Press Shift to hide leap actions.</div>
-            <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
-            <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
-            <div class="hint text-center" ng-if="get">Press Ctrl to show move actions.</div>
-            <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
+            <div class="row-divider">
+                <div class="square {{ local_state.board[0][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[0].length + 2" ng-click="square(local_state.board[0][$index-1])"></div>
+            </div>
+            <div class="row-divider">
+                <span ng-repeat="action in game.state.available_actions">
+                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{ action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
+                        {{ actionButtonName(action.action_type) }}
+                    </button>
+                    <button ng-if="showActionAsSpecialButton(action)" type="button" class="btn btn-sm btn-act btn-special {{ special_action_selected === action ? 'special-active' : '' }} {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="clickSpecialAction(action)" ng-disabled="refreshing || action.disabled">
+                        {{ prettify(action.action_type) }}
+                    </button>
+                    <span>
+                        <button type="button" ng-if="showActionAsDice(action)" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}} die" ng-click="act(action)" ng-disabled="refreshing || action.disabled">
+                            <img src="static/img/dice/attacker_down.png" ng-show="action.action_type=='SELECT_ATTACKER_DOWN'" />
+                            <img src="static/img/dice/both_down.png" ng-show="action.action_type=='SELECT_BOTH_DOWN'" />
+                            <img src="static/img/dice/push.png" ng-show="action.action_type=='SELECT_PUSH'" />
+                            <img src="static/img/dice/defender_down.png" ng-show="action.action_type=='SELECT_DEFENDER_DOWN'" />
+                            <img src="static/img/dice/defender_stumbles.png" ng-show="action.action_type=='SELECT_DEFENDER_STUMBLES'" />
+                        </button>
+                    </span>
+                </span>
+            </div>
+            <div class="row-divider text-center">
+                <div class="text-center clock" ng-if="!game.disqualified_agent && !game.game_over" ng-class="activeTimeLeft() <= 10 ? 'buzzer' : ''" ng-bind="clock"></div>
+                <div class="text-center clock buzzer" ng-if="game.disqualified_agent_id">{{ agentIdTeam(game.disqualified_agent_id) }} was disqualified.</div>
+            </div>
+
         </div>
+
+        <div class="player-info-box">
+
+            <div class="player-info away-box">
+                <div class="away-info team-box" ng-if="playerInFocus(game.state.away_team) != null">
+                    <div class="stats-box left">
+                        <div class="name-box red text-center">
+                            <span class="text-center" ng-if="playerInFocus(game.state.away_team).name.length < 18">
+                                {{playerInFocus(game.state.away_team).name}}
+                            </span>
+                            <span class="text-center small" ng-if="playerInFocus(game.state.away_team).name.length >= 18 && playerInFocus(game.state.away_team).name.length <= 20">
+                                {{playerInFocus(game.state.away_team).name}}
+                            </span>
+                            <span class="text-center tiny" ng-if="playerInFocus(game.state.away_team).name.length > 20">
+                                {{playerInFocus(game.state.away_team).name}}
+                            </span>
+                            <div class="role-box text-center">
+                                {{playerInFocus(game.state.away_team).role}} #{{playerInFocus(game.state.away_team).nr}}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="float:right" class="label right label-{{ playerReadyStateClass(playerInFocus(game.state.away_team)) }}">{{ platerStateText(playerInFocus(game.state.away_team).state) }}</span>
+                    </div>
+                    <div class="stats-box left">
+                        <span class="icon-box red">
+                            <img src="static/img/iconssmall/{{ playerIcon(playerInFocus(game.state.away_team), false) }}" width="28px" height="28px" />
+                        </span>
+                        <span>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">MA</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves < playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves == playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
+                                <div class="value red" ng-if="playerInFocus(game.state.away_team).state.moves > playerInFocus(game.state.away_team).ma">+{{playerInFocus(game.state.away_team).state.moves - playerInFocus(game.state.away_team).ma}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">ST</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).st}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">AG</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).ag}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">AV</div>
+                                <div class="value red">{{playerInFocus(game.state.away_team).av}}</div>
+                            </div>
+                        </span>
+                    </div>
+                    <div class="stats-box left">
+                        <div class="attribute skill-box">
+                            <div class="gamelabel">SKILLS</div>
+                            <div class="skill role-skill-red" ng-repeat="skill in playerInFocus(game.state.away_team).role_skills">{{ prettify(skill) }}</div>
+                            <div class="skill extra-skill-red" ng-repeat="skill in playerInFocus(game.state.away_team).extra_skills">{{ prettify(skill) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="player-info home-box">
+                <div class="home-info team-box" ng-if="playerInFocus(game.state.home_team) != null">
+                    <div class="stats-box left">
+                        <div class="name-box blue text-center">
+                            <span class="text-center" ng-if="playerInFocus(game.state.home_team).name.length < 16">
+                                {{playerInFocus(game.state.home_team).name}}
+                            </span>
+                            <span class="text-center small" ng-if="playerInFocus(game.state.home_team).name.length >= 16 && playerInFocus(game.state.home_team).name.length <= 18">
+                                {{playerInFocus(game.state.home_team).name}}
+                            </span>
+                            <span class="text-center tiny" ng-if="playerInFocus(game.state.home_team).name.length > 18">
+                                {{playerInFocus(game.state.home_team).name}}
+                            </span>
+                            <div class="role-box text-center">
+                                {{playerInFocus(game.state.home_team).role}} #{{playerInFocus(game.state.home_team).nr}}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="float:right" class="label right label-{{ playerReadyStateClass(playerInFocus(game.state.home_team)) }}">{{ platerStateText(playerInFocus(game.state.home_team).state) }}</span>
+                    </div>
+                    <div class="stats-box left">
+                        <span class="icon-box blue">
+                            <img src="static/img/iconssmall/{{ playerIcon(playerInFocus(game.state.home_team), false) }}" width="28px" height="28px" />
+                        </span>
+                        <span>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">MA</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves < playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves == playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
+                                <div class="value blue" ng-if="playerInFocus(game.state.home_team).state.moves > playerInFocus(game.state.home_team).ma">+{{playerInFocus(game.state.home_team).state.moves - playerInFocus(game.state.home_team).ma}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">ST</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).st}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">AG</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).ag}}</div>
+                            </div>
+                            <div class="attribute text-center">
+                                <div class="gamelabel">AV</div>
+                                <div class="value blue">{{playerInFocus(game.state.home_team).av}}</div>
+                            </div>
+                        </span>
+                    </div>
+                    <div class="stats-box">
+
+                    </div>
+                    <div class="stats-box left">
+                        <div class="attribute skill-box">
+                            <div class="gamelabel">SKILLS</div>
+                            <div class="skill role-skill-blue" ng-repeat="skill in playerInFocus(game.state.home_team).role_skills">{{ prettify(skill) }}</div>
+                            <div class="skill extra-skill-blue" ng-repeat="skill in playerInFocus(game.state.home_team).extra_skills">{{ prettify(skill) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
         <div class="gameboard">
             <div class="dugout away">
@@ -208,7 +337,7 @@
                          ng-repeat="n in [] | range:row.length-2" ng-click="square(local_state.board[$parent.$index+1][$index+1])"
                          ng-mouseover="squareHover(local_state.board[$parent.$index+1][$index+1])"
                          style="{{ getCursor(local_state.board[$parent.$index+1][$index+1]) }}">
-                        <div class="player-action-bar" ng-if="playerStartAction($index+1, $parent.$index+1, '')">
+                        <div class="player-action-bar" ng-if="(team_id === undefined || team_id === local_state.current_team_id) && playerStartAction($index+1, $parent.$index+1, '')">
                             <span class="action-dot {{ playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'move') ? 'active' : 'transparent'}}">
                                 <div ng-click="clickAction($event, 'move')">
                                     <img src="static/img/icons/actions/move.gif">
@@ -240,14 +369,14 @@
                                 </div>
                             </span>
                         </div>
-                        <div class="player-action-bar" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
+                        <div class="player-action-bar {{ team_id !== undefined && team_id === local_state.current_team_id ? 'disabled' : '' }}" ng-if="playerSkillAction($index+1, $parent.$index+1) !== null">
                             <span class="action-text">Use {{ playerSkillAction($index+1, $parent.$parent.$index+1) }}?</span>
-                            <span class="action-dot active right">
+                            <span class="action-dot {{ team_id !== undefined && team_id === local_state.current_team_id ? '' : 'active' }} right">
                                 <div ng-click="clickSkillAction($event, 'dont-use')">
                                     <img src="static/img/icons/actions/dont-use.gif">
                                 </div>
                             </span>
-                            <span class="action-dot active right">
+                            <span class="action-dot {{ team_id !== undefined && team_id === local_state.current_team_id ? '' : 'active' }} right">
                                 <div ng-click="clickSkillAction($event, 'use')">
                                     <img src="static/img/icons/actions/use.gif">
                                 </div>
@@ -315,101 +444,6 @@
 
         <div class="square-row">
             <div class="square {{ local_state.board[local_state.board.length-1][$index-1].available ? 'green' : 'disabled' }}" ng-repeat="n in [] | range:local_state.board[local_state.board.length-1].length + 2" ng-click="square(local_state.board[local_state.board.length-1][$index-1])"></div>
-        </div>
-
-        <div class="game-info">
-            <div class="player-info">
-                <div class="away team-box" ng-if="playerInFocus(game.state.away_team) != null">
-                    <div class="icon-box red">
-                        <img src="static/img/iconssmall/{{ playerIcon(playerInFocus(game.state.away_team), false) }}" width="48px" height="48px" />
-                    </div>
-                    <div class="stats-box left">
-                        <div>
-                            <span class="name-box">
-                                {{playerInFocus(game.state.away_team).nr}}. <b>{{playerInFocus(game.state.away_team).role}}:</b> {{playerInFocus(game.state.away_team).name}}
-                            </span>
-                            <span style="float:right" class="label right label-{{ playerReadyStateClass(playerInFocus(game.state.away_team)) }}">{{ platerStateText(playerInFocus(game.state.away_team).state) }}</span>
-                        </div>
-                        <div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">MA</div>
-                                <div class="value label label-success red" ng-if="playerInFocus(game.state.away_team).state.moves < playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
-                                <div class="value label label-danger red" ng-if="playerInFocus(game.state.away_team).state.moves == playerInFocus(game.state.away_team).ma">{{playerInFocus(game.state.away_team).ma - playerInFocus(game.state.away_team).state.moves}}</div>
-                                <div class="value label label-danger red" ng-if="playerInFocus(game.state.away_team).state.moves > playerInFocus(game.state.away_team).ma">+{{playerInFocus(game.state.away_team).state.moves - playerInFocus(game.state.away_team).ma}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">ST</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).st}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">AG</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).ag}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">AV</div>
-                                <div class="value label label-success red">{{playerInFocus(game.state.away_team).av}}</div>
-                            </div>
-                            <div class="attribute skill-box">
-                                <div class="gamelabel">Skills</div>
-                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.away_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="home team-box" ng-if="playerInFocus(game.state.home_team) != null">
-                    <div class="icon-box blue">
-                        <img src="static/img/iconssmall/{{ playerIcon(playerInFocus(game.state.home_team), false) }}" width="48px" height="48px" />
-                    </div>
-                    <div class="stats-box">
-                        <div>
-                            <span class="name-box">
-                                {{playerInFocus(game.state.home_team).nr}}. <b>{{playerInFocus(game.state.home_team).role}}:</b> {{playerInFocus(game.state.home_team).name}}
-                            </span>
-                            <span style="float:right" class="label label-{{ playerReadyStateClass(playerInFocus(game.state.home_team)) }}">{{ playerReadyStateName(playerInFocus(game.state.home_team)) }}</span>
-                        </div>
-                        <div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">MA</div>
-                                <div class="value label label-success blue" ng-if="playerInFocus(game.state.home_team).state.moves < playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
-                                <div class="value label label-danger blue" ng-if="playerInFocus(game.state.home_team).state.moves == playerInFocus(game.state.home_team).ma">{{playerInFocus(game.state.home_team).ma - playerInFocus(game.state.home_team).state.moves}}</div>
-                                <div class="value label label-danger blue" ng-if="playerInFocus(game.state.home_team).state.moves > playerInFocus(game.state.home_team).ma">+{{playerInFocus(game.state.home_team).state.moves - playerInFocus(game.state.home_team).ma}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">ST</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).st}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">AG</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).ag}}</div>
-                            </div>
-                            <div class="attribute text-center">
-                                <div class="gamelabel">AV</div>
-                                <div class="value label label-success blue">{{playerInFocus(game.state.home_team).av}}</div>
-                            </div>
-                            <div class="attribute skill-box">
-                                <div class="gamelabel">Skills</div>
-                                <div><span class="label label-success skill" ng-repeat="skill in playerInFocus(game.state.home_team).skills">{{ prettify(skill) }}</span>&nbsp</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="action-bar text-center">
-                <span ng-repeat="action in game.state.available_actions">
-                    <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
-                        {{ prettify(action.action_type) }}
-                    </button>
-                    <span>
-                        <button type="button" ng-if="showActionAsDice(action)" class="btn btn-sm {{action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}} die" ng-click="act(action)" ng-disabled="refreshing || action.disabled">
-                            <img src="static/img/dice/attacker_down.png" ng-show="action.action_type=='SELECT_ATTACKER_DOWN'" />
-                            <img src="static/img/dice/both_down.png" ng-show="action.action_type=='SELECT_BOTH_DOWN'" />
-                            <img src="static/img/dice/push.png" ng-show="action.action_type=='SELECT_PUSH'" />
-                            <img src="static/img/dice/defender_down.png" ng-show="action.action_type=='SELECT_DEFENDER_DOWN'" />
-                            <img src="static/img/dice/defender_stumbles.png" ng-show="action.action_type=='SELECT_DEFENDER_STUMBLES'" />
-                        </button>
-                    </span>
-                </span>
-            </div>
             <div id="gamelog" class="gamelog">
                 <div ng-repeat="report in game.state.reports | reverse | limitTo:reportsLimit" ng-if="showReport(report)" class="report">
                     <div ng-repeat="roll in report.rolls | reverse" class="roll">
@@ -417,7 +451,9 @@
 
                         </span>
                         <span ng-if="roll.modified_target != null" class="modifiers {{ roll.sum >= roll.modified_target ? 'success' : 'danger' }}">
-                            {{roll.roll_type === "AGILITY_ROLL" || roll.roll_type === "ARMOR_ROLL" || roll.roll_type === "GFI_ROLL" ? '(' + roll.modified_target + '+)' : '(' + roll.modified_target + ')' }}
+                            {{roll.target_higher ? '(' + roll.modified_target + '+)' : '' }}
+                            {{roll.target_lower ? '(' + roll.modified_target + '-)' : '' }}
+                            {{!roll.target_higher && !roll.target_lower ? '(' + roll.modified_target + ')' : '' }}
                         </span>
                     </div>
                     <div>

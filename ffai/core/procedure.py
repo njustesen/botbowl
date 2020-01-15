@@ -1347,17 +1347,15 @@ class ThrowARock(Procedure):
     def step(self, action):
 
         rolls = []
-        rocks = []
         for team in self.game.state.teams:
             roll = DiceRoll([D3(self.game.rnd)], roll_type=RollType.THROW_A_ROCK_ROLL)
-            rolls.append(roll)
             roll.modifiers = team.state.fame
-            rocks.append(roll.get_result())
+            rolls.append(roll.get_result())
             self.game.report(Outcome(OutcomeType.THROW_A_ROCK_ROLL, team=team, rolls=[roll]))
 
         for i in range(len(self.game.state.teams)):
             team = self.game.state.teams[i]
-            if rocks[i] == 1:
+            if rolls[i] == np.min(rolls):
                 players = self.game.get_players_on_pitch(team)
                 if len(players) > 0:
                     player = self.game.rnd.choice(players)
@@ -2095,10 +2093,12 @@ class StandUp(Procedure):
 
         if self.reroll.use_reroll:
             self.reroll = None
+            self.roll = None
             return False
         else:
             self.player.place_prone()
             self.game.report(Outcome(OutcomeType.FAILED_STAND_UP, rolls=[self.roll], player=self.player))
+            EndPlayerTurn(self.game, self.player)
         return True
 
 
@@ -2191,6 +2191,9 @@ class PlayerAction(Procedure):
             self.game.add_secondary_clock(self.player.team)
 
     def step(self, action):
+
+        if self.player.state.used:
+            return True
 
         if self.player_action_type == PlayerActionType.BLOCK and not self.player.state.up:
             assert self.player.has_skill(Skill.JUMP_UP)
@@ -2327,12 +2330,16 @@ class PlayerAction(Procedure):
             if not self.dump_off:
                 EndPlayerTurn(self.game, self.player)
             PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.position,
-                       pass_distance, dump_off=True)
+                       pass_distance, dump_off=self.dump_off)
             self.turn.pass_available = False
 
             return True
 
     def available_actions(self):
+
+        if self.player.state.used:
+            return []
+
         actions = []
 
         # Move actions

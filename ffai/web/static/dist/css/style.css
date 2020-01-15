@@ -6,7 +6,6 @@ html body {
   font-family: 'Varela Round', sans-serif;
   background: #F2F2F2;
   font-size: 1.3em;
-  padding-top: 50px;
   min-width: 904px;
   margin: auto !important;
   /* Firefox will set width as auto */
@@ -67,11 +66,80 @@ a:hover {
 .game .game-footer {
   margin-top: 1.8em;
 }
+.nav-bar-trans {
+  background-color: rgba(0, 0, 0, 0);
+  min-height: 28px;
+  border-width: 0 0 0px;
+  position: absolute;
+}
+.nav > li > a {
+  position: relative;
+  display: block;
+  padding: 0px 10px;
+}
+.nav > li > a:hover {
+  color: #000000;
+}
+.navbar-nav > li > a {
+  padding-top: 5px;
+  padding-bottom: 0px;
+}
+.navbar-collapse {
+  padding-right: 5px;
+  padding-left: 5px;
+}
 .nav-link {
   cursor: pointer;
 }
 .dropdown-toggle {
   cursor: pointer;
+}
+.btn {
+  margin-top: 2px;
+  margin-bottom: 2px;
+  height: 26px;
+  font-size: small;
+  line-height: 0.84;
+  border-radius: 2px;
+}
+*.btn:active,
+.btn:focus,
+.btn:active:focus,
+.btn.active:focus {
+  outline: none !important;
+}
+.die {
+  background-color: white;
+  padding: 0px;
+  margin: 2px 0px 0px 2px;
+}
+.die img {
+  width: 24px;
+  height: 24px;
+}
+.btn-danger {
+  float: left;
+  margin-right: 2px;
+}
+.btn-danger.btn-special {
+  background: #ffffff;
+  color: red;
+  font-weight: bolder;
+}
+.btn-danger.btn-special.special-active {
+  background: #ffdcdc;
+}
+.btn-primary {
+  float: right;
+  margin-left: 2px;
+}
+.btn-primary.btn-special {
+  background: #ffffff;
+  color: #235A9F;
+  font-weight: bolder;
+}
+.btn-primary.btn-special.special-active {
+  background: #dcdcff;
 }
 .rerolls {
   display: inline-block;
@@ -174,8 +242,8 @@ a:hover {
   padding-bottom: 4px;
 }
 .game-free .scoreboard .scoreboard-content {
-  min-width: 900px;
-  max-width: 900px;
+  min-width: 1200px;
+  max-width: 1200px;
   margin: auto;
   padding-bottom: 0px;
 }
@@ -208,19 +276,22 @@ a:hover {
 .game-free .scoreboard .turnpitch {
   height: 100%;
 }
-.game-free .scoreboard .turnmarker {
+.game-free .scoreboard .turnmarkers {
+  min-width: 1200px;
+}
+.game-free .scoreboard .turnmarkers .turnmarker {
   width: 50%;
   height: 4px;
   padding: 0px;
   margin: 0px;
   background-color: #ccc;
 }
-.game-free .scoreboard .turnmarker-home-turn {
+.game-free .scoreboard .turnmarkers .turnmarker-home-turn {
   width: 100%;
   background-color: rgba(0, 0, 255, 0.66);
   float: left;
 }
-.game-free .scoreboard .turnmarker-away-turn {
+.game-free .scoreboard .turnmarkers .turnmarker-away-turn {
   width: 100%;
   background-color: rgba(255, 0, 0, 0.66);
   float: right;
@@ -233,8 +304,118 @@ a:hover {
   color: #555;
   line-height: 2em;
 }
+.navbar-collapse {
+  padding-right: 5px;
+  padding-left: 0px;
+}
 .gamecontent {
-  height: 454px;
+  margin: auto;
+  width: 1200px;
+}
+.gamecontent .player-info {
+  height: 455px;
+  width: 148px;
+}
+.gamecontent .player-info.away-box {
+  float: left;
+}
+.gamecontent .player-info.home-box {
+  float: right;
+}
+.gamecontent .player-info .red {
+  background-color: rgba(255, 0, 0, 0.1);
+}
+.gamecontent .player-info .blue {
+  background-color: rgba(0, 0, 255, 0.1);
+}
+.gamecontent .player-info .team-box {
+  background-color: white;
+  height: 100%;
+  min-height: 64px;
+  border: 1px solid #ccc;
+}
+.gamecontent .player-info .home-info {
+  float: right;
+  width: 100%;
+}
+.gamecontent .player-info .away-info {
+  float: left;
+  width: 100%;
+}
+.gamecontent .player-info .icon-box {
+  float: left;
+  width: 36px;
+  padding: 4px;
+  margin-left: 4px;
+  margin-bottom: 4px;
+  border-radius: 2px;
+}
+.gamecontent .player-info .stats-box {
+  float: left;
+  font-size: 1.2em;
+  width: 100%;
+}
+.gamecontent .player-info .stats-box .name-box {
+  padding: 2px;
+  font-weight: normal;
+  font-size: 0.9em;
+  color: black;
+  margin: 4px;
+  margin-bottom: 4px;
+  border-radius: 2px;
+}
+.gamecontent .player-info .stats-box .name-box .small {
+  font-size: 0.8em;
+}
+.gamecontent .player-info .stats-box .name-box .tiny {
+  font-size: 0.7em;
+}
+.gamecontent .player-info .stats-box .role-box {
+  font-size: 0.8em;
+  color: rgba(0, 0, 0, 0.5);
+}
+.gamecontent .player-info .stats-box .attribute {
+  float: left;
+  margin-left: 4px;
+  padding-top: 1px;
+}
+.gamecontent .player-info .stats-box .attribute .value {
+  font-weight: normal;
+  color: black;
+  font-size: 0.785em;
+  border-radius: 2px;
+  width: 21.5px;
+  height: 22px;
+  line-height: 24px;
+}
+.gamecontent .player-info .stats-box .attribute .skill {
+  font-weight: normal;
+  color: black;
+  padding: 2px;
+  padding-left: 4px;
+  margin-bottom: 1px;
+  margin-right: 8px;
+  font-size: 0.785em;
+}
+.gamecontent .player-info .stats-box .attribute .skill.role-skill-red {
+  border-left: 4px solid rgba(255, 0, 0, 0.5);
+  background-color: rgba(255, 0, 0, 0.1);
+}
+.gamecontent .player-info .stats-box .attribute .skill.role-skill-red {
+  border-left: 4px solid rgba(255, 0, 0, 0.25);
+  background-color: rgba(255, 0, 0, 0.1);
+}
+.gamecontent .player-info .stats-box .attribute .skill.role-skill-blue {
+  border-left: 4px solid rgba(0, 0, 255, 0.5);
+  background-color: rgba(0, 0, 255, 0.1);
+}
+.gamecontent .player-info .stats-box .attribute .skill.role-skill-blue {
+  border-left: 4px solid rgba(0, 0, 255, 0.25);
+  background-color: rgba(0, 0, 255, 0.1);
+}
+.gamecontent .player-info .stats-box .skill-box {
+  overflow: scroll;
+  width: 100%;
 }
 .gamecontent .hint {
   position: relative;
@@ -268,6 +449,11 @@ a:hover {
   margin: 0 auto;
   max-width: 900px;
 }
+.gamecontent .square-row .row-divider {
+  position: absolute;
+  width: 904px;
+  margin-left: -2px;
+}
 .gamecontent .square {
   width: 30px;
   height: 30px;
@@ -288,6 +474,9 @@ a:hover {
   background-color: rgba(0, 0, 0, 0.33);
   border-radius: 16px;
 }
+.gamecontent .square .player-action-bar.disabled {
+  opacity: 0.5;
+}
 .gamecontent .square .player-action-bar .action-dot {
   height: 28px;
   width: 28px;
@@ -303,9 +492,12 @@ a:hover {
   filter: grayscale(100%);
 }
 .gamecontent .square .player-action-bar .action-dot.active:hover {
-  border: 1px solid black;
   background-color: #646464;
+  border: 1px solid #000000;
   cursor: pointer;
+}
+.gamecontent .square .player-action-bar .action-dot.active:hover.disabled {
+  cursor: default;
 }
 .gamecontent .square .player-action-bar .action-dot.right {
   float: right;
@@ -450,72 +642,6 @@ a:hover {
   width: 902px;
   margin: auto;
 }
-.gamecontent .game-info .player-info {
-  min-height: 64px;
-  margin-bottom: 4px;
-}
-.gamecontent .game-info .player-info .red {
-  background-color: rgba(255, 0, 0, 0.1);
-}
-.gamecontent .game-info .player-info .blue {
-  background-color: rgba(0, 0, 255, 0.1);
-}
-.gamecontent .game-info .player-info .team-box {
-  background-color: white;
-  width: 50%;
-  padding: 4px;
-  height: 100%;
-  min-height: 64px;
-  border: 1px solid #ccc;
-}
-.gamecontent .game-info .player-info .home {
-  float: right;
-}
-.gamecontent .game-info .player-info .away {
-  float: left;
-}
-.gamecontent .game-info .player-info .icon-box {
-  float: left;
-  width: 58px;
-  padding: 4px;
-  border-radius: .25em;
-  border-top-left-radius: 0.25em;
-  border-top-right-radius: 0.25em;
-  border-bottom-right-radius: 0.25em;
-  border-bottom-left-radius: 0.25em;
-}
-.gamecontent .game-info .player-info .stats-box {
-  float: left;
-  margin-left: 4px;
-  font-size: 1.1em;
-  width: 375px;
-}
-.gamecontent .game-info .player-info .stats-box .name-box {
-  padding: 2px;
-  font-weight: normal;
-  font-size: 1.0em;
-  color: black;
-}
-.gamecontent .game-info .player-info .stats-box .attribute {
-  float: left;
-  margin-right: 4px;
-  margin-top: 4px;
-}
-.gamecontent .game-info .player-info .stats-box .attribute .value {
-  width: 16px;
-  font-weight: normal;
-  color: black;
-}
-.gamecontent .game-info .player-info .stats-box .attribute .skill {
-  margin-right: 2px;
-  font-weight: normal;
-  color: black;
-  background-color: rgba(0, 255, 0, 0.4);
-}
-.gamecontent .game-info .player-info .stats-box .skill-box {
-  overflow: scroll;
-  width: 273px;
-}
 .gamecontent .game-info .action-bar {
   border-color: #080808;
   min-height: 34px;
@@ -523,31 +649,10 @@ a:hover {
   margin-top: 2px;
   margin-bottom: 2px;
 }
-.gamecontent .game-info .action-bar .btn {
-  margin-top: 2px;
-  margin-bottom: 2px;
-}
-.gamecontent .game-info .action-bar .die {
-  background-color: white;
-  padding: 0px;
-  margin: 2px 0px 0px 2px;
-}
-.gamecontent .game-info .action-bar .die img {
-  width: 28px;
-  height: 28px;
-}
-.gamecontent .game-info .action-bar .btn-danger {
-  float: left;
-  margin-right: 2px;
-}
-.gamecontent .game-info .action-bar .btn-primary {
-  float: right;
-  margin-left: 2px;
-}
 .gamecontent .gameboard {
   width: 904px;
   margin: auto;
-  height: 100%;
+  height: 454px;
   box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
   -moz-box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
   -webkit-box-shadow: 0 0 0px rgba(0, 0, 0, 0.6);
@@ -697,6 +802,9 @@ a:hover {
   -moz-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
   -webkit-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
   -o-box-shadow: 0 0 1px rgba(0, 0, 0, 0.6);
+  position: absolute;
+  width: 904px;
+  margin-left: -2px;
 }
 .gamelog .report {
   margin: 4px;
