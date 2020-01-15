@@ -1645,18 +1645,72 @@ class Shadowing(Procedure):
         ]
 
 
+class Tentacles(Procedure):
+
+    def __init__(self, game, player, position, tentacler, move_proc):
+        super().__init__(game)
+        self.player = player
+        self.position = position
+        self.tentacler = tentacler
+        self.move_proc = move_proc
+        self.roll = None
+        self.reroll = None
+
+    def step(self, action):
+
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)])
+            self.roll.target = 5
+            self.roll.modifiers = self.player.get_st() - self.tentacler.get_st()
+            if self.roll.is_d6_success():
+                return True
+            else:
+                self.reroll = Reroll(self.game, self.player, self)
+                return False
+
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+
+        self.move_proc.tentacles_used = True
+        return True
+
+
 class Move(Procedure):
 
     def __init__(self, game, player, position, gfi, dodge):
         super().__init__(game)
         self.player = player
         self.position = position
-        if dodge:
-            Dodge(game, player, position)
-        if gfi:
-            GFI(game, player, position)
+        self.dodge = dodge
+        self.gfi = gfi
+        self.tentaclers = [tentacler for tentacler in self.game.get_adjacent_opponents(self.player, skill=Skill.TENTACLES, standing=True) if tentacler.has_tackle_zone()]
+        self.tentacles_used = False
 
     def step(self, action):
+
+        if self.tentacles_used:
+            return True
+
+        if self.tentaclers:
+            next_tentacler = self.tentaclers[0]
+            Tentacles(self.game, self.player, self.position, next_tentacler, self)
+            self.tentaclers.remove(next_tentacler)
+            return False
+
+        if self.dodge:
+            Dodge(self.game, self.player, self.position)
+
+        if self.gfi:
+            GFI(self.game, self.player, self.position)
+
+        if self.dodge or self.gfi:
+            self.dodge = False
+            self.gfi = False
+            return False
 
         # If this is reached then Dodge and GFI was passed
 

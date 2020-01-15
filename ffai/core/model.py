@@ -504,7 +504,7 @@ class Die:
 
 class DiceRoll:
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None, target_higher=True, target_lower=False):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True, use_alternative=False):
         self.dice = dice
         self.sum = 0
         self.d68 = d68
@@ -514,6 +514,9 @@ class DiceRoll:
         self.roll_type = roll_type
         self.target_higher = target_higher
         self.target_lower = target_lower
+        self.highest_succeed = highest_succeed
+        self.lowest_fail = lowest_fail
+        self.use_alternative = use_alternative
         # Roll dice
         for d in self.dice:
             if not isinstance(d, BBDie):
@@ -536,7 +539,10 @@ class DiceRoll:
             'result': self.get_result(),
             'roll_type': self.roll_type.name,
             'target_higher': self.target_higher,
-            'target_lower': self.target_lower
+            'target_lower': self.target_lower,
+            'highest_succeed': self.highest_succeed,
+            'lowest_fail': self.lowest_fail,
+            'use_alternative': self.use_alternative
         }
 
     def modified_target(self):
@@ -559,16 +565,26 @@ class DiceRoll:
     def get_result(self):
         return self.sum + self.modifiers
 
-    def is_d6_success(self, alternative=False, lowest_always_fail=True, highest_always_succeed=True):
-        if lowest_always_fail and self.sum == 1:
+    def is_d6_success(self):
+        if self.lowest_fail and self.sum == 1:
             return False
 
-        if highest_always_succeed and self.sum == 6:
+        if self.highest_succeed and self.sum == 6:
             return True
 
-        if alternative:
-            return self.sum + self.modifiers >= self.alternative_target
-        return self.sum + self.modifiers >= self.target
+        if self.use_alternative:
+            if self.target_higher:
+                return self.sum + self.modifiers >= self.alternative_target
+            elif self.target_lower:
+                return self.sum + self.modifiers <= self.alternative_target
+            else:
+                return self.sum + self.modifiers == self.alternative_target
+        if self.target_higher:
+            return self.sum + self.modifiers >= self.target
+        elif self.target_lower:
+            return self.sum + self.modifiers <= self.target
+        else:
+            return self.sum + self.modifiers == self.target
 
     def same(self):
         value = None
