@@ -2,7 +2,7 @@
   "name": "Undead Team",
   "race": "Undead",
   "treasury": 0,
-  "apothecary": false,
+  "apothecaries": 0,
   "rerolls": 3,
   "fan_factor": 3,
   "ass_coaches": 0,

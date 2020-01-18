@@ -592,7 +592,8 @@ class Casualty(Procedure):
         self.player = player
         self.inflictor = inflictor
         self.waiting_apothecary = False
-        self.roll = roll
+        self.injury_roll = roll  # Not sure why this is here
+        self.roll = None
         self.casualty = None
         self.effect = None
         self.decay = decay
@@ -600,38 +601,42 @@ class Casualty(Procedure):
 
     def step(self, action):
 
-        self.roll = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
-        result = self.roll.get_sum()
-        n = min(61, max(38, result))
-        self.casualty = CasualtyType(n)
-        self.effect = Rules.casualty_effect[self.casualty]
-
-        self.game.report(
-            Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
-                    n=self.effect.name,
-                    rolls=[self.roll]))
-
-        if self.player.team.state.apothecaries > 1:
-            Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
-                       casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
-        else:
-            # Regeneration
-            if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
-                self.regeneration = Regeneration(self.game, self.player)
-                return False
-
-            if self.regeneration and self.regeneration.regenerates:
+        if self.regeneration:
+            if self.regeneration.regenerates:
                 if self.player.position is not None:
                     self.game.pitch_to_reserves(self.player)
                 return True
+            self.regeneration = None
 
-            # Apply casualty
-            self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
+            result = self.roll.get_sum()
+            n = min(61, max(38, result))
+            self.casualty = CasualtyType(n)
+            self.effect = Rules.casualty_effect[self.casualty]
 
-            # Decay
-            if self.decay:
-                self.game.report(Outcome(OutcomeType.DECAYING, player=self.player))
-                Casualty(self.game, self.player, self.inflictor)
+            self.game.report(
+                Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
+                        n=self.effect.name,
+                        rolls=[self.roll]))
+
+            if self.player.team.state.apothecaries > 1:
+                Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
+                           casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
+                return True
+            else:
+                # Regeneration
+                if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
+                    self.regeneration = Regeneration(self.game, self.player)
+                    return False
+
+        # Apply casualty
+        self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
+
+        # Decay
+        if self.decay:
+            self.game.report(Outcome(OutcomeType.DECAYING, player=self.player))
+            Casualty(self.game, self.player, self.inflictor)
 
         return True
 
