@@ -166,7 +166,7 @@ class PlayerState:
             'ejected': self.ejected,
             'spp_earned': self.spp_earned,
             'moves': self.moves,
-            'injuries_gained': self.injuries_gained,
+            'injuries_gained': [injury.name for injury in self.injuries_gained],
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
             'taken_root': self.taken_root
@@ -798,7 +798,7 @@ class Player(Piece):
             'st': self.get_st(),
             'ag': self.get_ag(),
             'av': self.get_av(),
-            'injuries': self.injuries,
+            'injuries': [injury.name for injury in self.injuries],
             'mng': self.mng,
             'spp': self.spp,
             'state': self.state.to_json(),

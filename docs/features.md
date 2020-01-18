@@ -49,7 +49,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Lizardmen**     |                         |                                    | YES           |
 | Necromantic       |                         |                                    | NO           |
 | **Norse**         |                         |                                    | YES        |
-| Nurgle            | Rotters                 | Nurgle's Rot, Foul Appearance      | NO            |
+| **Nurgle***      |                         |                                    | NO            |
 | **Orc**           |                         |                                    | YES           |
 | Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
 | **Skaven**        |                         |                                    | YES           |
@@ -61,6 +61,8 @@ A race is supported if all positions can be used and all their starting skills a
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             | Catchers, Blitzers | Diving Catch, Diving Tackle             | NO              |         
 | Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
+
+* Nurgle's Rot needs to be implemented in the post-game sequence
 
 ## Skills
 
@@ -83,7 +85,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Decay**         | YES         | YES       |
 | Dirty Player      | YES         | NO        |
 | Disturbing Presence | YES       | NO        |
-| Diving Catch      | NO          | NO        |
+| **Diving Catch**  | YES         | YES       |
 | Diving Tackle     | NO          | NO        |
 | **Dodge**         | YES         | YES       |
 | Dump-Off          | YES         | NO        |
@@ -91,7 +93,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Fan Favorite      | NO          | NO        |
 | Fend              | YES         | NO        |
 | Filthy Rich       | NO          | NO        |
-| Foul Appearance   | NO          | NO        |
+| Foul Appearance   | YES         | NO        |
 | **Frenzy**        | YES         | YES       |
 | Grab              | YES         | NO        |
 | Guard             | YES         | NO        |

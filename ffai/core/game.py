@@ -441,10 +441,10 @@ class Game:
             print("-Proc={}".format(self.state.stack.peek()))
 
         # Initialize if not
-        if not self.state.stack.peek().initialized:
+        if not self.state.stack.peek().started:
             proc = self.state.stack.peek()
             proc.start()
-            proc.initialized = True
+            proc.started = True
 
         # Update available actions
         self.set_available_actions()
@@ -1022,6 +1022,8 @@ class Game:
         :return: the modifier to be added to the pass roll.
         """
         modifiers = 1 if accurate or handoff else 0
+        if catcher.has_skill(Skill.DIVING_CATCH) and accurate:
+            modifiers += 1
         modifiers = -2 if interception else modifiers
         if interception and catcher.has_skill(Skill.VERY_LONG_LEGS):
             modifiers += 1
@@ -1148,6 +1150,20 @@ class Game:
             if p is not None and p.has_tackle_zone():
                 tackle_zones += 1
         return tackle_zones
+
+    def get_catcher(self, position):
+        """
+        :param position: A square on the board
+        :return: A player if the ball can be catched by one at the given square, otherwise None.
+        """
+        catcher = self.get_player_at(position)
+        if catcher is not None:
+            return catcher
+        diving_catchers = self.get_adjacent_players(position, team=None, down=False, skill=Skill.DIVING_CATCH)
+        if len(diving_catchers) == 1:
+            return diving_catchers[0]
+        else:
+            return None
 
     def is_setup_legal(self, team):
         """

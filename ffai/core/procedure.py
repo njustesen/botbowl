@@ -21,8 +21,7 @@ class Procedure:
         self.context = context
         self.game.state.stack.push(self)
         self.done = False
-        self.initialized = False
-        # TODO: Rename to started
+        self.started = False
 
     def start(self):
         """
@@ -272,6 +271,39 @@ class Stab(Procedure):
         return True
 
 
+class FoulAppearance(Procedure):
+
+    def __init__(self, game, attacker, defender):
+        super().__init__(game)
+        self.attacker = attacker
+        self.defender = defender
+        self.roll = None
+        self.reroll = None
+        self.revolted = False
+
+    def step(self, action):
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll.target = 2
+            self.game.report(
+                Outcome(OutcomeType.SKILL_USED, skill=Skill.FOUL_APPEARANCE, player=self.attacker, rolls=[self.roll]))
+            if self.roll.is_d6_success():
+                return True
+            else:
+                self.revolted = True
+                self.reroll = Reroll(self.game, self.attacker, self)
+                return False
+
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.reroll = None
+            self.roll = None
+            self.revolted = False
+            return False
+        return True
+
+
 class Block(Procedure):
 
     def __init__(self, game, attacker, defender, blitz=False, frenzy_block=False, gfi=False):
@@ -293,9 +325,12 @@ class Block(Procedure):
         self.dauntless_success = False
         self.frenzy_checked = False
         self.waiting_dump_off = False
+        self.waiting_foul_appearance = False
+        self.foul_appearance = None
 
     def start(self):
         self.waiting_dump_off = self.game.get_ball_carrier() == self.defender and self.defender.has_skill(Skill.DUMP_OFF) and not self.frenzy_block
+        self.waiting_foul_appearance = self.defender.has_skill(Skill.FOUL_APPEARANCE)
 
     def step(self, action):
 
@@ -304,6 +339,17 @@ class Block(Procedure):
             self.gfi = False
             GFI(self.game, self.attacker, self.attacker.position)
             return False
+
+        # Foul appearance
+        if self.waiting_foul_appearance:
+            if not self.foul_appearance:
+                self.foul_appearance = FoulAppearance(self.game, self.attacker, self.defender)
+                return False
+            elif self.foul_appearance.revolted:
+                return True
+            else:
+                self.waiting_foul_appearance = False
+                self.foul_appearance = None
 
         # Dump-off
         if self.waiting_dump_off:
@@ -656,6 +702,11 @@ class Catch(Procedure):
         self.reroll = None
         self.kick = kick
         self.passer = passer
+        self.diving = player.position != ball.position
+
+    def start(self):
+        if self.diving:
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.DIVING_CATCH))
 
     def step(self, action):
 
@@ -674,6 +725,8 @@ class Catch(Procedure):
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             if self.roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.CATCH, player=self.player, rolls=[self.roll]))
+                if self.diving:
+                    self.ball.move_to(self.player.position)
                 self.ball.is_carried = True
                 if self.game.is_touchdown(self.player):
                     Touchdown(self.game, self.player)
@@ -692,6 +745,9 @@ class Catch(Procedure):
             self.reroll = None
             return False
         else:
+            # If diving tackle was used - bounce from player's square
+            if self.diving:
+                self.ball.move_to(self.player.position)
             Bounce(self.game, self.ball, kick=self.kick)
 
         return True
@@ -1128,14 +1184,14 @@ class LandKick(Procedure):
             return False
 
         self.ball.on_ground = True
-        player_at = self.game.get_player_at(self.ball.position)
-        if player_at is None:
+        catcher = self.game.get_catcher(self.ball.position)
+        if catcher is None:
             Bounce(self.game, self.ball, kick=True)
             self.game.report(Outcome(OutcomeType.BALL_HIT_GROUND, position=self.ball.position))
             return True
 
-        Catch(self.game, player_at, self.ball, kick=True)
-        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position, player=player_at))
+        Catch(self.game, catcher, self.ball, kick=True)
+        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position, player=catcher))
 
         return True
 
@@ -1936,7 +1992,6 @@ class PassAction(Procedure):
         super().__init__(game)
         self.ball = ball
         self.passer = passer
-        self.catcher = catcher
         self.position = position
         self.pass_distance = pass_distance
         self.roll = None
@@ -1944,10 +1999,12 @@ class PassAction(Procedure):
         self.fumble = False
         self.interception_tried = False
         self.dump_off = dump_off
+        self.catcher = None
 
     def start(self):
         if self.dump_off:
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.DUMP_OFF, player=self.passer))
+        self.catcher = self.game.get_catcher(self.position)
 
     def step(self, action):
 
@@ -1979,6 +2036,7 @@ class PassAction(Procedure):
                 self.ball.move_to(self.position)
                 if not self.dump_off:
                     TurnoverIfPossessionLost(self.game, self.ball)
+
                 if self.catcher is not None:
                     Catch(self.game, self.catcher, self.ball, accurate=True)
                 else:
@@ -1990,9 +2048,11 @@ class PassAction(Procedure):
                 self.fumble = True
                 self.game.report(Outcome(OutcomeType.FUMBLE, player=self.passer, rolls=[self.roll]))
             elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
+                # Inaccurate pass - Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
             else:
+                # Inaccurate pass
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
 
             # Check if re-roll available
@@ -2859,7 +2919,7 @@ class Scatter(Procedure):
                     self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
 
                     # On player -> Catch
-                    player = self.game.get_player_at(self.ball.position)
+                    player = self.game.get_catcher(self.ball.position)
                     if player is not None:
                         Catch(self.game, player, self.ball)
                         self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position,
@@ -2918,7 +2978,6 @@ class Setup(Procedure):
         self.selected_player = None
         self.formations = game.config.defensive_formations if team == game.get_kicking_team() \
             else game.config.offensive_formations
-        self.started = False
         self.aa = []
 
     def start(self):
@@ -3060,9 +3119,9 @@ class ThrowIn(Procedure):
         self.game.report(Outcome(OutcomeType.THROW_IN, position=self.ball.position, rolls=[roll_direction,  roll_distance]))
 
         # On player -> Catch
-        player = self.game.get_player_at(self.ball.position)
-        if player is not None:
-            Catch(self.game, player, self.ball)
+        catcher = self.game.get_catcher(self.ball.position)
+        if catcher is not None:
+            Catch(self.game, catcher, self.ball)
         else:
             Bounce(self.game, self.ball)
 
@@ -3166,15 +3225,16 @@ class Turn(Procedure):
         self.half = half
         self.turn = turn
         self.blitz = blitz
-        self.started = False
         self.quick_snap = quick_snap
         self.blitz_available = not quick_snap
         self.pass_available = not quick_snap
         self.handoff_available = not quick_snap
         self.foul_available = not quick_snap
+        self.stunned_turned = False
 
     def start(self):
         self.game.state.current_team = self.team
+        self.game.add_primary_clock(self.team)
 
     def start_player_action(self, outcome_type, player_action_type, player):
 
@@ -3192,12 +3252,9 @@ class Turn(Procedure):
             TakeRoot(self.game, player, player_action)
 
     def step(self, action):
-
         # Update state
-        if not self.started:
-            self.started = True
-            self.game.add_primary_clock(self.team)
-
+        if not self.stunned_turned:
+            self.stunned_turned = True
             if self.blitz:
                 self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))
             elif self.quick_snap:
@@ -3256,7 +3313,7 @@ class Turn(Procedure):
             return False
 
     def available_actions(self):
-        if not self.started:
+        if not self.stunned_turned:
             return []
         move_players = []
         block_players = []
@@ -3549,7 +3606,7 @@ class Reroll(Procedure):
             self.skill = Skill.SURE_FEET
 
         # Add secondary clock if waiting for opponent decision
-        if self.skill is None and self.player.team != self.game.state.current_team:
+        if self.can_use_pro and self.player.team != self.game.state.current_team:
             self.game.add_secondary_clock(self.player.team)
             self.secondary_clock = True
 

@@ -217,9 +217,6 @@
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <span style="float:right" class="label right label-{{ playerReadyStateClass(playerInFocus(game.state.away_team)) }}">{{ platerStateText(playerInFocus(game.state.away_team).state) }}</span>
-                    </div>
                     <div class="stats-box left">
                         <span class="icon-box red">
                             <img src="static/img/iconssmall/{{ playerIcon(playerInFocus(game.state.away_team), false) }}" width="28px" height="28px" />
@@ -244,6 +241,9 @@
                                 <div class="value red">{{playerInFocus(game.state.away_team).av}}</div>
                             </div>
                         </span>
+                    </div>
+                    <div class="text-center">
+                        <span class="label label-{{ playerReadyStateClass(playerInFocus(game.state.away_team)) }}">{{ platerStateText(playerInFocus(game.state.away_team).state) }}</span>
                     </div>
                     <div class="stats-box left">
                         <div class="attribute skill-box">
