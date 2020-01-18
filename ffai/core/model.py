@@ -147,7 +147,7 @@ class PlayerState:
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.injuries = []
+        self.injuries_gained = []
         self.wild_animal = False
         self.taken_root = False
         self.used_skills = set()
@@ -166,7 +166,7 @@ class PlayerState:
             'ejected': self.ejected,
             'spp_earned': self.spp_earned,
             'moves': self.moves,
-            'injuries': self.injuries,
+            'injuries_gained': self.injuries_gained,
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
             'taken_root': self.taken_root
@@ -806,14 +806,14 @@ class Player(Piece):
         }
 
     def get_ag(self):
-        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG)
+        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG) - self.state.injuries_gained.count(CasualtyEffect.AG)
         ag = max(self.role.ag - 2, ag)
         ag = max(1, ag)
         ag = min(10, ag)
         return ag
 
     def get_st(self):
-        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST)
+        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST) - self.state.injuries_gained.count(CasualtyEffect.ST)
         st = max(self.role.st - 2, st)
         st = max(1, st)
         st = min(10, st)
@@ -823,14 +823,14 @@ class Player(Piece):
         if self.state.taken_root:
             return 0
         else:
-            ma = self.role.ma + self.extra_ma - self.injuries.count(CasualtyEffect.MA)
+            ma = self.role.ma + self.extra_ma - self.injuries.count(CasualtyEffect.MA) - self.state.injuries_gained.count(CasualtyEffect.MA)
             ma = max(self.role.ma - 2, ma)
             ma = max(1, ma)
             ma = min(10, ma)
             return ma
 
     def get_av(self):
-        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV)
+        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
         av = max(self.role.av - 2, av)
         av = max(1, av)
         av = min(10, av)

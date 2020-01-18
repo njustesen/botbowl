@@ -621,7 +621,8 @@ class Casualty(Procedure):
                 return False
 
             if self.regeneration and self.regeneration.regenerates:
-                self.game.pitch_to_reserves(self.player)
+                if self.player.position is not None:
+                    self.game.pitch_to_reserves(self.player)
                 return True
 
             # Apply casualty
