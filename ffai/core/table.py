@@ -239,7 +239,7 @@ class PhysicalState(Enum):
 class CasualtyEffect(Enum):
     NONE = 1
     MNG = 2
-    NI = 3
+    NIGGLING = 3
     MA = 4
     AV = 5
     AG = 6
@@ -481,8 +481,8 @@ class Rules:
         CasualtyType.FRACTURED_LEG: CasualtyEffect.MNG,
         CasualtyType.SMASHED_HAND: CasualtyEffect.MNG,
         CasualtyType.PINCHED_NERVE: CasualtyEffect.MNG,
-        CasualtyType.DAMAGED_BACK: CasualtyEffect.NI,
-        CasualtyType.SMASHED_KNEE: CasualtyEffect.NI,
+        CasualtyType.DAMAGED_BACK: CasualtyEffect.NIGGLING,
+        CasualtyType.SMASHED_KNEE: CasualtyEffect.NIGGLING,
         CasualtyType.SMASHED_HIP: CasualtyEffect.MA,
         CasualtyType.SMASHED_ANKLE: CasualtyEffect.MA,
         CasualtyType.SERIOUS_CONCUSSION: CasualtyEffect.AV,
@@ -496,4 +496,4 @@ class Rules:
     agility_table = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
 
     miss_next_game = [CasualtyEffect.MNG, CasualtyEffect.AG, CasualtyEffect.AV, CasualtyEffect.MA, CasualtyEffect.ST,
-                      CasualtyEffect.NI]
+                      CasualtyEffect.NIGGLING]

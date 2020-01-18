@@ -940,25 +940,19 @@ class Game:
         player.state.knocked_out = False
         player.state.up = True
 
-    def pitch_to_casualties(self, player, casualty, effect, apothecary=False):
+    def pitch_to_casualties(self, player):
         """
         Moves player from the pitch to the CAS section in the dugout and applies the casualty and effect to the player.
         :param player:
         :param casualty:
         :param effect:
-        :param apothecary: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
+        :param apothecary_used: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
         :return:
         """
-
         self.remove(player)
         player.state.up = True
-        if apothecary and effect == CasualtyEffect.NONE:
-            # Apothecary puts badly hurt players in the reserves
-            self.get_reserves(player.team).append(player)
-        else:
-            player.state.casualty = casualty
-            player.state.casualty_effect = effect
-            self.get_casualties(player.team).append(player)
+        player.state.stunned = False
+        self.get_casualties(player.team).append(player)
 
     def pitch_to_dungeon(self, player):
         """
@@ -1844,17 +1838,29 @@ class Game:
     def get_weather(self):
         return self.state.weather
 
-    def apply_casualty(self, player, inflictor, casualty, effect, roll, apothecary=False):
-        self.pitch_to_casualties(player, casualty, effect, apothecary)
+    def apply_casualty(self, player, inflictor, casualty, effect, roll):
+        self.pitch_to_casualties(player)
+        if effect == CasualtyEffect.MNG:
+            if effect not in player.state.injuries:
+                player.state.injuries.append(effect)
+        elif effect == CasualtyEffect.NIGGLING and CasualtyEffect.MNG not in player.state.injuries:
+            player.state.injuries.append(CasualtyEffect.MNG)
+        else:
+            player.state.injuries.append(effect)
+
         if effect == CasualtyEffect.NONE:
             self.report(Outcome(OutcomeType.BADLY_HURT, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll]))
         elif effect in Rules.miss_next_game:
+            if CasualtyEffect.MNG not in player.state.injuries:
+                player.state.injuries.append(CasualtyEffect.MNG)
             self.report(Outcome(OutcomeType.MISS_NEXT_GAME, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll], n=effect.name))
         elif effect == CasualtyEffect.DEAD:
             self.report(Outcome(OutcomeType.DEAD, player=player, opp_player=inflictor, team=player.team,
                                 rolls=[roll]))
+        if effect is not CasualtyEffect.MNG:
+            player.injuries.append(effect)
 
     def get_current_turn_proc(self):
         for i in range(len(self.state.stack.items)):

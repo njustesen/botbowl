@@ -122,7 +122,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Right Stuff       | NO          | NO        |
 | **Safe Throw**    | YES         | YES       |
 | Secret Weapon     | NO          | NO        |
-| Shadowing         | NO          | NO        |
+| Shadowing         | YES         | NO        |
 | Side Step         | YES         | NO        |
 | Sneaky Git        | NO          | NO        |
 | Sprint            | YES         | NO        |
@@ -137,7 +137,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Swoop             | NO          | NO        |
 | Tackle            | YES         | NO        |
 | **Take Root**     | YES         | YES       |
-| Tentacles         | NO          | NO        |
+| Tentacles         | YES         | NO        |
 | Thick Skull       | YES         | NO        |
 | Throw Team-Mate   | NO          | NO        |
 | Timmm-ber!        | NO          | NO        |

@@ -147,8 +147,7 @@ class PlayerState:
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.casualty_effect = None
-        self.casualty_type = None
+        self.injuries = []
         self.wild_animal = False
         self.taken_root = False
         self.used_skills = set()
@@ -167,11 +166,10 @@ class PlayerState:
             'ejected': self.ejected,
             'spp_earned': self.spp_earned,
             'moves': self.moves,
-            'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
-            'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None,
+            'injuries': self.injuries,
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
-            'taken_root' : self.taken_root
+            'taken_root': self.taken_root
         }
 
     def reset(self):
@@ -504,19 +502,17 @@ class Die:
 
 class DiceRoll:
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, alternative_target=None, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True, use_alternative=False):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
         self.dice = dice
         self.sum = 0
         self.d68 = d68
         self.target = target
-        self.alternative_target = alternative_target
         self.modifiers = modifiers
         self.roll_type = roll_type
         self.target_higher = target_higher
         self.target_lower = target_lower
         self.highest_succeed = highest_succeed
         self.lowest_fail = lowest_fail
-        self.use_alternative = use_alternative
         # Roll dice
         for d in self.dice:
             if not isinstance(d, BBDie):
@@ -533,7 +529,6 @@ class DiceRoll:
             'dice': dice,
             'sum': self.sum,
             'target': self.target,
-            'alyernative_target': self.alternative_target,
             'modifiers': self.modifiers,
             'modified_target': self.modified_target(),
             'result': self.get_result(),
@@ -541,8 +536,7 @@ class DiceRoll:
             'target_higher': self.target_higher,
             'target_lower': self.target_lower,
             'highest_succeed': self.highest_succeed,
-            'lowest_fail': self.lowest_fail,
-            'use_alternative': self.use_alternative
+            'lowest_fail': self.lowest_fail
         }
 
     def modified_target(self):
@@ -566,19 +560,12 @@ class DiceRoll:
         return self.sum + self.modifiers
 
     def is_d6_success(self):
-        if self.lowest_fail and self.sum == 1:
+        if self.lowest_fail and self.sum == 1*len(self.dice):
             return False
 
-        if self.highest_succeed and self.sum == 6:
+        if self.highest_succeed and self.sum == 6*len(self.dice):
             return True
 
-        if self.use_alternative:
-            if self.target_higher:
-                return self.sum + self.modifiers >= self.alternative_target
-            elif self.target_lower:
-                return self.sum + self.modifiers <= self.alternative_target
-            else:
-                return self.sum + self.modifiers == self.alternative_target
         if self.target_higher:
             return self.sum + self.modifiers >= self.target
         elif self.target_lower:
@@ -779,7 +766,7 @@ class Ball(Piece):
 class Player(Piece):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
-                 niggling=0, mng=False, spp=0, position=None):
+                 niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
         super().__init__(position)
         self.player_id = player_id
         self.role = role
@@ -791,7 +778,9 @@ class Player(Piece):
         self.extra_st = extra_st
         self.extra_ag = extra_ag
         self.extra_av = extra_av
-        self.niggling = niggling
+        self.injuries = [] if injuries is None else injuries
+        for _ in range(niggling_injuries):
+            self.injuries.append(CasualtyEffect.NIGGLING)
         self.mng = mng
         self.spp = spp
         self.state = PlayerState()
@@ -809,7 +798,7 @@ class Player(Piece):
             'st': self.get_st(),
             'ag': self.get_ag(),
             'av': self.get_av(),
-            'niggling': self.niggling,
+            'injuries': self.injuries,
             'mng': self.mng,
             'spp': self.spp,
             'state': self.state.to_json(),
@@ -817,19 +806,38 @@ class Player(Piece):
         }
 
     def get_ag(self):
-        return self.role.ag + self.extra_ag
+        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG)
+        ag = max(self.role.ag - 2, ag)
+        ag = max(1, ag)
+        ag = min(10, ag)
+        return ag
 
     def get_st(self):
-        return self.role.st + self.extra_st
+        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST)
+        st = max(self.role.st - 2, st)
+        st = max(1, st)
+        st = min(10, st)
+        return st
 
     def get_ma(self):
         if self.state.taken_root:
             return 0
         else:
-            return self.role.ma + self.extra_ma
+            ma = self.role.ma + self.extra_ma - self.injuries.count(CasualtyEffect.MA)
+            ma = max(self.role.ma - 2, ma)
+            ma = max(1, ma)
+            ma = min(10, ma)
+            return ma
 
     def get_av(self):
-        return self.role.av + self.extra_av
+        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV)
+        av = max(self.role.av - 2, av)
+        av = max(1, av)
+        av = min(10, av)
+        return av
+
+    def num_niggling_injuries(self):
+        return self.injuries.count(CasualtyEffect.NIGGLING)
 
     def has_skill(self, skill):
         return skill in self.get_skills()

@@ -201,18 +201,37 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         }
 
         $scope.getAvailable = function getAvailable(square){
-            if ($scope.special_action_selected !== null) {
+            if ($scope.special_action_selected !== null && square.special_actions.length > 0) {
                 return square.special_actions.indexOf($scope.special_action_selected.action_type) > -1;
             } else {
                 return square.available;
             }
         };
 
-        $scope.getAgiRolls = function getAgiRolls(square){
+        $scope.getAgiRolls = function getAgiRolls(square, scaled){
             if ($scope.special_action_selected !== null && square.special_agi_rolls[$scope.special_action_selected.action_type] !== undefined) {
-                return square.special_agi_rolls[$scope.special_action_selected.action_type];
+                let rolls = square.special_agi_rolls[$scope.special_action_selected.action_type];
+                if (scaled){
+                    if ($scope.special_action_selected.action_type === "STAB"){
+                        let scaled_rolls = [];
+                        for (let idx in rolls) {
+                            let roll = rolls[idx];
+                            scaled_rolls.push(Math.ceil(roll / 2));
+                        }
+                        return scaled_rolls;
+                    }
+                }
+                return rolls;
             } else {
                 return square.agi_rolls;
+            }
+        };
+
+        $scope.getBlockRoll = function getBlockRoll(square){
+            if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1) {
+                return 0;
+            } else {
+                return square.block_roll;
             }
         };
 
@@ -318,7 +337,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.getCursor = function getCursor(square){
-            if (square.available && square.action_type === "HANDOFF"){
+            if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1 && $scope.special_action_selected.action_type === "STAB"){
+                return "cursor: url(static/img/icons/actions/stab.gif), auto";
+            } else if (square.available && square.action_type === "HANDOFF"){
                 return "cursor: url(static/img/icons/actions/handover.gif), auto";
             } else if (square.available && square.action_type === "BLOCK"){
                 return "cursor: url(static/img/icons/actions/block.gif), auto";
@@ -451,7 +472,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             };
         };
 
-        $scope.clearSquareAction = function clearSquare(square) {
+        $scope.clearSquareAction = function clearSquareAction(square) {
             square.available = false;
             square.agi_roll = 0;
             square.block_roll = 0;

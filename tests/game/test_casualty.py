@@ -27,7 +27,7 @@ def test_casualty():
     game.step(Action(ActionType.SELECT_BOTH_DOWN))
 
     assert game.has_report_of_type(OutcomeType.CASUALTY)
-    assert defender.state.casualty_effect
+    assert defender.state.injuries
 
     assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_REGENERATION)
     assert not game.has_report_of_type(OutcomeType.FAILED_REGENERATION)
@@ -66,7 +66,7 @@ def test_casualty_regeneration_success():
     assert game.has_report_of_type(OutcomeType.CASUALTY)
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_REGENERATION)
     assert defender in game.get_reserves(defender.team)
-    assert not defender.state.casualty_effect
+    assert not defender.state.injuries
 
 
 def test_casualty_regeneration_fail():
@@ -102,6 +102,6 @@ def test_casualty_regeneration_fail():
     assert game.has_report_of_type(OutcomeType.CASUALTY)
     assert game.has_report_of_type(OutcomeType.FAILED_REGENERATION)
     assert defender not in game.get_reserves(defender.team)
-    assert defender.state.casualty_effect
+    assert defender.state.injuries
 
 

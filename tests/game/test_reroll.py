@@ -95,10 +95,14 @@ def test_gfi_reroll_fail():
     player.role.skills = []
     player.extra_skills = []
     assert not player.has_skill(Skill.SURE_FEET)
-    player.extra_ma = - player.get_ma()
+    player.state.moves = player.get_ma()
 
     game.state.teams[0].state.rerolls = 1
     game.put(player, Square(5, 5))
+
+    # Armor roll
+    D6.fix_result(1)
+    D6.fix_result(1)
 
     D6.fix_result(1)  # fail first gfi
     D6.fix_result(1)  # FAIL re-roll

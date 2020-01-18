@@ -259,13 +259,13 @@ class Stab(Procedure):
             return False
 
         # Stab!
-        self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)])
+        self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], lowest_fail=False, highest_succeed=False)
         self.roll.target = self.defender.get_av()
         if self.attacker.has_skill(Skill.STAKES) and self.defender.team.race in \
                 ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker))
             self.roll.modifiers += 1
-        if self.roll.is_d6_success(lowest_always_fail=False, highest_always_succeed=False):
+        if self.roll.is_d6_success():
             KnockDown(self.game, player=self.defender, armor_roll=False, inflictor=self.attacker)
         self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker, rolls=[self.roll]))
         # Can Stab be re-rolled?
@@ -972,7 +972,6 @@ class Injury(Procedure):
         self.mighty_blow_used = mighty_blow_used
         self.dirty_player_used = dirty_player_used
         self.ejected = ejected
-        self.apothecary_used = False
         self.in_crowd = in_crowd
 
     def step(self, action):
@@ -981,7 +980,6 @@ class Injury(Procedure):
 
         # Roll
         roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.INJURY_ROLL)
-        result = roll.get_sum()
         self.injury_rolled = True
 
         # Skill modifiers
@@ -989,6 +987,7 @@ class Injury(Procedure):
         stunty = 1 if self.player.has_skill(Skill.STUNTY) else 0
         mighty_blow = 0
         dirty_player = 0
+        niggling = self.player.num_niggling_injuries()
         if self.inflictor is not None:
             dirty_player = 1 if self.inflictor.has_skill(Skill.DIRTY_PLAYER) and not self.dirty_player_used and \
                                 self.foul else 0
@@ -1003,30 +1002,32 @@ class Injury(Procedure):
                     Turnover(self.game)
                     Ejection(self.game, self.inflictor)
 
-        # STUNNED
-        if result + thick_skull + stunty + mighty_blow + dirty_player <= 7:
-            roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player
-            if self.player.has_skill(Skill.BALL_AND_CHAIN):
-                KnockOut(self.game, self.player, roll=roll, inflictor=self.inflictor)
-            else:
-                self.game.report(Outcome(OutcomeType.STUNNED, player=self.player, opp_player=self.inflictor,
-                                         rolls=[roll]))
-                if self.in_crowd:
-                    self.game.pitch_to_reserves(self.player)
-                else:
-                    self.player.place_prone()
-                    self.player.state.stunned = True
-
         # CASUALTY
-        elif result + stunty + mighty_blow + dirty_player >= 10:
+        roll.modifiers = stunty + mighty_blow + dirty_player + niggling
+        if roll.get_result() >= 10:
             roll.modifiers = stunty + mighty_blow + dirty_player
             self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[roll]))
             Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY))
+            return True
 
         # KOD
-        else:
-            roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player
+        roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
+        if roll.get_result() >= 8:
             KnockOut(self.game, self.player, roll=roll, inflictor=self.inflictor)
+            return True
+
+        # STUNNED
+        roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
+        if self.player.has_skill(Skill.BALL_AND_CHAIN):
+            KnockOut(self.game, self.player, roll=roll, inflictor=self.inflictor)
+        else:
+            self.game.report(Outcome(OutcomeType.STUNNED, player=self.player, opp_player=self.inflictor,
+                                     rolls=[roll]))
+            if self.in_crowd:
+                self.game.pitch_to_reserves(self.player)
+            else:
+                self.player.place_prone()
+                self.player.state.stunned = True
 
         return True
 
@@ -1808,6 +1809,7 @@ class Dodge(Procedure):
         self.reroll = None
         self.roll = None
         self.waiting_break_tackle = False
+        self.break_tackle_target = None
 
     def step(self, action):
 
@@ -1822,8 +1824,7 @@ class Dodge(Procedure):
                 # Success
                 self.player.use_skill(Skill.BREAK_TACKLE)
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.BREAK_TACKLE))
-                self.roll.target = self.roll.alternative_target
-                self.roll.alternative_target = None
+                self.roll.target = self.break_tackle_target
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position,
                                          rolls=[self.roll]))
                 return True
@@ -1842,7 +1843,7 @@ class Dodge(Procedure):
             agility_target = Rules.agility_table[self.player.get_ag()]
             self.roll.target = agility_target
             if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag():
-                self.roll.alternative_target = Rules.agility_table[self.player.get_st()]
+                self.break_tackle_target = Rules.agility_table[self.player.get_st()]
 
             if self.roll.is_d6_success():
 
@@ -1854,7 +1855,7 @@ class Dodge(Procedure):
 
                 # Fail
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
-                if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag() and self.roll.is_d6_success(alternative=True):
+                if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag() and self.roll.get_result() >= self.break_tackle_target:
                     self.waiting_break_tackle = True
                     return False
 
