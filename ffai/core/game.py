@@ -300,7 +300,7 @@ class Game:
                 if action.position is not None and not isinstance(action.position, Square):
                     print("Illegal position type", action.position, action.action_type.name)
                     return False
-                if len(action_choice.players) > 0 and action.player not in action_choice.players:
+                if len(action_choice.players) > 1 and action.player not in action_choice.players:
                     if action.player is None:
                         print("Player player: None")
                     else:
@@ -1081,7 +1081,7 @@ class Game:
         """
         return 1 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
 
-    def get_dodge_modifiers(self, player, position):
+    def get_dodge_modifiers(self, player, position, include_diving_tackle=False):
         """
         :param player:
         :param position: The position the player is dodging to
@@ -1101,11 +1101,15 @@ class Game:
             modifiers += 1
 
         prehensile_tailers = self.get_adjacent_opponents(player, skill=Skill.PREHENSILE_TAIL)
-        if len(prehensile_tailers) > 0:
-            modifiers -= len(prehensile_tailers)  # subtract 1 for each prehensile tail detractor
+        modifiers -= len(prehensile_tailers)  # subtract 1 for each prehensile tail detractor
 
         if not ignore_opp_mods:
             modifiers -= tackle_zones_to
+
+        if include_diving_tackle:
+            diving_tacklers = self.get_adjacent_opponents(player, skill=Skill.DIVING_TACKLE)
+            if len(diving_tacklers) > 0:
+                modifiers -= 2
 
         return modifiers
 

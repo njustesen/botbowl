@@ -1747,6 +1747,7 @@ class Move(Procedure):
         self.player = player
         self.position = position
         self.dodge = dodge
+        self.dodge_proc = None
         self.gfi = gfi
         self.tentaclers = [tentacler for tentacler in self.game.get_adjacent_opponents(self.player, skill=Skill.TENTACLES, standing=True) if tentacler.has_tackle_zone()]
         self.tentacles_used = False
@@ -1763,7 +1764,7 @@ class Move(Procedure):
             return False
 
         if self.dodge:
-            Dodge(self.game, self.player, self.position)
+            self.dodge_proc = Dodge(self.game, self.player, self.position)
 
         if self.gfi:
             GFI(self.game, self.player, self.position)
@@ -1780,6 +1781,9 @@ class Move(Procedure):
         position = self.player.position
 
         self.game.move(self.player, self.position)
+        if self.dodge_proc is not None and self.dodge_proc.diving_tackler:
+            self.game.move(self.dodge_proc.diving_tackler, self.dodge_proc.from_position)
+            KnockDown(self.game, self.dodge_proc.diving_tackler, armor_roll=False, injury_roll=False, turnover=False)
 
         # Check if player moved onto the ball
         ball = self.game.get_ball_at(self.player.position)
@@ -1872,8 +1876,28 @@ class Dodge(Procedure):
         self.roll = None
         self.waiting_break_tackle = False
         self.break_tackle_target = None
+        self.diving_tacklers = []
+        self.diving_tackler = None
+        self.from_position = self.game.state.pitch.squares[self.player.position.y][self.player.position.x]
+        self.diving_tacklers = self.game.get_adjacent_opponents(self.player, down=False, skill=Skill.DIVING_TACKLE)
+        if self.diving_tacklers:
+            self.game.add_secondary_clock(self.diving_tacklers[0].team)
 
     def step(self, action):
+
+        # Diving tackle
+        if self.diving_tacklers:
+            if action.action_type == ActionType.USE_SKILL:
+                self.diving_tackler = self.diving_tacklers[0]
+                self.diving_tacklers.clear()
+            else:
+                self.diving_tacklers.pop(0)
+            # Time management
+            if self.diving_tacklers:
+                self.game.add_secondary_clock(self.diving_tacklers[0].team)
+            else:
+                self.game.remove_secondary_clocks()
+            return False
 
         # Break tackle
         if self.waiting_break_tackle:
@@ -1900,7 +1924,7 @@ class Dodge(Procedure):
 
             # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position)
+            self.roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position, include_diving_tackle=(self.diving_tackler is not None))
 
             agility_target = Rules.agility_table[self.player.get_ag()]
             self.roll.target = agility_target
@@ -1908,13 +1932,10 @@ class Dodge(Procedure):
                 self.break_tackle_target = Rules.agility_table[self.player.get_st()]
 
             if self.roll.is_d6_success():
-
                 # Success
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
                 return True
-
             else:
-
                 # Fail
                 self.game.report(Outcome(OutcomeType.FAILED_DODGE, player=self.player, position=self.position, rolls=[self.roll]))
                 if self.player.can_use_skill(Skill.BREAK_TACKLE) and self.player.get_st() > self.player.get_ag() and self.roll.get_result() >= self.break_tackle_target:
@@ -1939,6 +1960,9 @@ class Dodge(Procedure):
 
         # If dodge failed and no re-roll -> Player trips
         self.game.move(self.player, self.position)
+        if self.diving_tackler:
+            self.game.move(self.diving_tackler, self.from_position)
+            KnockDown(self.game, self.diving_tackler, armor_roll=False, injury_roll=False, turnover=False)
         KnockDown(self.game, self.player, turnover=True)
 
         if shadowers:
@@ -1947,9 +1971,12 @@ class Dodge(Procedure):
         return True
 
     def available_actions(self):
+        if self.diving_tacklers:
+            return [ActionChoice(ActionType.USE_SKILL, skill=Skill.DIVING_TACKLE, team=self.diving_tacklers[0].team, players=[self.diving_tacklers[0]]),
+                    ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.DIVING_TACKLE, team=self.diving_tacklers[0].team, players=[self.diving_tacklers[0]])]
         if self.waiting_break_tackle:
-            return [ActionChoice(ActionType.USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team),
-                    ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team)]
+            return [ActionChoice(ActionType.USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team, players=[self.player]),
+                    ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.BREAK_TACKLE, team=self.player.team, players=[self.player])]
         return []
 
 
