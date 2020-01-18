@@ -48,15 +48,15 @@ A race is supported if all positions can be used and all their starting skills a
 | Khorne            |                         |                                    | NO           |  
 | **Lizardmen**     |                         |                                    | YES           |
 | Necromantic       |                         |                                    | NO           |
-| Norse             | Yhetee                  |                                    | YES        |
-| Nurgle            | Rotters | Nurgle's Rot, Foul Appearance, Tentacles           | NO            |
-| **Orc**           |                          |                                    | YES           |
+| **Norse**         |                         |                                    | YES        |
+| Nurgle            | Rotters                 | Nurgle's Rot, Foul Appearance      | NO            |
+| **Orc**           |                         |                                    | YES           |
 | Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
 | **Skaven**        |                         |                                    | YES           |
 | Savage Orc        |                         |                                    | NO            |
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Bombardier, Secret Weapon  | NO        |
 | **Undead**        |                         |                                    | YES
-| Vampire           | Vampire | Blood Lust, Hypnotic Gaze                          | YES
+| Vampire           | Vampire                 | Blood Lust, Hypnotic Gaze                          | YES
 | **Wood Elf**      |                         |                                    | YES              |
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             | Catchers, Blitzers | Diving Catch, Diving Tackle             | NO              |         
@@ -80,7 +80,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Chainsaw          | NO          | NO        |
 | Claws             | YES         | NO        |
 | Dauntless         | YES         | NO        |
-| **Decay**         | YES         | NO        |
+| **Decay**         | YES         | YES       |
 | Dirty Player      | YES         | NO        |
 | Disturbing Presence | YES       | NO        |
 | Diving Catch      | NO          | NO        |
