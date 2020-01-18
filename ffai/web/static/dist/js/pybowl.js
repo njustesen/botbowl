@@ -1989,6 +1989,13 @@ appServices.factory('IconService', function() {
                 'Blitzer': 'amblitzer',
                 'Thrower': 'amthrower',
                 'Catcher': 'amcatcher'
+            },
+            'Undead': {
+                'Zombie': 'uzombie',
+                'Skeleton': 'uskeleton',
+                'Ghoul': 'ughoul',
+                'Wight': 'uwight',
+                'Mummy': 'umummy'
             }
         },
 
