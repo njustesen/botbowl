@@ -130,7 +130,7 @@ def get_bots():
     return json.dumps(api.get_bots())
 
 
-def start_server(debug=False, use_reloader=False, port=5000):
+def start_server(debug=False, use_reloader=False, port=5000, host="0.0.0.0"):
     
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
