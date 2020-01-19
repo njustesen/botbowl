@@ -9,8 +9,8 @@ var appFilters = angular.module('appFilters', []);
 
 var options = {};
 options.api = {};
-options.api.base_url = "http://127.0.0.1:5000";
-
+//options.api.base_url = "http://127.0.0.1:5000";
+options.api.base_url = window.location.protocol + "//" + window.location.host;
 
 app.config(['$locationProvider', '$routeProvider', 
   function($location, $routeProvider) {
