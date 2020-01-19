@@ -145,4 +145,4 @@ def start_server(debug=False, use_reloader=False, port=5000, host="0.0.0.0"):
     app.jinja_options = jinja_options
 
     app.config['TEMPLATES_AUTO_RELOAD']=True
-    app.run(debug=debug, use_reloader=use_reloader, port=port)
+    app.run(host=host, debug=debug, use_reloader=use_reloader, port=port)
