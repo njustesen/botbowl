@@ -46,13 +46,14 @@ Please cite our paper if you use FFAI in your publications.
 * Games can be saved and loaded
 
 ## Plans for Future Releases
+* Support for all skills and teams in LRB6 + BB2016
+* AI interface using protobufs to enable any programming language
+* Integration with OBBLM/NAFLM
 * Support for dungeon arenas
-* Support for all skills and teams in LRB6
-* League mode
-* Integration with OBBLM
 
 ## Installation
 [Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
+Then run:
 ```
 pip install git+https://github.com/njustesen/ffai
 ```
