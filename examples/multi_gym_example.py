@@ -4,7 +4,7 @@ import gym
 import numpy as np
 import ffai
 from multiprocessing import Process, Pipe
-from ffai.ai.renderer import Renderer
+import ffai
 
 
 def worker(remote, parent_remote, env):
@@ -74,7 +74,7 @@ def worker(remote, parent_remote, env):
 
 if __name__ == "__main__":
 
-    renderer = Renderer()
+    renderer = ffai.Renderer()
 
     nenvs = 8
     envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]

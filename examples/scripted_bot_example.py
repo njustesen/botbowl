@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
-from ffai import Action, ActionType, Square
-from ffai import ProcBot
-from ffai.core.load import *
-from ffai.ai.registry import register_bot, make_bot
-from ffai.core.game import Game
-from ffai.core.procedure import Block, PassAction, Pickup, GFI, Catch, Dodge
+import ffai
+from ffai import Action, ActionType, Square, BBDieResult, Skill, PassDistance
 import time
 
 
-class MyScriptedBot(ProcBot):
+class MyScriptedBot(ffai.ProcBot):
 
     def __init__(self, name):
         super().__init__(name)
@@ -55,20 +51,20 @@ class MyScriptedBot(ProcBot):
         Select between USE_REROLL and DONT_USE_REROLL
         """
         context = game.get_procedure().context
-        if type(context) == Block:
+        if type(context) == ffai.Block:
             # Check if you get to pick: context.favor == my_team
             if len(context.roll.dice) == 1 and context.roll.dice[0].get_value() == BBDieResult.ATTACKER_DOWN:
                 return Action(ActionType.USE_REROLL)
-        elif type(context) == PassAction:
+        elif type(context) == ffai.PassAction:
             if context.roll.target <= 3:
                 return Action(ActionType.USE_REROLL)
-        elif type(context) == Dodge:
+        elif type(context) == ffai.Dodge:
             if context.roll.target <= 2:
                 return Action(ActionType.USE_REROLL)
-        elif type(context) == GFI:
+        elif type(context) == ffai.GFI:
             if game.has_ball(context.player):
                 return Action(ActionType.USE_REROLL)
-        elif type(context) == Catch:
+        elif type(context) == ffai.Catch:
             if context.roll.target <= 2:
                 return Action(ActionType.USE_REROLL)
             elif game.is_touchdown(context.player):
@@ -94,7 +90,7 @@ class MyScriptedBot(ProcBot):
                 game.get_player_at(game.get_ball_position()) is None:
             for player in game.get_players_on_pitch(self.my_team, up=True):
                 if Skill.BLOCK in player.get_skills():
-                    return Action(ActionType.PLACE_PLAYER, player=player, position=ball_pos)
+                    return Action(ActionType.SELECT_PLAYER, player=player, position=ball_pos)
         return Action(ActionType.SELECT_NONE)
 
     def touchback(self, game):
@@ -350,29 +346,29 @@ class MyScriptedBot(ProcBot):
 
 
 # Register MyScriptedBot
-register_bot('scripted', MyScriptedBot)
+ffai.register_bot('scripted', MyScriptedBot)
 
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = load_config("bot-bowl-ii")
+    config = ffai.load_config("bot-bowl-ii")
     config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
-    ruleset = load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
-    arena = load_arena(config.arena)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
+    ruleset = ffai.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
+    arena = ffai.load_arena(config.arena)
+    home = ffai.load_team_by_filename("human", ruleset)
+    away = ffai.load_team_by_filename("human", ruleset)
 
     # Play 100 games
     for i in range(10):
-        home_agent = make_bot('scripted')
+        home_agent = ffai.make_bot('scripted')
         home_agent.name = "Scripted Bot 1"
-        away_agent = make_bot('scripted')
-        away_agent.name = "Scripted Bot 3"
+        away_agent = ffai.make_bot('random')
+        away_agent.name = "Random Bot 3"
         config.debug_mode = False
-        game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))

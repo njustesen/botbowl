@@ -7,7 +7,7 @@ import time
 
 def test_server():
     def start():
-        server.start_server(debug=True, use_reloader=False, port=3405)
+        server.start_server(debug=True, use_reloader=False, host="127.0.0.1", port=3405)
     p = Process(target=start)
     p.start()
     time.sleep(1)
