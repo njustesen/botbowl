@@ -74,7 +74,7 @@ def worker(remote, parent_remote, env):
 
 if __name__ == "__main__":
 
-    renderer = ffai.Renderer()
+    #renderer = ffai.Renderer()
 
     nenvs = 8
     envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]

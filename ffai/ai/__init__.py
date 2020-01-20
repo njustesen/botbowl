@@ -5,7 +5,6 @@ from .env import FFAIEnv
 from .layers import *
 from .registry import *
 from .competition import *
-from .renderer import *
 # from .renderer import *
 from .bots import GrodBot
 from .bots import RandomBot
