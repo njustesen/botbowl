@@ -34,6 +34,7 @@ def test_dodge_fail_one():
 
     opp_player = opponents[1]
     game.put(opp_player, Square(12, 12))
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(11, 12)
     assert game.get_player_at(to) is None
@@ -59,6 +60,7 @@ def test_dodge_skill_reroll_single_use_limit():
 
     opp_player = opponents[1]
     game.put(opp_player, Square(12, 12))
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     from_square = player.position
     to = Square(11, 12)
@@ -92,6 +94,7 @@ def test_dodge_skill_reroll_failed():
 
     opp_player = opponents[1]
     game.put(opp_player, Square(12, 12))
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     from_square = player.position
     to = Square(11, 12)
@@ -191,7 +194,7 @@ def test_dodge_use_break_tackle():
 
     # make sure there is one enemy in tackle zone
     assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
-
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y + 1)
     D6.fix_result(3)
@@ -223,6 +226,7 @@ def test_break_tackle_reroll():
     # make sure there is one enemy in tackle zone
     assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y + 1)
     D6.fix_result(3)
@@ -257,6 +261,7 @@ def test_break_tackle_twice():
     # make sure there is one enemy in tackle zone
     assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 1
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y + 1)
     D6.fix_result(4)

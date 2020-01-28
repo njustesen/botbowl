@@ -15,6 +15,7 @@ def test_leap_one_square_success():
 
     game.put(player, Square(1, 1))
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y)
 
@@ -39,6 +40,7 @@ def test_leap_two_squares_success():
 
     game.put(player, Square(1, 1))
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
@@ -63,6 +65,7 @@ def test_leap_two_squares_fail():
 
     game.put(player, Square(1, 1))
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
@@ -88,6 +91,7 @@ def test_leap_very_long_legs_success():
 
     game.put(player, Square(1, 1))
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
@@ -112,6 +116,7 @@ def test_leap_tackle_zone():
     opp_team = game.get_opp_team(team)
     opp_player = opp_team.players[0]
     game.put(opp_player, Square(player.position.x + 1, player.position.y))
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
     D6.fix_result(4)
@@ -132,6 +137,7 @@ def test_two_leaps():
     player.extra_skills = [Skill.LEAP]
     player.role.ag = 3
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
     D6.fix_result(4)

@@ -93,6 +93,7 @@ def test_catch_team_reroll():
     D6.fix_result(6)  # Second catch roll
     D6.fix_result(1)  # First catch roll
     D6.fix_result(6)  # Pass roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     game.step(Action(ActionType.PASS, position=catcher.position))
     assert game.has_report_of_type(OutcomeType.FAILED_CATCH)
@@ -116,6 +117,7 @@ def test_catch_skill_reroll():
     D6.fix_result(6)  # Second catch roll
     D6.fix_result(1)  # First catch roll
     D6.fix_result(6)  # Pass roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     game.step(Action(ActionType.PASS, position=catcher.position))
     assert game.has_report_of_type(OutcomeType.FAILED_CATCH)
@@ -139,6 +141,7 @@ def test_diving_catch():
     catcher_position = Square(passer.position.x + 4, passer.position.y + 0)
     game.put(catcher, catcher_position)
     pass_position = Square(passer.position.x + 3, passer.position.y + 0)
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Catch
     D6.fix_result(6)  # Pass

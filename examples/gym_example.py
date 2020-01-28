@@ -43,7 +43,7 @@ if __name__ == "__main__":
             # Extract non-spatial features
             state_arr = list(obs['state'].values())
             board = list(obs['board'].values())
-            procedure = obs['procedure']
+            procedure = obs['procedures']
 
             # Sample random action type
             action_types = env.available_action_types()

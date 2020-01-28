@@ -16,6 +16,7 @@ def test_dodge_reroll_success():
 
     opp_player = opponents[1]
     game.put(opp_player, Square(12, 12))
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(11, 12)
     assert game.get_player_at(to) is None
@@ -44,6 +45,7 @@ def test_bonehead_reroll_success():
 
     D6.fix_result(1)  # fail first bonehead
     D6.fix_result(4)  # pass on re-roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))  # should bonehead and present reroll choice
 
     # check that in a reroll context the game domain context is still Bonehead
@@ -75,6 +77,7 @@ def test_gfi_reroll_success():
 
     D6.fix_result(1)  # fail first gfi
     D6.fix_result(4)  # pass on re-roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y)
     game.step(Action(ActionType.MOVE, player=player, position=to))
@@ -106,6 +109,7 @@ def test_gfi_reroll_fail():
 
     D6.fix_result(1)  # fail first gfi
     D6.fix_result(1)  # FAIL re-roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 1, player.position.y)
     game.step(Action(ActionType.MOVE, player=player, position=to))
@@ -133,6 +137,7 @@ def test_bonehead_loner_reroll_success():
     D6.fix_result(1)  # fail first bonehead
     D6.fix_result(4)  # pass loner
     D6.fix_result(4)  # pass on re-roll
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))  # should bonehead and present reroll choice
     game.step(Action(ActionType.USE_REROLL))  # use reroll
 
@@ -159,6 +164,7 @@ def test_bonehead_loner_reroll_fail():
     D6.fix_result(1)  # fail first bonehead
     D6.fix_result(3)  # fail loner
     D6.fix_result(6)  # pass on re-roll - shouldn't be used
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))  # should bonehead and present reroll choice
     game.step(Action(ActionType.USE_REROLL))  # use reroll - should fail loner test
 

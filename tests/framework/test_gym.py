@@ -86,7 +86,7 @@ def test_multiple_gyms(env):
         p.start()
     for remote in work_remotes:
         remote.close()
-    for i in range(200):
+    for i in range(20):
         for remote in remotes:
             remote.send('step')
         results = [remote.recv() for remote in remotes]

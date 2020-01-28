@@ -20,6 +20,7 @@ def test_interception_success():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.state.weather = WeatherType.NICE
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
@@ -46,6 +47,7 @@ def test_interception_safe_throw_success():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.state.weather = WeatherType.NICE
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     D6.fix_result(4)  # Safe throw agility roll
@@ -77,6 +79,7 @@ def test_interception_safe_throw_fail():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.state.weather = WeatherType.NICE
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     D6.fix_result(3)  # Safe throw agility roll
@@ -107,6 +110,7 @@ def test_interception_safe_throw_very_long_legs_fail():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.state.weather = WeatherType.NICE
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
@@ -134,6 +138,7 @@ def test_interception_fail():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.state.weather = WeatherType.NICE
+    game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix_result(1)  # Interception
     D6.fix_result(6)  # Pass

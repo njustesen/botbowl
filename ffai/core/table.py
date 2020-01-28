@@ -106,7 +106,7 @@ class OutcomeType(Enum):
     KNOCKED_OUT = 43
     BADLY_HURT = 44
     INTERCEPTION = 46
-    BALL_CAUGhT = 47
+    BALL_CAUGHT = 47
     BALL_DROPPED = 48
     FAILED_DODGE = 49
     SUCCESSFUL_DODGE = 50

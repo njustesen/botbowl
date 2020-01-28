@@ -291,26 +291,39 @@ class Game:
             return True
         for action_choice in self.state.available_actions:
             if action.action_type == action_choice.action_type:
-                if type(action.action_type) != ActionType:
-                    print("Illegal action type")
+                # Type checking
+                if type(action.action_type) is not ActionType:
+                    print("Illegal action type: ", type(action.action_type))
                     return False
                 if action.player is not None and not isinstance(action.player, Player):
-                    print("Illegal player type", action.action_type, action, self.state.stack.peek())
+                    print("Illegal player type: ", type(action.action_type), action, self.state.stack.peek())
                     return False
                 if action.position is not None and not isinstance(action.position, Square):
-                    print("Illegal position type", action.position, action.action_type.name)
+                    print("Illegal position type:", type(action.position), action.action_type.name)
                     return False
+                # Check if player argument is used instead of position argument
+                if len(action_choice.players) == 0 and action.player is not None and action.position is None:
+                    if action.action_type == ActionType.MOVE:
+                        print("WW")
+                    action.position = action.player.position
+                    # Check if player argument is used instead of position argument
+                elif len(action_choice.positions) == 0 and action.position is not None and action.player is None:
+                    if action.action_type == ActionType.MOVE:
+                        print("WW")
+                    action.player = self.get_player_at(action.position)
+                # Check player argument
                 if len(action_choice.players) > 1 and action.player not in action_choice.players:
                     if action.player is None:
-                        print("Player player: None")
+                        print("Illegal player: None")
                     else:
-                        print("Illegal player", action.action_type, action.player, self.state.stack.peek())
+                        print("Illegal player:", action.player.to_json(), action.action_type.name)
                     return False
+                # Check position argument
                 if len(action_choice.positions) > 0 and action.position not in action_choice.positions:
                     if action.position is None:
-                        print("Player position: None")
+                        print("Illegal position: None")
                     else:
-                        print("Illegal position", action.position.to_json(), action.action_type.name)
+                        print("Illegal position:", action.position.to_json(), action.action_type.name)
                     return False
                 return True
         return False
@@ -374,6 +387,8 @@ class Game:
 
         # Is game over
         if self.state.stack.is_empty():
+            # This should probably not happen?
+            self._end_game()
             return False
 
         # Get proc
@@ -1826,7 +1841,6 @@ class Game:
                     continue
                 if player_at.has_skill(Skill.NO_HANDS):
                     continue
-
                 n.add(neighbor)
 
         if position_from in n:

@@ -160,6 +160,7 @@ def test_really_stupid_fails_without_support(dice_value):
     D6.FixedRolls.clear()
     D6.fix_result(dice_value)  # fail trait test
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
 
     # check the player turn has ended
@@ -182,7 +183,7 @@ def test_really_stupid_passes_with_support(dice_value):
     team_mate = players[2]
     assert not team_mate.has_skill(Skill.REALLY_STUPID)
     game.put(player, Square(5, 5))
-    game.put(team_mate, Square(5,6))
+    game.put(team_mate, Square(5, 6))
 
     adjacent = game.get_adjacent_teammates(player)
     assert len(adjacent) == 1
@@ -190,6 +191,7 @@ def test_really_stupid_passes_with_support(dice_value):
     D6.FixedRolls.clear()
     D6.fix_result(dice_value)  # pass trait test if supported
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
 
     # check the player turn has ended
@@ -220,6 +222,7 @@ def test_really_stupid_fails_if_support_is_really_stupid(dice_value):
     D6.FixedRolls.clear()
     D6.fix_result(dice_value)  # fail trait test if supported by really stupid player
 
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
 
     # check the player turn has ended
@@ -346,12 +349,13 @@ def test_take_root_removed_on_touchdown():
     player.state.taken_root = True
 
     scoring_player = players[2]
-    scoring_player.position = Square(2, 5)
+    game.move(scoring_player, Square(2, 5))
     game.get_ball().move_to(scoring_player.position)
     game.get_ball().is_carried = True
     assert not game.arena.is_in_opp_endzone(scoring_player.position, scoring_player.team == game.state.home_team)
 
     to = Square(1, 5)
+    game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=scoring_player))
     game.step(Action(ActionType.MOVE, player=scoring_player, position=to))
 

@@ -136,7 +136,7 @@ def test_high_kick_touchback():
     assert game.actor == game.get_team_agent(team)
 
 
-def test_blitz():
+def test_blitz_movement():
     game = get_game_kickoff()
     D6.fix_result(1)  # Scatter
     D6.fix_result(5)
@@ -150,18 +150,13 @@ def test_blitz():
     for player in game.get_players_on_pitch(team):
         if game.num_tackle_zones_in(player) >= 1:
             for action_choice in game.state.available_actions:
-                assert player not in action_choice.players
+                assert player.position not in action_choice.positions
         else:
-            moved = False
-            for action_choice in game.state.available_actions:
-                if action_choice.action_type != ActionType.END_TURN:
-                    assert player in action_choice.players
-                    assert action_choice.action_type != ActionType.BLOCK
-                    if not moved:
-                        game.step(Action(ActionType.START_MOVE, player=player))
-                        game.step(Action(ActionType.MOVE, player=player, position=Square(player.position.x - 1, player.position.y)))
-                        game.step(Action(ActionType.END_PLAYER_TURN, player=player))
-                        moved = True
+            game.step(Action(ActionType.START_MOVE, player=player))
+            x = player.position.x
+            game.step(Action(ActionType.MOVE, position=Square(player.position.x - 1, player.position.y)))
+            assert player.position.x == x - 1
+            game.step(Action(ActionType.END_PLAYER_TURN, player=player))
     game.step(Action(ActionType.END_TURN))
 
 

@@ -466,8 +466,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     continue;
                 }
                 if (action.positions.length > 0){
-                    // If an available player is selected
                     $scope.main_action = action;
+                    // If an available player is selected
                     if (action.player_ids.length === 0 || ($scope.selectedPlayer() != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0) || action.player_ids.length === 1){
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;

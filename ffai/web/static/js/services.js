@@ -153,7 +153,7 @@ appServices.factory('GameLogService', function() {
             'MISS_NEXT_GAME': "<player> was injured: <n>",
             'DEAD': "<player> was <b>killed.</b>",
             'INTERCEPTION':  "<player> intercepted the pass.",
-            'BALL_CAUGhT':  "<player> caught the ball.",
+            'BALL_CAUGHT':  "<player> caught the ball.",
             'BALL_DROPPED':  "<player> dropped the ball.",
             'FAILED_DODGE':  " <player> failed to dodge.",
             'SUCCESSFUL_DODGE': " <player> successfully dodged.",

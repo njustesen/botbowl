@@ -518,8 +518,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     continue;
                 }
                 if (action.positions.length > 0){
-                    // If an available player is selected
                     $scope.main_action = action;
+                    // If an available player is selected
                     if (action.player_ids.length === 0 || ($scope.selectedPlayer() != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0) || action.player_ids.length === 1){
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;
@@ -1684,7 +1684,7 @@ appServices.factory('GameLogService', function() {
             'MISS_NEXT_GAME': "<player> was injured: <n>",
             'DEAD': "<player> was <b>killed.</b>",
             'INTERCEPTION':  "<player> intercepted the pass.",
-            'BALL_CAUGhT':  "<player> caught the ball.",
+            'BALL_CAUGHT':  "<player> caught the ball.",
             'BALL_DROPPED':  "<player> dropped the ball.",
             'FAILED_DODGE':  " <player> failed to dodge.",
             'SUCCESSFUL_DODGE': " <player> successfully dodged.",

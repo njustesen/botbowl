@@ -1138,16 +1138,14 @@ class Touchback(Procedure):
         self.players_on_pitch_standing = self.game.get_players_on_pitch(self.game.state.receiving_this_drive, up=True)
 
     def step(self, action):
-
         player = None
         if len(self.players_on_pitch_standing) == 0:
             position = self.game.rnd.choice(self.game.get_team_side(self.game.state.receiving_this_drive))
             self.ball.is_carried = False
         else:
-            position = action.player.position
-            self.ball.is_carried = True
             player = action.player
-
+            position = player.position
+            self.ball.is_carried = True
         self.ball.move_to(position)
         self.ball.on_ground = True
         self.game.report(Outcome(OutcomeType.TOUCHBACK_BALL_PLACED, player=player, position=position))
@@ -1324,7 +1322,7 @@ class HighKick(Procedure):
         if not self.game.is_team_side(self.ball.position, self.receiving_team) or \
             self.game.get_player_at(self.ball.position) is not None:
             return True
-        if len(self.available_players) == 0:
+        if len(self.available_players) == 0 or action.action_type == ActionType.SELECT_NONE:
             return True
         if action.action_type == ActionType.SELECT_PLAYER:
             self.game.move(action.player, self.ball.position)
@@ -1338,8 +1336,7 @@ class HighKick(Procedure):
             return []
         if self.game.is_team_side(self.ball.position, self.receiving_team) and \
                 self.game.get_player_at(self.ball.position) is None:
-            return [ActionChoice(ActionType.SELECT_PLAYER, team=self.receiving_team,
-                                 players=self.available_players),
+            return [ActionChoice(ActionType.SELECT_PLAYER, team=self.receiving_team, players=self.available_players),
                     ActionChoice(ActionType.SELECT_NONE, team=self.receiving_team)]
         return []
 
@@ -1664,17 +1661,17 @@ class Shadowing(Procedure):
             return True
 
         if self.roll is None and action.action_type == ActionType.USE_SKILL:
-            self.roll = DiceRoll(dice=[D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.SHADOWING_ROLL)
+            self.roll = DiceRoll(dice=[D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.SHADOWING_ROLL, highest_succeed=False)
             self.roll.target = 7
-            self.roll.modifiers = self.player.get_ma() - action.player.get_ma()
+            self.roll.modifiers = self.player.get_ma() - self.shadower.get_ma()
             self.roll.target_higher = False
             self.roll.target_lower = True
-            self.game.report(Outcome(OutcomeType.SKILL_USED, player=action.player, skill=Skill.SHADOWING, rolls=[self.roll]))
-            if self.roll.is_d6_success(lowest_always_fail=False, highest_always_succeed=False):
-                self.game.move(action.player, self.position)
+            self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.shadower, skill=Skill.SHADOWING, rolls=[self.roll]))
+            if self.roll.is_d6_success():
+                self.game.move(self.shadower, self.position)
                 return True
             else:
-                self.reroll = Reroll(self.game, action.player, context=self)
+                self.reroll = Reroll(self.game, self.shadower, context=self)
                 return False
 
         if self.reroll is not None:
@@ -2538,9 +2535,10 @@ class PlayerAction(Procedure):
                                                 agi_rolls=agi_rolls))
                 if self.player.has_skill(Skill.STAB):
                     stab_agi_rolls = [([2, stab_rolls[i]] if gfi else [stab_rolls[i]]) for i in range(len(block_positions))]
+                    agi_rolls = [([2] if gfi else []) for _ in block_positions] + stab_agi_rolls
                     actions.append(ActionChoice(ActionType.STAB, team=self.player.team,
                                                 positions=block_positions,
-                                                agi_rolls=stab_agi_rolls))
+                                                agi_rolls=agi_rolls))
 
         # Foul actions
         if self.player_action_type == PlayerActionType.FOUL:
@@ -2853,8 +2851,8 @@ class Push(Procedure):
         if self.squares is not None:
             actions.append(ActionChoice(ActionType.PUSH, team=self.selector.team, positions=self.squares))
         elif self.waiting_stand_firm:
-            actions.append(ActionChoice(ActionType.USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team))
-            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team))
+            actions.append(ActionChoice(ActionType.USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team, players=[self.player]))
+            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, skill=Skill.STAND_FIRM, team=self.player.team, players=[self.player]))
         return actions
 
 
