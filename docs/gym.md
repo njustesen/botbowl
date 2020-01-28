@@ -168,7 +168,7 @@ Actions consists of 31 action types. Some action types, denoted by `<position>` 
 13. ActionType.SELECT_DEFENDER_STUMBLES
 14. ActionType.SELECT_DEFENDER_DOWN
 15. ActionType.SELECT_NONE
-16. ActionType.PLACE_PLAYER`<Position>` (Only used during high-kick)
+16. ActionType.PLACE_PLAYER`<Position>`
 17. ActionType.PLACE_BALL`<Position>`
 18. ActionType.PUSH`<Position>`
 19. ActionType.FOLLOW_UP`<Position>` 
