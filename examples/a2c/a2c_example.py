@@ -34,23 +34,10 @@ log_filename = "logs/" + model_name + ".dat"
 
 # Reward function
 rewards_own = {
-    OutcomeType.TOUCHDOWN: 1,
-    OutcomeType.END_OF_GAME_WINNER: 1,
-    OutcomeType.BALL_CAUGHT: 0.1,
-    OutcomeType.INTERCEPTION: 0.2,
-    OutcomeType.SUCCESSFUL_PICKUP: 0.1,
-    OutcomeType.TURNOVER: -0.05
+    OutcomeType.TOUCHDOWN: 1
 }
 rewards_opp = {
-    OutcomeType.TOUCHDOWN: 0.0,
-    OutcomeType.END_OF_GAME_WINNER: -1,
-    OutcomeType.BALL_CAUGHT: -0.1,
-    OutcomeType.INTERCEPTION: -0.2,
-    OutcomeType.KNOCKED_DOWN: 0.05,
-    OutcomeType.KNOCKED_OUT: 0.05,
-    OutcomeType.CASUALTY: 0.1,
-    OutcomeType.BALL_DROPPED: 0.2,
-    OutcomeType.TURNOVER: 0.05
+    OutcomeType.TOUCHDOWN: 0.0
 }
 
 

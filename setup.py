@@ -12,7 +12,9 @@ setup(name='ffai',
           'python-interface',
           'stopit',
           'requests',
-          'pytest'
+          'pytest',
+          'torch',
+          'torchvision'
       ],
       packages=find_packages()
 )
