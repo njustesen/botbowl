@@ -303,13 +303,9 @@ class Game:
                     return False
                 # Check if player argument is used instead of position argument
                 if len(action_choice.players) == 0 and action.player is not None and action.position is None:
-                    if action.action_type == ActionType.MOVE:
-                        print("WW")
                     action.position = action.player.position
                     # Check if player argument is used instead of position argument
                 elif len(action_choice.positions) == 0 and action.position is not None and action.player is None:
-                    if action.action_type == ActionType.MOVE:
-                        print("WW")
                     action.player = self.get_player_at(action.position)
                 # Check player argument
                 if len(action_choice.players) > 1 and action.player not in action_choice.players:
