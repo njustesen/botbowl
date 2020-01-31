@@ -10,10 +10,9 @@ import torch.nn.functional as F
 
 
 # Training configuration
-num_steps = 10000000
+num_steps = 1000000
 num_processes = 8
-num_updates = 100000
-steps_per_update = 10
+steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
 entropy_coef = 0.01
@@ -23,21 +22,31 @@ log_interval = 50
 save_interval = 500
 
 # Environment
-env_name = "FFAI-1-v1"
-reset_steps = 200  # The environment is reset after this many steps in case of bugs
+env_name = "FFAI-1-v2"
+# env_name = "FFAI-3-v2"
+# env_name = "FFAI-5-v2"
+# env_name = "FFAI-7-v2"
+# env_name = "FFAI-v2"
+reset_steps = 2000  # The environment is reset after this many steps it gets stuck
+# If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
+FFAIEnv.play_on_both_sides = False
 
 # Architecture
-hidden_nodes = 25
+num_hidden_nodes = 256
+num_cnn_kernels = [32, 64]
 
 model_name = env_name
 log_filename = "logs/" + model_name + ".dat"
 
-# Reward function
+# --- Reward function ---
+# You need to improve the reward function before it can learn anything on larger boards.
+# Outcomes achieved by the agent
 rewards_own = {
     OutcomeType.TOUCHDOWN: 1
 }
+# Outcomes achieved by the opponent
 rewards_opp = {
-    OutcomeType.TOUCHDOWN: 0.0
+    OutcomeType.TOUCHDOWN: -1
 }
 
 
@@ -68,7 +77,6 @@ class Memory(object):
         self.spatial_obs[step + 1].copy_(spatial_obs)
         self.non_spatial_obs[step + 1].copy_(non_spatial_obs)
         self.actions[step].copy_(action)
-        # self.positions[step].copy_(position)
         self.value_predictions[step].copy_(value_pred)
         self.rewards[step].copy_(reward)
         self.masks[step].copy_(mask)
@@ -81,25 +89,24 @@ class Memory(object):
 
 
 class CNNPolicy(nn.Module):
-    def __init__(self, spatial_shape, non_spatial_inputs, hidden_nodes, actions):
+    def __init__(self, spatial_shape, non_spatial_inputs, hidden_nodes, kernels, actions):
         super(CNNPolicy, self).__init__()
 
         # Spatial input stream
-        self.conv1 = nn.Conv2d(spatial_shape[0], out_channels=16, kernel_size=3, stride=1, padding=1)
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(spatial_shape[0], out_channels=kernels[0], kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=kernels[0], out_channels=kernels[1], kernel_size=3, stride=1, padding=1)
 
         # Non-spatial input stream
         self.linear0 = nn.Linear(non_spatial_inputs, hidden_nodes)
 
         # Linear layers
-        stream_size = 32 * spatial_shape[1] * spatial_shape[2]
+        stream_size = kernels[1] * spatial_shape[1] * spatial_shape[2]
         stream_size += hidden_nodes
-        #self.linear1 = nn.Linear(stream_size, hidden_nodes)
-        #self.linear2 = nn.Linear(hidden_nodes, hidden_nodes)
+        self.linear1 = nn.Linear(stream_size, hidden_nodes)
 
         # The outputs
-        self.critic = nn.Linear(stream_size, 1)
-        self.actor = nn.Linear(stream_size, actions)
+        self.critic = nn.Linear(hidden_nodes, 1)
+        self.actor = nn.Linear(hidden_nodes, actions)
 
         self.train()
         self.reset_parameters()
@@ -108,8 +115,8 @@ class CNNPolicy(nn.Module):
         relu_gain = nn.init.calculate_gain('relu')
         self.conv1.weight.data.mul_(relu_gain)
         self.conv2.weight.data.mul_(relu_gain)
-        #self.linear1.weight.data.mul_(relu_gain)
         self.linear0.weight.data.mul_(relu_gain)
+        self.linear1.weight.data.mul_(relu_gain)
         self.actor.weight.data.mul_(relu_gain)
         self.critic.weight.data.mul_(relu_gain)
 
@@ -133,26 +140,24 @@ class CNNPolicy(nn.Module):
         concatenated = torch.cat((flatten_x1, flatten_x2), dim=1)
 
         # Fully-connected layers
-        #x2 = self.linear1(concatenated)
-        #x2 = F.relu(x2)
+        x3 = self.linear1(concatenated)
+        x3 = F.relu(x3)
         #x2 = self.linear2(x2)
         #x2 = F.relu(x2)
 
         # Output streams
-        value = self.critic(concatenated)
-        actor = self.actor(concatenated)
+        value = self.critic(x3)
+        actor = self.actor(x3)
 
         # return value, policy
         return value, actor
 
     def act(self, spatial_inputs, non_spatial_input, action_mask):
         values, action_probs = self.get_action_probs(spatial_inputs, non_spatial_input, action_mask=action_mask)
-        # print(action_probs.tolist())
         actions = action_probs.multinomial(1)
         return values, actions
 
     def evaluate_actions(self, spatial_inputs, non_spatial_input, actions, actions_mask):
-        # gets values, actions, and positions
         value, policy = self(spatial_inputs, non_spatial_input)
         actions_mask = actions_mask.view(-1, 1, actions_mask.shape[2]).squeeze().bool()
         policy[~actions_mask] = float('-inf')
@@ -199,12 +204,12 @@ def worker(remote, parent_remote, env, worker_id):
             steps += 1
             action = data
             obs, reward, done, info = env.step(action)
-            reward, reward_shaped = reward_function(env), reward_function(env, shaped=True)
-            if done:
-                obs = env.reset()
-                steps = 0
-            elif steps >= reset_steps:
-                obs, reward, done, info = env.step(action)
+            reward_shaped = reward_function(env, shaped=True)
+            if done or steps >= reset_steps:
+                # If we  get stuck or something - reset the environment
+                if steps >= reset_steps:
+                    print("Max. number of steps exceeded! Consider increasing the number.")
+                done = True
                 obs = env.reset()
                 steps = 0
             remote.send((obs, reward, reward_shaped, done, info))
@@ -240,12 +245,9 @@ class VecEnv():
         cumul_rewards = None
         cumul_shaped_rewards = None
         cumul_dones = None
-        #print("Sending step")
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
         results = [remote.recv() for remote in self.remotes]
-        #print("Returned step")
-
         obs, rews, rews_shaped, dones, infos = zip(*results)
         if cumul_rewards is None:
             cumul_rewards = np.stack(rews)
@@ -260,10 +262,8 @@ class VecEnv():
         return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_dones, infos
 
     def reset(self):
-        #print("Sending reset")
         for remote in self.remotes:
             remote.send(('reset', None))
-        #print("Reset returned")
         return np.stack([remote.recv() for remote in self.remotes])
 
     def render(self):
@@ -317,14 +317,6 @@ def main():
                 elif ob['available-action-types'][action_type.name] == 1:
                     position_mask = ob['board'][f"{action_type.name.replace('_', ' ').lower()} positions"]
                     position_mask_flatten = np.reshape(position_mask, (1, board_squares))
-                    '''
-                    if action_type == ActionType.MOVE:
-                        print("-------------")
-                        print(len(masks))
-                        print(position_mask)
-                        print(position_mask_flatten)
-                        m = True
-                    '''
                     for j in range(board_squares):
                         mask[i + j] = position_mask_flatten[0][j]
                 i += board_squares
@@ -346,7 +338,7 @@ def main():
         return spatial_action_type, spatial_x, spatial_y
 
     # MODEL
-    ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=hidden_nodes, actions=action_space)
+    ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels, actions=action_space)
 
     # OPTIMIZER
     optimizer = optim.RMSprop(ac_agent.parameters(), learning_rate)
@@ -365,18 +357,16 @@ def main():
     all_updates = 0
     all_episodes = 0
     all_steps = 0
-    #renderer = Renderer()
-    rewards = 0
-    rewards_shaped = 0
     episodes = 0
     proc_rewards = np.zeros(num_processes)
     proc_shaped_rewards = np.zeros(num_processes)
     episode_rewards = []
     episode_shaped_rewards = []
+    wins = []
     value_losses = []
     policy_losses = []
 
-    for update in range(num_updates):
+    while all_steps < num_steps:
 
         for step in range(steps_per_update):
 
@@ -397,48 +387,40 @@ def main():
                     'x': x,
                     'y': y
                 }
-                '''
-                if action_type == ActionType.MOVE:
-                    print(action_type, x, y)
-                '''
                 action_objects.append(action_object)
 
             obs, reward, shaped_reward, done, info = envs.step(action_objects)
-
-            '''
-            if render:
-                for i in range(num_processes):
-                    renderer.render(obs[i], i)
-            '''
-            #shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
+            # TODO: Render
+            shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
             reward = torch.from_numpy(np.expand_dims(np.stack(reward), 1)).float()
-            rewards += reward.sum().item()
-            #rewards_shaped += shaped_reward.sum().item()
-            r = reward.numpy()[0]
-            #rs = shaped_reward.numpy()[0]
-            for i in range(len(r)):
+            r = reward.numpy()
+            sr = shaped_reward.numpy()
+            for i in range(num_processes):
                 proc_rewards[i] += r[i]
-            #    proc_shaped_rewards[i] += rs[i]
+                proc_shaped_rewards[i] += sr[i]
 
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
             dones = masks.squeeze()
             episodes += num_processes - int(dones.sum().item())
-            for i in range(len(done)):
+            for i in range(num_processes):
+                if r[i] > 0:
+                    wins.append(1)
+                elif r[i] < 0:
+                    wins.append(0)
                 if done[i]:
+                    wins.append(0.5)
                     episode_rewards.append(proc_rewards[i])
-            #        episode_shaped_rewards.append(proc_shaped_rewards[i])
+                    episode_shaped_rewards.append(proc_shaped_rewards[i])
                     proc_rewards[i] = 0
-            #        proc_shaped_rewards[i] = 0
+                    proc_shaped_rewards[i] = 0
 
             # Update the observations returned by the environment
             spatial_obs, non_spatial_obs = update_obs(obs)
 
             # insert the step taken into memory
-            #memory.insert(step, torch.from_numpy(spatial_obs).float(), torch.from_numpy(non_spatial_obs).float(),
-            #              torch.tensor(actions), torch.tensor(values), reward, masks)
             memory.insert(step, spatial_obs, non_spatial_obs,
-                          actions.data, values.data, reward, masks, action_masks)
+                          actions.data, values.data, shaped_reward, masks, action_masks)
 
         next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
 
@@ -491,17 +473,19 @@ def main():
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
 
             mean_reward_pr_episode = np.mean(episode_rewards)
-            #mean_shaped_reward_pr_episode = np.mean(episode_shaped_rewards)
+            mean_shaped_reward_pr_episode = np.mean(episode_shaped_rewards)
             episode_rewards.clear()
-            #episode_shaped_rewards.clear()
+            episode_shaped_rewards.clear()
+            win_rate = np.mean(wins)
+            wins.clear()
             #mean_value_loss = np.mean(value_losses)
             #mean_policy_loss = np.mean(policy_losses)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Reward/Episode: {:.2f}, TD/Episode: {:.2f}" \
-                .format(all_updates, all_episodes, all_steps, mean_reward_pr_episode, mean_reward_pr_episode)
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, NET TD/Episode: {:.2f}" \
+                .format(all_updates, all_episodes, all_steps, win_rate, mean_shaped_reward_pr_episode)
 
             log_to_file = "{}, {}, {}, {}, {}\n" \
-                .format(all_updates, all_episodes, all_steps, mean_reward_pr_episode, mean_reward_pr_episode)
+                .format(all_updates, all_episodes, all_steps, win_rate, mean_shaped_reward_pr_episode)
 
             print(log)
 
@@ -512,17 +496,12 @@ def main():
             # Saving the agent
             torch.save(ac_agent, "models/" + model_name)
 
-            rewards = 0
-            rewards_shaped = 0
             episodes = 0
             value_losses.clear()
             policy_losses.clear()
 
-        if all_steps >= num_steps:
-            # Saving the agent
-            torch.save(ac_agent, "models/" + model_name)
-            envs.close()
-            return
+    torch.save(ac_agent, "models/" + model_name)
+    envs.close()
 
 
 def update_obs(observations):
@@ -534,6 +513,11 @@ def update_obs(observations):
     non_spatial_obs = []
 
     for obs in observations:
+        '''
+        for k, v in obs['board'].items():
+            print(k)
+            print(v)
+        '''
         spatial_ob = np.stack(obs['board'].values())
 
         state = list(obs['state'].values())

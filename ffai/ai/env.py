@@ -150,6 +150,8 @@ class FFAIEnv(gym.Env):
         Reroll
     ]
 
+    play_on_both_sides = False
+
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.3"
         self.config = config
@@ -219,7 +221,6 @@ class FFAIEnv(gym.Env):
         })
 
     def step(self, action):
-        self.last_report_idx = len(self.game.state.reports)
         if type(action['action-type']) is ActionType and action['action-type'] in FFAIEnv.actions:
             action_type = action['action-type']
         else:
@@ -227,24 +228,10 @@ class FFAIEnv(gym.Env):
         p = Square(action['x'], action['y']) if action['x'] is not None and action['y'] is not None else None
         position = None
         player = None
-        '''
-        if action_type in self.player_action_types:
-            if p is None:
-                raise Exception(f"{action_type.name} requires a position. None was given.")
-            player = self.game.get_player_at(p)
-            if player is None:
-                raise Exception(f"{action_type.name} requires a position with a player. {p.to_json()} does not point to a player.")
-            action = None
-            for a in self.game.state.available_actions:
-                if a.action_type == action_type:
-                    action = a
-                    break
-            if len(action.positions) == 1:
-                position = action.positions[0]
-        '''
         if action_type in self.positional_action_types:
             position = p
         real_action = Action(action_type=action_type, position=position, player=player)
+        self.last_report_idx = len(self.game.state.reports)
         return self._step(real_action)
 
     def _step(self, action):
@@ -375,7 +362,7 @@ class FFAIEnv(gym.Env):
         return obs
 
     def reset(self):
-        if self.rnd.randint(0, 1) == 0:
+        if not FFAIEnv.play_on_both_sides or self.rnd.randint(0, 2) == 0:
             self.team_id = self.home_team.team_id
             home_agent = self.actor
             away_agent = self.opp_actor
@@ -392,17 +379,17 @@ class FFAIEnv(gym.Env):
                          config=self.config,
                          ruleset=self.ruleset,
                          seed=seed)
+        self.last_report_idx = len(self.game.state.reports)
         self.game.init()
         self.own_team = self.game.get_agent_team(self.actor)
         self.opp_team = self.game.get_agent_team(self.opp_actor)
-        self.last_report_idx = len(self.game.state.reports)
 
         return self._observation(self.game)
 
     def get_outcomes(self):
         if self.last_report_idx == len(self.game.state.reports):
             return []
-        return self.game.state.reports[self.last_report_idx+1:]
+        return self.game.state.reports[self.last_report_idx:]
 
     def available_action_types(self):
         if isinstance(self.game.get_procedure(), Setup):

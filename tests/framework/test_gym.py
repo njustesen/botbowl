@@ -5,11 +5,11 @@ from multiprocessing import Process, Pipe
 import numpy as np
 
 envs = [
-    "FFAI-1-v1",
-    "FFAI-3-v1",
-    "FFAI-5-v1",
-    "FFAI-7-v1",
-    "FFAI-11-v1"
+    "FFAI-1-v2",
+    "FFAI-3-v2",
+    "FFAI-5-v2",
+    "FFAI-7-v2",
+    "FFAI-11-v2"
 ]
 
 

@@ -20,6 +20,19 @@
       "spp": 0,
       "niggling": false,
       "mng": false
+    },
+    {
+      "nr" : 2,
+      "name": "Himmelstein, Henny",
+      "position": "Lineman",
+      "extra_skills" : [],
+      "extra_ma" : 0,
+      "extra_st" : 0,
+      "extra_ag" : 0,
+      "extra_av" : 0,
+      "spp": 0,
+      "niggling": false,
+      "mng": false
     }
   ]
 }
