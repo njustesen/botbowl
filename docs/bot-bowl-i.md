@@ -37,7 +37,6 @@ GrodBot and EvoGrod were the best two bots in the round-robin tournament and thu
 Congratulations to all the winners!
 
 ## Analysis by bzl11
-The two bots play very similarly, which is not at all surprising. Things they need to improve on:
 
 <iframe src="https://www.youtube.com/embed/6qv_pzeYoOU" 
     width="820" 
@@ -46,9 +45,11 @@ The two bots play very similarly, which is not at all surprising. Things they ne
     allowfullscreen>
 </iframe>
 
-Setups at the start of a drive. Both bots use the exact same setup for offense and defense. As a defensive setup it is not very good but that’s easy to fix. Offensive setup should ideally take into consideration what the defense has done, but of course that’s a lot harder to do.
-Blocking. The bots are way too happy to take one dice blocks, even in cases where they have made the effort to set up 2ds. This led to a lot of early rerolls being wasted and easily avoidable trouble. This is just tactics, which I guess goes down as medium difficulty to fix.
-Long term planning. This is the really difficult stuff so it’s hard to be too critical, but you’d see things like a bot taking great risks to move a catcher into scoring range, and then next turn just moving him backwards. They just don’t feel like they’re playing with a consistent plan.
-No use of Thrower. Neither bot ever tried to use their thrower to do anything, which is notable. Maybe they just don’t value Sure Hands as a skill, maybe they ignore it completely, I don’t know. They were mostly using catchers to carry the ball, which has its logic, but I’d like to see them try to get more value out of the few players with skills that they do have.
+The two bots play very similarly, which is not at all surprising. Things they need to improve on:
+- Setups at the start of a drive. Both bots use the exact same setup for offense and defense. As a defensive setup it is not very good but that’s easy to fix. Offensive setup should ideally take into consideration what the defense has done, but of course that’s a lot harder to do.
+- Blocking. The bots are way too happy to take one dice blocks, even in cases where they have made the effort to set up 2ds. This led to a lot of early rerolls being wasted and easily avoidable trouble. This is just tactics, which I guess goes down as medium difficulty to fix.
+- Long term planning. This is the really difficult stuff so it’s hard to be too critical, but you’d see things like a bot taking great risks to move a catcher into scoring range, and then next turn just moving him backwards. They just don’t feel like they’re playing with a consistent plan.
+- No use of Thrower. Neither bot ever tried to use their thrower to do anything, which is notable. Maybe they just don’t value Sure Hands as a skill, maybe they ignore it completely, I don’t know. They were mostly using catchers to carry the ball, which has its logic, but I’d like to see them try to get more value out of the few players with skills that they do have.
+
 We hope to see these things improved in the bots that will be submitted to [Bot Bowl II](docs/bot-bowl-ii.md). which will either be in the summer of 2020.
 
