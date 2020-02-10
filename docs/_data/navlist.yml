@@ -1,12 +1,12 @@
 docs:
 
-- pagetitle: FFAI
+- pagetitle: Blood Bowl
   url: /
 
 - pagetitle: Bot Bowl I
   url: /bot-bowl-i
 
-- pagetitle: Bots
+- pagetitle: Bot Bowl II
   url: /bot-bowl-ii
 
 - pagetitle: Tutorials
