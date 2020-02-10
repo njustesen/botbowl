@@ -39,6 +39,13 @@ Congratulations to all the winners!
 ## Analysis by bzl11
 The two bots play very similarly, which is not at all surprising. Things they need to improve on:
 
+<iframe src="https://www.youtube.com/embed/6qv_pzeYoOU" 
+    width="560" 
+    height="315"
+    frameborder="0" 
+    allowfullscreen>
+</iframe>
+
 Setups at the start of a drive. Both bots use the exact same setup for offense and defense. As a defensive setup it is not very good but that’s easy to fix. Offensive setup should ideally take into consideration what the defense has done, but of course that’s a lot harder to do.
 Blocking. The bots are way too happy to take one dice blocks, even in cases where they have made the effort to set up 2ds. This led to a lot of early rerolls being wasted and easily avoidable trouble. This is just tactics, which I guess goes down as medium difficulty to fix.
 Long term planning. This is the really difficult stuff so it’s hard to be too critical, but you’d see things like a bot taking great risks to move a catcher into scoring range, and then next turn just moving him backwards. They just don’t feel like they’re playing with a consistent plan.
