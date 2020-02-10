@@ -1,0 +1,13 @@
+docs:
+
+- pagetitle: FFAI
+  url: /
+
+- pagetitle: Bot Bowl I
+  url: /bot-bowl-i
+
+- pagetitle: Bots
+  url: /bot-bowl-ii
+
+- pagetitle: Tutorials
+  url: /njustesen/tutorials

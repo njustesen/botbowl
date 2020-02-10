@@ -15,11 +15,8 @@ Please cite our paper if you use FFAI in your publications.
 }
 ```
 
-## Plans for Future Releases
-* Support for all skills and teams in LRB6 + BB2016
-* AI interface using protobufs to enable any programming language
-* Integration with OBBLM/NAFLM
-* Support for dungeon arenas
+## Bot Bowl
+Bot Bowl is an AI competition using FFAI. Read about the upcoming [Bot Bowl II](docs/bot-bowl-ii.md) or see the results from last year's [Bot Bowl](docs/bot-bowl-i.md).
 
 ## Installation
 [Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
@@ -27,6 +24,7 @@ Then run:
 ```
 pip install git+https://github.com/njustesen/ffai
 ```
+Here's a more [detailed guide](docs/installation.md) on how to set up FFAI.
 
 ## Run FFAI's Web Server
 ```
