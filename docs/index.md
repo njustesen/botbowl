@@ -1,6 +1,6 @@
 # Welcome to Bot Bowl
 
-![FFAI](/screenshots/ffai.png?raw=true "FFAI")
+![FFAI](ffai/screenshots/ffai.png "FFAI")
 
 Bot Bowl is a new AI competition in the board game [Blood Bowl](https://en.wikipedia.org/wiki/Blood_Bowl) (Games Workshop). Blood Bowl is a fully-observable, stochastic, turn-based, modern-style board game with a grid-based game board. At first sight, the game ought to be approachable by numerous game-playing algorithms. However, as all pieces on the board belonging to a player can be moved several times each turn, the turn-wise branching factor
 becomes overwhelming for traditional algorithms. Additionally, scoring points in the game is rare and difficult, which makes it hard to design heuristics for search algorithms or apply reinforcement learning. 
