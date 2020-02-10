@@ -40,8 +40,8 @@ Congratulations to all the winners!
 The two bots play very similarly, which is not at all surprising. Things they need to improve on:
 
 <iframe src="https://www.youtube.com/embed/6qv_pzeYoOU" 
-    width="560" 
-    height="315"
+    width="820" 
+    height="480"
     frameborder="0" 
     allowfullscreen>
 </iframe>
