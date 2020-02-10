@@ -1,13 +1,13 @@
 docs:
 
 - pagetitle: About
-  url: /
+  url: /ffai
 
 - pagetitle: Bot Bowl I
-  url: /bot-bowl-i
+  url: /ffai/bot-bowl-i
 
 - pagetitle: Bot Bowl II
-  url: /bot-bowl-ii
+  url: /ffai/bot-bowl-ii
 
 - pagetitle: Tutorials
-  url: /njustesen/tutorials
+  url: /ffai/tutorials
