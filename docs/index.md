@@ -9,7 +9,7 @@ We see Blood Bowl as the next board game challenge for AI. You can read more abo
 
 Go to the [tutorials](docs/tutorials.md) page to get started or read more about [Bot Bowl II](docs/bot-bowl-ii.md).
 
-The Bot Bowl competitions are organized by [Niels Justesen](www.njustesen.com). 
+The Bot Bowl competitions are organized by [Niels Justesen](https://www.njustesen.com). 
 
 ## Disclaimers and Copyrighted Art
 FFAI is not affiliated with or endorsed by any company and/or trademark. FFAI is an open research framework and the authors have no commercial interests in this project. The web interface in FFAI currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of FFAI. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP. The team icons are from FUMBBL and are used with permission. The license described in [LICENSE](LICENSE) only covers the source code - not any of the graphics files.
