@@ -31,7 +31,7 @@ python -c "import ffai"
 ```
 This should not produce an import error.
 
-If you cloned the repository and insatlled locally, you can start the web server:
+If you cloned the repository and installed locally, you can start the web server:
 ```
 python examples/server_example.py 
 ```
