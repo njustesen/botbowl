@@ -13,6 +13,7 @@ Now run the script and go to [http://localhost:5005/](http://localhost:5005/). Y
 
 Alternatively, you can add games like this, e.g. before starting the server:
 ```
+from ffai.ai.registry import make_bot
 api.new_game(home_team_id="orc",
              away_team_id="human",
              home_agent=Agent("Player 1", human=True)),
