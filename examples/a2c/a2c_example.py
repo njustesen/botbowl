@@ -10,7 +10,7 @@ import torch.nn.functional as F
 
 
 # Training configuration
-num_steps = 1000000
+num_steps = 10000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
@@ -155,6 +155,7 @@ class CNNPolicy(nn.Module):
     def act(self, spatial_inputs, non_spatial_input, action_mask):
         values, action_probs = self.get_action_probs(spatial_inputs, non_spatial_input, action_mask=action_mask)
         actions = action_probs.multinomial(1)
+        # If ball carrier can score without dice roll
         return values, actions
 
     def evaluate_actions(self, spatial_inputs, non_spatial_input, actions, actions_mask):
@@ -176,27 +177,27 @@ class CNNPolicy(nn.Module):
         action_probs = F.softmax(actions, dim=1)
         return values, action_probs
 
+def reward_function(env, shaped=False):
+    r = 0
+    for outcome in env.get_outcomes():
+        if not shaped and outcome.outcome_type != OutcomeType.TOUCHDOWN:
+            continue
+        team = None
+        if outcome.player is not None:
+            team = outcome.player.team
+        elif outcome.team is not None:
+            team = outcome.team
+        if team == env.own_team and outcome.outcome_type in rewards_own:
+            r += rewards_own[outcome.outcome_type]
+        if team == env.opp_team and outcome.outcome_type in rewards_opp:
+            r += rewards_opp[outcome.outcome_type]
+    return r
 
 def worker(remote, parent_remote, env, worker_id):
     parent_remote.close()
 
-    def reward_function(env, shaped=False):
-        r = 0
-        for outcome in env.get_outcomes():
-            if not shaped and outcome.outcome_type != OutcomeType.TOUCHDOWN:
-                continue
-            team = None
-            if outcome.player is not None:
-                team = outcome.player.team
-            elif outcome.team is not None:
-                team = outcome.team
-            if team == env.own_team and outcome.outcome_type in rewards_own:
-                r += rewards_own[outcome.outcome_type]
-            if team == env.opp_team and outcome.outcome_type in rewards_opp:
-                r += rewards_opp[outcome.outcome_type]
-        return r
-
     steps = 0
+    tds = 0
 
     while True:
         command, data = remote.recv()
@@ -204,6 +205,8 @@ def worker(remote, parent_remote, env, worker_id):
             steps += 1
             action = data
             obs, reward, done, info = env.step(action)
+            tds_scored = info['touchdowns'] - tds
+            tds = info['touchdowns']
             reward_shaped = reward_function(env, shaped=True)
             if done or steps >= reset_steps:
                 # If we  get stuck or something - reset the environment
@@ -212,9 +215,11 @@ def worker(remote, parent_remote, env, worker_id):
                 done = True
                 obs = env.reset()
                 steps = 0
-            remote.send((obs, reward, reward_shaped, done, info))
+                tds = 0
+            remote.send((obs, reward, reward_shaped, tds_scored, done, info))
         elif command == 'reset':
             steps = 0
+            tds = 0
             obs = env.reset()
             remote.send(obs)
         elif command == 'render':
@@ -244,22 +249,25 @@ class VecEnv():
     def step(self, actions):
         cumul_rewards = None
         cumul_shaped_rewards = None
+        cumul_tds_scored = None
         cumul_dones = None
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
         results = [remote.recv() for remote in self.remotes]
-        obs, rews, rews_shaped, dones, infos = zip(*results)
+        obs, rews, rews_shaped, tds, dones, infos = zip(*results)
         if cumul_rewards is None:
             cumul_rewards = np.stack(rews)
             cumul_shaped_rewards = np.stack(rews_shaped)
+            cumul_tds_scored = np.stack(tds)
         else:
             cumul_rewards += np.stack(rews)
             cumul_shaped_rewards += np.stack(rews_shaped)
+            cumul_tds_scored += np.stack(tds)
         if cumul_dones is None:
             cumul_dones = np.stack(dones)
         else:
             cumul_dones |= np.stack(dones)
-        return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_dones, infos
+        return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_tds_scored, cumul_dones, infos
 
     def reset(self):
         for remote in self.remotes:
@@ -359,9 +367,9 @@ def main():
     all_steps = 0
     episodes = 0
     proc_rewards = np.zeros(num_processes)
-    proc_shaped_rewards = np.zeros(num_processes)
+    proc_tds = np.zeros(num_processes)
     episode_rewards = []
-    episode_shaped_rewards = []
+    episode_tds = []
     wins = []
     value_losses = []
     policy_losses = []
@@ -388,16 +396,17 @@ def main():
                     'y': y
                 }
                 action_objects.append(action_object)
+                
 
-            obs, reward, shaped_reward, done, info = envs.step(action_objects)
+            obs, env_reward, shaped_reward, tds_scored, done, info = envs.step(action_objects)
             # TODO: Render
+            reward = torch.from_numpy(np.expand_dims(np.stack(env_reward), 1)).float()
             shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
-            reward = torch.from_numpy(np.expand_dims(np.stack(reward), 1)).float()
             r = reward.numpy()
             sr = shaped_reward.numpy()
             for i in range(num_processes):
-                proc_rewards[i] += r[i]
-                proc_shaped_rewards[i] += sr[i]
+                proc_rewards[i] += sr[i]
+                proc_tds[i] += tds_scored[i]
 
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
@@ -411,9 +420,9 @@ def main():
                 if done[i]:
                     wins.append(0.5)
                     episode_rewards.append(proc_rewards[i])
-                    episode_shaped_rewards.append(proc_shaped_rewards[i])
+                    episode_tds.append(proc_tds[i])
                     proc_rewards[i] = 0
-                    proc_shaped_rewards[i] = 0
+                    proc_tds[i] = 0
 
             # Update the observations returned by the environment
             spatial_obs, non_spatial_obs = update_obs(obs)
@@ -471,21 +480,19 @@ def main():
 
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
-
-            mean_reward_pr_episode = np.mean(episode_rewards)
-            mean_shaped_reward_pr_episode = np.mean(episode_shaped_rewards)
+            td_rate = np.mean(episode_tds)
+            mean_reward = np.mean(episode_rewards)
             episode_rewards.clear()
-            episode_shaped_rewards.clear()
             win_rate = np.mean(wins)
             wins.clear()
             #mean_value_loss = np.mean(value_losses)
             #mean_policy_loss = np.mean(policy_losses)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, NET TD/Episode: {:.2f}" \
-                .format(all_updates, all_episodes, all_steps, win_rate, mean_shaped_reward_pr_episode)
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, mean reward: {:.3f} " \
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
 
             log_to_file = "{}, {}, {}, {}, {}\n" \
-                .format(all_updates, all_episodes, all_steps, win_rate, mean_shaped_reward_pr_episode)
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
 
             print(log)
 
