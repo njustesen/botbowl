@@ -42,12 +42,27 @@ log_filename = "logs/" + model_name + ".dat"
 # You need to improve the reward function before it can learn anything on larger boards.
 # Outcomes achieved by the agent
 rewards_own = {
-    OutcomeType.TOUCHDOWN: 1
+    OutcomeType.TOUCHDOWN: 1,
+    OutcomeType.CATCH: 0.1,
+    OutcomeType.INTERCEPTION: 0.2,
+    OutcomeType.SUCCESSFUL_PICKUP: 0.1,
+    OutcomeType.FUMBLE: -0.1,
+    OutcomeType.KNOCKED_DOWN: -0.1,
+    OutcomeType.KNOCKED_OUT: -0.2,
+    OutcomeType.CASUALTY: -0.5
+}
+rewards_opp = {
+    OutcomeType.TOUCHDOWN: -1,
+    OutcomeType.CATCH: -0.1,
+    OutcomeType.INTERCEPTION: -0.2,
+    OutcomeType.SUCCESSFUL_PICKUP: -0.1,
+    OutcomeType.FUMBLE: 0.1,
+    OutcomeType.KNOCKED_DOWN: 0.1,
+    OutcomeType.KNOCKED_OUT: 0.2,
+    OutcomeType.CASUALTY: 0.5
 }
 # Outcomes achieved by the opponent
-rewards_opp = {
-    OutcomeType.TOUCHDOWN: -1
-}
+ball_progression_reward = 0.005
 
 
 class Memory(object):
@@ -177,7 +192,7 @@ class CNNPolicy(nn.Module):
         action_probs = F.softmax(actions, dim=1)
         return values, action_probs
 
-def reward_function(env, shaped=False):
+def reward_function(env, info, shaped=False):
     r = 0
     for outcome in env.get_outcomes():
         if not shaped and outcome.outcome_type != OutcomeType.TOUCHDOWN:
@@ -191,6 +206,9 @@ def reward_function(env, shaped=False):
             r += rewards_own[outcome.outcome_type]
         if team == env.opp_team and outcome.outcome_type in rewards_opp:
             r += rewards_opp[outcome.outcome_type]
+    if info['ball_progression'] > 0:
+        r += info['ball_progression'] * ball_progression_reward
+        #print("Reward: ", ball_progression_reward*info['ball_progression'])
     return r
 
 def worker(remote, parent_remote, env, worker_id):
@@ -207,7 +225,7 @@ def worker(remote, parent_remote, env, worker_id):
             obs, reward, done, info = env.step(action)
             tds_scored = info['touchdowns'] - tds
             tds = info['touchdowns']
-            reward_shaped = reward_function(env, shaped=True)
+            reward_shaped = reward_function(env, info, shaped=True)
             if done or steps >= reset_steps:
                 # If we  get stuck or something - reset the environment
                 if steps >= reset_steps:
@@ -417,8 +435,10 @@ def main():
                     wins.append(1)
                 elif r[i] < 0:
                     wins.append(0)
-                if done[i]:
+                else:
                     wins.append(0.5)
+                if done[i]:
+
                     episode_rewards.append(proc_rewards[i])
                     episode_tds.append(proc_tds[i])
                     proc_rewards[i] = 0
@@ -481,6 +501,7 @@ def main():
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
             td_rate = np.mean(episode_tds)
+            episode_tds.clear()
             mean_reward = np.mean(episode_rewards)
             episode_rewards.clear()
             win_rate = np.mean(wins)
@@ -488,7 +509,7 @@ def main():
             #mean_value_loss = np.mean(value_losses)
             #mean_policy_loss = np.mean(policy_losses)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, mean reward: {:.3f} " \
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f} " \
                 .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
 
             log_to_file = "{}, {}, {}, {}, {}\n" \

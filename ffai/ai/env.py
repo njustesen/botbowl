@@ -170,6 +170,8 @@ class FFAIEnv(gym.Env):
         self.cv = None
         self.last_obs = None
         self.last_report_idx = 0
+        self.last_ball_team = None
+        self.last_ball_x = None
         self.own_team = None
         self.opp_team = None
 
@@ -243,13 +245,27 @@ class FFAIEnv(gym.Env):
             reward = 1 if self.game.get_winner() == self.actor else -1
         team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
         opp_team = self.game.state.home_team if self.team_id != self.home_team.team_id else self.game.state.away_team
+        ball_carrier = self.game.get_ball_carrier()
+        ball_team = ball_carrier.team if ball_carrier is not None else None
+        ball_position = self.game.get_ball_position()
+        progression = 0
+        if ball_team == team and self.last_ball_team:
+            #print("From: ", self.last_ball_x, ", To: ", ball_position.x)
+            if team == self.game.state.home_team:
+                progression = self.last_ball_x - ball_position.x
+            else:
+                progression = ball_position.x - self.last_ball_x
+            #print("Progression: ", progression)
+        self.last_ball_x = ball_position.x if ball_position is not None else None
+        self.last_ball_team = ball_team
         info = {
             'cas_inflicted': len(self.game.get_casualties(team)),
             'opp_cas_inflicted': len(self.game.get_casualties(opp_team)),
             'touchdowns': team.state.score,
             'opp_touchdowns': opp_team.state.score,
             'half': self.game.state.round,
-            'round': self.game.state.round
+            'round': self.game.state.round,
+            'ball_progression': progression
         }
         return self._observation(self.game), reward, self.game.state.game_over, info
 
@@ -380,6 +396,8 @@ class FFAIEnv(gym.Env):
                          ruleset=self.ruleset,
                          seed=seed)
         self.last_report_idx = len(self.game.state.reports)
+        self.last_ball_team = None
+        self.last_ball_x = None
         self.game.init()
         self.own_team = self.game.get_agent_team(self.actor)
         self.opp_team = self.game.get_agent_team(self.opp_actor)
