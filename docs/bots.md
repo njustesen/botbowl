@@ -6,7 +6,7 @@ If you end up developing your own bot, please submit it to [Bot Bowl II](bow-bow
 Make sure that FFAI is installed. If you haven't installed it yet, go to the [installation guide](installation.md).
 
 ## A Random Bot
-Let’s start by making a bot that takes random actions. The code below, which can also be found in [examples/random_bot_example.py](../examples/random_bot_example.py), implements a bot that takes random actions.
+Let’s start by making a bot that takes random actions. The code below, which can also be found in [examples/random_bot_example.py](https://github.com/njustesen/ffai/blob/master/examples/random_bot_example.py), implements a bot that takes random actions.
 
 ```
 #!/usr/bin/env python3
