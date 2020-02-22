@@ -1,7 +1,7 @@
 # Develop a Scripted Bot
 This tutorial will introduce you to the Fantasy Football AI framework (FFAI) that allows you to make your own Blood Bowl bot in Python. First, I will explain how to download and set up the framework, then how to make a simple bot that uses FFAI’s API to retrieve information about the game state in order to make actions. Finally, I will introduce a fully fledged bot called GrodBot (developed by Peter Moore) that you can use as solid starting point.
 
-If you end up developing your own bot, please submit it to [Bot Bowl II](bow-bowl-ii.md).
+If you end up developing your own bot, please submit it to [Bot Bowl II](bot-bowl-ii.md).
 
 Make sure that FFAI is installed. If you haven't installed it yet, go to the [installation guide](installation.md).
 
