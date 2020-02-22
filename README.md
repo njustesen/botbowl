@@ -26,6 +26,9 @@ pip install git+https://github.com/njustesen/ffai
 ```
 Here's a more [detailed guide](docs/installation.md) on how to set up FFAI.
 
+## Tutorials
+Head over to our [tutorials](docs/tutorials.md) to learn about how to use FFAI.
+
 ## Run FFAI's Web Server
 ```
 python -c "import ffai.web.server as server;server.start_server(debug=True, use_reloader=False, port=5000)"
