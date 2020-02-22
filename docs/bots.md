@@ -177,3 +177,71 @@ To play against you agent in the web interface, add the following the your bot s
 register_bot('my-random-bot', MyRandomBot)
 server.start_server(debug=True, use_reloader=False)
 ```
+
+## A procedure-based bot
+
+FFAI offers a built-in template for scripted bots with a simple structure that calls different functions depending on the current procedure of the game. FFAI has a number of different procedures for each part of the game, such as ‘Turn’, ‘Move’, ‘Block’, and ‘Pass’. The procedure-based bot template ‘ProcBot’ has one function for each of these procedures:
+
+```
+class ProcBot(Agent):
+
+   ...
+
+    def coin_toss_flip(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def coin_toss_kick_receive(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def setup(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def place_ball(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def high_kick(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def touchback(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def turn(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    ...
+```
+
+Instead of implementing a bot that inherits from Agent, you can make a bot that inherits from ProcBot. This means, that instead of implementing the act() function, you need to implement all of these procedure functions which will help you to seperate your implementation. Here are a few simple implementations of these functions:
+
+```
+def coin_toss_flip(self, game):
+    """
+    Select heads/tails and/or kick/receive
+    """
+    return Action(ActionType.TAILS)
+```
+```
+def place_ball(self, game):
+    """
+    Place the ball when kicking.
+    """
+    left_center = Square(7, 8)
+    right_center = Square(20, 8)
+    if game.is_team_side(left_center, self.opp_team):
+        return Action(ActionType.PLACE_BALL, pos=left_center)
+    return Action(ActionType.PLACE_BALL, pos=right_center)
+```
+```
+def touchback(self, game):
+    """
+    Select player to give the ball to.
+    """
+    p = None
+    for player in game.get_players_on_pitch(self.my_team, up=True):
+        if Skill.BLOCK in player.skills:
+            return Action(ActionType.SELECT_PLAYER, player=player)
+        p = player
+    return Action(ActionType.SELECT_PLAYER, player=p)
+```
+
+While the logic behind these functions are quite simple, it becomes more complicated to implement the functions ‘turn’ and ‘player_action’, as you need to consider the game board to make decisions. In the next tutorial on script-based bots we will focus on these functions, where we will dive into pathfinding and probabilities.
