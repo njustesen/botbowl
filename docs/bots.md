@@ -178,7 +178,7 @@ register_bot('my-random-bot', MyRandomBot)
 server.start_server(debug=True, use_reloader=False)
 ```
 
-## A procedure-based bot
+## A Procedure-based Bot
 
 FFAI offers a built-in template for scripted bots with a simple structure that calls different functions depending on the current procedure of the game. FFAI has a number of different procedures for each part of the game, such as ‘Turn’, ‘Move’, ‘Block’, and ‘Pass’. The procedure-based bot template ‘ProcBot’ has one function for each of these procedures:
 
