@@ -6,10 +6,12 @@ Year: 2018
 This module contains the Game class, which is the main class and interface used to interact with a game in FFAI.
 """
 
-from ffai.core.procedure import *
-from ffai.core.load import *
 from copy import deepcopy
+
 import numpy as np
+
+from ffai.core.load import *
+from ffai.core.procedure import *
 
 
 class Game:
@@ -37,6 +39,7 @@ class Game:
         self.forced_action = None
 
         self.action = None
+        self.ff_map = None
 
     def to_json(self):
         return {
@@ -131,12 +134,15 @@ class Game:
             if self.state.game_over:
                 self._end_game()
                 return
+
+            # Reset pathfinding map
+            self.ff_map = None
             
             # if procedure is ready for input
             if done:
 
                 # If human player - wait for input
-                if self.actor.human:
+                if self.actor is None or self.actor.human:
                     return
 
                 # Query agent for action
@@ -330,6 +336,8 @@ class Game:
         '''
         if self.config.competition_mode:
             action = self.actor.act(self.safe_clone())
+            if not type(action) == Action:
+                return None
             # Correct player object
             if action.player is not None:
                 action.player = self.state.player_by_id[action.player.player_id]
@@ -1000,6 +1008,8 @@ class Game:
         :param position:
         :return:
         """
+        if self.state.pitch.board[position.y][position.x] == player:
+            return
         assert player.position is not None
         assert self.state.pitch.board[position.y][position.x] is None
         for ball in self.state.pitch.balls:
@@ -1476,14 +1486,15 @@ class Game:
         :param to_position: The position of the defender.
         :return: Possible square to push the player standing on pos_to on to.
         """
+        attacker = self.get_player_at(from_position)
+        defender = self.get_player_at(to_position)
+        if defender.has_skill(Skill.SIDE_STEP) and not attacker.has_skill(Skill.GRAB):
+            return self.get_adjacent_squares(to_position, out=True, occupied=False)
         squares_to = self.get_adjacent_squares(to_position, out=True)
         squares_empty = []
         squares_out = []
         squares = []
-        #print("From:", pos_from)
         for square in squares_to:
-            #print("Checking: ", square)
-            #print("Distance: ", pos_from.distance(square, manhattan=False))
             include = False
             if from_position.x == to_position.x or from_position.y == to_position.y:
                 if from_position.distance(square, manhattan=False) >= 2:
@@ -1491,7 +1502,6 @@ class Game:
             else:
                 if from_position.distance(square, manhattan=True) >= 3:
                     include = True
-            #print("Include: ", include)
             if include:
                 if self.is_out_of_bounds(square):
                     squares_out.append(square)
@@ -1602,11 +1612,10 @@ class Game:
 
     def get_assisting_players(self, player, opp_player, foul=False):
         """
-        Returns a list of assisting players in a block between player and opp_player.
         :param player:
         :param opp_player:
         :param foul: Indicates whether it is a foul. The Guard skill is ignored if fould=True.
-        :return: a list of assisting players.
+        :return: a list of assisting players in a block between player and opp_player.
         """
         assists = []
         for yy in range(-1, 2, 1):
@@ -1625,6 +1634,55 @@ class Game:
                                 assists.append(player_at)
         return assists
 
+    def can_assist(self, player, foul=False):
+        """
+        :param assister: The player which potentially can assist
+        :param opp_player: The opponent player to assist against
+        :param foul:
+        :return:
+        """
+        if not player.can_assist():
+            return False
+        if (not foul and player.has_skill(Skill.GUARD)) or \
+                        self.num_tackle_zones_in(player) <= 1:
+            return True
+        return False
+
+    def get_assisting_players_at(self, player, opp_player, foul=False):
+        """
+        :param player:
+        :param opp_player:
+        :param foul: Indicates whether it is a foul. The Guard skill is ignored if fould=True.
+        :return: a list of assisting players in a block between player and opp_player.
+        """
+        assists = []
+        for yy in range(-1, 2, 1):
+            for xx in range(-1, 2, 1):
+                if yy == 0 and xx == 0:
+                    continue
+                p = Square(opp_player.position.x+xx, opp_player.position.y+yy)
+                if not self.is_out_of_bounds(p) and player.position != p:
+                    player_at = self.get_player_at(p)
+                    if player_at is not None:
+                        if player_at.team == player.team and self.can_assist(player_at):
+                            assists.append(player_at)
+        return assists
+
+    def get_block_strengths(self, attacker, defender, blitz=False):
+        """
+        :param attacker:
+        :param defender:
+        :return: a tuple containing the attacker and defenders strengths during a block including assists.
+        """
+        assert attacker.position.distance(defender.position) == 1
+        attacker_strength = attacker.get_st()
+        defender_strength = defender.get_st()
+        if blitz and attacker.has_skill(Skill.HORNS):
+            attacker_strength += 1
+        attacker_strength += len(self.get_assisting_players(attacker, defender))
+        defender_strength += len(self.get_assisting_players(defender, attacker))
+        return attacker_strength, defender_strength
+
     def num_block_dice(self, attacker, defender, blitz=False, dauntless_success=False):
         """
         :param attacker: 
@@ -1634,6 +1692,147 @@ class Game:
         :return: The number of block dice used in a block between the attacker and defender.
         """
         return self.num_block_dice_at(attacker, defender, attacker.position, blitz, dauntless_success)
+
+    def get_block_probs(self, attacker, defender):
+        """
+        :param attacker:
+        :param defender:
+        :return: a tuple containing the knock-down probabilities of the attacker and defender.
+        """
+        dice = self.num_block_dice(attacker, defender)
+        push_squares = self.get_push_squares(attacker.position, defender.position)
+        crowd_push = self.arena.board[push_squares[0].y][push_squares[0].x] == Tile.CROWD and not defender.has_skill(Skill.STAND_FIRM)
+        p_self = 1.0 / 6.0 if attacker.has_skill(Skill.BLOCK) else 2.0 / 6.0
+        p_opp = 2.0 / 6.0 if attacker.has_skill(Skill.BLOCK) else 2.0 / 6.0
+        if crowd_push:
+            p_opp += 2.0 / 6.0
+        if not crowd_push:
+            p_opp -= (1.0 / 6.0 if defender.has_skill(Skill.DODGE) and not attacker.has_skill(Skill.TACKLE) else 0.0)
+        if dice == 2:
+            p_self -= (1.0 - p_self) * p_self
+            p_opp += (1.0 - p_opp) * p_opp
+        if dice == 3:
+            p_self -= (1.0 - p_self) * p_self
+            p_opp += (1.0 - p_opp) * p_opp
+        if dice == -2:
+            p_self += (1.0 - p_self) * p_self
+            p_opp -= (1.0 - p_opp) * p_opp
+        if dice == -3:
+            p_self += (1.0 - p_self) * p_self
+            p_opp -= (1.0 - p_opp) * p_opp
+        p_fumble_opp = 0.0
+        p_fumble_self = 0.0
+        if self.get_ball_carrier() == defender:
+            p_fumble_opp = p_opp
+            if not crowd_push and attacker.has_skill(Skill.STRIP_BALL) and not defender.has_skill(Skill.SURE_HANDS):
+                p_fumble_opp += 2.0 / 6.0
+        elif self.get_ball_carrier() == attacker:
+            p_fumble_self = p_self
+        return p_self, p_opp, p_fumble_self, p_fumble_opp
+
+    def get_blitz_probs(self, attacker, attack_position, defender):
+        """
+        :param attacker:
+        :param attack_position:
+        :param defender:
+        :return: a tuple containing the knock-down probabilities of the attacker and defender given that attacker
+        blitzes from attack_position.
+        """
+        orig_position = self.get_square(attacker.position.x, attacker.position.y)
+        self.move(attacker, attack_position)
+        p_self, p_opp, p_fumble_self, p_fumble_opp = self.get_block_probs(attacker, defender)
+        self.move(attacker, orig_position)
+        return p_self, p_opp, p_fumble_self, p_fumble_opp
+
+    def get_dodge_prob(self, player, position, allow_dodge_reroll=True, allow_team_reroll=False):
+        """
+        :param player:
+        :param position:
+        :param allow_dodge_reroll:
+        :param allow_team_reroll:
+        :return: the probability of a successful dodge for player to position.
+        """
+        if self.num_tackle_zones_in(player) == 0:
+            return 1.0
+        ag_roll = Rules.agility_table[player.get_ag()] - self.get_dodge_modifiers(player, position)
+        ag_roll = max(2, min(6, ag_roll))
+        successful_outcomes = 6-(ag_roll-1)
+        p = successful_outcomes / 6.0
+        if allow_dodge_reroll and player.has_skill(Skill.DODGE) and not self.get_adjacent_opponents(player, down=False, skill=Skill.TACKLE):
+            p += (1.0-p)*p
+        elif allow_team_reroll and self.can_use_reroll(player.team):
+            p += (1.0-p)*p
+        return p
+
+    def get_catch_prob(self, player, accurate=False, interception=False, handoff=False, allow_catch_reroll=True, allow_team_reroll=False):
+        """
+        :param player:
+        :param accurate: whether it is an accurate pass
+        :param interception: whether it is an interception attempt
+        :param handoff: whether it is a handoff
+        :param allow_catch_reroll:
+        :param allow_team_reroll:
+        :return: the probability of a successful catch for player.
+        """
+        ag_roll = Rules.agility_table[player.get_ag()] - self.get_catch_modifiers(player, accurate=accurate, interception=interception, handoff=handoff)
+        ag_roll = max(2, min(6, ag_roll))
+        successful_outcomes = 6-(ag_roll-1)
+        p = successful_outcomes / 6.0
+        if allow_catch_reroll and player.has_skill(Skill.CATCH):
+            p += (1.0-p)*p
+        elif allow_team_reroll and self.can_use_reroll(player.team):
+            p += (1.0-p)*p
+        return p
+
+    def get_dodge_prob_from(self, player, from_position, to_position, allow_dodge_reroll=False, allow_team_reroll=False):
+        """
+        :param player:
+        :param position:
+        :param allow_dodge_reroll:
+        :param allow_team_reroll:
+        :return: the probability of a successful dodge for player from from_position to to_position.
+        """
+        orig_position = self.get_square(player.position.x, player.position.y)
+        self.move(player, from_position)
+        p = self.get_dodge_prob(player, to_position, allow_dodge_reroll, allow_team_reroll)
+        self.move(player, orig_position)
+        return p
+
+    def get_pickup_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False):
+        """
+        :param player:
+        :param position: the position of the ball
+        :param allow_pickup_reroll:
+        :param allow_team_reroll:
+        :return: the probability of a successful catch for player.
+        """
+        ag_roll = Rules.agility_table[player.get_ag()] - self.get_pickup_modifiers(player, position=position)
+        ag_roll = max(2, min(6, ag_roll))
+        successful_outcomes = 6-(ag_roll-1)
+        p = successful_outcomes / 6.0
+        if allow_pickup_reroll and player.has_skill(Skill.SURE_HANDS):
+            p += (1.0-p)*p
+        elif allow_team_reroll and self.can_use_reroll(player.team):
+            p += (1.0-p)*p
+        return p
+
+    def get_pass_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False):
+        """
+        :param player:
+        :param position: the position of the ball
+        :param allow_pickup_reroll:
+        :param allow_team_reroll:
+        :return: the probability of a successful catch for player.
+        """
+        ag_roll = Rules.agility_table[player.get_ag()] - self.get_pickup_modifiers(player, position=position)
+        ag_roll = max(2, min(6, ag_roll))
+        successful_outcomes = 6-(ag_roll-1)
+        p = successful_outcomes / 6.0
+        if allow_pickup_reroll and player.has_skill(Skill.SURE_HANDS):
+            p += (1.0-p)*p
+        elif allow_team_reroll and self.can_use_reroll(player.team):
+            p += (1.0-p)*p
+        return p
 
     def num_block_dice_at(self, attacker, defender, position, blitz=False, dauntless_success=False):
         """
@@ -1786,6 +1985,17 @@ class Game:
         distance = Rules.pass_matrix[distance_y][distance_x]
         return PassDistance(distance)
 
+    def get_distance_to_endzone(self, player):
+        """
+        :param player:
+        :return: direct distance to the nearest endzone tile.
+        """
+        assert player.position is not None
+        if player.team == self.state.home_team:
+            return self.arena.width - player.position.x
+        else:
+            return player.position.x - 1
+
     def get_interceptors(self, position_from, position_to, team):
         """
         Finds interceptors using the following rules:
@@ -1857,18 +2067,41 @@ class Game:
         return self.state.available_actions
 
     def clear_board(self):
+        """
+        Moves all players from the board to their respective reserves box.
+        """
         for player in self.get_players_on_pitch(self.state.home_team):
             self.pitch_to_reserves(player)
         for player in self.get_players_on_pitch(self.state.away_team):
             self.pitch_to_reserves(player)
 
+    def get_active_player(self):
+        """
+        :return: the current player to make a move if any, else None.
+        """
+        return self.state.active_player
+
     def get_procedure(self):
+        """
+        :return: The current procedure on the top of the stack.
+        """
         return self.state.stack.peek()
 
     def get_weather(self):
+        """
+        :return: The current weather.
+        """
         return self.state.weather
 
     def apply_casualty(self, player, inflictor, casualty, effect, roll):
+        """
+        Applies a casualty to a player and moves it to the dugout.
+        :param player: the player to apply the casualty to.
+        :param inflictor: the player who inflicted the casuality - can be None.
+        :param casualty: the Casualty to apply.
+        :param effect: The CasualtyEffect to apply.
+        :param roll: The casualty roll that caused the casualty.
+        """
         # Move to casualty box
         if player.position is not None:
             self.pitch_to_casualties(player)
@@ -1889,8 +2122,12 @@ class Game:
             player.state.injuries_gained.append(effect)
 
     def get_current_turn_proc(self):
+        """
+        :return: the Turn procedure that is highest on the stack.
+        """
         for i in range(len(self.state.stack.items)):
             idx = len(self.state.stack.items) - 1 - i
             if type(self.state.stack.items[idx]) == Turn:
                 return self.state.stack.items[idx]
         return None
+

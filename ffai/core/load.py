@@ -100,6 +100,7 @@ def load_rule_set(name, debug=False, all_rules=True):
             if debug:
                 print("-- Parsing " + str(i["name"]))
             reduced = 0 if not "reduced" in i else i["reduced"]
+            reduced = 0 if not "reduced" in i else i["reduced"]
             inducement = Inducement(i["name"], (int)(i.cdata), (int)(i["max"]), reduced=reduced)
             ruleset.inducements.append(inducement)
 

@@ -2,10 +2,10 @@
 A number of static methods for interpretting the state of the fantasy football pitch that aren't required directly by
 the client
 """
-from ffai.core import Game, Action, ActionType
-from ffai.core.procedure import *
-from ffai.util.pathfinding import *
 from typing import Optional, List, Dict
+
+from ffai.ai.pathfinding import *
+from ffai.core.procedure import *
 
 
 class ActionSequence:
@@ -155,7 +155,7 @@ def get_players(game: Game, team: Team, include_own: bool = True, include_opp: b
 
 def caging_squares_north_east(game: Game, protect_square: Square) -> List[Square]:
 
-    # * At it's simplest, a cage requires 4 platers in the North-East, South-East, South-West and North-West
+    # * At it's simplest, a cage requires 4 players in the North-East, South-East, South-West and North-West
     # * positions, relative to the ball carrier, such that there is no more than 3 squares between the players in
     # * each of those adjacent compass directions.
     # *

@@ -4,9 +4,11 @@ from ffai.core.load import *
 from .env import FFAIEnv
 from .layers import *
 from .registry import *
+from .pathfinding import *
+from .bothelper import *
+from .macro_actions import *
 from .competition import *
 # from .renderer import *
-from .bots import GrodBot
 from .bots import RandomBot
 from .bots import ProcBot
 

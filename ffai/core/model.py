@@ -1048,7 +1048,7 @@ class Formation:
 
     def _get_player(self, players, t):
         if t == 'S':
-            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) for player in players])
+            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) - (0.5 if player.has_skill(Skill.SURE_HANDS) else 0) for player in players])
             return players[idx]
         if t == 'm':
             idx = np.argmax([player.get_ma() for player in players])
