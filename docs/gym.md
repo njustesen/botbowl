@@ -44,7 +44,7 @@ The default feature layers in obs['board'] are:
 27. SkillLayer(Skill.PASS)
 
 Custom layers can be implemented like this:
-```
+```python
 from ffai.ai import FeatureLayer
 class MyCustomLayer(FeatureLayer):
 
@@ -60,12 +60,12 @@ class MyCustomLayer(FeatureLayer):
         return "expensive players"
 ```
 and added to the environment's feature layers:
-```
+```python
 env.layers.append(MyCustomLayer())
 ```
 
 To visualize the feature layers, use the feature_layers option when calling render:
-```
+```python
 env.render(feature_layers=True)
 ```
 
@@ -193,7 +193,7 @@ Actions consists of 31 action types. Some action types, denoted by `<position>` 
 36. ActionType.SETUP_FORMATION_ZONE
 
 Actions are instantiated and used like this:
-```
+```python
 action = {
     'action-type': 26,
     'x': 8,
@@ -205,7 +205,7 @@ obs, reward, done, info = env.step(action)
 ## Rewards and Info
 The default reward function only rewards for a win, draw or loss 1/0/-1.
 However, the info object returned by the step function contains useful information for reward shaping:
-```
+```python
 'cas_inflicted': {int},
 'opp_cas_inflicted': {int},
 'touchdowns': {int},

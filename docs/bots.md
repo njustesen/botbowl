@@ -1,4 +1,4 @@
-# Develop a Scripted Bot
+# Scripted Bots I: Getting Started
 This tutorial will introduce you to the Fantasy Football AI framework (FFAI) that allows you to make your own Blood Bowl bot in Python. First, I will explain how to download and set up the framework, then how to make a simple bot that uses FFAI’s API to retrieve information about the game state in order to make actions. Finally, I will introduce a fully fledged bot called GrodBot (developed by Peter Moore) that you can use as solid starting point.
 
 If you end up developing your own bot, please submit it to [Bot Bowl II](bot-bowl-ii.md).
@@ -8,7 +8,7 @@ Make sure that FFAI is installed. If you haven't installed it yet, go to the [in
 ## A Random Bot
 Let’s start by making a bot that takes random actions. The code below, which can also be found in [examples/random_bot_example.py](https://github.com/njustesen/ffai/blob/master/examples/random_bot_example.py), implements a bot that takes random actions.
 
-```
+```python
 #!/usr/bin/env python3
 
 import ffai
@@ -85,7 +85,7 @@ Let’s go through the code step by step. First, we import the ffai package as w
 
 Because we just want to take a random action for now, let’s forget about the game object. Instead, let’s look at the Action class that we need to instantiate whenever act is called.
 
-```
+```python
 class Action:
 
     def __init__(self, action_type, pos=None, player=None):
@@ -94,7 +94,7 @@ class Action:
 
 The only required parameter in the constructor is ```action_type```, which should be an instance of the enum ```ActionType```. You can see all the different action types in [ffai/core/table.py](../ffai/core/table.py). Here are some examples of actions that could be instantiated in a sequence of ```act()```-calls:
 
-```
+```python
 Action(ActionType.START_BLITZ, player=game.get_players_on_pitch(self.my_team)[0])
 Action(ActionType.MOVE, position=Square(3,5))
 Action(ActionType.MOVE, position=Square(3,6))
@@ -107,13 +107,13 @@ Action(ActionType.END_PLAYER_TURN)
 
 But how do we know which actions that are allowed in the current step of the game? The game object contains a list of the available action choices in the state:
 
-```
+```python
 game.state.available_actions
 ```
 
 This is a list of possible action choices that can be performed with some additional information about them, such as the required dice roll to make. An example of this list, formatted in json, looks like this:
 
-```
+```python
 "available_actions": [
      {
          "action_type": "MOVE", 
@@ -153,27 +153,27 @@ which are the available actions in this situation:
 
 By iterating the available actions, we can easily select one that we like. For our random bot, we first sample a random ```ÀctionType```:
 
-```
+```python
 action_choice = self.rnd.choice(game.state.available_actions)
 ```
 
 We do not want to sample the ActionType.PLACE_PLAYER, which is used during the setup phase, as we don’t want to rely in our bot to randomly come up with a valid starting formation. Instead, we allow it to select one of the built-in starting formations that are available as actions. After selecting an action type, we can sample a position or player if it is needed:
 
-```
+```python
 pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
 player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
 ```
 
 Finally, we can instantiate the Action object and return it:
 
-```
+```python
 action = Action(action_choice.action_type, pos=pos, player=player)
 return action
 ```
 
 To play against you agent in the web interface, add the following the your bot script, and start a new server.
 
-```
+```python
 register_bot('my-random-bot', MyRandomBot)
 server.start_server(debug=True, use_reloader=False)
 ```
@@ -182,10 +182,10 @@ server.start_server(debug=True, use_reloader=False)
 
 FFAI offers a built-in template for scripted bots with a simple structure that calls different functions depending on the current procedure of the game. FFAI has a number of different procedures for each part of the game, such as ‘Turn’, ‘Move’, ‘Block’, and ‘Pass’. The procedure-based bot template ‘ProcBot’ has one function for each of these procedures:
 
-```
+```python
 class ProcBot(Agent):
 
-   ...
+    ...
 
     def coin_toss_flip(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
@@ -213,14 +213,14 @@ class ProcBot(Agent):
 
 Instead of implementing a bot that inherits from Agent, you can make a bot that inherits from ProcBot. This means, that instead of implementing the act() function, you need to implement all of these procedure functions which will help you to seperate your implementation. Here are a few simple implementations of these functions:
 
-```
+```python
 def coin_toss_flip(self, game):
     """
     Select heads/tails and/or kick/receive
     """
     return Action(ActionType.TAILS)
 ```
-```
+```python
 def place_ball(self, game):
     """
     Place the ball when kicking.
@@ -231,7 +231,7 @@ def place_ball(self, game):
         return Action(ActionType.PLACE_BALL, pos=left_center)
     return Action(ActionType.PLACE_BALL, pos=right_center)
 ```
-```
+```python
 def touchback(self, game):
     """
     Select player to give the ball to.
