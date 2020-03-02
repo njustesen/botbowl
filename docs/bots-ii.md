@@ -450,13 +450,13 @@ If none of the other parts resulted in an action, we should just end the turn.
 
 This bot wins consistently against the random baseline from the previous tutorial. In 10 games, this bot won all of them
 with an average of 3.5 touchdowns per game. The video below shows an example of such a game. To run this evaluation yourself,
-uncomment the code at the end of examples/scripted_bot_example.py and run it.
+uncomment the code at the end of [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py) and run it.
 
 ## Next steps
 
 While this bot is good against the random baseline, it can easily be exploited by smarter bots or by human players. Try
 a game against it to identify its weaknesses, and then see if you can improve it. You can run the web server to play against
-the bot by running python script in examples/scripted_bot_example.py. Remember to comment out the evaluation part first, if
+the bot by running python script in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py). Remember to comment out the evaluation part first, if
 you have activated it.
 
 In the next tutorial, we will take a look at kick-off formations (coming soon).
