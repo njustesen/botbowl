@@ -245,3 +245,5 @@ def touchback(self, game):
 ```
 
 While the logic behind these functions are quite simple, it becomes more complicated to implement the functions ‘turn’ and ‘player_action’, as you need to consider the game board to make decisions. In the next tutorial on script-based bots we will focus on these functions, where we will dive into pathfinding and probabilities.
+
+Try going through the rest of the functions in ProcBot and start thinking about how these could be implemented.
