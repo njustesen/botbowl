@@ -244,9 +244,9 @@ def load_config(name):
     config.debug_mode = data['debug_mode']
     config.competition_mode = data['competition_mode']
     config.kick_scatter_dice = data['kick_scatter_dice']
-    config.defensive_formations = [load_formation(formation, config.pitch_max) for formation in
+    config.defensive_formations = [load_formation(formation, size=config.pitch_max) for formation in
                                    data['defensive_formations']]
-    config.offensive_formations = [load_formation(formation, config.pitch_max) for formation in
+    config.offensive_formations = [load_formation(formation, size=config.pitch_max) for formation in
                                    data['offensive_formations']]
     game = None
     disqualification = None
@@ -263,15 +263,19 @@ def load_config(name):
     return config
 
 
-def load_formation(name, size=11):
+def load_formation(name, directory=None, size=11):
     """
     :param name: the filename to load.
+    :param path: path to a text file describing the setup formation. If None, the FFAI formation path will be used.
     :param size: The number of players on the pitch in the used FFAI variant.
     :return: The formation in data/formations/<size>/<name>
     """
     if not name.endswith(".txt"):
         name += ".txt"
-    path = get_data_path('formations/' + str(size) + "/" + name)
+    if directory is not None:
+        path = os.path.join(directory, name)
+    else:
+        path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
     file = open(path, 'r')
     name = name.replace(".txt", "").replace("off_", "").replace("def_", "").title()
