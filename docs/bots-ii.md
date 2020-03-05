@@ -2,22 +2,20 @@
 
 In this tutorial, we will walk you through the code of a fully-fledged bot that is able to consistently beat the random bot
 from the previous tutorial. To achieve this, we will make heavy use of the pathfinding and probability features of FFAI.
-There will be plenty things to improve on after this tutorial while some intelligent behaviors will emerge.
+There will be plenty things to improve on after this tutorial while some intelligent behaviors will emerge. The complete code of the scripted bot that we will describe is in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py).
 
 ## Architecture
-We will use the procedure-based bot that was introduced in the previous tutorial. This will allow us to implement employ simple
-rules for most of the procedures so we can focus on the few ones that require important planning and decision-making. The
+We will use the procedure-based bot that was introduced in the previous tutorial. This will allow us to implement simple rules for most of the procedures so we can focus on the few procedures that require important planning and decision-making. The
 bot that we will describe follows a prioritized lists of decisions, starting with simple and safe player actions in the beginning and
-ending with more risky and complicated decisions. The list will be traversed before each player takes a decision, such that a risky
-action taken by one player can open up several simple actions by others. This approach stand in contrast to the design of Grodbot, the
-winnner of Bot Bowl I, wherein many possible actions a evaluated fore every player at the same time and then the most promising action
-is taken. Grodbots approach is possibly more potent while it is tricky to evaluate all types of actions. Here, a simple list allows us
-to implement easily understood heuristics.
+ending with more risky and complicated actions. The list will be traversed before each player takes a decision, such that a risky action taken by one player can open up several safe actions by others. This approach stands in contrast to the design of Grodbot, the
+winnner of Bot Bowl I, wherein many possible actions are evaluated for all players at the same time and then the most promising action
+is taken. Grodbots approach is possibly more potent while it is difficult to assign numerical values to all types of actions. Our approach implements the following list of priorities, which allows us
+to implement easily understood and isolated heuristics.
 
 The list of priorities are:
-1. Stand up and end turn with players that are marked and down
+1. Stand players up that are down and marked, and then end their turn
 2. Move the ball carrier safely towards the endzone
-3. Execute safe blocks
+3. Make safe blocks
 4. Pickup the ball if it's on the ground
 5. Move receivers into scoring range
 6. Make a blitz move
@@ -27,17 +25,15 @@ The list of priorities are:
 10. Make risky blocks
 11. End turn
 
-The bot plans out a complete player turn at each step during its turn. A list of actions is maintained and execute in order.
-When a player ends its turn, a function is called that will plan a new list of actions for a new player until no reasonable player
-actions are lef.
+The bot plans out a complete player turn at each step during its turn. A list of actions is maintained and executed in order.
+When a player ends its turn, the ```_make_plan(game, ball_carrier)``` function is called that will plan a new list of actions for a new player until no reasonable player actions are left.
 
-The rest of this tutorial will walk you through these eleven decisions.
+The rest of this tutorial will walk you through the eleven decisions listed above.
 
 ## 1. Stand up
 
-We simply iterate through all players on our team and if we find a player that is on the field (player.position is not None),
-is not standing up, not stunned, and not used, then we plan a move action, stand the player up. We return to stop the planning
-execute the planned actions.
+We simply iterate through all players on our team and if we find a player that is on the field (```player.position is not None```),
+is not standing up, not stunned, and not used, then we plan a move action, stand the player up. We return to stop planning which will execute the actions we have appended to ```self.actions````.
 
 ```python
 for player in self.my_team.players:
@@ -66,8 +62,9 @@ if ball_carrier is not None and ball_carrier.team == self.my_team and not ball_c
     ...
 ```
 
-Notice, that for simplicity the ball carrier can perform a hand-off action but not a pass action. We will start by
-describing the steps needed to move the playing into the endzone if it's safe to do so.
+Notice, that our bot can perform a hand-off action but not a pass action. We leave this as an exercise for you to implement in the end. 
+
+We will start by describing the steps needed to move the playing into the endzone if it's safe to do so.
 
 ```python
 # 2.1 Can ball carrier score with high probability
@@ -79,11 +76,9 @@ if td_path is not None and td_path.prob >= 0.7:
     return
 ```
 
-First, we use the pathfinding module (ffai.ai.pathfinding) to get the safest (and then shortest) path for the ball carrier
-the opponent's endzone. If ```pf.get_safest_scoring_path(game, ball_carrier)``` returns None, then no path was found, which
+First, we use the pathfinding module (ffai.ai.pathfinding) to get the safest (and then shortest) path for the ball carrier to the opponent's endzone. If ```pf.get_safest_scoring_path(game, ball_carrier)``` returns ```None```, then no path was found, which
 means that either the path is blocked or the player doesn't have enough moves left. If a path was found, the Path instance
-will have a probability in [0,1] and a list of steps in the path. Here, we decide to move the ball carrier to the endzone,
-if the probability of success is at least 70%. This is absolutely not a perfect heuristic, especially because we haven't
+will have a probability in [0,1] and a list of steps. Here, we decide to move the ball carrier to the endzone if the probability of success is at least 70%. This is absolutely not a perfect heuristic, especially because we haven't
 yet checked if we can make any blitzes to clear the path for a safer option. Nevertheless, we will settle for this simple
 solution.
 
@@ -129,18 +124,15 @@ if game.is_handoff_available():
         return
 ```
 
-First, we check if a hand-off actions is available. If not, a we scan the field for unused players on our team that are
-standing. We check if each player is in scoring distance and saves the safest of the available choice. The probability of
+First, we check if a hand-off actions is available. If not, we scan the field for unused players on our team that are standing. We check if each player is in scoring distance and saves the safest of the available choice. The probability of
 success is computed as a product of three components: 1) the probability of success for moving the ball carrier to the target player,
 2) the probability for catching the ball, and 3) the probability of success for moving the target player to the endzone.
-If the hand-off is successful, step 2.1 from before will make sure that we the target player will attempt to score.
-One catch with this approach is, that the target player's path to endzone is computed in a state where that current ball carrier is
+If the hand-off is successful, step 2.1 from before will make sure that the target player will attempt to score.
+One catch with this approach is that the target player's path to endzone is computed in a state where that current ball carrier is
 not necessarily adjacent, i.e. before the ball carriers is moved. This could mean that the ball carrier will block the scoring
-path of the target player. This an effect of not doing perfect forward planning but it should be okay in most situations.
+path of the target player. This an effect of not doing perfect forward planning but it should be okay in most situations. To overcome this potential issue, we would need to clone the game object, move the ball carrier to the new square and then run pathfinding for the target player.
 
-The last step for the ball carrier, if none of the above was possible or safe enough, is to just move the ball carrier
-safely towards the endzone. We do this by calling ```pf.get_safest_scoring_path(game, ball_carrier, max_search_distance=30)```
-with a max_searc_distance of 30, which will override the player's movement allowance. When a path is found, we follow it
+The last step for the ball carrier, if none of the above was possible or safe enough, is to just move the safely towards the endzone. We do this by calling ```pf.get_safest_scoring_path(game, ball_carrier, max_search_distance=30)```. The maximum search distance will override the player's movement allowance so we are guaranteed to find a path. When a path is found, we follow it
 until a step will cause it to become adjacent to an opponent or a GFI roll is needed.
 
 ```python
@@ -163,9 +155,7 @@ if game.num_tackle_zones_in(ball_carrier) == 0:
 
 ## 3. Safe blocks
 
-If we can't score, we might just execute a few safe blocks. The code below will first find the safest block in terms of not
-knocking down the attacker. Additionally, it will not select a block where there is a chance of loosing the ball (if we have
-possession of the ball). If the safest block has more than 94% chance of staying upright and no chance of loosing the ball, then
+If we can't score, we might just make a few safe blocks. The code below will first find the safest block in terms of avoiding an attacker down result. Additionally, it will not select a block where there is a chance of loosing the ball if we have possession of the ball. If for the safest block we have more than 94% chance of staying upright and there is no risk of loosing the ball, then
 we will perform the block immediately.
 
 ```python
@@ -176,21 +166,19 @@ if attacker is not None and p_self_up > 0.94 and block_p_fumble_self == 0:
     return
 ```
 
-Without describing in detail how ```self._get_safest_block(game)``` works (it is pretty straigforward), is useful to know
+Without describing in detail how ```self._get_safest_block(game)``` works (it is pretty straightforward), is useful to know
 that it makes use of FFAI's ```game.get_block_probs(attacker, defender)```, that returns a tuple contains four probabilites:
-1) the probability for the attacker to be knocked down, 2) the probability for the defender to be knocked down, 3) the
-probability of the attacker to fumble the ball, and 4) the probability for the defender to fumble the ball. This function
-makes use of lower-level functions such as ```game.num_block_dice(attacker, defender)``` and ```game.get_push_squares(attacker, defender)```.
-Notice, that the use of team-rerolls is not included in the computation of the probability.
+1) the probability of the attacker being knocked down, 2) the probability of the defender being knocked down, 3) the probability of the attacker to fumble the ball, and 4) the probability of the defender to fumble the ball. This function
+makes use of lower-level functions such as ```game.num_block_dice(attacker, defender)``` and ```game.get_push_squares(attacker, defender)``` to check for __crowd surfing__.
+Notice, that the use of team-rerolls is not included in the calculation of the probabilities. 
 
 ## 4. Pickup the ball
 
-We iterate all unused players on the field to see if they are in reach of the ball. We use FFAI's function
+If the ball is on the ground we should pick it up! We first iterate all unused players on the field to see if they are in reach of the ball. We use FFAI's function
 ```game.get_pickup_prob(player, game.get_ball_position(), allow_pickup_reroll=True)``` to compute the probability for the player
-to pick up the ball. The function includes the use of the Pickup skill but does not include team re-rolls by default.
+to pick up the ball. This function includes the use of the Pickup skill but does not include team re-rolls by default.
 We then multiply the pick-up probability with the probability of success for moving to the ball. If there is more than 33% chance
-of success, we will perform the move. After the move, we will move towards the endzone until a dodge or GFI roll or we would move into
-an opponent tackle zone.
+of success, we will perform the move. After the move, we will move towards the endzone until a dodge, a GFI roll, or we would move into an opponent tackle zone.
 
 ```python
 if game.get_ball_carrier() is None:
@@ -234,7 +222,7 @@ if game.get_ball_carrier() is None:
 ## 5. Move receivers into scoring range
 As we allow the ball carrier to make hand-off actions to players in scoring range, it makes sense to move some players
 close to the endzone. First, we scan the field for unused players on the field that are not in opponent tackle zones.
-Then, if the have the catch skill and aren't the ball carrier, we will move one of them towards the endzone until they
+Then, if the have the __Catch__ skill and aren't the ball carrier, we will move one of them towards the endzone until they
 are in scoring range, would move into an opponent tackle zone, or would have to make a GFI roll.
 
 ```python
@@ -270,11 +258,11 @@ for player in open_players:
 
 Deciding where to make a blitz action requires a lot of planning. Each player can move to and block any opponent player
 in range from several different angles. We will prioritize a good amount of time for this decision by checking many of
-these options. We will, however, ignore potential blitzing players that do not have the Block skill. Each avaible blitz
+these options. We will, however, ignore potential blitzing players that do not have the __Block__ skill. Each available blitz
 move is rated using the following summation: ```score = p_self_up + p_opp + p_fumble_opp - p_fumble_self```, which is the
 probability of staying upright plus the probability of knocking down the opponent plus the probability of causing the opponent
 to fumble minus the probability of loosing the ball possession. We will execute the highest scoring blitz if it has a score
-of 1.25 or higher, e.g. 0.92 + 0.44 + 0.0 - 0.08 = 1.28, which is a pretty good blitz to take.
+of 1.25 or higher, e.g. 0.92 + 0.44 + 0.0 - 0.08 = 1.28, which is a reasonably good blitz to take.
 
 ```python
 if game.is_blitz_available():
@@ -322,10 +310,8 @@ if game.is_blitz_available():
 
 If we have possession of the ball, we would like to protect the ball carrier and if the opponent has the ball, we would
 like to surround the ball carrier in as similar way. Ideally, we would like to surround the ball carrier in different ways
-depending on which team it's on and the position on the board. To make it simple, we will attempt to make a classic Blood
-Bowl cage around the ball carrier regardless of these other factors. A cage is a formation where several players (ideally four)
-are diagonally adjacent to the ball carrier. The way this is done should be all familiar with you know, besides an
-additional check to see of a cage position is out of bounds.
+depending on whos has possession of the ball and the position on the board. To make it simple, we will just attempt to make a classic Blood Bowl cage around the ball carrier regardless of these other factors. A cage is a formation where several players (ideally four)
+are diagonally adjacent to the ball carrier. The way we achieve this should now be familiar with you, besides an additional check to see of a cage position is out of bounds.
 
 ```python
 cage_positions = [
@@ -354,10 +340,10 @@ if ball_carrier is not None:
                     return
 ```
 
-# Move non-marked players to assist
+## 8. Move non-marked players to assist
 
 If we can't move the ball nor make any safe blocks, we should move players to assisting positions. First, we scan
-the field for possible assisting position by iterating the opponent players.
+the field for possible assisting positions by iterating the opponent players.
 
 ```python
 assist_positions = []
@@ -378,7 +364,7 @@ We make use of the function ```game.get_block_strengths(player, opponent)``` tha
 and defender's strength values (including assists). Here, we employ a simple heuristic that adds a position to the list of
 potential assist positions if it adjacent to and opponent in a block situation with equal strength, if the position doesn't
 have any other adjacent opponents. This should raise the attackers strength to our favor. When such positions are found,
-we scan for players than can safely move to one of them.
+we scan for players that can safely move to one of them.
 
 ```python
 for player in open_players:
@@ -397,7 +383,7 @@ for player in open_players:
 
 The rest of the open players we have, we will just move safely towards the ball. Much smarter defensive moves could be
 made, such as screening the backfield. This approach is, however, simpler and will put direct pressure on the opponent
-ball carrier, block passage towards our own ball carrier, or just move players towards a free ball on the ground. The
+ball carrier, and protect our own ball carrier, or just move players towards a free ball on the ground. The
 code to do this will use concepts that we have already covered.
 
 ```python
@@ -431,7 +417,7 @@ for player in open_players:
 
 ## 10. Execute risky blocks
 
-Why not block with players, where there is a higher chance of knocking down the defender than knocking down the attacker.
+At last we will block with players where there is a higher chance of knocking down the defender than knocking down the attacker.
 If there is a chance that we can cause a fumble, we should also do the block regardless of the risk.
 
 ```python
@@ -448,15 +434,18 @@ If none of the other parts resulted in an action, we should just end the turn.
 
 ## Evaluation
 
-This bot wins consistently against the random baseline from the previous tutorial. In 10 games, this bot won all of them
-with an average of 3.5 touchdowns per game. The video below shows an example of such a game. To run this evaluation yourself,
+This bot wins consistently against the random baseline from the previous tutorial. In 10 games, this bot won all of them with an average of 3.5 touchdowns per game. To run this evaluation yourself,
 uncomment the code at the end of [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py) and run it.
 
 ## Next steps
 
-While this bot is good against the random baseline, it can easily be exploited by smarter bots or by human players. Try
-a game against it to identify its weaknesses, and then see if you can improve it. You can run the web server to play against
-the bot by running python script in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py). Remember to comment out the evaluation part first, if
-you have activated it.
+While this bot is good against the random baseline, it can easily be exploited by smarter bots or by human players. Try a game against it to identify its weaknesses and  see if you can improve it. You can run the web server to play against the bot by running the python script in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py). Remember to comment out the evaluation part of the code if you have activated it.
 
-In the next tutorial, we will take a look at kick-off formations (coming soon).
+Some ideas for improvement:
+- Passing actions
+- Add follow up logic
+- Improve reroll logic when blocking the opponent ball carrier
+- Stay away from the sideline!
+- Foul actions
+
+In the next tutorial, we will take a look at [bots-iii.md](kick-off formations).

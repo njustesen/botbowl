@@ -696,7 +696,7 @@ ffai.register_bot('scripted', MyScriptedBot)
 if __name__ == "__main__":
 
     # Uncomment to this to evaluate the bot against the random baseline
-
+    '''
     # Load configurations, rules, arena and teams
     config = ffai.load_config("bot-bowl-ii")
     config.competition_mode = False
@@ -723,7 +723,7 @@ if __name__ == "__main__":
         game.init()
         end = time.time()
         print(end - start)
-
+    '''
 
     import ffai.web.server as server
 

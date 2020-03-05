@@ -1,21 +1,14 @@
 # Scripted Bots III: Setup
 
-Kick-off setups are incredibly important for both the offense and defense. It is, however, also incredibly difficult 
-to write a script the does this successfully for several reasons. First of all, the task of setting up players before kick-off 
-requires extensive long-term planning. The offense team needs to consider of we need to score quickly, slower, or perhaps not 
-scoring at all but rather just maintain the possession of the ball. Additionally, the offensive team must consider the context 
-to a great detail. How many players do I have left? Which player should pickup the ball, who should make the first blitz 
-action, and who should move into scoring range? The defensive team has an additional challenge; adaptation. While the 
-offense more or less can use the same setup formation every time (with some players potentially missing), the defense has to 
-setup as a reaction to the offense. This is one of the great challenges in AI. One can easily write a script for a single 
-setup formation While it is infeasible to describe a ruleset that can adapt the defensive setup to any offensive setup.
+Kick-off formations are incredibly important for both the offense and defense. It is, however, also incredibly difficult to write a script the does this successfully for several reasons. First of all, the task of setting up players before kick-off 
+requires extensive long-term planning. The offense team needs to consider of there is a need for scoring quickly, slowly, or perhaps not at all but rather just maintain the possession of the ball. Additionally, the offensive team must consider the context in great detail. How many players do I have left? Which player should pickup the ball? Who should make the first blitz 
+action? Who should move into scoring range? The defensive team has an additional challenge: adaptation. While the offense more or less can use the same setup formation every time (with some players potentially missing), the defense has to react to the offense formation. Such adaptation is perhaps one of the greatest challenges in game AI. One can easily write a script for a single 
+setup formation While it is infeasible to describe a ruleset that can adapt the defensive setup to any posible offensive formation.
 
-In this tutorial, we do not attempt to solve the challenges of adapting to the opponent. Instead, we start developing 
-a technique for fixed setup formations that, however, can adapt to missing players as some will be injured or knocked out during 
-the game.
+In this tutorial, we do not attempt to solve the challenges of adapting to the opponent. Instead, we start developing a technique for fixed setup formations that, however, can adapt to missing players as some will be injured or knocked out during the game.
 
-## Setup formation syntax
-We use a simple syntax to describe kick-off setup formations in a similar style to [https://fumbbl.com/help:Offensive+Setups](FUMBBL's setup guides).
+## Formation syntax
+We use a simple syntax to describe kick-off formations in a similar style to [https://fumbbl.com/help:Offensive+Setups](FUMBBL's setup guides).
 An example of an offensive setup formation looks like this:
 
 ```
@@ -36,23 +29,23 @@ An example of an offensive setup formation looks like this:
 -------------
 ```
 
-A setup is always seen from the left-field perspective and is always 13x15 (half a field) unless a smaller board size is used. 
+A setup is always seen from the left-field perspective and is always 13x15 (half of the field) unless a smaller board size is used. 
+
 The characters in the syntax means:
 
 - **-**: No player should be placed here.
-- **S**: Prioritize players with high strength and block and avoid player with Sure Hands.
+- **S**: Prioritize players with high strength and block and avoid player with __Sure Hands__.
 - **s**: Prioritize players with high strength.
 - **m**: Prioritize players with high movement allowance.
 - **a**: Prioritize players with high agility.
 - **v**: Prioritize players with high armour value.
-- **s**: Prioritize players with Sure Hands.
-- **p**: Prioritize players with Pass.
-- **c**: Prioritize players with Catch.
-- **b**: Prioritize players with Block.
-- **d**: Prioritize players with Dodge.
+- **s**: Prioritize players with __Sure Hands__.
+- **p**: Prioritize players with __Pass__.
+- **c**: Prioritize players with __Catch__.
+- **b**: Prioritize players with __Block__.
+- **d**: Prioritize players with __Dodge__.
 - **0**: Prioritize players with no skills.
-- **x**: Prioritize players with Block and avoid Pass/Catch players.
-- **-**: No player should be placed here.
+- **x**: Prioritize players with __Block__ and avoid __Pass__/__Catch__ players.
 
 ## The Formation class
 FFAI comes with an implementation of a Formation class which constructor takes a 2D array of strings, similar to the syntax above. Its 
@@ -66,7 +59,7 @@ formation = load_formation(filename, directory=directory_path)
 actions = formation.actions(game, my_team)
 ````
 
-FFAI also comes with two offensive and two defensive formation that you can use out of the box like this:
+FFAI also comes with two offensive and two defensive formations that you can use out of the box like this:
 
 ````python
 import load_formation from FFAI
@@ -78,7 +71,7 @@ def_formation_spread = load_formation("def_spread")
 Notice, that if no directory is specified, the default location inside FFAI is used.
 
 ## Custom formations
-In our scripted bot, we will use a fixed offensive and a fixed defensive formation:
+Our scripted bot from the previous tutorial we will use a fixed offensive and a fixed defensive formation:
 
 ```python
 self.off_formation = [
@@ -121,7 +114,7 @@ self.def_formation = Formation("Zone defense", self.def_formation)
 self.setup_actions = []
 ```
 
-We can then use the formations in the ```Setup()``` function of our bot:
+We can then use the formations in the ```Setup()``` function of our bot like this:
 
 ```python
 def setup(self, game):
@@ -139,5 +132,4 @@ def setup(self, game):
             self.setup_actions.append(Action(ActionType.END_SETUP))
 ```
 
-Try experimenting with a few diferent setup formations or implement a larger repository of formations for different 
-situations.
+Try experimenting with a few diferent setup formations or implement a larger repository of formations for different situations.
