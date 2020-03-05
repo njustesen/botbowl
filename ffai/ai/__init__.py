@@ -7,7 +7,7 @@ from .registry import *
 from .pathfinding import *
 from .bothelper import *
 from .competition import *
-# from .renderer import *
+from .renderer import *
 from .bots import RandomBot
 from .bots import ProcBot
 

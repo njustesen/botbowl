@@ -50,8 +50,7 @@ def worker(remote, parent_remote, env):
             obs, reward, done, info = env.step(action)
             steps += 1
 
-            # Render
-            # Currently crashes on mac python 3.7.4
+            # Render - Does not work when running multiple processes
             # env.render(feature_layers=False)
 
             if done:
@@ -74,10 +73,10 @@ def worker(remote, parent_remote, env):
 
 if __name__ == "__main__":
 
-    #renderer = ffai.Renderer()
+    renderer = ffai.Renderer()
 
     nenvs = 8
-    envs = [gym.make("FFAI-3-v1") for _ in range(nenvs)]
+    envs = [gym.make("FFAI-3-v2") for _ in range(nenvs)]
     for i in range(len(envs)):
         envs[i].seed()
 
@@ -93,15 +92,14 @@ if __name__ == "__main__":
     for remote in work_remotes:
         remote.close()
 
-    for i in range(10):
+    for i in range(1000):
         print(i)
         for remote in remotes:
             remote.send('step')
         results = [remote.recv() for remote in remotes]
         for j in range(len(results)):
             obs, reward, done, info = results[j]
-            # Currently crashes on mac python 3.7.4
-            # renderer.render(obs, j)
+            renderer.render(obs, j)
 
     for remote in remotes:
         remote.send('close')

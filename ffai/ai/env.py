@@ -12,7 +12,7 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-# import tkinter as tk
+import tkinter as tk
 import math
 from copy import deepcopy
 
@@ -477,8 +477,7 @@ class FFAIEnv(gym.Env):
                                 width=1)
 
     def render(self, feature_layers=False):
-        '''
-        Disabled due to Tinker bugs. Switch to other UI lib.
+
         if self.root is None:
             self.root = tk.Tk()
             self.root.title("FFAI Gym")
@@ -623,7 +622,6 @@ class FFAIEnv(gym.Env):
 
         self.root.update_idletasks()
         self.root.update()
-        '''
 
     def close(self):
         self.game = None
