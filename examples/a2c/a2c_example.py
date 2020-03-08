@@ -7,10 +7,11 @@ from ffai.ai.layers import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 
 # Training configuration
-num_steps = 10000000
+num_steps = 1000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
@@ -22,10 +23,10 @@ log_interval = 50
 save_interval = 500
 
 # Environment
-env_name = "FFAI-1-v2"
-# env_name = "FFAI-3-v2"
+#env_name = "FFAI-1-v2"
+#env_name = "FFAI-3-v2"
+#num_steps = 10000000 # Increase training time
 # env_name = "FFAI-5-v2"
-# env_name = "FFAI-7-v2"
 # env_name = "FFAI-v2"
 reset_steps = 2000  # The environment is reset after this many steps it gets stuck
 # If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
@@ -39,8 +40,6 @@ model_name = env_name
 log_filename = "logs/" + model_name + ".dat"
 
 # --- Reward function ---
-# You need to improve the reward function before it can learn anything on larger boards.
-# Outcomes achieved by the agent
 rewards_own = {
     OutcomeType.TOUCHDOWN: 1,
     OutcomeType.CATCH: 0.1,
@@ -61,7 +60,6 @@ rewards_opp = {
     OutcomeType.KNOCKED_OUT: 0.2,
     OutcomeType.CASUALTY: 0.5
 }
-# Outcomes achieved by the opponent
 ball_progression_reward = 0.005
 
 
@@ -363,6 +361,12 @@ def main():
         spatial_action_type = spatial_action_types[spatial_action_type_idx]
         return spatial_action_type, spatial_x, spatial_y
 
+    # Clear log file
+    try:
+        os.remove(log_filename)
+    except OSError:
+        pass
+
     # MODEL
     ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels, actions=action_space)
 
@@ -391,6 +395,12 @@ def main():
     wins = []
     value_losses = []
     policy_losses = []
+    log_updates = []
+    log_episode = []
+    log_steps = []
+    log_win_rate = []
+    log_td_rate = []
+    log_mean_reward = []
 
     while all_steps < num_steps:
 
@@ -431,14 +441,13 @@ def main():
             dones = masks.squeeze()
             episodes += num_processes - int(dones.sum().item())
             for i in range(num_processes):
-                if r[i] > 0:
-                    wins.append(1)
-                elif r[i] < 0:
-                    wins.append(0)
-                else:
-                    wins.append(0.5)
                 if done[i]:
-
+                    if r[i] > 0:
+                        wins.append(1)
+                    elif r[i] < 0:
+                        wins.append(0)
+                    else:
+                        wins.append(0.5)
                     episode_rewards.append(proc_rewards[i])
                     episode_tds.append(proc_tds[i])
                     proc_rewards[i] = 0
@@ -507,7 +516,14 @@ def main():
             win_rate = np.mean(wins)
             wins.clear()
             #mean_value_loss = np.mean(value_losses)
-            #mean_policy_loss = np.mean(policy_losses)
+            #mean_policy_loss = np.mean(policy_losses)    
+            
+            log_updates.append(all_updates)
+            log_episode.append(all_episodes)
+            log_steps.append(all_steps)
+            log_win_rate.append(win_rate)
+            log_td_rate.append(td_rate)
+            log_mean_reward.append(mean_reward)
 
             log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f} " \
                 .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
@@ -527,6 +543,30 @@ def main():
             episodes = 0
             value_losses.clear()
             policy_losses.clear()
+            
+            # plot
+            fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+            axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+            axs[0].plot(log_steps, log_mean_reward)
+            axs[0].set_title('Reward')
+            #axs[0].set_ylim(bottom=0.0)
+            axs[0].set_xlim(left=0)
+            axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+            axs[1].plot(log_steps, log_td_rate)
+            axs[1].set_title('TD/Episode')
+            axs[1].set_ylim(bottom=0.0)
+            axs[1].set_xlim(left=0)
+            axs[2].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
+            axs[2].plot(log_steps, log_win_rate)
+            axs[2].set_title('Win rate')            
+            axs[2].set_yticks(np.arange(0, 1.001, step=0.1))
+            axs[2].set_xlim(left=0)
+            fig.tight_layout()
+            fig.savefig("plots/"+model_name+".png")
+            plt.close('all')
+
+            # Save model
+            torch.save(ac_agent, "models/" + model_name)
 
     torch.save(ac_agent, "models/" + model_name)
     envs.close()
