@@ -174,22 +174,22 @@ The 'procedure' part of the observation contains a one-hot vector with 16 values
 ## Action Types
 The 'available-action-types' part of the observation contains a one-hot vector describing which action types that are currently available.
 
-0. ```ActionType.START_GAME
-1. ```ActionType.HEADS
-2. ```ActionType.TAILS
-3. ```ActionType.KICK
-4. ```ActionType.RECEIVE
-5. ```ActionType.END_PLAYER_TURN
-6. ```ActionType.USE_REROLL
-7. ```ActionType.DONT_USE_REROLL
-8. ```ActionType.END_TURN
-9. ```ActionType.STAND_UP
-10. ```ActionType.SELECT_ATTACKER_DOWN
-11. ```ActionType.SELECT_BOTH_DOWN
-12. ```ActionType.SELECT_PUSH
-13. ```ActionType.SELECT_DEFENDER_STUMBLES
-14. ```ActionType.SELECT_DEFENDER_DOWN
-15. ```ActionType.SELECT_NONE
+0. ```ActionType.START_GAME```
+1. ```ActionType.HEADS```
+2. ```ActionType.TAILS```
+3. ```ActionType.KICK```
+4. ```ActionType.RECEIVE```
+5. ```ActionType.END_PLAYER_TURN```
+6. ```ActionType.USE_REROLL```
+7. ```ActionType.DONT_USE_REROLL```
+8. ```ActionType.END_TURN```
+9. ```ActionType.STAND_UP```
+10. ```ActionType.SELECT_ATTACKER_DOWN```
+11. ```ActionType.SELECT_BOTH_DOWN```
+12. ```ActionType.SELECT_PUSH```
+13. ```ActionType.SELECT_DEFENDER_STUMBLES```
+14. ```ActionType.SELECT_DEFENDER_DOWN```
+15. ```ActionType.SELECT_NONE```
 16. ```ActionType.PLACE_PLAYER <Position>```
 17. ```ActionType.PLACE_BALL <Position>```
 18. ```ActionType.PUSH <Position>```
