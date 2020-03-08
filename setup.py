@@ -14,7 +14,8 @@ setup(name='ffai',
           'requests',
           'pytest',
           'torch',
-          'torchvision'
+          'torchvision',
+          'matplotlib'
       ],
       packages=find_packages()
 )
