@@ -251,7 +251,8 @@ FFAI comes with five environments with various difficulty:
 - **FFAI-3-v2:** 3 players on a 12x5 pitch
 - **FFAI-1-v:** 1 player on a 4x3 pitch
 
-![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
+![FFAI-3-v2](screenshots/gym_3.png?raw=true "FFAI-3-v2")
+A rendering of __FFAI-3-v2__.
 
 ## Explore the Observation Space
 Try running [examples/gym.py](examples/gym.py) while debugging in your favorite IDE (e.g. [https://www.jetbrains.com/pycharm/](PyCharm)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
