@@ -166,7 +166,7 @@ The 'procedure' part of the observation contains a one-hot vector with 16 values
 9. ```Block```
 10. ```Push```
 11. ```FollowUp```
-12. ```Apothecary
+12. ```Apothecary```
 13. ```PassAction```
 14. ```Interception```
 15. ```Reroll```
@@ -244,11 +244,11 @@ These values are commulative, such that 'cas_inflicted' refers to the total numb
 
 ## Environments
 FFAI comes with five environments with various difficulty:
-* FFAI-v2: 11 players on a 26x15 pitch (traditional size)
-* FFAI-7-v2: 7 players on a 20x11 pitch
-* FFAI-5-v2: 5 players on a 16x8 pitch
-* FFAI-3-v2: 3 players on a 12x5 pitch
-* FFAI-1-v: 1 player on a 4x3 pitch
+- **FFAI-v2:** 11 players on a 26x15 pitch (traditional size)
+- **FFAI-7-v2:** 7 players on a 20x11 pitch
+- **FFAI-5-v2:** 5 players on a 16x8 pitch
+- **FFAI-3-v2:** 3 players on a 12x5 pitch
+- **FFAI-1-v:** 1 player on a 4x3 pitch
 
 ![FFAI Gym GUI](screenshots/gym.png?raw=true "FFAI Gym GUI")
 
