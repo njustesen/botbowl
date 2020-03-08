@@ -171,7 +171,7 @@ The 'procedure' part of the observation contains a one-hot vector with 16 values
 14. ```Interception```
 15. ```Reroll```
 
-## Action Types
+### Observation: available-action-types' Action Types
 The 'available-action-types' part of the observation contains a one-hot vector describing which action types that are currently available.
 
 0. ```ActionType.START_GAME```
@@ -215,7 +215,8 @@ The 'available-action-types' part of the observation contains a one-hot vector d
 38. ```ActionType.SETUP_FORMATION_SPREAD```
 39. ```ActionType.SETUP_FORMATION_ZONE```
 
-To take an action, the step function must be called with an Action instance that contains an action type and a position if needed. See the list above if the actions needs a position. Actions are instantiated and used like this:
+## Actions
+To take an action, the step function must be called with an Action instance that contains an action type and a position if needed. See the list above whether an actions needs a position. Actions are instantiated and used like this:
 
 ```python
 action = {
@@ -226,7 +227,7 @@ action = {
 obs, reward, done, info = env.step(action)
 ```
 
-You can always check if an action type is available using ```env.available_action_types()``` and for positions ```available_positions(action_type)```. The same information is available through ```obs[available_action_types]``` and ```obs['board']['<action_type> positions']``` where ```<action_type>``` e.g. could be `move`.
+You can always check if an action type is available using ```env.available_action_types()``` and for positions ```available_positions(action_type)```. The same information is available through ```obs['available-action-types']``` and ```obs['board']['<action_type> positions']``` where ```<action_type>``` e.g. could be `move`.
 
 ## Rewards and Info
 The default reward function only rewards for a win, draw or loss 1/0/-1.
@@ -255,4 +256,4 @@ FFAI comes with five environments with various difficulty:
 ## Explore the Observation Space
 Try running [examples/gym.py](examples/gym.py) while debugging in your favorite IDE (e.g. [https://www.jetbrains.com/pycharm/](PyCharm)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
 
-In the next tutorial, we will start developing a reinforcement learning.
+In the next tutorial, we will start developing a reinforcement learning agent.
