@@ -40,7 +40,7 @@ approach, we have one action for each non-spatial action as well as $$W \times H
 where $$W$$ and $$H$$ is the width and height of the spatial feature layers which are equal to the board 
 size plus a one-tile padding, since push actions can be out of bounds.  
  
-![Single-branch action space](screenshots/action-space.png?raw=true "Single-branch action space")
+![Single-branch action space](img/action-space.png?raw=true "Single-branch action space")
 
 We compute batches of action masks from the spatial feature layers that represent the available spatial actions. 
 Action masks are computed as vectors of the same size as the one-branch action space as seen above:
@@ -94,7 +94,7 @@ with the non-spatial input. The resulting vector then goes through a fully-conne
 The action output is a fully-connected layer with a softmax activation function forming a distribution over actions. The state-value output 
 is also fully-connected layer but without any activation function. 
 
-![Network architecture](screenshots/architecture.png?raw=true "Network architecture")
+![Network architecture](img/architecture.png?raw=true "Network architecture")
 
 We used pytorch to implement this policy network:
 
