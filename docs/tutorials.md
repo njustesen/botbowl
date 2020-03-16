@@ -8,7 +8,7 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 4. [**Scripted Bots II: Pathfinding and Probabilities**](bots-ii.md)
 5. [**Scripted Bots III: Formations**](bots-iii.md)
 6. [**Reinforcement Learning I: OpenAI Gym Environment**](gym.md)
-7. **Reinforcement Learning II: A2C** (coming soon)
+7. [**Reinforcement Learning II: A2C**](a2c.md)
 8. **Reinforcement Learning III: Enhancements** (coming soon)
 9. **Reinforcement Learning IV: Self-play** (coming soon)
 10. **Submit to Bot Bowl** (coming soon)
