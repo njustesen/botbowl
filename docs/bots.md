@@ -149,7 +149,7 @@ This is a list of possible action choices that can be performed with some additi
 ```
 which are the available actions in this situation:
 
-!["A human lineman has taken a Blitz action and can thus both move and block."](screenshots/block_situation.png?raw=true "Block situation")
+!["A human lineman has taken a Blitz action and can thus both move and block."](img/block_situation.png?raw=true "Block situation")
 
 By iterating the available actions, we can easily select one that we like. For our random bot, we first sample a random ```ÀctionType```:
 

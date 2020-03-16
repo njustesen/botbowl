@@ -2,7 +2,7 @@
 This tutorial will introduce you to FFAI's implementations of the [Open AI Gym interface](https://arxiv.org/pdf/1606.01540.pdf) that will allow for easy integration of reinforcement learning algorithms. 
 
 You can run [examples/gym.py](examples/gym.py) to se a random agent play Blood Bowl through the FFAI Gym environment. The rendering is simplified for faster execution and looks like this:
-![FFAI Gym GUI](https://njustesen.github.io/ffai/screenshots/gym.png?raw=true "FFAI Gym GUI FFAI-3")
+![FFAI Gym GUI](https://njustesen.github.io/ffai/img/gym.png?raw=true "FFAI Gym GUI FFAI-3")
 
 [examples/gym.py](examples/gym.py) demonstrated how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
 
@@ -79,7 +79,7 @@ To visualize the feature layers, use the ```feature_layers``` option when callin
 env.render(feature_layers=True)
 ```
 
-![FFAI Gym Feature Layers](screenshots/gym_layers.png?raw=true "FFAI Gym Feature Layers")
+![FFAI Gym Feature Layers](img/gym_layers.png?raw=true "FFAI Gym Feature Layers")
 
 ### Observation: 'state'
 The 'state' part of the observation contains normailized values for folliwng 50  features:
@@ -306,7 +306,7 @@ FFAI comes with five environments with various difficulty:
 - **FFAI-3-v2:** 3 players on a 12x5 pitch
 - **FFAI-1-v2:** 1 player on a 4x3 pitch
 
-![A rendering of __FFAI-3-v2__.](screenshots/gym_3.png?raw=true "A rendering of __FFAI-3-v2__.")
+![A rendering of __FFAI-3-v2__.](img/gym_3.png?raw=true "A rendering of __FFAI-3-v2__.")
 
 ## Explore the Observation Space
 Try running [examples/gym.py](examples/gym.py) while debugging in your favorite IDE (e.g. [PyCharm](https://www.jetbrains.com/pycharm/)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
