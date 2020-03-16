@@ -449,9 +449,15 @@ Because the neural network is written in pytorch, you can run the code in debug 
 
 The training process is plotted as the script runs. Here are the results we got on the three small FFAI environments.
 
+### FFAI-1-v2
+
 ![FFAI-1-v2 Results](img/FFAI-1-v2.png?raw=true "FFAI-1-v2 Results")
 
+### FFAI-3-v2
+
 ![FFAI-3-v2 Results](img/FFAI-3-v2.png?raw=true "FFAI-3-v2 Results")
+
+### FFAI-5-v2
 
 ![FFAI-5-v2 Results](img/FFAI-5-v2.png?raw=true "FFAI-5-v2 Results")
 
