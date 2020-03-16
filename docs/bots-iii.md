@@ -48,13 +48,13 @@ The characters in the syntax means:
 - **x**: Prioritize players with __Block__ and avoid __Pass__/__Catch__ players.
 
 ## The Formation class
-FFAI comes with an implementation of a Formation class which constructor takes a 2D array of strings, similar to the syntax above. Its 
-```actions(self, game, team)``` function will then return a list of actions to execute the described setup formation. 
+FFAI comes with an implementation of a Formation class with a constructor that takes a 2D array of strings, similar to the syntax above. 
+
+Its ```actions(self, game, team)``` function will then return a list of actions to execute the described setup formation. 
 FFAI also has a loader if you prefer to write formations in a text file exactly as above. Load a formation from a file like 
 this:
 
 ````python
-import load_formation from FFAI
 formation = load_formation(filename, directory=directory_path)
 actions = formation.actions(game, my_team)
 ````
@@ -62,7 +62,6 @@ actions = formation.actions(game, my_team)
 FFAI also comes with two offensive and two defensive formations that you can use out of the box like this:
 
 ````python
-import load_formation from FFAI
 off_formation_line = load_formation("off_line")
 def_formation_wedge = load_formation("off_wedge")
 def_formation_spread = load_formation("def_spread")
@@ -132,4 +131,4 @@ def setup(self, game):
             self.setup_actions.append(Action(ActionType.END_SETUP))
 ```
 
-Try experimenting with a few diferent setup formations or implement a larger repository of formations for different situations.
+Try experimenting with a few different setup formations or implement a larger repository of formations for different situations.
