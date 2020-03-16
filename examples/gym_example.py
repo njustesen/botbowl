@@ -8,12 +8,12 @@ import ffai
 if __name__ == "__main__":
 
     # Create environment
-    # env = gym.make("FFAI-v1")
+    env = gym.make("FFAI-v2")
 
     # Smaller variants
     # env = gym.make("FFAI-7-v2")
     # env = gym.make("FFAI-5-v2")
-    env = gym.make("FFAI-3-v2")
+    # env = gym.make("FFAI-3-v2")
     # env = gym.make("FFAI-1-v2")
 
     # Get observations space (layer, height, width)

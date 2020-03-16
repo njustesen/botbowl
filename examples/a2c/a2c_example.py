@@ -1,3 +1,4 @@
+import os
 import gym
 from ffai import FFAIEnv
 from torch.autograd import Variable
@@ -37,6 +38,16 @@ num_cnn_kernels = [32, 64]
 
 model_name = env_name
 log_filename = "logs/" + model_name + ".dat"
+
+
+def ensure_dir(file_path):
+    directory = os.path.dirname(file_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+ensure_dir("logs/")
+ensure_dir("models/")
+ensure_dir("plots/")
 
 # --- Reward function ---
 # You need to improve the reward function before it can learn anything on larger boards.
@@ -170,7 +181,6 @@ class CNNPolicy(nn.Module):
     def act(self, spatial_inputs, non_spatial_input, action_mask):
         values, action_probs = self.get_action_probs(spatial_inputs, non_spatial_input, action_mask=action_mask)
         actions = action_probs.multinomial(1)
-        # If ball carrier can score without dice roll
         return values, actions
 
     def evaluate_actions(self, spatial_inputs, non_spatial_input, actions, actions_mask):
@@ -208,7 +218,6 @@ def reward_function(env, info, shaped=False):
             r += rewards_opp[outcome.outcome_type]
     if info['ball_progression'] > 0:
         r += info['ball_progression'] * ball_progression_reward
-        #print("Reward: ", ball_progression_reward*info['ball_progression'])
     return r
 
 def worker(remote, parent_remote, env, worker_id):
@@ -249,7 +258,7 @@ def worker(remote, parent_remote, env, worker_id):
 class VecEnv():
     def __init__(self, envs):
         """
-        envs: list of blood bowl game environments to run in subprocesses
+        envs: list of FFAI environments to run in subprocesses
         """
         self.closed = False
         nenvs = len(envs)
@@ -380,6 +389,7 @@ def main():
     memory.spatial_obs[0].copy_(spatial_obs)
     memory.non_spatial_obs[0].copy_(non_spatial_obs)
 
+    # Variables for storing stats
     all_updates = 0
     all_episodes = 0
     all_steps = 0

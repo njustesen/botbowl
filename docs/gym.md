@@ -44,6 +44,7 @@ The default feature layers in obs['board'] are:
 27. SkillLayer(Skill.PASS)
 
 Custom layers can be implemented like this:
+
 ```python
 from ffai.ai import FeatureLayer
 class MyCustomLayer(FeatureLayer):
@@ -59,12 +60,15 @@ class MyCustomLayer(FeatureLayer):
     def name(self):
         return "expensive players"
 ```
+
 and added to the environment's feature layers:
+
 ```python
 env.layers.append(MyCustomLayer())
 ```
 
 To visualize the feature layers, use the feature_layers option when calling render:
+
 ```python
 env.render(feature_layers=True)
 ```
@@ -193,6 +197,7 @@ Actions consists of 31 action types. Some action types, denoted by `<position>` 
 36. ActionType.SETUP_FORMATION_ZONE
 
 Actions are instantiated and used like this:
+
 ```python
 action = {
     'action-type': 26,
@@ -205,6 +210,7 @@ obs, reward, done, info = env.step(action)
 ## Rewards and Info
 The default reward function only rewards for a win, draw or loss 1/0/-1.
 However, the info object returned by the step function contains useful information for reward shaping:
+
 ```python
 'cas_inflicted': {int},
 'opp_cas_inflicted': {int},
@@ -213,15 +219,16 @@ However, the info object returned by the step function contains useful informati
 'half': {int},
 'round': {int}
 ```
+
 These values are commulative, such that 'cas_inflicted' refers to the total number of casualties inflicted by the team.
 
 ## Variants
 FFAI comes with five environments with various difficulty:
-* FFAI-v1: 11 players on a 26x15 pitch (traditional size)
-* FFAI-7-v1: 7 players on a 20x11 pitch
-* FFAI-5-v1: 5 players on a 16x8 pitch
-* FFAI-3-v1: 3 players on a 12x5 pitch
-* FFAI-1-v1: 1 player on a 4x3 pitch
+* FFAI-v2: 11 players on a 26x15 pitch (traditional size)
+* FFAI-7-v2: 7 players on a 20x11 pitch
+* FFAI-5-v2: 5 players on a 16x8 pitch
+* FFAI-3-v2: 3 players on a 12x5 pitch
+* FFAI-1-v2: 1 player on a 4x3 pitch
 
 This is how the FFAI-3-v1 environment looks:
 
