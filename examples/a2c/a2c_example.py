@@ -26,7 +26,8 @@ save_interval = 500
 #env_name = "FFAI-1-v2"
 #env_name = "FFAI-3-v2"
 #num_steps = 10000000 # Increase training time
-# env_name = "FFAI-5-v2"
+env_name = "FFAI-5-v2"
+num_steps = 100000000 # Increase training time
 # env_name = "FFAI-v2"
 reset_steps = 2000  # The environment is reset after this many steps it gets stuck
 # If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
