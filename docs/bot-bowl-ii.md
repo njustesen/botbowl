@@ -6,11 +6,7 @@ A submission link will appear on this page when we get closer to the deadline.
 
 ## Prizes
 
-Bot Bowl II will have a prize pool of $1000.
-
-- **1st:** $500
-- **2nd:** $300
-- **3rd:** $200
+The prizes for Bot Bowl II will be announced very soon.
 
 ## Format
 The format of Bot Bowl II will be similar to last year's competition.
