@@ -17,7 +17,7 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 3. **Reinforcement Learning III: Enhancements** (coming soon)
 4. **Reinforcement Learning IV: Self-play** (coming soon)
 
-# Submission
+## Submission
 1. **Submit to Bot Bowl** (coming soon)
 
 If you find any problems or have questions as you go through the tutorials, please report an issue on [https://github.com/njustesen/ffai/](github).
