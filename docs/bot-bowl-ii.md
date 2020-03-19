@@ -6,7 +6,7 @@ A submission link will appear on this page when we get closer to the deadline.
 
 ## Prizes
 
-Bot Bowl II will have a prize pool of $1000.
+Bot Bowl II will have a prize pool of $1000 sponsered by [modl.ai](www.modl.ai).
 
 - **1st:** $500
 - **2nd:** $300
