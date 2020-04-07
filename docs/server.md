@@ -17,5 +17,5 @@ from ffai.ai.registry import make_bot
 api.new_game(home_team_id="orc",
              away_team_id="human",
              home_agent=Agent("Player 1", human=True)),
-             away_agent=make_bot("grodbot")
+             away_agent=make_bot("random")
 ```
