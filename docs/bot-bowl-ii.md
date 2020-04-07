@@ -4,13 +4,8 @@ Submit your bot before August 1st 2020 to participate in Bot Bowl II.
 The results of  will be announced at the [Conference of Games (CoG) 2020 in Osaka, Japan](http://ieee-cog.org/2020/) with a prize pool of $1000.
 A submission link will appear on this page when we get closer to the deadline.
 
-## Prizes
-
-Bot Bowl II will have a prize pool of $1000 sponsered by [modl.ai](http://modl.ai).
-
-- **1st:** $500
-- **2nd:** $300
-- **3rd:** $200
+## Prize
+The winner of Bot Bowl II will receive $500 from IEEE!
 
 ## Format
 The format of Bot Bowl II will be similar to last year's competition.
