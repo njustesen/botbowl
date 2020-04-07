@@ -7,7 +7,7 @@ becomes overwhelming for traditional algorithms. Additionally, scoring points in
 
 We see Blood Bowl as the next board game challenge for AI. You can read more about this in our paper [Blood Bowl: A New Board Game Challenge and Competition for AI](https://njustesen.github.io/njustesen/publications/justesen2019blood.pdf). 
 
-Go to the [tutorials](docs/tutorials.md) page to get started or read more about [Bot Bowl II](docs/bot-bowl-ii.md).
+Go to the [tutorials](tutorials.md) page to get started or read more about [Bot Bowl II](bot-bowl-ii.md).
 
 The Bot Bowl competitions are organized by [Niels Justesen](https://www.njustesen.com). 
 
