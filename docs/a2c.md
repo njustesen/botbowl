@@ -461,7 +461,7 @@ The training process is plotted as the script runs. Here are the results we got 
 
 ![FFAI-5-v2 Results](img/FFAI-5-v2.png?raw=true "FFAI-5-v2 Results")
 
-Run the script to see if you reproduce some of the results.
+Run the script to see if you can reproduce some of the results.
 
 ## Next Steps
 We were able to learn strong policies for the one, three, and five-player variants of Blood Bowl against a random opponent. 
