@@ -9,9 +9,9 @@ Bot Bowl II will have two prizes:
 1. The winner will receive $500 from IEEE
 2. The participant with the highest ranked _machine learning bot_* will receive $500 from [modl.ai](http://modl.ai)
 
-* To qualify as a _machine learning bot_, the core part of the decision-making must be learned. A _machine learning bot_ can use search and even some scripted behaviors, as long as the main decision-making of the bot is learned. If you are unsure if your bot will qualify as a _machine learning bot_, you are welcome to ask questions on our [discord server](https://discord.gg/MTXMuae).
+\* To qualify as a _machine learning bot_, the core part of the decision-making must be learned. A _machine learning bot_ can use search and even some scripted behaviors, as long as the main decision-making of the bot is learned. If you are unsure if your bot will qualify as a _machine learning bot_, you are welcome to ask questions on our [discord server](https://discord.gg/MTXMuae).
 
-Participants *CAN* win both prizes, if they win the competition with a machine learning bot. 
+Participants **CAN** win both prizes, if they win the competition with a machine learning bot. 
 
 ## Format
 The format of Bot Bowl II will be similar to last year's competition.
