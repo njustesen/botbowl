@@ -5,11 +5,11 @@ from multiprocessing import Process, Pipe
 import numpy as np
 
 envs = [
-    "FFAI-1-v1",
-    "FFAI-3-v1",
-    "FFAI-5-v1",
-    "FFAI-7-v1",
-    "FFAI-11-v1"
+    "FFAI-1-v2",
+    "FFAI-3-v2",
+    "FFAI-5-v2",
+    "FFAI-7-v2",
+    "FFAI-11-v2"
 ]
 
 
@@ -40,7 +40,7 @@ def test_gym(env):
     assert steps > 10
 
 
-@pytest.mark.parametrize("env", ["FFAI-11-v1"])
+@pytest.mark.parametrize("env", envs)
 def test_multiple_gyms(env):
 
     def worker(remote, parent_remote, env):
@@ -86,7 +86,7 @@ def test_multiple_gyms(env):
         p.start()
     for remote in work_remotes:
         remote.close()
-    for i in range(200):
+    for i in range(20):
         for remote in remotes:
             remote.send('step')
         results = [remote.recv() for remote in remotes]

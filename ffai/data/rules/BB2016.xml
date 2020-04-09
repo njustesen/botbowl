@@ -509,7 +509,7 @@
             <stakes>false</stakes>
         </roster>
         <roster>
-            <name>Elf</name>
+            <name>Elven Union</name>
             <rerollValue>50000</rerollValue>
             <positions>
                 <position>
@@ -2187,7 +2187,7 @@
             <feeder>false</feeder>
             <races>
                 <race>Dark Elf</race>
-                <race>Elf</race>
+                <race>Elven Union</race>
                 <race>High Elf</race>
                 <race>Wood Elf</race>
             </races>
@@ -2494,7 +2494,7 @@
             <feeder>false</feeder>
             <races>
                 <race>Dark Elf</race>
-                <race>Elf</race>
+                <race>Elven Union</race>
             </races>
         </star>
         <star>
@@ -2597,7 +2597,7 @@
             <feeder>false</feeder>
             <races>
                 <race>Wood Elf</race>
-                <race>Elf</race>
+                <race>Elven Union</race>
             </races>
         </star>
         <star>
@@ -2720,7 +2720,7 @@
                 <race>Chaos Pact</race>
                 <race>Dark Elf</race>
                 <race>Dwarf</race>
-                <race>Elf</race>
+                <race>Elven Union</race>
                 <race>Goblin</race>
                 <race>Halfling</race>
                 <race>High Elf</race>
@@ -2776,7 +2776,7 @@
             </skills>
             <feeder>false</feeder>
             <races>
-                <race>Elf</race>
+                <race>Elven Union</race>
                 <race>High Elf</race>
             </races>
         </star>
@@ -3292,7 +3292,7 @@
             </skills>
             <feeder>false</feeder>
             <races>
-                <race>Elf, High Elf, Wood Elf</race>
+                <race>Elven Union, High Elf, Wood Elf</race>
             </races>
         </star>
         <star>
@@ -3313,7 +3313,7 @@
             </skills>
             <feeder>false</feeder>
             <races>
-                <race>Elf</race>
+                <race>Elven Union</race>
                 <race>High Elf</race>
                 <race>Wood Elf</race>
             </races>

@@ -100,6 +100,7 @@ def load_rule_set(name, debug=False, all_rules=True):
             if debug:
                 print("-- Parsing " + str(i["name"]))
             reduced = 0 if not "reduced" in i else i["reduced"]
+            reduced = 0 if not "reduced" in i else i["reduced"]
             inducement = Inducement(i["name"], (int)(i.cdata), (int)(i["max"]), reduced=reduced)
             ruleset.inducements.append(inducement)
 
@@ -175,11 +176,11 @@ def load_team(path, ruleset):
     f.close()
     data = json.loads(jsonStr)
     team_id = str(uuid.uuid1())
-    team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecary=data['apothecary'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
+    team = Team(team_id, data['name'], data['race'], players=[], treasury=data['treasury'], apothecaries=data['apothecaries'], rerolls=data['rerolls'], ass_coaches=data['ass_coaches'], cheerleaders=data['cheerleaders'], fan_factor=data['fan_factor'])
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)
         player_id = str(uuid.uuid1())
-        player = Player(player_id=player_id, role=role, name=p['name'], nr=p['nr'], niggling=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)
+        player = Player(player_id=player_id, role=role, name=p['name'], nr=p['nr'], niggling_injuries=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)
         for s in p['extra_skills']:
             player.extra_skills.append(parse_enum(Skill, s))
         team.players.append(player)
@@ -243,9 +244,9 @@ def load_config(name):
     config.debug_mode = data['debug_mode']
     config.competition_mode = data['competition_mode']
     config.kick_scatter_dice = data['kick_scatter_dice']
-    config.defensive_formations = [load_formation(formation, config.pitch_max) for formation in
+    config.defensive_formations = [load_formation(formation, size=config.pitch_max) for formation in
                                    data['defensive_formations']]
-    config.offensive_formations = [load_formation(formation, config.pitch_max) for formation in
+    config.offensive_formations = [load_formation(formation, size=config.pitch_max) for formation in
                                    data['offensive_formations']]
     game = None
     disqualification = None
@@ -262,15 +263,19 @@ def load_config(name):
     return config
 
 
-def load_formation(name, size=11):
+def load_formation(name, directory=None, size=11):
     """
     :param name: the filename to load.
+    :param path: path to a text file describing the setup formation. If None, the FFAI formation path will be used.
     :param size: The number of players on the pitch in the used FFAI variant.
     :return: The formation in data/formations/<size>/<name>
     """
     if not name.endswith(".txt"):
         name += ".txt"
-    path = get_data_path('formations/' + str(size) + "/" + name)
+    if directory is not None:
+        path = os.path.join(directory, name)
+    else:
+        path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
     file = open(path, 'r')
     name = name.replace(".txt", "").replace("off_", "").replace("def_", "").title()

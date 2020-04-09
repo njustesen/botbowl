@@ -1,8 +1,3 @@
-from ffai.core.game import *
-from ffai.core.load import *
-from ffai.ai.bots.random_bot import RandomBot
-from ffai.ai.layers import *
-import uuid
 import tkinter as tk
 import math
 from tkinter import *
@@ -29,7 +24,6 @@ class Renderer:
         self.roots = {}
         self.cvs = {}
 
-    '''
     def _available_players(self, action_type):
         action = None
         for a in self.game.state.available_actions:
@@ -38,7 +32,6 @@ class Renderer:
         if action is None:
             return []
         return [player.position for player in action.players]
-    '''
 
     def _draw_player(self, obs, idx, x, y, own=False):
         board_x = Renderer.square_size * x
@@ -61,7 +54,7 @@ class Renderer:
             outline = 'grey'
         self.cvs[idx].create_oval(board_x, board_y, board_x + Renderer.square_size, board_y + Renderer.square_size, fill=fill, outline=outline,
                             width=width)
-        text_fill = 'grey' if not obs['board']['available players'][y][x] else 'black'
+        text_fill = 'grey' if not obs['board']['active players'][y][x] else 'black'
         self.cvs[idx].create_text(board_x + Renderer.square_size / 2,
                                   board_y + Renderer.square_size / 2,
                             fill=text_fill)

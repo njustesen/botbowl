@@ -11,8 +11,8 @@ from ffai.web import api
 from ffai.core.load import *
 import json
 import random
-import sys
 from ffai.ai.registry import make_bot
+import traceback
 
 app = Flask(__name__)
 
@@ -47,7 +47,9 @@ def create():
 def save():
     game_id = json.loads(request.data)['game_id']
     name = json.loads(request.data)['name']
-    team_id = json.loads(request.data)['team_id']
+    # todo: team_id needed?
+    team_id = ""  # json.loads(request.data)['team_id']
+
     if len(name) > 2 and len(name) < 40 and not api.save_game_exists(name):
         api.save_game(game_id, name, team_id)
         return json.dumps("Game was successfully saved")
@@ -90,14 +92,15 @@ def step(game_id):
     try:
         action = json.loads(request.data)['action']
         action_type = parse_enum(ActionType, action['action_type'])
-        pos = Square(action['pos']['x'], action['pos']['y']) if 'pos' in action and action['pos'] is not None else None
+        position = Square(action['position']['x'], action['position']['y']) if 'position' in action and action['position'] is not None else None
         player_id = action['player_id'] if 'player_id' in action else None
         game = api.get_game(game_id)
         player = game.get_player(player_id) if player_id is not None else None
-        action = Action(action_type, pos=pos, player=player)
+        action = Action(action_type, position=position, player=player)
         game = api.step(game_id, action)
     except Exception as e:
         print(e)
+        traceback.print_exc()
         game = api.get_game(game_id)
     return json.dumps(game.to_json())
 
@@ -127,7 +130,7 @@ def get_bots():
     return json.dumps(api.get_bots())
 
 
-def start_server(debug=False, use_reloader=False, port=5000):
+def start_server(debug=False, use_reloader=False, port=5000, host="0.0.0.0"):
     
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
@@ -142,4 +145,4 @@ def start_server(debug=False, use_reloader=False, port=5000):
     app.jinja_options = jinja_options
 
     app.config['TEMPLATES_AUTO_RELOAD']=True
-    app.run(debug=debug, use_reloader=use_reloader, port=port)
+    app.run(host=host, debug=debug, use_reloader=use_reloader, port=port)

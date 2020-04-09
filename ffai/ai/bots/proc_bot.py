@@ -5,7 +5,7 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-
+from ffai.core.model import Agent
 from ffai.core.procedure import *
 
 
@@ -17,7 +17,8 @@ class ProcBot(Agent):
     def act(self, game):
 
         # Get current procedure
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
+        # print(type(proc))
 
         # Call private function
         if isinstance(proc, CoinTossFlip):
@@ -26,6 +27,10 @@ class ProcBot(Agent):
             return self.coin_toss_kick_receive(game)
         if isinstance(proc, Setup):
             return self.setup(game)
+        if isinstance(proc, Reroll):
+            if proc.can_use_pro:
+                return self.use_pro(game)
+            return self.reroll(game)
         if isinstance(proc, PlaceBall):
             return self.place_ball(game)
         if isinstance(proc, HighKick):
@@ -41,27 +46,35 @@ class ProcBot(Agent):
         if isinstance(proc, PlayerAction):
             return self.player_action(game)
         if isinstance(proc, Block):
+            if proc.waiting_juggernaut:
+                return self.use_juggernaut(game)
+            if proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
+                return self.use_wrestle(game)
             return self.block(game)
         if isinstance(proc, Push):
+            if proc.waiting_stand_firm:
+                return self.use_stand_firm(game)
             return self.push(game)
         if isinstance(proc, FollowUp):
             return self.follow_up(game)
         if isinstance(proc, Apothecary):
             return self.apothecary(game)
-        if isinstance(proc, PassAction):
-            return self.pass_action(game)
-        if isinstance(proc, Catch):
-            return self.catch(game)
         if isinstance(proc, Interception):
             return self.interception(game)
-        if isinstance(proc, GFI):
-            return self.gfi(game)
-        if isinstance(proc, Dodge):
-            return self.dodge(game)
-        if isinstance(proc, Pickup):
-            return self.pickup(game)
 
         raise Exception("Unknown procedure")
+
+    def use_pro(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def use_juggernaut(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def use_wrestle(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def use_stand_firm(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def coin_toss_flip(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
@@ -70,6 +83,9 @@ class ProcBot(Agent):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def setup(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def reroll(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def place_ball(self, game):

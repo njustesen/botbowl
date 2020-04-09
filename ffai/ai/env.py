@@ -8,12 +8,11 @@ This module contains the FFAIEnv class; FFAI implementing the Open AI Gym interf
 
 import gym
 from gym import spaces
-from ffai.core.game import *
-from ffai.core.load import *
+from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-# import tkinter as tk
+import tkinter as tk
 import math
 from copy import deepcopy
 
@@ -45,6 +44,7 @@ class FFAIEnv(gym.Env):
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
         ActionType.END_TURN,
+        ActionType.END_SETUP,
         ActionType.STAND_UP,
         ActionType.SELECT_ATTACKER_DOWN,
         ActionType.SELECT_BOTH_DOWN,
@@ -56,19 +56,22 @@ class FFAIEnv(gym.Env):
         ActionType.PLACE_BALL,
         ActionType.PUSH,
         ActionType.FOLLOW_UP,
-        ActionType.INTERCEPTION,
         ActionType.SELECT_PLAYER,
         ActionType.MOVE,
         ActionType.BLOCK,
         ActionType.PASS,
         ActionType.FOUL,
         ActionType.HANDOFF,
+        ActionType.LEAP,
+        ActionType.STAB,
         ActionType.START_MOVE,
         ActionType.START_BLOCK,
         ActionType.START_BLITZ,
         ActionType.START_PASS,
         ActionType.START_FOUL,
         ActionType.START_HANDOFF,
+        ActionType.USE_SKILL,
+        ActionType.DONT_USE_SKILL,
         ActionType.SETUP_FORMATION_WEDGE,
         ActionType.SETUP_FORMATION_LINE,
         ActionType.SETUP_FORMATION_SPREAD,
@@ -85,6 +88,8 @@ class FFAIEnv(gym.Env):
         ActionType.END_PLAYER_TURN,
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
+        ActionType.USE_SKILL,
+        ActionType.DONT_USE_SKILL,
         ActionType.END_TURN,
         ActionType.STAND_UP,
         ActionType.SELECT_ATTACKER_DOWN,
@@ -109,18 +114,13 @@ class FFAIEnv(gym.Env):
         ActionType.PLACE_BALL,
         ActionType.PUSH,
         ActionType.FOLLOW_UP,
-        ActionType.INTERCEPTION,
-        ActionType.SELECT_PLAYER,
         ActionType.MOVE,
         ActionType.BLOCK,
         ActionType.PASS,
         ActionType.FOUL,
-        ActionType.HANDOFF
-    ]
-
-    player_action_types = [
-        ActionType.PLACE_PLAYER,
-        ActionType.INTERCEPTION,
+        ActionType.HANDOFF,
+        ActionType.LEAP,
+        ActionType.STAB,
         ActionType.SELECT_PLAYER,
         ActionType.START_MOVE,
         ActionType.START_BLOCK,
@@ -146,12 +146,11 @@ class FFAIEnv(gym.Env):
         FollowUp,
         Apothecary,
         PassAction,
-        Catch,
         Interception,
-        GFI,
-        Dodge,
-        Pickup
+        Reroll
     ]
+
+    play_on_both_sides = False
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.3"
@@ -170,6 +169,11 @@ class FFAIEnv(gym.Env):
         self.root = None
         self.cv = None
         self.last_obs = None
+        self.last_report_idx = 0
+        self.last_ball_team = None
+        self.last_ball_x = None
+        self.own_team = None
+        self.opp_team = None
 
         self.layers = [
             OccupiedLayer(),
@@ -180,8 +184,6 @@ class FFAIEnv(gym.Env):
             UpLayer(),
             StunnedLayer(),
             UsedLayer(),
-            AvailablePlayerLayer(),
-            AvailablePositionLayer(),
             RollProbabilityLayer(),
             BlockDiceLayer(),
             ActivePlayerLayer(),
@@ -202,44 +204,36 @@ class FFAIEnv(gym.Env):
             SkillLayer(Skill.PASS)
         ]
 
+        for action_type in FFAIEnv.positional_action_types:
+            self.layers.append(AvailablePositionLayer(action_type))
+
         arena = load_arena(self.config.arena)
 
         self.observation_space = spaces.Dict({
             'board': spaces.Box(low=0, high=1, shape=(len(self.layers), arena.height, arena.width)),
             'state': spaces.Box(low=0, high=1, shape=(50,)),
-            'procedure': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
+            'procedures': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
+            'available-action-types': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.actions),))
         })
 
-        self.actions = FFAIEnv.actions
-
         self.action_space = spaces.Dict({
-            'action-type': spaces.Discrete(len(self.actions)),
+            'action-type': spaces.Discrete(len(FFAIEnv.actions)),
             'x': spaces.Discrete(arena.width),
             'y': spaces.Discrete(arena.height)
         })
 
     def step(self, action):
-        action_type = self.actions[action['action-type']] if action['action-type'] is not None else None
-        if action_type is None:
-            return
+        if type(action['action-type']) is ActionType and action['action-type'] in FFAIEnv.actions:
+            action_type = action['action-type']
+        else:
+            action_type = FFAIEnv.actions[int(action['action-type'])]
         p = Square(action['x'], action['y']) if action['x'] is not None and action['y'] is not None else None
         position = None
         player = None
-        if action_type in self.player_action_types:
-            if p is None:
-                raise Exception(f"{action_type.name} requires a position. None was given.")
-            player = self.game.get_player_at(p)
-            if player is None:
-                raise Exception(f"{action_type.name} requires a position with a player. {p.to_json()} does not point to a player.")
-            action = None
-            for a in self.game.state.available_actions:
-                if a.action_type == action_type:
-                    action = a
-            if len(action.positions) == 1:
-                position = action.positions[0]
-        elif action_type in self.positional_action_types:
+        if action_type in self.positional_action_types:
             position = p
-        real_action = Action(action_type=action_type, pos=position, player=player)
+        real_action = Action(action_type=action_type, position=position, player=player)
+        self.last_report_idx = len(self.game.state.reports)
         return self._step(real_action)
 
     def _step(self, action):
@@ -251,13 +245,27 @@ class FFAIEnv(gym.Env):
             reward = 1 if self.game.get_winner() == self.actor else -1
         team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
         opp_team = self.game.state.home_team if self.team_id != self.home_team.team_id else self.game.state.away_team
+        ball_carrier = self.game.get_ball_carrier()
+        ball_team = ball_carrier.team if ball_carrier is not None else None
+        ball_position = self.game.get_ball_position()
+        progression = 0
+        if ball_team == team and self.last_ball_team:
+            #print("From: ", self.last_ball_x, ", To: ", ball_position.x)
+            if team == self.game.state.home_team:
+                progression = self.last_ball_x - ball_position.x
+            else:
+                progression = ball_position.x - self.last_ball_x
+            #print("Progression: ", progression)
+        self.last_ball_x = ball_position.x if ball_position is not None else None
+        self.last_ball_team = ball_team
         info = {
             'cas_inflicted': len(self.game.get_casualties(team)),
             'opp_cas_inflicted': len(self.game.get_casualties(opp_team)),
             'touchdowns': team.state.score,
             'opp_touchdowns': opp_team.state.score,
             'half': self.game.state.round,
-            'round': self.game.state.round
+            'round': self.game.state.round,
+            'ball_progression': progression
         }
         return self._observation(self.game), reward, self.game.state.game_over, info
 
@@ -279,7 +287,8 @@ class FFAIEnv(gym.Env):
         obs = {
             'board': {},
             'state': {},
-            'procedure': np.zeros(len(FFAIEnv.procedures))
+            'procedures': {},
+            'available-action-types': {}
         }
         for layer in self.layers:
             obs['board'][layer.name()] = layer.produce(game)
@@ -314,7 +323,7 @@ class FFAIEnv(gym.Env):
         obs['state']['own cheerleaders'] = active_team.state.cheerleaders / 8.0 if active_team is not None else 0.0
         obs['state']['own bribes'] = active_team.state.bribes / 4.0 if active_team is not None else 0.0
         obs['state']['own babes'] = active_team.state.babes / 4.0 if active_team is not None else 0.0
-        obs['state']['own apothecary available'] = 1.0 if active_team is not None and active_team.state.apothecary_available else 0.0
+        obs['state']['own apothecaries'] = 0.0 if active_team is None else active_team.state.apothecaries / 2
         obs['state']['own reroll available'] = 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
         obs['state']['own fame'] = active_team.state.fame if active_team is not None else 0.0
 
@@ -326,7 +335,7 @@ class FFAIEnv(gym.Env):
         obs['state']['opp cheerleaders'] = opp_team.state.cheerleaders / 8.0 if opp_team is not None else 0.0
         obs['state']['opp bribes'] = opp_team.state.bribes / 4.0 if opp_team is not None else 0.0
         obs['state']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
-        obs['state']['opp apothecary available'] = 1.0 if opp_team is not None and opp_team.state.apothecary_available else 0.0
+        obs['state']['opp apothecaries'] = 0.0 if opp_team is None else active_team.state.apothecaries / 2
         obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
         obs['state']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
 
@@ -337,32 +346,39 @@ class FFAIEnv(gym.Env):
         obs['state']['is blitz'] = 1.0 if game.is_blitz() else 0.0
         obs['state']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
 
-        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.MOVE else 0.0
-        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.BLOCK else 0.0
-        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.BLITZ else 0.0
-        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.PASS else 0.0
-        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.HANDOFF else 0.0
-        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type(
-            game.state.active_player) == PlayerActionType.FOUL else 0.0
+        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.MOVE else 0.0
+        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLOCK else 0.0
+        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLITZ else 0.0
+        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.PASS else 0.0
+        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.HANDOFF else 0.0
+        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.FOUL else 0.0
 
         # Procedure
-        if game.state.stack.size() > 0:
-            procedure = game.state.stack.peek()
-            assert procedure.__class__ in FFAIEnv.procedures
-            proc_idx = FFAIEnv.procedures.index(procedure.__class__)
-            obs['procedure'][proc_idx] = 1.0
+        for procedure in FFAIEnv.procedures:
+            proc_name = procedure.__name__
+            obs['procedures'][proc_name] = 0.0
+
+        for procedure in game.state.stack.items:
+            if procedure.__class__ in FFAIEnv.procedures:
+            # proc_idx = FFAIEnv.procedures.index(procedure.__class__)
+                proc_name = procedure.__class__.__name__
+                obs['procedures'][proc_name] = 1.0
 
         self.last_obs = obs
+
+        # Actions
+        for action_type in FFAIEnv.actions:
+            obs['available-action-types'][action_type.name] = 0.0
+
+        for action_choice in game.get_available_actions():
+            # idx = FFAIEnv.actions.index(action_choice.action_type)
+            action_name = action_choice.action_type.name
+            obs['available-action-types'][action_name] = 1.0
 
         return obs
 
     def reset(self):
-        if self.rnd.randint(0, 1) == 0:
+        if not FFAIEnv.play_on_both_sides or self.rnd.randint(0, 2) == 0:
             self.team_id = self.home_team.team_id
             home_agent = self.actor
             away_agent = self.opp_actor
@@ -379,34 +395,46 @@ class FFAIEnv(gym.Env):
                          config=self.config,
                          ruleset=self.ruleset,
                          seed=seed)
+        self.last_report_idx = len(self.game.state.reports)
+        self.last_ball_team = None
+        self.last_ball_x = None
         self.game.init()
+        self.own_team = self.game.get_agent_team(self.actor)
+        self.opp_team = self.game.get_agent_team(self.opp_actor)
+
         return self._observation(self.game)
 
+    def get_outcomes(self):
+        if self.last_report_idx == len(self.game.state.reports):
+            return []
+        return self.game.state.reports[self.last_report_idx:]
+
     def available_action_types(self):
-        if isinstance(self.game.state.stack.peek(), Setup):
+        if isinstance(self.game.get_procedure(), Setup):
             if self.game.get_kicking_team().team_id == self.team_id:
-                return [self.actions.index(action_type) for action_type in self.defensive_formation_action_types]
+                return [FFAIEnv.actions.index(action_type) for action_type in self.defensive_formation_action_types]
             else:
-                return [self.actions.index(action_type) for action_type in self.offensive_formation_action_types]
-        return [self.actions.index(action.action_type) for action in self.game.state.available_actions if action.action_type in self.actions]
+                return [FFAIEnv.actions.index(action_type) for action_type in self.offensive_formation_action_types]
+        return [action.action_type for action in self.game.state.available_actions if action.action_type in FFAIEnv.actions]
 
     def available_positions(self, action_type):
         action = None
         for a in self.game.state.available_actions:
-            if a.action_type == self.actions[action_type]:
+            if a.action_type == action_type:
                 action = a
         if action is None:
             return []
-        if action.action_type in FFAIEnv.player_action_types:
-            return [player.position for player in action.players if player.position is not None]
         if action.action_type in FFAIEnv.positional_action_types:
-            return [position for position in action.positions if position is not None]
+            if action.positions:
+                return [position for position in action.positions if position is not None]
+            elif action.players:
+                return [player.position for player in action.players if player is not None]
         return []
 
     def _available_players(self, action_type):
         action = None
         for a in self.game.state.available_actions:
-            if a.action_type == self.actions[action_type]:
+            if a.action_type == FFAIEnv.actions[action_type]:
                 action = a
         if action is None:
             return []
@@ -449,8 +477,7 @@ class FFAIEnv(gym.Env):
                                 width=1)
 
     def render(self, feature_layers=False):
-        '''
-        Disabled due to Tinker bugs. Switch to other UI lib.
+
         if self.root is None:
             self.root = tk.Tk()
             self.root.title("FFAI Gym")
@@ -595,7 +622,6 @@ class FFAIEnv(gym.Env):
 
         self.root.update_idletasks()
         self.root.update()
-        '''
 
     def close(self):
         self.game = None

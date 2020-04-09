@@ -1,18 +1,6 @@
 import pytest
 from ffai.core.game import *
-
-
-def get_game(seed=0):
-    config = load_config("ff-11")
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
-    home_agent = Agent("human1", human=True)
-    away_agent = Agent("human2", human=True)
-    game = Game(1, home, away, home_agent, away_agent, config)
-    game.set_seed(seed)
-    game.init()
-    return game
+from tests.util import *
 
 
 @pytest.mark.parametrize("action_type", [ActionType.HEADS, ActionType.TAILS])
@@ -21,15 +9,15 @@ def test_coin_toss(action_type):
     for i in range(100):
         if len(coverage) == 2:
             return
-        game = get_game()
+        game = get_game_coin_toss()
         game.step(Action(ActionType.START_GAME))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
         assert type(proc) is CoinTossFlip
         actor_id = game.actor.agent_id
         acting_team = game.get_agent_team(game.actor)
         game.set_seed(i)
         game.step(Action(action_type))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
         assert type(proc) is CoinTossKickReceive
         if action_type == ActionType.HEADS:
             if game.has_report_of_type(OutcomeType.HEADS_WON):
@@ -64,17 +52,17 @@ def test_kick_receive(action_type):
     for i in range(100):
         if len(actors) == 2:
             return
-        game = get_game()
+        game = get_game_coin_toss()
         game.set_seed(i)
         game.step(Action(ActionType.START_GAME))
         game.step(Action(ActionType.HEADS))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
         assert type(proc) is CoinTossKickReceive
         selector = game.actor
         selecting_team = game.get_agent_team(game.actor)
         actors.add(game.home_agent == selector)
         game.step(Action(action_type))
-        proc = game.state.stack.peek()
+        proc = game.get_procedure()
         assert type(proc) is Setup
         if action_type == ActionType.KICK:
             assert game.has_report_of_type(

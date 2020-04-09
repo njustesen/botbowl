@@ -2,19 +2,19 @@
 
 import gym
 import numpy as np
-import ffai.ai
-from ffai.ai.env import FFAIEnv
+import ffai
+
 
 if __name__ == "__main__":
 
     # Create environment
-    # env = gym.make("FFAI-v1")
+    env = gym.make("FFAI-v2")
 
     # Smaller variants
-    # env = gym.make("FFAI-7-v1")
-    # env = gym.make("FFAI-5-v1")
-    env = gym.make("FFAI-3-v1")
-    # env = gym.make("FFAI-1-v1")
+    # env = gym.make("FFAI-7-v2")
+    # env = gym.make("FFAI-5-v2")
+    # env = gym.make("FFAI-3-v2")
+    # env = gym.make("FFAI-1-v2")
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
@@ -43,7 +43,7 @@ if __name__ == "__main__":
             # Extract non-spatial features
             state_arr = list(obs['state'].values())
             board = list(obs['board'].values())
-            procedure = obs['procedure']
+            procedure = obs['procedures']
 
             # Sample random action type
             action_types = env.available_action_types()
@@ -65,7 +65,6 @@ if __name__ == "__main__":
             steps += 1
 
             # Render
-            # Currently crashes on mac python 3.7.4
-            # env.render(feature_layers=True)
+            env.render(feature_layers=True)
 
     print(steps)

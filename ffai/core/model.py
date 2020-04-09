@@ -147,8 +147,11 @@ class PlayerState:
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.casualty_effect = None
-        self.casualty_type = None
+        self.injuries_gained = []
+        self.wild_animal = False
+        self.taken_root = False
+        self.used_skills = set()
+        self.squares_moved = []
 
     def to_json(self):
         return {
@@ -163,8 +166,10 @@ class PlayerState:
             'ejected': self.ejected,
             'spp_earned': self.spp_earned,
             'moves': self.moves,
-            'casualty_type': self.casualty_type.name if self.casualty_type is not None else None,
-            'casualty_effect': self.casualty_effect.name if self.casualty_effect is not None else None
+            'injuries_gained': [injury.name for injury in self.injuries_gained],
+            'squares_moved': [square.to_json() for square in self.squares_moved],
+            'wild_animal': self.wild_animal,
+            'taken_root': self.taken_root
         }
 
     def reset(self):
@@ -172,9 +177,19 @@ class PlayerState:
         self.used = False
         self.stunned = False
         self.bone_headed = False
+        self.wild_animal = False
+        self.taken_root = False
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
+        self.used_skills.clear()
+        self.squares_moved.clear()
+
+    def reset_turn(self):
+        self.moves = 0
+        self.used = False
+        self.used_skills.clear()
+        self.squares_moved.clear()
 
 
 class Agent:
@@ -217,7 +232,7 @@ class TeamState:
     def __init__(self, team):
         self.bribes = 0
         self.babes = 0
-        self.apothecary_available = team.apothecary
+        self.apothecaries = team.apothecaries
         self.wizard_available = False
         self.masterchef = False
         self.score = 0
@@ -234,7 +249,7 @@ class TeamState:
         return {
             'bribes': self.bribes,
             'babes': self.babes,
-            'apothecary_available': self.apothecary_available,
+            'apothecaries': self.apothecaries,
             'masterchef': self.masterchef,
             'score': self.score,
             'turn': self.turn,
@@ -342,6 +357,7 @@ class GameState:
         self.game_over = False
         self.available_actions = []
         self.clocks = []
+        self.rerolled_procs = set()
 
     def to_json(self):
         return {
@@ -397,490 +413,10 @@ class Pitch:
             'balls': [ball.to_json() for ball in self.balls]
         }
 
-    def put(self, piece, pos):
-        piece.position = Square(pos.x, pos.y)
-        self.board[pos.y][pos.x] = piece
-
-    def remove(self, piece):
-        assert piece.position is not None
-        self.board[piece.position.y][piece.position.x] = None
-        piece.position = None
-
-    def move(self, piece, pos_to):
-        assert piece.position is not None
-        assert self.board[pos_to.y][pos_to.x] is None
-        for ball in self.balls:
-            if ball.position == piece.position and ball.is_carried:
-                ball.move_to(pos_to)
-        self.remove(piece)
-        self.put(piece, pos_to)
-
-    def swap(self, piece_a, piece_b):
-        assert piece_a.position is not None
-        assert piece_b.position is not None
-        pos_a = Square(piece_a.position.x, piece_a.position.y)
-        pos_b = Square(piece_b.position.x, piece_b.position.y)
-        piece_a.position = pos_b
-        piece_b.position = pos_a
-        self.board[pos_a.y][pos_a.x] = piece_b
-        self.board[pos_b.y][pos_b.x] = piece_a
-
-    def get_balls_at(self, pos, in_air=False):
-        balls = []
-        for ball in self.balls:
-            if ball.position == pos and (ball.on_ground or in_air):
-                balls.append(ball)
-        return balls
-
-    def get_ball_at(self, pos, in_air=False):
-        """
-        Assumes there is only one ball on the square
-        :param pos:
-        :param in_air:
-        :return: Ball or None
-        """
-        for ball in self.balls:
-            if ball.position == pos and (ball.on_ground or in_air):
-                return ball
-        return None
-
-    def get_ball_positions(self):
-        return [ball.position for ball in self.balls]
-
-    def get_ball_position(self):
-        """
-        Assumes there is only one ball on the square
-        :return: Ball or None
-        """
-        for ball in self.balls:
-            return ball.position
-        return None
-
-    def get_ball_team(self):
-        ball_carrier = self.get_ball_carrier()
-        if ball_carrier is None:
-            return None
-        else:
-            return ball_carrier.team
-
-    def get_ball_carrier(self):
-        ball_pos: Square = self.get_ball_position()
-        if ball_pos is None:
-            return None
-        else:
-            return self.get_player_at(ball_pos)
-
-    def is_out_of_bounds(self, pos):
-        return pos.x < 1 or pos.x >= self.width-1 or pos.y < 1 or pos.y >= self.height-1
-
-    def get_player_at(self, pos):
-        return self.board[pos.y][pos.x]
-
-    def get_push_squares(self, pos_from, pos_to):
-        squares_to = self.get_adjacent_squares(pos_to, include_out=True)
-        squares_empty = []
-        squares_out = []
-        squares = []
-        #print("From:", pos_from)
-        for square in squares_to:
-            #print("Checking: ", square)
-            #print("Distance: ", pos_from.distance(square, manhattan=False))
-            include = False
-            if pos_from.x == pos_to.x or pos_from.y == pos_to.y:
-                if pos_from.distance(square, manhattan=False) >= 2:
-                    include = True
-            else:
-                if pos_from.distance(square, manhattan=True) >= 3:
-                    include = True
-            #print("Include: ", include)
-            if include:
-                if self.is_out_of_bounds(square):
-                    squares_out.append(square)
-                elif self.get_player_at(square) is None:
-                    squares_empty.append(square)
-                squares.append(square)
-        if len(squares_empty) > 0:
-            return squares_empty
-        if len(squares_out) > 0:
-            return squares_out
-        assert len(squares) > 0
-        return squares
-
-    def get_square(self, x, y):
-        if 0 >= x < self.width and 0 >= y < self.height:
-            return self.squares[y][x]
-        return Square(x, y)
-
-    def get_adjacent_squares(self, pos, include_diagonal=True, include_out=False, include_occupied=True, distance=1):
-        squares = []
-        r = range(-distance, distance+1)
-        for yy in r:
-            for xx in r:
-                if yy == 0 and xx == 0:
-                    continue
-                sq = self.get_square(pos.x+xx, pos.y+yy)
-                if not include_out and self.is_out_of_bounds(sq):
-                    continue
-                if not include_occupied and self.get_player_at(sq) is not None:
-                    continue
-                if include_diagonal:
-                    squares.append(sq)
-                elif xx == 0 or yy == 0:
-                    squares.append(sq)
-        return squares
-
-    def get_adjacent_player_squares_at(self, player_or_team, position, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
-        squares = []
-        if isinstance(player_or_team, Team):
-            team = player_or_team
-        else:
-            team = player_or_team.team
-        for square in self.get_adjacent_squares(position, include_diagonal=include_diagonal):
-            player_at = self.get_player_at(square)
-            if player_at is None:
-                continue
-            if not include_stunned and player_at.state.stunned:
-                continue
-            if include_own and player_at.team == team or include_opp and not player_at.team == team:
-                if not only_blockable or player_at.state.up:
-                    if not only_foulable or not player_at.state.up:
-                        squares.append(square)
-        return squares
-
-    def get_adjacent_players_at(self, player_or_team, position, include_own=True, include_opp=True, include_diagonal=False, only_blockable=False, only_foulable=False, include_stunned=True):
-        players = []
-        if isinstance(player_or_team, Team):
-            team = player_or_team
-        else:
-            team = player_or_team.team
-        for square in self.get_adjacent_squares(position, include_diagonal=include_diagonal):
-            player_at = self.get_player_at(square)
-            if player_at is None:
-                continue
-            if not include_stunned and player_at.state.stunned:
-                continue
-            if include_own and player_at.team == team or include_opp and not player_at.team == team:
-                if not only_blockable or player_at.state.up:
-                    if not only_foulable or not player_at.state.up:
-                        players.append(player_at)
-        return players
-
-    def get_adjacent_players(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
-        return self.get_adjacent_players_at(player, player.position, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
-
-    def get_adjacent_player_squares(self, player, include_own=True, include_opp=True, include_diagonal=True, only_blockable=False, only_foulable=False, include_stunned=True):
-        return self.get_adjacent_player_squares_at(player, player.position, include_own=include_own, include_opp=include_opp, include_diagonal=include_diagonal, only_blockable=only_blockable, only_foulable=only_foulable, include_stunned=include_stunned)
-
-    def num_tackle_zones_at(self, player, position):
-        tackle_zones = 0
-        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
-            player = self.get_player_at(square)
-            if player is not None and player.has_tackle_zone():
-                tackle_zones += 1
-        return tackle_zones
-
-    def num_tackle_zones_in(self, player):
-        tackle_zones = 0
-        for square in self.get_adjacent_player_squares(player, include_own=False, include_opp=True):
-            player = self.get_player_at(square)
-            if player is not None and player.has_tackle_zone():
-                tackle_zones += 1
-        return tackle_zones
-
-    def get_tackle_zones_detailed(self, player):
-        tackle_zones = 0
-        tacklers = []
-        prehensile_tailers = []
-        diving_tacklers = []
-        shadowers = []
-        tentaclers = []
-        for square in self.get_adjacent_player_squares(player, include_own=False, include_opp=True):
-            player_at = self.get_player_at(square)
-            if player_at is not None and player_at.has_tackle_zone():
-                tackle_zones += 1
-            if player_at is not None and player_at.has_skill(Skill.TACKLE):
-                tacklers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.PREHENSILE_TAIL):
-                prehensile_tailers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.DIVING_TACKLE):
-                diving_tacklers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.SHADOWING):
-                shadowers.append(player_at)
-            if player_at is not None and player_at.has_skill(Skill.TENTACLES):
-                tentaclers.append(player_at)
-
-        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
-
-    def get_tackle_zones_detailed_at(self, player, position):
-        tackle_zones = 0
-        tacklers = []
-        prehensile_tailers = []
-        diving_tacklers = []
-        shadowers = []
-        tentaclers = []
-        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
-            player_at = self.get_player_at(square)
-            if player_at is not None and player_at.has_tackle_zone():
-                tackle_zones += 1
-            if player_at is None and player_at.has_skill(Skill.TACKLE):
-                tacklers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.PREHENSILE_TAIL):
-                prehensile_tailers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.DIVING_TACKLE):
-                diving_tacklers.append(player_at)
-                shadowers.append(player_at)
-            if player_at is None and player_at.has_skill(Skill.TENTACLES):
-                tentaclers.append(player_at)
-
-        return tackle_zones, tacklers, prehensile_tailers, diving_tacklers, shadowers, tentaclers
-
-    def get_players_blockable_at(self, player, position):
-        blockable = []
-        for square in self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True):
-            player_at = self.get_player_at(square)
-            if player_at is not None and player_at.has_tackle_zone():
-                blockable.append(player_at)
-
-        return blockable
-
-    def get_assisting_players(self, player, opp_player, ignore_guard=False):
-        assists = []
-        for yy in range(-1, 2, 1):
-            for xx in range(-1, 2, 1):
-                if yy == 0 and xx == 0:
-                    continue
-                p = Square(opp_player.position.x+xx, opp_player.position.y+yy)
-                if not self.is_out_of_bounds(p) and player.position != p:
-                    player_at = self.get_player_at(p)
-                    if player_at is not None:
-                        if player_at.team == player.team:
-                            if not player_at.can_assist():
-                                continue
-                            if (not ignore_guard and player_at.has_skill(Skill.GUARD)) or \
-                                            self.num_tackle_zones_in(player_at) <= 1:
-                                # TODO: Check if attacker has a tackle zone
-                                assists.append(player_at)
-        return assists
-
-    def num_block_dice(self, player, opp_player, blitz=False, dauntless_success=False):
-        return self.num_block_dice_at(player, opp_player, player.position, blitz, dauntless_success)
-
-    def num_block_dice_at(self, player, opp_player, position, blitz=False, dauntless_success=False):
-
-        # Determine dice and favor
-        st_for = player.get_st()
-        st_against = opp_player.get_st()
-
-        # Horns
-        if blitz and player.has_skill(Skill.HORNS):
-            st_for += 1
-
-        # Dauntless
-        if dauntless_success:
-            st_for = max(st_for, st_against)
-
-        # Find assists
-        assists_for, assists_against = self.num_assists_at(player, opp_player, position, ignore_guard=False)
-
-        st_for = st_for + assists_for
-        st_against = st_against + assists_against
-
-        # Determine dice and favor
-        if st_for > 2 * st_against:
-            return 3
-        elif st_for > st_against:
-            return 2
-        elif st_for == st_against:
-            return 1
-        elif st_for < 2*st_against:
-            return -3
-        elif st_for < st_against:
-            return -2
-
-    def num_assists_at(self, player, opp_player, position, ignore_guard: bool = False):
-        '''
-        Return net assists for a block of player on opp_player when player has moved to position first.  Required for
-        calculating assists after moving in a Blitz action.
-        :param player: Player
-        :param opp_player: Player
-        :param position: Square
-        :param ignore_guard: bool
-        :return: int - Net # of assists
-        '''
-
-        # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
-        # Assists against
-        opp_assist_squares = self.get_adjacent_player_squares_at(player, position, include_own=False, include_opp=True, only_blockable=True)
-        n_assist_against: int = 0
-        for opp_assist_square in opp_assist_squares:
-            # For each opponent, check if they can assist
-            assister: Player = self.get_player_at(opp_assist_square)
-            if assister == opp_player:
-                continue
-            elif assister.has_skill(Skill.GUARD) and not ignore_guard:
-                n_assist_against += 1
-            elif not assister.can_assist():
-                continue
-            else:
-                # Check if in a tackle zone of anyone besides player (at either original square, or "position")
-                adjacent_to_assister_squares = self.get_adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
-                found_adjacent = False
-                for adjacent_to_assister_square in adjacent_to_assister_squares:
-                    player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
-                    # Need to make sure we take into account the blocking/blitzing player may be in a different square than currently represented on the board.
-                    if adjacent_to_assister_square == position or adjacent_to_assister_square == player.position or not player_adjacent_to_assister.can_assist():
-                        continue
-                    else:
-                        found_adjacent = True
-                        break
-                if not found_adjacent:
-                    n_assist_against += 1
-        # Assists for
-        assist_squares = self.get_adjacent_player_squares(opp_player, include_own=False, include_opp=True, only_blockable=True)
-        n_assists_for: int = 0
-        for assist_square in assist_squares:
-            # For each opponent, check if they can assist
-            assister: Player = self.get_player_at(assist_square)
-            if assister.has_skill(Skill.GUARD) and not ignore_guard:
-                n_assists_for += 1
-            elif not assister.can_assist():
-                continue
-            else:
-                adjacent_to_assister_squares = self.get_adjacent_player_squares(assister, include_own=False, include_opp=True, only_blockable=True)
-                found_adjacent = False
-                for adjacent_to_assister_square in adjacent_to_assister_squares:
-                    player_adjacent_to_assister: Player = self.get_player_at(adjacent_to_assister_square)
-                    if not player_adjacent_to_assister.can_assist():
-                        continue
-                    else:
-                        found_adjacent = True
-                        break
-                if not found_adjacent:
-                    n_assists_for += 1
-        return (n_assists_for, n_assist_against)
-
-    def get_pass_distances_at(self, passer, weather, position):
-        squares = []
-        distances = []
-        distances_allowed = [PassDistance.QUICK_PASS,
-                             PassDistance.SHORT_PASS,
-                             PassDistance.LONG_PASS,
-                             PassDistance.LONG_BOMB,
-                             PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
-            else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
-        if weather == WeatherType.BLIZZARD:
-            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
-        for y in range(len(self.board)):
-            for x in range(len(self.board[y])):
-                to_pos = Square(x, y)
-                if self.is_out_of_bounds(to_pos) or position == to_pos:
-                    continue
-                distance = self.get_pass_distance(position, to_pos)
-                if distance in distances_allowed:
-                    squares.append(to_pos)
-                    distances.append(distance)
-        return squares, distances
-
-    def get_pass_distances(self, passer, weather):
-        squares = []
-        distances = []
-        distances_allowed = [PassDistance.QUICK_PASS,
-                             PassDistance.SHORT_PASS,
-                             PassDistance.LONG_PASS,
-                             PassDistance.LONG_BOMB,
-                             PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
-            else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
-        if weather == WeatherType.BLIZZARD:
-            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
-        for y in range(len(self.board)):
-            for x in range(len(self.board[y])):
-                pos = Square(x, y)
-                if self.is_out_of_bounds(pos) or passer.position == pos:
-                    continue
-                distance = self.get_pass_distance(passer, pos)
-                if distance in distances_allowed:
-                    squares.append(pos)
-                    distances.append(distance)
-        return squares, distances
-
-    def get_pass_distance(self, passer, pos):
-        if isinstance(passer, Player):
-            distance_x = abs(passer.position.x - pos.x)
-            distance_y = abs(passer.position.y - pos.y)
-        else:
-            distance_x = abs(passer.x - pos.x)
-            distance_y = abs(passer.y - pos.y)
-        if distance_y >= len(Rules.pass_matrix) or distance_x >= len(Rules.pass_matrix[0]):
-            return PassDistance.HAIL_MARY
-        distance = Rules.pass_matrix[distance_y][distance_x]
-        return PassDistance(distance)
-
-    def get_interceptors(self, passer, pos):
-        """
-        1) Find line x from a to b
-        3) Find squares s where x intersects
-        3) Find manhattan neighboring n squares of s
-        4) Remove squares where distance to a is larger than dist(a,b)
-        5) Remove squares without standing opponents with hands
-        6) Determine players on squares
-        """
-
-        # 1) Find line x from a to b
-        x = get_line((passer.position.x, passer.position.y), (pos.x, pos.y))
-
-        # 3) Find squares s where x intersects
-        s = []
-        for i in x:
-            s.append(Square(i[0], i[1]))
-
-        # 3) Include manhattan neighbors s into n
-        # 4) Remove squares where distance to a is larger than dist(a,b)
-        max_distance = passer.position.distance(pos)
-        n = set()
-        for square in s:
-            for neighbor in self.get_adjacent_squares(square) + [square]:
-
-                if neighbor in n:
-                    continue
-
-                # 4) Remove squares where distance to a is larger than dist(a,b)
-                if neighbor.distance(passer.position) > max_distance:
-                    continue
-                if neighbor.distance(pos) > max_distance:
-                    continue
-                if neighbor.x > max(passer.position.x, pos.x) or neighbor.x < min(passer.position.x, pos.x):
-                    continue
-                if neighbor.y > max(passer.position.y, pos.y) or neighbor.y < min(passer.position.y, pos.y):
-                    continue
-
-                # 5) Remove squares without standing opponents with hands
-                player_at = self.get_player_at(neighbor)
-                if player_at is None:
-                    continue
-                if player_at.team == passer.team:
-                    continue
-                if not player_at.can_catch():
-                    continue
-                if player_at.has_skill(Skill.NO_HANDS):
-                    continue
-
-                n.add(neighbor)
-
-        if passer.position in n:
-            n.remove(pos)
-        if pos in n:
-            n.remove(pos)
-
-        players = []
-        for square in n:
-            players.append(self.get_player_at(square))
-
-        return players
-
 
 class ActionChoice:
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
@@ -889,6 +425,7 @@ class ActionChoice:
         self.block_rolls = [] if block_rolls is None else block_rolls
         self.disabled = disabled
         self.agi_rolls = [] if agi_rolls is None else agi_rolls
+        self.skill = skill
 
     def to_json(self):
         return {
@@ -899,21 +436,22 @@ class ActionChoice:
             "block_rolls": self.block_rolls,
             "agi_rolls": self.agi_rolls,
             'player_ids': [player.player_id for player in self.players],
+            "skill": self.skill.name if self.skill is not None else None,
             "disabled": self.disabled
         }
 
 
 class Action:
 
-    def __init__(self, action_type, pos=None, player=None):
+    def __init__(self, action_type, position=None, player=None):
         self.action_type = action_type
-        self.pos = pos
+        self.position = position
         self.player = player
 
     def to_json(self):
         return {
             'action_type': self.action_type.name,
-            'position': self.pos.to_json() if self.pos is not None else None,
+            'position': self.position.to_json() if self.position is not None else None,
             'player_id': self.player.player_id if self.player is not None else None
         }
 
@@ -934,11 +472,11 @@ class TwoPlayerArena:
         self.height = len(board)
         self.json = None
 
-    def is_in_opp_endzone(self, pos, home):
+    def is_in_opp_endzone(self, position, home):
         if home:
-            return self.board[pos.y][pos.x] == Tile.AWAY_TOUCHDOWN
+            return self.board[position.y][position.x] == Tile.AWAY_TOUCHDOWN
         else:
-            return self.board[pos.y][pos.x] == Tile.HOME_TOUCHDOWN
+            return self.board[position.y][position.x] == Tile.HOME_TOUCHDOWN
 
     def to_json(self):
         if self.json is not None:
@@ -964,13 +502,17 @@ class Die:
 
 class DiceRoll:
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
         self.dice = dice
         self.sum = 0
         self.d68 = d68
         self.target = target
         self.modifiers = modifiers
         self.roll_type = roll_type
+        self.target_higher = target_higher
+        self.target_lower = target_lower
+        self.highest_succeed = highest_succeed
+        self.lowest_fail = lowest_fail
         # Roll dice
         for d in self.dice:
             if not isinstance(d, BBDie):
@@ -990,7 +532,11 @@ class DiceRoll:
             'modifiers': self.modifiers,
             'modified_target': self.modified_target(),
             'result': self.get_result(),
-            'roll_type': self.roll_type.name
+            'roll_type': self.roll_type.name,
+            'target_higher': self.target_higher,
+            'target_lower': self.target_lower,
+            'highest_succeed': self.highest_succeed,
+            'lowest_fail': self.lowest_fail
         }
 
     def modified_target(self):
@@ -1014,13 +560,18 @@ class DiceRoll:
         return self.sum + self.modifiers
 
     def is_d6_success(self):
-        if self.sum == 1:
+        if self.lowest_fail and self.sum == 1*len(self.dice):
             return False
 
-        if self.sum == 6:
+        if self.highest_succeed and self.sum == 6*len(self.dice):
             return True
 
-        return self.sum + self.modifiers >= self.target
+        if self.target_higher:
+            return self.sum + self.modifiers >= self.target
+        elif self.target_lower:
+            return self.sum + self.modifiers <= self.target
+        else:
+            return self.sum + self.modifiers == self.target
 
     def same(self):
         value = None
@@ -1124,6 +675,10 @@ class BBDie(Die):
         else:
             raise ValueError("Fixed result of BBDie must be a BBDieResult")
 
+    @staticmethod
+    def clear_fixes():
+        BBDie.FixedRolls.clear()
+
     def __init__(self, rnd):
         if len(BBDie.FixedRolls) > 0:
             self.value = BBDie.FixedRolls.pop(0)
@@ -1197,8 +752,8 @@ class Ball(Piece):
         self.position.x += x
         self.position.y += y
 
-    def move_to(self, pos):
-        self.position = Square(pos.x, pos.y)
+    def move_to(self, position):
+        self.position = Square(position.x, position.y)
 
     def to_json(self):
         return {
@@ -1211,7 +766,7 @@ class Ball(Piece):
 class Player(Piece):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
-                 niggling=0, mng=False, spp=0, position=None):
+                 niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
         super().__init__(position)
         self.player_id = player_id
         self.role = role
@@ -1223,25 +778,78 @@ class Player(Piece):
         self.extra_st = extra_st
         self.extra_ag = extra_ag
         self.extra_av = extra_av
-        self.niggling = niggling
+        self.injuries = [] if injuries is None else injuries
+        for _ in range(niggling_injuries):
+            self.injuries.append(CasualtyEffect.NIGGLING)
         self.mng = mng
         self.spp = spp
         self.state = PlayerState()
 
+    def to_json(self):
+        return {
+            'player_id': self.player_id,
+            'name': self.name,
+            'role': self.role.name,
+            'team_id': self.team.team_id,
+            'nr': self.nr,
+            'role_skills': [skill.name for skill in self.role.skills],
+            'extra_skills': [skill.name for skill in self.extra_skills],
+            'ma': self.get_ma(),
+            'st': self.get_st(),
+            'ag': self.get_ag(),
+            'av': self.get_av(),
+            'injuries': [injury.name for injury in self.injuries],
+            'mng': self.mng,
+            'spp': self.spp,
+            'state': self.state.to_json(),
+            'position': self.position.to_json() if self.position is not None else None
+        }
+
     def get_ag(self):
-        return self.role.ag + self.extra_ag
+        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG) - self.state.injuries_gained.count(CasualtyEffect.AG)
+        ag = max(self.role.ag - 2, ag)
+        ag = max(1, ag)
+        ag = min(10, ag)
+        return ag
 
     def get_st(self):
-        return self.role.st + self.extra_st
+        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST) - self.state.injuries_gained.count(CasualtyEffect.ST)
+        st = max(self.role.st - 2, st)
+        st = max(1, st)
+        st = min(10, st)
+        return st
 
     def get_ma(self):
-        return self.role.ma + self.extra_ma
+        if self.state.taken_root:
+            return 0
+        else:
+            ma = self.role.ma + self.extra_ma - self.injuries.count(CasualtyEffect.MA) - self.state.injuries_gained.count(CasualtyEffect.MA)
+            ma = max(self.role.ma - 2, ma)
+            ma = max(1, ma)
+            ma = min(10, ma)
+            return ma
 
     def get_av(self):
-        return self.role.av + self.extra_av
+        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
+        av = max(self.role.av - 2, av)
+        av = max(1, av)
+        av = min(10, av)
+        return av
+
+    def num_niggling_injuries(self):
+        return self.injuries.count(CasualtyEffect.NIGGLING)
 
     def has_skill(self, skill):
         return skill in self.get_skills()
+
+    def has_used_skill(self, skill):
+        return skill in self.state.used_skills
+
+    def can_use_skill(self, skill):
+        return self.has_skill(skill) and not self.has_used_skill(skill)
+
+    def use_skill(self, skill):
+        return self.state.used_skills.add(skill)
 
     def get_skills(self):
         return self.role.skills + self.extra_skills
@@ -1259,25 +867,6 @@ class Player(Piece):
 
     def can_assist(self):
         return self.state.up and not self.state.bone_headed and not self.state.hypnotized and not self.state.really_stupid
-
-    def to_json(self):
-        return {
-            'player_id': self.player_id,
-            'name': self.name,
-            'role': self.role.name,
-            'team_id': self.team.team_id,
-            'nr': self.nr,
-            'skills': [skill.name for skill in self.get_skills()],
-            'ma': self.get_ma(),
-            'st': self.get_st(),
-            'ag': self.get_ag(),
-            'av': self.get_av(),
-            'niggling': self.niggling,
-            'mng': self.mng,
-            'spp': self.spp,
-            'state': self.state.to_json(),
-            'position': self.position.to_json() if self.position is not None else None
-        }
 
     def num_moves_left(self, include_gfi: bool = True):
         if self.state.used or self.state.stunned:
@@ -1299,6 +888,10 @@ class Player(Piece):
 
     def __hash__(self):
         return self.player_id.__hash__()
+
+    def place_prone(self):
+        self.state.up = False
+        self.state.taken_root = False
 
 
 class Square:
@@ -1345,14 +938,14 @@ class Race:
 
 class Team:
 
-    def __init__(self, team_id, name, race, players=None, treasury=0, apothecary=False, rerolls=0, ass_coaches=0,
+    def __init__(self, team_id, name, race, players=None, treasury=0, apothecaries=0, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
         self.team_id = team_id
         self.name = name
         self.race = race
         self.players = players if players is not None else []
         self.treasury = treasury
-        self.apothecary = apothecary
+        self.apothecaries = apothecaries
         self.rerolls = rerolls
         self.fan_factor = fan_factor
         self.ass_coaches = ass_coaches
@@ -1370,7 +963,7 @@ class Team:
             'name': self.name,
             'race': self.race,
             'treasury': self.treasury,
-            'apothecary': self.apothecary,
+            'apothecaries': self.apothecaries,
             'rerolls': self.rerolls,
             'ass_coaches': self.ass_coaches,
             'cheerleaders': self.cheerleaders,
@@ -1388,9 +981,9 @@ class Team:
 
 class Outcome:
 
-    def __init__(self, outcome_type, pos=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
+    def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type
-        self.pos = pos
+        self.position = position
         self.player = player
         self.opp_player = opp_player
         self.rolls = rolls if rolls is not None else []
@@ -1404,7 +997,7 @@ class Outcome:
             rolls.append(roll.to_json())
         return {
             'outcome_type': self.outcome_type.name,
-            'pos': self.pos.to_json() if self.pos is not None else None,
+            'pos': self.position.to_json() if self.position is not None else None,
             'player_id': self.player.player_id if self.player is not None else None,
             'opp_player': self.opp_player.player_id if self.opp_player is not None else None,
             'rolls': rolls,
@@ -1455,7 +1048,7 @@ class Formation:
 
     def _get_player(self, players, t):
         if t == 'S':
-            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) for player in players])
+            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) - (0.5 if player.has_skill(Skill.SURE_HANDS) else 0) for player in players])
             return players[idx]
         if t == 'm':
             idx = np.argmax([player.get_ma() for player in players])
@@ -1496,7 +1089,7 @@ class Formation:
         player_on_pitch = []
         for player in team.players:
             if player.position is not None:
-                actions.append(Action(ActionType.PLACE_PLAYER, pos=None, player=player))
+                actions.append(Action(ActionType.PLACE_PLAYER, position=None, player=player))
                 player_on_pitch.append(player)
 
         # Go through formation from scrimmage to touchdown zone
@@ -1515,13 +1108,13 @@ class Formation:
                     continue
                 yy = y + 1
                 xx = x + 1 if not home else game.arena.width - x - 2
-                pos = game.get_square(xx, yy)
-                if not game.is_scrimmage(pos) or pos in positions_used:
+                position = game.get_square(xx, yy)
+                if not game.is_scrimmage(position) or position in positions_used:
                     continue
                 player = self._get_player(players, t)
                 players.remove(player)
-                actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
-                positions_used.append(pos)
+                actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
+                positions_used.append(position)
 
         for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
@@ -1533,11 +1126,11 @@ class Formation:
                         continue
                     yy = y + 1
                     xx = x + 1 if not home else game.arena.width - x - 2
-                    pos = game.get_square(xx, yy)
-                    if game.is_scrimmage(pos) or pos in positions_used:
+                    position = game.get_square(xx, yy)
+                    if game.is_scrimmage(position) or position in positions_used:
                         continue
                     player = self._get_player(players, t)
                     players.remove(player)
-                    actions.append(Action(ActionType.PLACE_PLAYER, pos=pos, player=player))
-                    positions_used.append(pos)
+                    actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
+                    positions_used.append(position)
         return actions

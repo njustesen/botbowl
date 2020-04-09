@@ -1,38 +1,12 @@
 import pytest
-from ffai.core.game import *
-
-
-def get_game(home_team, seed=0):
-    config = load_config("ff-11")
-    config.kick_off_table = False
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
-    home_agent = Agent("human1", human=True)
-    away_agent = Agent("human2", human=True)
-    game = Game(1, home, away, home_agent, away_agent, config)
-    game.set_seed(seed)
-    game.init()
-    game.step(Action(ActionType.START_GAME))
-    game.step(Action(ActionType.HEADS))
-    if game.actor == game.home_agent:
-        if home_team:
-            game.step(Action(ActionType.KICK))
-        else:
-            game.step(Action(ActionType.RECEIVE))
-    if game.actor == game.away_agent:
-        if home_team:
-            game.step(Action(ActionType.RECEIVE))
-        else:
-            game.step(Action(ActionType.KICK))
-    return game
+from tests.util import *
 
 
 def place_player(game, team, x, y):
     xx = x if team == game.state.away_team else game.arena.width - x - 1
     yy = y
     sq = Square(xx, yy)
-    game.step(Action(ActionType.PLACE_PLAYER, player=game.get_dugout(team).reserves[0], pos=sq))
+    game.step(Action(ActionType.PLACE_PLAYER, player=game.get_dugout(team).reserves[0], position=sq))
     return game.get_player_at(sq)
 
 
@@ -44,9 +18,9 @@ def clear_board(game):
 
 @pytest.mark.parametrize("home_team", [True, False])
 def test_scrimmage_setup(home_team):
-    game = get_game(home_team)
+    game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure()
     assert type(proc) == Setup
 
     # Empty board
@@ -89,9 +63,9 @@ def test_scrimmage_setup(home_team):
 
 @pytest.mark.parametrize("home_team", [True, False])
 def test_wings_setup(home_team):
-    game = get_game(home_team)
+    game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure()
     assert type(proc) == Setup
 
     # Top Wing
@@ -121,9 +95,9 @@ def test_wings_setup(home_team):
 
 @pytest.mark.parametrize("home_team", [True, False])
 def test_player_count_setup(home_team):
-    game = get_game(home_team)
+    game = get_game_setup(home_team)
     team = game.state.home_team if home_team else game.state.away_team
-    proc = game.state.stack.peek()
+    proc = game.get_procedure()
     assert type(proc) == Setup
     assert not game.is_setup_legal_count(team)
     # Max players

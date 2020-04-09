@@ -75,7 +75,7 @@ class OwnTackleZoneLayer(FeatureLayer):
         for player in active_team.players:
             if player.position is not None:
                 if player.has_tackle_zone():
-                    for square in game.state.pitch.get_adjacent_squares(player.position):
+                    for square in game.get_adjacent_squares(player.position):
                         out[square.y][square.x] += 0.125
         return out
 
@@ -200,41 +200,28 @@ class TargetPlayerLayer(FeatureLayer):
         return "target player"
 
 
-class AvailablePlayerLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for action_choice in game.state.available_actions:
-            for player in action_choice.players:
-                if player.position is not None:
-                    out[player.position.y][player.position.x] = 1.0
-        return out
-
-    def name(self):
-        return "available players"
-
-
 class AvailablePositionLayer(FeatureLayer):
 
+    def __init__(self, action_type):
+        self.action_type = action_type
+
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
         for action_choice in game.state.available_actions:
+            if action_choice.action_type != self.action_type:
+                continue
             for position in action_choice.positions:
                 if position is not None:
                     out[position.y][position.x] = 1.0
-            for player in action_choice.players:
-                if player.position is not None:
-                    out[player.position.y][player.position.x] = 1.0
+            if len(action_choice.positions) == 0:
+                for player in action_choice.players:
+                    if player.position is not None:
+                        out[player.position.y][player.position.x] = 1.0
+            break
         return out
 
     def name(self):
-        return "available positions"
+        return f"{self.action_type.name.replace('_', ' ').lower()} positions"
 
 
 class RollProbabilityLayer(FeatureLayer):
