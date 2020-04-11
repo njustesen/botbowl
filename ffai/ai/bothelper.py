@@ -34,9 +34,9 @@ class ActionSequence:
 
     def popleft(self):
         return self.action_steps.pop(0)
-        #val = self.action_steps[0]
-        #del self.action_steps[0]
-        #return val
+        # val = self.action_steps[0]
+        # del self.action_steps[0]
+        # return val
 
     def is_empty(self):
         return not self.action_steps
@@ -412,7 +412,8 @@ def players_in_scoring_endzone(game: g.Game, team: m.Team, include_own: bool = T
     players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp)
     selected_players: List[m.Player] = []
     for player in players:
-        if in_scoring_endzone(game, team, player.position): selected_players.append(player)
+        if in_scoring_endzone(game, team, player.position):
+            selected_players.append(player)
     return selected_players
 
 
@@ -488,7 +489,8 @@ def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, inclu
     players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned, include_used=include_used)
     res: List[m.Player] = []
     for player in players:
-        if in_scoring_range(game, player): res.append(player)
+        if in_scoring_range(game, player):
+            res.append(player)
     return res
 
 
