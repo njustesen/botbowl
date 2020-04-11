@@ -308,7 +308,7 @@ class GrodBot(bot.ProcBot):
         Start a new player action / turn.
         """
 
-        # Simple algorithm: 
+        # Simple algorithm:
         #   Loop through all available (yet to move) players.
         #   Compute all possible moves for all players.
         #   Assign a score to each action for each player.
