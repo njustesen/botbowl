@@ -281,13 +281,13 @@ def is_caging_position(game: g.Game, player: m.Player, protect_player: m.Player)
 
 def has_player_within_n_squares(game: g.Game, units: List[m.Player], square: m.Square, num_squares: int) -> bool:
     for cur in units:
-        if cur.position.distance(m.Square) <= num_squares:
+        if cur.position.distance(square) <= num_squares:
             return True
     return False
 
 
 def has_adjacent_player(game: g.Game, square: m.Square) -> bool:
-    return not game.get_adjacent_players(m.Square)
+    return not game.get_adjacent_players(square)
 
 
 def is_castle_position_of(game: g.Game, player1: m.Player, player2: m.Player) -> bool:
@@ -299,7 +299,7 @@ def is_bishop_position_of(game: g.Game, player1: m.Player, player2: m.Player) ->
 
 
 def attacker_would_surf(game: g.Game, attacker: m.Player, defender: m.Player) -> bool:
-    if (defender.has_skill(m.Skill.SIDE_STEP) and not attacker.has_skill(m.Skill.GRAB)) or defender.has_skill(m.Skill.STAND_FIRM):
+    if (defender.has_skill(t.Skill.SIDE_STEP) and not attacker.has_skill(t.Skill.GRAB)) or defender.has_skill(t.Skill.STAND_FIRM):
         return False
 
     if not attacker.position.is_adjacent(defender.position):
@@ -384,7 +384,7 @@ def last_block_proc(game) -> Optional[p.Block]:
 
 def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
     ball_square = game.get_ball_position()
-    return ball_square is not None and ball_square.is_adjacent(m.Square)
+    return ball_square is not None and ball_square.is_adjacent(square)
 
 
 def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Square]:

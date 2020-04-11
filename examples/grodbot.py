@@ -440,7 +440,7 @@ class GrodBot(pb.ProcBot):
             actions.append(ActionSequence(action_steps, score=score, description='Block die choice'))
 
         if check_reroll and check_reroll_block(game, self.my_team, actions, favor):
-                return m.Action(t.ActionType.USE_REROLL)
+            return m.Action(t.ActionType.USE_REROLL)
         else:
             actions.sort(key=lambda x: x.score, reverse=True)
             current_move = actions[0]
@@ -557,27 +557,36 @@ def block_favourability(block_result: m.ActionType, team: m.Team, active_player:
             if defender.has_skill(t.Skill.DODGE) and not attacker.has_skill(t.Skill.TACKLE): return 4.0       # push back
             else: return 6.0
         elif block_result == t.ActionType.SELECT_PUSH:
-                return 4.0
+            return 4.0
         elif block_result == t.ActionType.SELECT_BOTH_DOWN:
-            if defender.has_skill(t.Skill.BLOCK) and not attacker.has_skill(t.Skill.BLOCK): return 1.0        # skull
-            elif not attacker.has_skill(t.Skill.BLOCK): return 2                                            # both down
-            elif attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK): return 3.0          # nothing happens
-            else: return 5.0                                                                                  # only defender is down
+            if defender.has_skill(t.Skill.BLOCK) and not attacker.has_skill(t.Skill.BLOCK):
+                return 1.0        # skull
+            elif not attacker.has_skill(t.Skill.BLOCK):
+                return 2                                            # both down
+            elif attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK):
+                return 3.0          # nothing happens
+            else:
+                return 5.0                                                                                  # only defender is down
         elif block_result == t.ActionType.SELECT_ATTACKER_DOWN:
             return 1.0                                                                                        # skull
     else:
         if block_result == t.ActionType.SELECT_DEFENDER_DOWN:
             return 1.0                                                                                        # least favourable
         elif block_result == t.ActionType.SELECT_DEFENDER_STUMBLES:
-            if defender.has_skill(t.Skill.DODGE) and not attacker.has_skill(t.Skill.TACKLE): return 3       # not going down, so I like this.
+            if defender.has_skill(t.Skill.DODGE) and not attacker.has_skill(t.Skill.TACKLE):
+                return 3       # not going down, so I like this.
             else: return 1.0                                                                                  # splat.  No good.
         elif block_result == t.ActionType.SELECT_PUSH:
             return 3.0
         elif block_result == t.ActionType.SELECT_BOTH_DOWN:
-            if not attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK): return 6.0        # Attacker down, I am not.
-            if not attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK): return 5.0    # Both down is pretty good.
-            if attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK): return 2.0        # Just I splat
-            else: return 4.0                                                                                  # Nothing happens (both have block).
+            if not attacker.has_skill(t.Skill.BLOCK) and defender.has_skill(t.Skill.BLOCK):
+                return 6.0        # Attacker down, I am not.
+            if not attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK):
+                return 5.0    # Both down is pretty good.
+            if attacker.has_skill(t.Skill.BLOCK) and not defender.has_skill(t.Skill.BLOCK):
+                return 2.0        # Just I splat
+            else:
+                return 4.0                                                                                  # Nothing happens (both have block).
         elif block_result == t.ActionType.SELECT_ATTACKER_DOWN:
             return 6.0                                                                                        # most favourable!
 
