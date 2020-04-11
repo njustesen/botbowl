@@ -60,9 +60,9 @@ class FfHeatMap:
 
         for path in paths:
             if is_friendly:
-                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += (1.0 - path.prob) * (1.0 - path.prob)
+                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += path.prob * path.prob
             else:
-                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += (1.0 - path.prob) * (1.0 - path.prob)
+                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += path.prob * path.prob
 
     def add_unit_by_paths(self, game: g.Game, paths: Dict[m.Player, List[pf.Path]]):
         for player in paths.keys():

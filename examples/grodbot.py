@@ -1452,7 +1452,7 @@ def scoring_urgency_score(game: g.Game, heat_map: helper.FfHeatMap, player: m.Pl
 
 
 def path_cost_to_score(path: pf.Path) -> float:
-    cost: float = path.prob
+    cost: float = 1-path.prob
 
     # assert 0 <= cost <= 1
 
