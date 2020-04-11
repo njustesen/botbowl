@@ -78,11 +78,10 @@ class FfHeatMap:
     def get_ball_move_square_safety_score(self, square: m.Square) -> float:
 
         # Basic idea - identify safe regions to move the ball towards
-        friendly_heat: float = self.units_friendly[square.x][square.y]
+        # friendly_heat: float = self.units_friendly[square.x][square.y]
         opponent_heat: float = self.units_opponent[square.x][square.y]
 
         score: float = 30.0 * max(0.0, (1.0 - opponent_heat / 2))
-        return score
 
         # score: float=0.0
         # if opponent_heat < 0.25: score += 15.0
@@ -94,7 +93,7 @@ class FfHeatMap:
         return score
 
     def get_cage_necessity_score(self, square: m.Square) -> float:
-        opponent_friendly: float = self.units_friendly[square.x][square.y]
+        # opponent_friendly: float = self.units_friendly[square.x][square.y]
         opponent_heat: float = self.units_opponent[square.x][square.y]
         score: float = 0.0
 

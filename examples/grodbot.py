@@ -12,7 +12,7 @@ import ffai
 import numpy as np
 
 
-class GrodBot(pb.ProcBot):
+class GrodBot(pb.Agent):
     """
     A Bot that uses path finding to evaluate all possibilities.
 
@@ -50,17 +50,111 @@ class GrodBot(pb.ProcBot):
         self.heat_map: Optional[helper.FfHeatMap] = None
         self.actions_available = []
 
-    def use_pro(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
+    def act(self, game):
+
+        available_actions = game.state.available_actions
+        # For statistical purposes, keeps a record of # action choices.
+        available = 0
+        for action_choice in available_actions:
+            if len(action_choice.positions) == 0 and len(action_choice.players) == 0:
+                available += 1
+            elif len(action_choice.positions) > 0:
+                available += len(action_choice.positions)
+            else:
+                available += len(action_choice.players)
+        self.actions_available.append(available)
+
+        # Get current procedure
+        proc = game.state.stack.peek()
+
+        # Call private function
+        if isinstance(proc, p.CoinTossFlip):
+            action = self.coin_toss_flip(game)
+        elif isinstance(proc, p.CoinTossKickReceive):
+            action = self.coin_toss_kick_receive(game)
+        elif isinstance(proc, p.Setup):
+            action = self.setup(game)
+        elif isinstance(proc, p.PlaceBall):
+            action = self.place_ball(game)
+        elif isinstance(proc, p.HighKick):
+            action = self.high_kick(game)
+        elif isinstance(proc, p.Touchback):
+            action = self.touchback(game)
+        elif isinstance(proc, p.Turn) and proc.quick_snap:
+            action = self.quick_snap(game)
+        elif isinstance(proc, p.Turn) and proc.blitz:
+            action = self.blitz(game)
+        elif isinstance(proc, p.Turn):
+            action = self.turn(game)
+        elif isinstance(proc, p.PlayerAction):
+            action = self.player_action(game)
+        elif isinstance(proc, p.Block):
+            action = self.block(game)
+        elif isinstance(proc, p.Push):
+            action = self.push(game)
+        elif isinstance(proc, p.FollowUp):
+            action = self.follow_up(game)
+        elif isinstance(proc, p.Apothecary):
+            action = self.apothecary(game)
+        elif isinstance(proc, p.PassAction):
+            action = self.pass_action(game)
+        elif isinstance(proc, p.Catch):
+            action = self.catch(game)
+        elif isinstance(proc, p.Interception):
+            action = self.interception(game)
+        elif isinstance(proc, p.Reroll):
+            action = self.reroll(game)
+        else:
+            raise Exception("Unknown procedure: ", proc)
+
+        # Check the Bot logic has evaluated a real action and not made one up
+        action_found = False
+        for available_action in available_actions:
+            if type(action.action_type) == type(available_action.action_type):
+                # Actions always?? require either a player or a square???
+                if available_action.players and available_action.positions:
+                    action_found = (action.player in available_action.players) and (action.player in available_action.players)
+                elif available_action.players:
+                    action_found = action.player in available_action.players
+                elif available_action.positions:
+                    action_found = action.position in available_action.positions
+                else:
+                    action_found = True
+
+        if not action_found:
+            raise Exception('Invalid action')
+        return action
+
+    def reroll(self, game):
+        proc = game.state.stack.peek()
+        # target_roll = proc.context.roll.target
+        # target_higher = proc.context.roll.target_higher
+        # dice = proc.context.roll.dice
+        # num_dice = len(dice)
+        if proc.can_use_pro:
+            return m.Action(t.ActionType.USE_SKILL)
+        if isinstance(proc.context, p.GFI):
+            return m.Action(t.ActionType.USE_REROLL)
+        if isinstance(proc.context, p.Dodge):
+            return m.Action(t.ActionType.USE_REROLL)
+        if isinstance(proc.context, p.Catch):
+            return m.Action(t.ActionType.USE_REROLL)
+        if isinstance(proc.context, p.Pickup):
+            return m.Action(t.ActionType.USE_REROLL)
+        else:
+            return m.Action(t.ActionType.USE_REROLL)
 
     def use_juggernaut(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
+        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
 
     def use_wrestle(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
+        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
 
     def use_stand_firm(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
+        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
+
+    def use_dump_off(self, game):
+        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
 
     def new_game(self, game: g.Game, team):
         """
@@ -83,9 +177,6 @@ class GrodBot(pb.ProcBot):
         """
         return m.Action(t.ActionType.RECEIVE)
         # return Action(ActionType.KICK)
-
-    def reroll(self, game):
-        return m.Action(t.ActionType.USE_REROLL)
 
     def setup(self, game: g.Game) -> m.Action:
         """
@@ -352,6 +443,12 @@ class GrodBot(pb.ProcBot):
         Select block die or reroll.
         """
         # Loop through available dice results
+        proc = game.state.stack.peek()
+        if proc.waiting_juggernaut:
+            return self.use_juggernaut(game)
+        if proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
+            return self.use_wrestle(game)
+
         active_player: m.Player = game.state.active_player
         attacker: m.Player = game.state.stack.items[-1].attacker
         defender: m.Player = game.state.stack.items[-1].defender
@@ -418,40 +515,12 @@ class GrodBot(pb.ProcBot):
         Select interceptor.
         """
         for action in game.state.available_actions:
-            if action.action_type == t.ActionType.INTERCEPTION:
+            if action.action_type == t.ActionType.SELECT_PLAYER:
                 for player, agi_rolls in zip(action.players, action.agi_rolls):
-                    return m.Action(t.ActionType.INTERCEPTION, player=player)
+                    return m.Action(t.ActionType.SELECT_PLAYER, player=player)
         return m.Action(t.ActionType.SELECT_NONE)
 
     def pass_action(self, game: g.Game):
-        """
-        Reroll or not.
-        """
-        return m.Action(t.ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def catch(self, game: g.Game):
-        """
-        Reroll or not.
-        """
-        return m.Action(t.ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def gfi(self, game: g.Game):
-        """
-        Reroll or not.
-        """
-        return m.Action(t.ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def dodge(self, game: g.Game):
-        """
-        Reroll or not.
-        """
-        return m.Action(t.ActionType.USE_REROLL)
-        # return Action(ActionType.DONT_USE_REROLL)
-
-    def pickup(self, game: g.Game):
         """
         Reroll or not.
         """
