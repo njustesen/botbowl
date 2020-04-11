@@ -10,8 +10,6 @@ Peter Moore.  The main modifications,
     3. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
     3. Simple class implementations as well as run code that demonstrates the results via main()
 """
-import math
-from interface import implements, Interface
 from typing import Optional, List
 from ffai.core.model import Player, Square
 from ffai.core.table import Skill, WeatherType, Tile
@@ -26,15 +24,14 @@ class Path:
         self.steps = steps
         self.prob = prob
 
-    def __len__(self: 'Path') -> int:
+    def __len__(self) -> int:
         return len(self.steps)
 
-    def get_last_step(self: 'Path') -> 'Square':
+    def get_last_step(self) -> 'Square':
         return self.steps[-1]
 
-    def is_empty(self: 'Path') -> bool:
+    def is_empty(self) -> bool:
         return len(self) == 0
-
 
 
 class Node:
@@ -147,6 +144,7 @@ class FFTileMap:
     def get_movement(self, mover: FFMover, sx: int, sy: int, tx: int, ty: int) -> float:
         return self.game.get_square(sx, sy).distance(self.game.get_square(tx, ty))
 
+
 class FFPathFinder:
 
     def __init__(self, tile_map: FFTileMap, max_search_distance: int):
@@ -161,7 +159,7 @@ class FFPathFinder:
                 nodes_cur.append(Node(x, y))
             self.nodes.append(nodes_cur)
 
-    def find_path(self, mover: FFMover, sx: int, sy: int, tx: int = None, ty: int = None, tile:Tile = None, player:Player=None) -> Optional[Path]:
+    def find_path(self, mover: FFMover, sx: int, sy: int, tx: int = None, ty: int = None, tile: Tile = None, player: Player = None) -> Optional[Path]:
         # easy first check, if the destination is blocked, we can't get there
         if tx is not None and ty is not None and self.tile_map.blocked(mover, tx, ty):
             return None
@@ -258,7 +256,6 @@ class FFPathFinder:
             if best_path is not None and path.prob == best_path.prob and len(path.steps) < len(best_path.steps):
                 best_path = path
         return best_path
-
 
     def create_path(self, sx: int, sy: int, tx: int, ty: int) -> Optional[Path]:
         if tx == sx and ty == sy:
@@ -375,6 +372,7 @@ class FFPathFinder:
     def get_moves(self, mover: FFMover, sx: int, sy: int, tx: int, ty: int) -> float:
         return self.tile_map.get_movement(mover, sx, sy, tx, ty)
 
+
 def _alter_state(game, player, from_position, moves_used):
     orig_player, orig_ball = None, None
     if from_position is not None or moves_used is not None:
@@ -392,6 +390,7 @@ def _alter_state(game, player, from_position, moves_used):
         if moves_used > 0:
             player.state.up = True
     return orig_player, orig_ball
+
 
 def _reset_state(game, player, orig_player, orig_ball):
     if orig_player is not None:
@@ -425,6 +424,7 @@ def get_safest_path(game, player, position, from_position=None, num_moves_used=N
 
     return path
 
+
 def get_safest_path_to_player(game, player, target_player, from_position=None, num_moves_used=None, allow_skill_reroll=True, max_search_distance=False):
     """
     :param game:
@@ -446,7 +446,7 @@ def get_safest_path_to_player(game, player, target_player, from_position=None, n
         game.ff_map = FFTileMap(game)
     player_mover = FFMover(player, allow_skill_reroll=allow_skill_reroll)
     max_steps = player.num_moves_left() - 1 if not max_search_distance else max_search_distance
-    finder = FFPathFinder(game.ff_map, max_steps )
+    finder = FFPathFinder(game.ff_map, max_steps)
     path = finder.find_path(player_mover, player.position.x, player.position.y, player=target_player)
 
     _reset_state(game, player, orig_player, orig_ball)
@@ -478,6 +478,7 @@ def get_all_paths(game, player, from_position=None, num_moves_used=None, allow_s
     _reset_state(game, player, orig_player, orig_ball)
 
     return paths
+
 
 def get_safest_scoring_path(game, player, from_position=None, num_moves_used=None, allow_skill_reroll=True, max_search_distance=None):
     """
