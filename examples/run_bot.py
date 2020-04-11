@@ -1,9 +1,3 @@
-def main2():
-    import ffai.web.api as api
-
-    print(api.list_bots())
-
-
 def main():
     import ffai as ffai
     import time as time
@@ -17,7 +11,7 @@ def main():
     away = ffai.load_team_by_filename("human", ruleset)
 
     # Play 10 games
-    for i in range(10):
+    for i in range(5):
         home_agent = ffai.make_bot('grodbot')
         home_agent.name = "Grod1"
         away_agent = ffai.make_bot('grodbot')
