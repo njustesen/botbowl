@@ -40,19 +40,28 @@ class GrodBot(pb.Agent):
     ADDITIONAL_SCORE_NEAR_SIDELINE = -20.0
     ADDITIONAL_SCORE_SIDELINE = -40.0
 
-    def __init__(self, name, verbose=True):
+    def __init__(self, name):
         super().__init__(name)
         self.my_team = None
         self.opp_team = None
         self.current_move: Optional[ActionSequence] = None
-        self.verbose = verbose
         self.verbose = True
+        self.debug = False
         self.heat_map: Optional[helper.FfHeatMap] = None
         self.actions_available = []
+
+    def set_verbose(self, verbose):
+        self.verbose = verbose
+
+    def set_debug(self, debug):
+        self.debug = debug
 
     def act(self, game):
 
         available_actions = game.state.available_actions
+        available_action_types = [available_action.action_type for available_action in available_actions]
+        # Add a default "USE_SKILL action" ?
+
         # For statistical purposes, keeps a record of # action choices.
         available = 0
         for action_choice in available_actions:
@@ -104,25 +113,43 @@ class GrodBot(pb.Agent):
             action = self.interception(game)
         elif isinstance(proc, p.Reroll):
             action = self.reroll(game)
-        else:
+        elif isinstance(proc, p.Shadowing):
+            action = self.shadowing(game)
+        elif self.debug:
+            # If we arrive here, then the GrodBot hasn't explicitly handled the procedure
             raise Exception("Unknown procedure: ", proc)
+        elif t.ActionType.USE_SKILL in available_action_types:
+            # Catch-all for things like Break Tackle, Diving Tackle etc
+            return m.Action(t.ActionType.USE_SKILL)
+        else:
+            # Ugly catch-all -> simply pick an action
+            action_choice = available_actions[0]
+            player = action_choice.players[0] if action_choice.players else None
+            position = action_choice.positions[0] if action_choice.positions else None
+            action = m.Action(action_choice.action_type, position=position, player=player)
+            # raise Exception("Unknown procedure: ", proc)
 
-        # Check the Bot logic has evaluated a real action and not made one up
-        action_found = False
-        for available_action in available_actions:
-            if type(action.action_type) == type(available_action.action_type):
-                # Actions always?? require either a player or a square???
-                if available_action.players and available_action.positions:
-                    action_found = (action.player in available_action.players) and (action.player in available_action.players)
-                elif available_action.players:
-                    action_found = action.player in available_action.players
-                elif available_action.positions:
-                    action_found = action.position in available_action.positions
-                else:
-                    action_found = True
+        # Check we found a valid action
+        if self.debug:
+            action_found = False
+            for available_action in available_actions:
+                if type(action.action_type) == type(available_action.action_type):
+                    # Actions always?? require either a player or a square???
+                    if available_action.players and available_action.positions:
+                        action_found = (action.player in available_action.players) and (action.player in available_action.players)
+                    elif available_action.players:
+                        action_found = action.player in available_action.players
+                    elif available_action.positions:
+                        action_found = action.position in available_action.positions
+                    else:
+                        action_found = True
+            if not action_found:
+                raise Exception('Invalid action')
 
-        if not action_found:
-            raise Exception('Invalid action')
+        if self.verbose:
+            current_team = game.state.current_team.name if game.state.current_team is not None else available_actions[0].team.name
+            # print('      Turn=H' + str(game.state.half) + 'R' + str(game.state.round) + ', Team=' + current_team + ', Action=' + action.action_type.name)
+
         return action
 
     def reroll(self, game):
@@ -143,18 +170,6 @@ class GrodBot(pb.Agent):
             return m.Action(t.ActionType.USE_REROLL)
         else:
             return m.Action(t.ActionType.USE_REROLL)
-
-    def use_juggernaut(self, game):
-        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
-
-    def use_wrestle(self, game):
-        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
-
-    def use_stand_firm(self, game):
-        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
-
-    def use_dump_off(self, game):
-        return m.Action(t.ActionType.USE_SKILL)  # Alternative is return m.Action(t.ActionType.DONT_USE_SKILL)
 
     def new_game(self, game: g.Game, team):
         """
@@ -438,6 +453,14 @@ class GrodBot(pb.Agent):
         action_step = self.current_move.popleft()
         return action_step
 
+    def shadowing(self, game: g.Game):
+        """
+        Select block die or reroll.
+        """
+        # Loop through available dice results
+        proc = game.state.stack.peek()
+        return m.Action(t.ActionType.USE_SKILL)
+
     def block(self, game: g.Game):
         """
         Select block die or reroll.
@@ -445,9 +468,9 @@ class GrodBot(pb.Agent):
         # Loop through available dice results
         proc = game.state.stack.peek()
         if proc.waiting_juggernaut:
-            return self.use_juggernaut(game)
+            return m.Action(t.ActionType.USE_SKILL)
         if proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
-            return self.use_wrestle(game)
+            return m.Action(t.ActionType.USE_SKILL)
 
         active_player: m.Player = game.state.active_player
         attacker: m.Player = game.state.stack.items[-1].attacker
@@ -1358,12 +1381,13 @@ def score_push(game: g.Game, from_square: m.Square, to_square: m.Square) -> floa
 
 
 def check_follow_up(game: g.Game) -> bool:
-    # Check the BlockState - ideally follow up if pushed player is prone, or has ball.  Note the procedure for putting
-    # the defender on the ground is not activated yet, so we need to check the stack state to determine the state of
-    # the defender.
+    # To do: the  logic here is faulty for the current game state,  in terms of how and when actions are evaluated.  I.e.
+    # the check appears to happen before the defending player is placed prone (but after the player is pushed?)
+    # What I want is to follow up, generally, if the defender is prone and not otherwise.
     active_player: m.Player = game.state.active_player
 
     block_proc = helper.last_block_proc(game)
+
     attacker: m.Player = block_proc.attacker
     defender: m.Player = block_proc.defender
     is_blitz_action = block_proc.blitz
@@ -1371,10 +1395,14 @@ def check_follow_up(game: g.Game) -> bool:
         if active_player.position != position:
             follow_up_square: m.Square = position
 
+    defender_prone = (block_proc.selected_die == t.BBDieResult.DEFENDER_DOWN) or ((block_proc.selected_die == t.BBDieResult.DEFENDER_STUMBLES) and (attacker.has_skill(t.Skill.TACKLE) or not defender.has_skill(t.Skill.DODGE)))
+
     num_tz_cur = game.num_tackle_zones_in(active_player)
     num_tz_new = game.num_tackle_zones_at(active_player, follow_up_square)
-    opp_adj_cur = game.get_adjacent_opponents(active_player, stunned=False)
-    opp_adj_new = game.get_adjacent_players(follow_up_square, team=game.get_opp_team(active_player.team), stunned=False)
+    opp_adj_cur = game.get_adjacent_opponents(active_player, stunned=False, down=False)
+    opp_adj_new = game.get_adjacent_players(follow_up_square, team=game.get_opp_team(active_player.team), stunned=False, down=False)
+
+    num_tz_new -= defender_prone
 
     # If blitzing (with squares of movement left) always follow up if the new square is not in any tackle zone.
     if is_blitz_action and attacker.num_moves_left() > 0 and num_tz_new == 0:
@@ -1382,7 +1410,7 @@ def check_follow_up(game: g.Game) -> bool:
 
     # If Attacker has the ball, strictly follow up only if there are less opponents next to new square.
     if game.get_ball_carrier == attacker:
-        if len(opp_adj_new) < len(opp_adj_cur):
+        if len(opp_adj_new) - defender_prone < len(opp_adj_cur):
             return True
         return False
 
@@ -1398,7 +1426,7 @@ def check_follow_up(game: g.Game) -> bool:
         return False  # Don't follow if already next to ball
 
     # Follow up if less standing opponents in the next square or equivalent, but defender is now prone
-    if (num_tz_new == 0) or (num_tz_new < num_tz_cur) or (num_tz_new == num_tz_cur and not defender.state.up):
+    if (num_tz_new == 0) or (num_tz_new < num_tz_cur) or (num_tz_new == num_tz_cur and not defender_prone):
         return True
     if attacker.has_skill(t.Skill.GUARD) and num_tz_new > num_tz_cur:
         return True      # Yes if attacker has guard

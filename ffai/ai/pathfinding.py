@@ -16,6 +16,7 @@ from ffai.core.table import Skill, WeatherType, Tile
 from ffai.core.game import Game
 import time
 import copy
+from functools import lru_cache
 
 
 class Path:
@@ -117,31 +118,43 @@ class FFTileMap:
     def has_visited(self, x: int, y: int) -> bool:
         return self.visited[x][y]
 
+    @lru_cache(maxsize=50000)
     def blocked(self, mover: FFMover, x: int, y: int) -> bool:
         square = self.game.get_square(x, y)
 
         # Need to ignore the "crowd" squares on the boundary by blocking them.
-        return (x <= 0) or (y <= 0) or (x >= self.width - 1) or (y >= self.height - 1) or self.game.get_player_at(
-            square) is not None
+        return (x <= 0) or (y <= 0) or (x >= self.width - 1) or (y >= self.height - 1) or self.game.get_player_at(square) is not None
 
     def get_cost(self, mover: FFMover, sx: int, sy: int, tx: int, ty: int) -> float:
         square_from = self.game.get_square(sx, sy)
         square_to = self.game.get_square(tx, ty)
         moving_unit = mover.player
-        dodge_prob = self.game.get_dodge_prob_from(moving_unit, square_from, square_to,
-                                                   allow_dodge_reroll=mover.allow_skill_reroll)
+        # A huge speed up if we can cache this function call
+        dodge_prob = self.dodge_prob(moving_unit, square_from, square_to, allow_dodge_reroll=mover.allow_skill_reroll)
         move_prob = 1.0
         cur_depth: int = mover.cur_depth  # essentially number of moves already done.
-        if cur_depth != -1 and (cur_depth + 1 > moving_unit.num_moves_left(include_gfi=False)):
+        if cur_depth != -1 and (cur_depth + 1 > self.num_moves_left(moving_unit, include_gfi=False)):
             move_prob = 1.0 / 6.0
             if self.game.state.weather == WeatherType.BLIZZARD:
                 move_prob = 2.0 / 6.0
-            if moving_unit.has_skill(Skill.SURE_FEET):
+            if mover.allow_skill_reroll and moving_unit.has_skill(Skill.SURE_FEET):
                 move_prob += (1 - move_prob) * move_prob
         cost = 1 - move_prob * dodge_prob
         return cost
 
+    @lru_cache(maxsize=50000)
+    def num_moves_left(self, player, include_gfi=False):
+        return player.num_moves_left(include_gfi=include_gfi)
+
+    @lru_cache(maxsize=50000)
+    def dodge_prob(self, moving_unit, square_from, square_to, allow_dodge_reroll):
+        return self.game.get_dodge_prob_from(moving_unit, square_from, square_to, allow_dodge_reroll=allow_dodge_reroll)
+
     def get_movement(self, mover: FFMover, sx: int, sy: int, tx: int, ty: int) -> float:
+        return self.dist(sx, sy, tx, ty)
+
+    @lru_cache(maxsize=50000)
+    def dist(self, sx: int, sy: int, tx: int, ty: int) -> float:
         return self.game.get_square(sx, sy).distance(self.game.get_square(tx, ty))
 
 
@@ -161,6 +174,8 @@ class FFPathFinder:
 
     def find_path(self, mover: FFMover, sx: int, sy: int, tx: int = None, ty: int = None, tile: Tile = None, player: Player = None) -> Optional[Path]:
         # easy first check, if the destination is blocked, we can't get there
+        FFTileMap.dodge_prob.cache_clear()
+        FFTileMap.num_moves_left.cache_clear()
         if tx is not None and ty is not None and self.tile_map.blocked(mover, tx, ty):
             return None
 
@@ -333,7 +348,7 @@ class FFPathFinder:
                     path_cur = self.create_path(sx, sy, x, y)
                     if path_cur is not None:
                         paths.append(path_cur)
-        #l = [len(path) for path in paths]
+        # l = [len(path) for path in paths]
         return paths
 
     def get_computed_cost(self, ix: int, iy: int) -> float:
@@ -361,9 +376,11 @@ class FFPathFinder:
         self.closed.remove(node)
 
     def is_valid_location(self, mover: FFMover, sx: int, sy: int, x: int, y: int) -> bool:
-        valid = 0 <= x < self.tile_map.get_width_in_tiles() and 0 <= y < self.tile_map.get_height_in_tiles()
-        valid = valid and not (sx == x and sy == y)
-        valid = valid and not self.tile_map.blocked(mover, x, y)
+        valid = not self.tile_map.blocked(mover, x, y)
+        # valid = not (sx == x and sy == y) and not self.tile_map.blocked(mover, x, y)
+        # valid = 0 <= x < self.tile_map.get_width_in_tiles() and 0 <= y < self.tile_map.get_height_in_tiles()
+        # valid = valid and not (sx == x and sy == y)
+        # valid = valid and not self.tile_map.blocked(mover, x, y)
         return valid
 
     def get_cost(self, mover: FFMover, sx: int, sy: int, tx: int, ty: int) -> float:
@@ -378,7 +395,7 @@ def _alter_state(game, player, from_position, moves_used):
     if from_position is not None or moves_used is not None:
         orig_player = copy.deepcopy(player)
         orig_ball = copy.deepcopy(game.get_ball())
-    # Moove player if another starting position is used
+    # Move player if another starting position is used
     if from_position is not None:
         assert game.get_player_at(from_position) is None or game.get_player_at(from_position) == player
         game.move(player, from_position)
@@ -412,6 +429,9 @@ def get_safest_path(game, player, position, from_position=None, num_moves_used=N
     given position and the cost/probability of failure.
     """
     orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    FFTileMap.dodge_prob.cache_clear()
+    FFTileMap.num_moves_left.cache_clear()
+    FFTileMap.blocked.cache_clear()
 
     if game.ff_map is None:
         game.ff_map = FFTileMap(game)
@@ -441,6 +461,9 @@ def get_safest_path_to_player(game, player, target_player, from_position=None, n
     a position that is adjacent to the other player and the cost/probability of failure.
     """
     orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    FFTileMap.dodge_prob.cache_clear()
+    FFTileMap.num_moves_left.cache_clear()
+    FFTileMap.blocked.cache_clear()
 
     if game.ff_map is None:
         game.ff_map = FFTileMap(game)
@@ -467,6 +490,9 @@ def get_all_paths(game, player, from_position=None, num_moves_used=None, allow_s
     given position and the cost/probability of failure, for each reachable square.
     """
     orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    FFTileMap.dodge_prob.cache_clear()
+    FFTileMap.num_moves_left.cache_clear()
+    FFTileMap.blocked.cache_clear()
 
     if game.ff_map is None:
         game.ff_map = FFTileMap(game)
