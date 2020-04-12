@@ -58,9 +58,16 @@ class GrodBot(pb.Agent):
 
     def act(self, game):
 
+        # Refresh my_team and opp_team (they seem to be copies)
+        proc = game.state.stack.peek()
         available_actions = game.state.available_actions
         available_action_types = [available_action.action_type for available_action in available_actions]
-        # Add a default "USE_SKILL action" ?
+
+        # Update local my_team and opp_team variables to latest copy (to ensure fresh data)
+        if hasattr(proc, 'team'):
+            assert proc.team == self.my_team
+            self.my_team = proc.team
+            self.opp_team = game.get_opp_team(self.my_team)
 
         # For statistical purposes, keeps a record of # action choices.
         available = 0
@@ -73,10 +80,7 @@ class GrodBot(pb.Agent):
                 available += len(action_choice.players)
         self.actions_available.append(available)
 
-        # Get current procedure
-        proc = game.state.stack.peek()
-
-        # Call private function
+        # Evaluate appropriate action for each possible procedure
         if isinstance(proc, p.CoinTossFlip):
             action = self.coin_toss_flip(game)
         elif isinstance(proc, p.CoinTossKickReceive):
@@ -115,40 +119,45 @@ class GrodBot(pb.Agent):
             action = self.reroll(game)
         elif isinstance(proc, p.Shadowing):
             action = self.shadowing(game)
-        elif self.debug:
-            # If we arrive here, then the GrodBot hasn't explicitly handled the procedure
-            raise Exception("Unknown procedure: ", proc)
-        elif t.ActionType.USE_SKILL in available_action_types:
-            # Catch-all for things like Break Tackle, Diving Tackle etc
-            return m.Action(t.ActionType.USE_SKILL)
         else:
-            # Ugly catch-all -> simply pick an action
-            action_choice = available_actions[0]
-            player = action_choice.players[0] if action_choice.players else None
-            position = action_choice.positions[0] if action_choice.positions else None
-            action = m.Action(action_choice.action_type, position=position, player=player)
-            # raise Exception("Unknown procedure: ", proc)
+            if self.debug:
+                raise Exception("Unknown procedure: ", proc)
+            elif t.ActionType.USE_SKILL in available_action_types:
+                # Catch-all for things like Break Tackle, Diving Tackle etc
+                return m.Action(t.ActionType.USE_SKILL)
+            else:
+                # Ugly catch-all -> simply pick an action
+                action_choice = available_actions[0]
+                player = action_choice.players[0] if action_choice.players else None
+                position = action_choice.positions[0] if action_choice.positions else None
+                action = m.Action(action_choice.action_type, position=position, player=player)
+                # raise Exception("Unknown procedure: ", proc)
 
-        # Check we found a valid action
-        if self.debug:
-            action_found = False
-            for available_action in available_actions:
-                if type(action.action_type) == type(available_action.action_type):
-                    # Actions always?? require either a player or a square???
-                    if available_action.players and available_action.positions:
-                        action_found = (action.player in available_action.players) and (action.player in available_action.players)
-                    elif available_action.players:
-                        action_found = action.player in available_action.players
-                    elif available_action.positions:
-                        action_found = action.position in available_action.positions
-                    else:
-                        action_found = True
-            if not action_found:
+        # Check returned Action is valid
+        action_found = False
+        for available_action in available_actions:
+            if isinstance(action.action_type, type(available_action.action_type)):
+                if available_action.players and available_action.positions:
+                    action_found = (action.player in available_action.players) and (action.player in available_action.players)
+                elif available_action.players:
+                    action_found = action.player in available_action.players
+                elif available_action.positions:
+                    action_found = action.position in available_action.positions
+                else:
+                    action_found = True
+        if not action_found:
+            if self.debug:
                 raise Exception('Invalid action')
+            else:
+                # Ugly catch-all -> simply pick an action
+                action_choice = available_actions[0]
+                player = action_choice.players[0] if action_choice.players else None
+                position = action_choice.positions[0] if action_choice.positions else None
+                action = m.Action(action_choice.action_type, position=position, player=player)
 
         if self.verbose:
             current_team = game.state.current_team.name if game.state.current_team is not None else available_actions[0].team.name
-            # print('      Turn=H' + str(game.state.half) + 'R' + str(game.state.round) + ', Team=' + current_team + ', Action=' + action.action_type.name)
+            print('      Turn=H' + str(game.state.half) + 'R' + str(game.state.round) + ', Team=' + current_team + ', Action=' + action.action_type.name)
 
         return action
 
@@ -284,7 +293,10 @@ class GrodBot(pb.Agent):
                 self.current_move = ActionSequence(action_steps, description='Setup')
 
         # We must have initialised the action sequence, lets execute it
-        next_action: m.Action = self.current_move.popleft()
+        if self.current_move.is_empty():
+            raise Exception('what')
+        else:
+            next_action: m.Action = self.current_move.popleft()
         return next_action
 
     def place_ball(self, game: g.Game):
@@ -520,7 +532,6 @@ class GrodBot(pb.Agent):
         player = game.state.active_player
         do_follow = check_follow_up(game)
         for position in game.state.available_actions[0].positions:
-            # Always follow up
             if do_follow and player.position != position:
                 return m.Action(t.ActionType.FOLLOW_UP, position=position)
             elif not do_follow and player.position == position:
@@ -530,6 +541,7 @@ class GrodBot(pb.Agent):
         """
         Use apothecary?
         """
+        # Update here -> apothecary BH in first half, KO or BH in second half
         return m.Action(t.ActionType.USE_APOTHECARY)
         # return Action(ActionType.DONT_USE_APOTHECARY)
 
@@ -554,21 +566,24 @@ class GrodBot(pb.Agent):
         """
         Called when a game end.
         """
-        print("Num steps:", len(self.actions_available))
-        print("Avg. branching factor:", np.mean(self.actions_available))
+        print(f'''Result for {self.name}''')
+        print('------------------')
+        print(f'''Num steps: {len(self.actions_available)}''')
+        print(f'''Avg. branching factor: {np.mean(self.actions_available)}''')
         GrodBot.steps.append(len(self.actions_available))
         GrodBot.mean_actions_available.append(np.mean(self.actions_available))
-        print("Avg. Num steps:", np.mean(GrodBot.steps))
-        print("Avg. overall branching factor:", np.mean(GrodBot.mean_actions_available))
+        print(f'''Avg. Num steps: {np.mean(GrodBot.steps)}''')
+        print(f'''Avg. overall branching factor: {np.mean(GrodBot.mean_actions_available)}''')
         winner = game.get_winner()
-        print("Casualties: ", game.num_casualties())
-        print("Score: " + self.my_team.name + "->" + str(self.my_team.state.score) + " ... " + self.opp_team.name + "->" + str(self.opp_team.state.score))
+        print(f'''Casualties: {game.state.home_team.name} ({game.home_agent.name}): {game.num_casualties(game.state.home_team)} ... {game.state.away_team.name}  ({game.away_agent.name}): {game.num_casualties(game.state.away_team)}''')
+        print(f'''Score: {game.state.home_team.name} ({game.home_agent.name}): {game.state.home_team.state.score} ... {game.state.away_team.name}  ({game.away_agent.name}): {game.state.away_team.state.score}''')
         if winner is None:
-            print("It's a draw")
+            print(f'''It's a draw''')
         elif winner == self:
-            print("I ({}) won".format(self.name))
+            print(f'''I won''')
         else:
-            print("I ({}) lost".format(self.name))
+            print(f'''I lost''')
+        print('------------------')
 
 
 def block_favourability(block_result: m.ActionType, team: m.Team, active_player: m.Player, attacker: m.Player, defender: m.Player, favor: m.Team) -> float:
