@@ -7,6 +7,7 @@ import ffai.ai.bots.proc_bot as pb
 from typing import Optional, List, Dict
 import ffai.core.game as g
 import ffai.ai.bothelper as helper
+from ffai.ai.registry import register_bot
 from ffai.ai.bothelper import ActionSequence
 import ffai
 import numpy as np
@@ -1757,5 +1758,5 @@ def player_value(game: g.Game, player: m.Player) -> float:
 
 
 # Register bot
-ffai.register_bot('GrodBot', GrodBot)
+register_bot('GrodBot', GrodBot)
 

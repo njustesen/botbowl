@@ -1,7 +1,6 @@
 def main():
     import ffai as ffai
     import time as time
-    import examples.grodbot as grodbot
 
     config = ffai.load_config("bot-bowl-ii")
     config.competition_mode = False
