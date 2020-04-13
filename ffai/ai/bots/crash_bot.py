@@ -7,10 +7,9 @@ This module contains an example bot that takes random actions.
 """
 from ffai.core.model import Agent
 from ffai.ai.registry import register_bot
-import time
 
 
-class IdleBot(Agent):
+class CrashBot(Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -19,11 +18,8 @@ class IdleBot(Agent):
         pass
         
     def act(self, game):
-        time.sleep(1000000)
+        v = 1 / 0
         return None
 
     def end_game(self, game):
         pass
-
-
-register_bot('idle', IdleBot)

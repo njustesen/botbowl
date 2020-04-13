@@ -3,14 +3,506 @@ import ffai.core.model as m
 import ffai.core.table as t
 import ffai.core.procedure as p
 import ffai.ai.pathfinding as pf
-import ffai.ai.bots.proc_bot as pb
+import ffai.ai.proc_bot as pb
 from typing import Optional, List, Dict
 import ffai.core.game as g
-import ffai.ai.bothelper as helper
 from ffai.ai.registry import register_bot
-from ffai.ai.bothelper import ActionSequence
-import ffai
 import numpy as np
+
+
+class ActionSequence:
+
+    def __init__(self, action_steps: List[m.Action], score: float = 0, description: str = ''):
+        """ Creates a new ActionSequence - an ordered list of sequential Actions to attempt to undertake.
+        :param action_steps: Sequence of action steps that form this action.
+        :param score: A score representing the attractiveness of the move (default: 0)
+        :param description: A debug string (default: '')
+        """
+
+        # Note the intention of this object is that when the object is acting, as steps are completed,
+        # they are removed from the move_sequence so the next move is always the top of the move_sequence
+        # lis
+
+        self.action_steps = action_steps
+        self.score = score
+        self.description = description
+
+    def is_valid(self, game: g.Game) -> bool:
+        pass
+
+    def popleft(self):
+        return self.action_steps.pop(0)
+        # val = self.action_steps[0]
+        # del self.action_steps[0]
+        # return val
+
+    def is_empty(self):
+        return not self.action_steps
+
+
+class FfHeatMap:
+    """ A heat map of a Blood Bowl field.
+
+    A class for analysing zones of control for both teams
+    """
+
+    def __init__(self, game: g.Game, team: m.Team):
+        self.game = game
+        self.team = team
+        # Note that the edges are not on the field, but represent crowd squares
+        self.units_friendly: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
+        self.units_opponent: List[List[float]] = [[0.0 for y in range(game.state.pitch.height)] for x in range(game.state.pitch.width)]
+
+    def add_unit_paths(self, player: m.Player, paths: List[pf.Path]):
+        is_friendly: bool = player.team == self.team
+
+        for path in paths:
+            if is_friendly:
+                self.units_friendly[path.steps[-1].x][path.steps[-1].y] += path.prob * path.prob
+            else:
+                self.units_opponent[path.steps[-1].x][path.steps[-1].y] += path.prob * path.prob
+
+    def add_unit_by_paths(self, game: g.Game, paths: Dict[m.Player, List[pf.Path]]):
+        for player in paths.keys():
+            self.add_unit_paths(player, paths[player])
+
+    def add_players_moved(self, game: g.Game, players: List[m.Player]):
+        for player in players:
+            adjacents: List[m.Square] = game.get_adjacent_squares(player.position, occupied=True)
+            self.units_friendly[player.position.x][player.position.y] += 1.0
+            for adjacent in adjacents:
+                self.units_friendly[player.position.x][player.position.y] += 0.5
+
+    def get_ball_move_square_safety_score(self, square: m.Square) -> float:
+
+        # Basic idea - identify safe regions to move the ball towards
+        # friendly_heat: float = self.units_friendly[square.x][square.y]
+        opponent_heat: float = self.units_opponent[square.x][square.y]
+
+        score: float = 30.0 * max(0.0, (1.0 - opponent_heat / 2))
+
+        # score: float=0.0
+        # if opponent_heat < 0.25: score += 15.0
+        # if opponent_heat < 0.05: score += 15.0
+        # if opponent_heat < 1.5: score += 5
+        # if friendly_heat > 3.5: score += 10.0
+        # score += max(30.0, 5.0*(friendly_heat-opponent_heat))
+
+        return score
+
+    def get_cage_necessity_score(self, square: m.Square) -> float:
+        # opponent_friendly: float = self.units_friendly[square.x][square.y]
+        opponent_heat: float = self.units_opponent[square.x][square.y]
+        score: float = 0.0
+
+        if opponent_heat < 0.4:
+            score -= 80.0
+        # if opponent_friendly > opponent_heat: score -= max(30.0, 10.0*(opponent_friendly-opponent_heat))
+        # if opponent_heat <1.5: score -=5
+        # if opponent_heat > opponent_friendly: score += 10.0*(opponent_friendly-opponent_heat)
+
+        return score
+
+
+def blitz_used(game: g.Game) -> bool:
+    for action in game.state.available_actions:
+        if action.action_type == t.ActionType.START_BLITZ:
+            return False
+    return True
+
+
+def handoff_used(game: g.Game) -> bool:
+    for action in game.state.available_actions:
+        if action.action_type == t.ActionType.START_HANDOFF:
+            return False
+    return True
+
+
+def foul_used(game: g.Game) -> bool:
+    for action in game.state.available_actions:
+        if action.action_type == t.ActionType.START_FOUL:
+            return False
+    return True
+
+
+def pass_used(game: g.Game) -> bool:
+    for action in game.state.available_actions:
+        if action.action_type == t.ActionType.START_PASS:
+            return False
+    return True
+
+
+def get_players(game: g.Game, team: m.Team, include_own: bool = True, include_opp: bool = True, include_stunned: bool = True, include_used: bool = True, include_off_pitch: bool = False, only_blockable: bool = False, only_used: bool = False) -> List[m.Player]:
+    players: List[m.Player] = []
+    selected_players: List[m.Player] = []
+    for iteam in game.state.teams:
+        if iteam == team and include_own:
+            players.extend(iteam.players)
+        if iteam != team and include_opp:
+            players.extend(iteam.players)
+    for player in players:
+        if only_blockable and not player.state.up:
+            continue
+        if only_used and not player.state.used:
+            continue
+
+        if include_stunned or not player.state.stunned:
+            if include_used or not player.state.used:
+                if include_off_pitch or (player.position is not None and not game.is_out_of_bounds(player.position)):
+                    selected_players.append(player)
+
+    return selected_players
+
+
+def caging_squares_north_east(game: g.Game, protect_square: m.Square) -> List[m.Square]:
+
+    # * At it's simplest, a cage requires 4 players in the North-East, South-East, South-West and North-West
+    # * positions, relative to the ball carrier, such that there is no more than 3 squares between the players in
+    # * each of those adjacent compass directions.
+    # *
+    # *   1     3
+    # *    xx-xx
+    # *    xx-xx
+    # *    --o--
+    # *    xx-xx
+    # *    xx-xx
+    # *   3     4
+    # *
+    # * pitch is 26 long
+    # *
+    # *
+    # * Basically we need one player in each of the corners: 1-4, but spaced such that there is no gap of 3 squares.
+    # * If the caging player is in 1-4, but next to ball carrier, he ensures this will automatically be me
+    # *
+    # * The only exception to this is when the ball carrier is on, or near, the sideline.  Then return the squares
+    # * that can otherwise form the cage.
+    # *
+
+    caging_squares: List[m.Square] = []
+    x = protect_square.x
+    y = protect_square.y
+
+    if x <= game.state.pitch.width - 3:
+        if y == game.state.pitch.height - 2:
+            caging_squares.append(game.get_square(x + 1, y + 1))
+            caging_squares.append(game.get_square(x + 2, y + 1))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
+        elif y == game.state.pitch.height - 1:
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
+        else:
+            caging_squares.append(game.get_square(x + 1, y + 1))
+            caging_squares.append(game.get_square(x + 1, y + 2))
+            caging_squares.append(game.get_square(x + 2, y + 1))
+            # caging_squares.append(game.state.pitch.get_square(x + 3, y + 3))
+
+    return caging_squares
+
+
+def caging_squares_north_west(game: g.Game, protect_square: m.Square) -> List[m.Square]:
+
+    caging_squares: List[m.Square] = []
+    x = protect_square.x
+    y = protect_square.y
+
+    if x >= 3:
+        if y == game.state.pitch.height-2:
+            caging_squares.append(game.get_square(x - 1, y + 1))
+            caging_squares.append(game.get_square(x - 2, y + 1))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
+        elif y == game.state.pitch.height-1:
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
+        else:
+            caging_squares.append(game.get_square(x - 1, y + 1))
+            caging_squares.append(game.get_square(x - 1, y + 2))
+            caging_squares.append(game.get_square(x - 2, y + 1))
+            # caging_squares.append(game.state.pitch.get_square(x - 3, y + 3))
+
+    return caging_squares
+
+
+def caging_squares_south_west(game: g.Game, protect_square: m.Square) -> List[m.Square]:
+
+    caging_squares: List[m.Square] = []
+    x = protect_square.x
+    y = protect_square.y
+
+    if x >= 3:
+        if y == 2:
+            caging_squares.append(game.get_square(x - 1, y - 1))
+            caging_squares.append(game.get_square(x - 2, y - 1))
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
+        elif y == 1:
+            caging_squares.append(game.get_square(x - 1, y))
+            caging_squares.append(game.get_square(x - 2, y))
+        else:
+            caging_squares.append(game.get_square(x - 1, y - 1))
+            caging_squares.append(game.get_square(x - 1, y - 2))
+            caging_squares.append(game.get_square(x - 2, y - 1))
+            # caging_squares.append(game.state.pitch.get_square(x - 3, y - 3))
+
+    return caging_squares
+
+
+def caging_squares_south_east(game: g.Game, protect_square: m.Square) -> List[m.Square]:
+
+    caging_squares: List[m.Square] = []
+    x = protect_square.x
+    y = protect_square.y
+
+    if x <= game.state.pitch.width - 3:
+        if y == 2:
+            caging_squares.append(game.get_square(x + 1, y - 1))
+            caging_squares.append(game.get_square(x + 2, y - 1))
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
+        elif y == 1:
+            caging_squares.append(game.get_square(x + 1, y))
+            caging_squares.append(game.get_square(x + 2, y))
+        else:
+            caging_squares.append(game.get_square(x + 1, y - 1))
+            caging_squares.append(game.get_square(x + 1, y - 2))
+            caging_squares.append(game.get_square(x + 2, y - 1))
+            # caging_squares.append(game.get_square(x + 3, y - 3))
+
+    return caging_squares
+
+
+def is_caging_position(game: g.Game, player: m.Player, protect_player: m.Player) -> bool:
+    return player.position.distance(protect_player.position) <= 2 and not is_castle_position_of(game, player, protect_player)
+
+
+def has_player_within_n_squares(game: g.Game, units: List[m.Player], square: m.Square, num_squares: int) -> bool:
+    for cur in units:
+        if cur.position.distance(square) <= num_squares:
+            return True
+    return False
+
+
+def has_adjacent_player(game: g.Game, square: m.Square) -> bool:
+    return not game.get_adjacent_players(square)
+
+
+def is_castle_position_of(game: g.Game, player1: m.Player, player2: m.Player) -> bool:
+    return player1.position.x == player2.position.x or player1.position.y == player2.position.y
+
+
+def is_bishop_position_of(game: g.Game, player1: m.Player, player2: m.Player) -> bool:
+    return abs(player1.position.x - player2.position.x) == abs(player1.position.y - player2.position.y)
+
+
+def attacker_would_surf(game: g.Game, attacker: m.Player, defender: m.Player) -> bool:
+    if (defender.has_skill(t.Skill.SIDE_STEP) and not attacker.has_skill(t.Skill.GRAB)) or defender.has_skill(t.Skill.STAND_FIRM):
+        return False
+
+    if not attacker.position.is_adjacent(defender.position):
+        return False
+
+    return direct_surf_squares(game, attacker.position, defender.position)
+
+
+def direct_surf_squares(game: g.Game, attack_square: m.Square, defend_square: m.Square) -> bool:
+    defender_on_sideline: bool = on_sideline(game, defend_square)
+    defender_in_endzone: bool = on_endzone(game, defend_square)
+
+    if defender_on_sideline and defend_square.x == attack_square.x:
+        return True
+
+    if defender_in_endzone and defend_square.y == attack_square.y:
+        return True
+
+    if defender_in_endzone and defender_on_sideline:
+        return True
+
+    return False
+
+
+def reverse_x_for_right(game: g.Game, team: m.Team, x: int) -> int:
+    if not game.is_team_side(m.Square(13, 3), team):
+        res = game.state.pitch.width - 1 - x
+    else:
+        res = x
+    return res
+
+
+def reverse_x_for_left(game: g.Game, team: m.Team, x: int) -> int:
+    if game.is_team_side(m.Square(13, 3), team):
+        res = game.state.pitch.width - 1 - x
+    else:
+        res = x
+    return res
+
+
+def on_sideline(game: g.Game, square: m.Square) -> bool:
+    return square.y == 1 or square.y == game.state.pitch.height - 1
+
+
+def on_endzone(game: g.Game, square: m.Square) -> bool:
+    return square.x == 1 or square.x == game.state.pitch.width - 1
+
+
+def on_los(game: g.Game, team: m.Team, square: m.Square) -> bool:
+    return (reverse_x_for_right(game, team, square.x) == 13) and 4 < square.y < 21
+
+
+def los_squares(game: g.Game, team: m.Team) -> List[m.Square]:
+
+    squares: List[m.Square] = [
+        game.get_square(reverse_x_for_right(game, team, 13), 5),
+        game.get_square(reverse_x_for_right(game, team, 13), 6),
+        game.get_square(reverse_x_for_right(game, team, 13), 7),
+        game.get_square(reverse_x_for_right(game, team, 13), 8),
+        game.get_square(reverse_x_for_right(game, team, 13), 9),
+        game.get_square(reverse_x_for_right(game, team, 13), 10),
+        game.get_square(reverse_x_for_right(game, team, 13), 11)
+    ]
+    return squares
+
+
+def distance_to_sideline(game: g.Game, square: m.Square) -> int:
+    return min(square.y - 1, game.state.pitch.height - square.y - 2)
+
+
+def is_endzone(game, square: m.Square) -> bool:
+    return square.x == 1 or square.x == game.state.pitch.width - 1
+
+
+def last_block_proc(game) -> Optional[p.Block]:
+    for i in range(len(game.state.stack.items) - 1, -1, -1):
+        if isinstance(game.state.stack.items[i], p.Block):
+            block_proc = game.state.stack.items[i]
+            return block_proc
+    return None
+
+
+def is_adjacent_ball(game: g.Game, square: m.Square) -> bool:
+    ball_square = game.get_ball_position()
+    return ball_square is not None and ball_square.is_adjacent(square)
+
+
+def squares_within(game: g.Game, square: m.Square, distance: int) -> List[m.Square]:
+    squares: List[m.Square] = []
+    for i in range(-distance, distance + 1):
+        for j in range(-distance, distance + 1):
+            cur_square = game.get_square(square.x + i, square.y + j)
+            if cur_square != square and not game.is_out_of_bounds(cur_square):
+                squares.append(cur_square)
+    return squares
+
+
+def distance_to_defending_endzone(game: g.Game, team: m.Team, position: m.Square) -> int:
+    res = reverse_x_for_right(game, team, position.x) - 1
+    return res
+
+
+def distance_to_scoring_endzone(game: g.Game, team: m.Team, position: m.Square) -> int:
+    res = reverse_x_for_left(game, team, position.x) - 1
+    return res
+    # return game.state.pitch.width - 1 - reverse_x_for_right(game, team, position.x)
+
+
+def players_in_scoring_endzone(game: g.Game, team: m.Team, include_own: bool = True, include_opp: bool = False) -> List[m.Player]:
+    players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp)
+    selected_players: List[m.Player] = []
+    for player in players:
+        if in_scoring_endzone(game, team, player.position):
+            selected_players.append(player)
+    return selected_players
+
+
+def in_scoring_endzone(game: g.Game, team: m.Team, square: m.Square) -> bool:
+    return reverse_x_for_left(game, team, square.x) == 1
+
+
+def players_in_scoring_distance(game: g.Game, team: m.Team, include_own: bool = True, include_opp: bool = True, include_stunned: bool = False) -> List[m.Player]:
+    players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned)
+    selected_players: List[m.Player] = []
+    for player in players:
+        if distance_to_scoring_endzone(game, team, player.position) <= player.num_moves_left():
+            selected_players.append(player)
+    return selected_players
+
+
+def distance_to_nearest_player(game: g.Game, team: m.Team, square: m.Square, include_own: bool = True, include_opp: bool = True, only_used: bool = False, include_used: bool = True, include_stunned: bool = True, only_blockable: bool = False) -> int:
+    opps: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, only_used=only_used, include_used=include_used, include_stunned=include_stunned, only_blockable=only_blockable)
+    cur_max = 100
+    for opp in opps:
+        dist = opp.position.distance(square)
+        cur_max = min(cur_max, dist)
+    return cur_max
+
+
+def screening_distance(game: g.Game, from_square: m.Square, to_square: m.Square) -> float:
+    # Return the "screening distance" between 3 squares.  (To complete)
+    # float dist =math.sqrt(math.pow(m.Square.x - cur.position.x, 3) + math.pow(m.Square.y - cur.position.y, 3))
+    return 0.0
+
+
+def num_opponents_can_reach(game: g.Game, team: m.Team, square: m.Square) -> int:
+    opps: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
+    num_opps_reach: int = 0
+    for cur in opps:
+        dist = max(square.x - cur.position.x, square.y - cur.position.y)
+        if cur.state.stunned:
+            continue
+        move_allowed = cur.get_ma() + 2
+        if not cur.state.up:
+            move_allowed -= 3
+        if dist < move_allowed:
+            num_opps_reach += 1
+    return num_opps_reach
+
+
+def num_opponents_on_field(game: g.Game, team: m.Team) -> int:
+    opps: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
+    num_opponents = 0
+    for cur in opps:
+        if cur.position is not None:
+            num_opponents += 1
+    return num_opponents
+
+
+def number_opponents_closer_than_to_endzone(game: g.Game, team: m.Team, square: m.Square) -> int:
+    opponents: List[m.Player] = get_players(game, team, include_own=False, include_opp=True)
+    num_opps = 0
+    distance_square_endzone = distance_to_defending_endzone(game, team, square)
+
+    for opponent in opponents:
+        distance_opponent_endzone = distance_to_defending_endzone(game, team, opponent.position)
+        if distance_opponent_endzone < distance_square_endzone:
+            num_opps += 1
+    return num_opps
+
+
+def in_scoring_range(game: g.Game, player: m.Player) -> bool:
+    return player.num_moves_left() >= distance_to_scoring_endzone(game, player.team, player.position)
+
+
+def players_in_scoring_range(game: g.Game, team: m.Team, include_own=True, include_opp=True, include_used=True, include_stunned=True) -> List[m.Player]:
+    players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_stunned=include_stunned, include_used=include_used)
+    res: List[m.Player] = []
+    for player in players:
+        if in_scoring_range(game, player):
+            res.append(player)
+    return res
+
+
+def players_in(game: g.Game, team: m.Team, squares: List[m.Square], include_own=True, include_opp=True, include_used=True, include_stunned=True, only_blockable=False) -> List[m.Player]:
+
+    allowed_players: List[m.Player] = get_players(game, team, include_own=include_own, include_opp=include_opp, include_used=include_used, include_stunned=include_stunned, only_blockable=only_blockable)
+    res: List[m.Player] = []
+
+    for square in squares:
+        player: Optional[m.Player] = game.get_player_at(square)
+        if player is None:
+            continue
+        if player in allowed_players:
+            res.append(player)
+    return res
 
 
 class GrodBot(pb.Agent):
@@ -48,7 +540,7 @@ class GrodBot(pb.Agent):
         self.current_move: Optional[ActionSequence] = None
         self.verbose = True
         self.debug = False
-        self.heat_map: Optional[helper.FfHeatMap] = None
+        self.heat_map: Optional[FfHeatMap] = None
         self.actions_available = []
 
     def set_verbose(self, verbose):
@@ -220,7 +712,7 @@ class GrodBot(pb.Agent):
 
         else:
 
-            if not helper.get_players(game, self.my_team, include_own=True, include_opp=False, include_off_pitch=False):
+            if not get_players(game, self.my_team, include_own=True, include_opp=False, include_off_pitch=False):
                 # If no players are on the pitch yet, create a new ActionSequence for the setup.
                 action_steps: List[m.Action] = []
 
@@ -245,21 +737,21 @@ class GrodBot(pb.Agent):
                 # Are we kicking or receiving?
                 if game.state.receiving_this_drive:
                     place_squares: List[m.Square] = [
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 7),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 8),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 9),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 7),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 8),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 9),
                         # Receiver next
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 8), 8),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 8), 8),
                         # Support line players
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 10),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 11),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 5),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 13),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 10),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 11),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 5),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 13),
                         # A bit wide semi-defensive
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 4),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 12),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 4),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 12),
                         # Extra help at the back
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 10), 8)
+                        game.get_square(reverse_x_for_right(game, self.my_team, 10), 8)
                     ]
                     players_sorted_bash = sorted(players_available, key=lambda x: player_bash_ability(game, x), reverse=True)
                     players_sorted_blitz = sorted(players_available, key=lambda x: player_blitz_ability(game, x), reverse=True)
@@ -268,19 +760,19 @@ class GrodBot(pb.Agent):
                     place_squares: List[m.Square] = [
 
                         # LOS squares first
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 7),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 8),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 13), 9),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 7),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 8),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 13), 9),
 
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 12), 3),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 12), 13),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 2),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 14),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 12), 3),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 12), 13),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 2),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 14),
 
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 12), 5),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 12), 10),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 11),
-                        game.get_square(helper.reverse_x_for_right(game, self.my_team, 11), 5)
+                        game.get_square(reverse_x_for_right(game, self.my_team, 12), 5),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 12), 10),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 11),
+                        game.get_square(reverse_x_for_right(game, self.my_team, 11), 5)
                         ]
 
                     players_sorted_bash = sorted(players_available, key=lambda x: player_bash_ability(game, x), reverse=True)
@@ -306,7 +798,7 @@ class GrodBot(pb.Agent):
         """
 
         # Note left_center square is 7,8
-        center_opposite: m.Square = m.Square(helper.reverse_x_for_left(game, self.my_team, 7), 8)
+        center_opposite: m.Square = m.Square(reverse_x_for_left(game, self.my_team, 7), 8)
         return m.Action(t.ActionType.PLACE_BALL, position=center_opposite)
 
     def high_kick(self, game: g.Game):
@@ -340,24 +832,24 @@ class GrodBot(pb.Agent):
         """
         self.current_move = None
 
-        players_moved: List[m.Player] = helper.get_players(game, self.my_team, include_own=True, include_opp=False, include_used=True, only_used=False)
-        players_to_move: List[m.Player] = helper.get_players(game, self.my_team, include_own=True, include_opp=False, include_used=False)
+        players_moved: List[m.Player] = get_players(game, self.my_team, include_own=True, include_opp=False, include_used=True, only_used=False)
+        players_to_move: List[m.Player] = get_players(game, self.my_team, include_own=True, include_opp=False, include_used=False)
         paths_own: Dict[m.Player, List[pf.Path]] = dict()
         for player in players_to_move:
             paths = pf.get_all_paths(game, player, from_position=None, num_moves_used=None, allow_skill_reroll=True, max_search_distance=player.num_moves_left())
             paths_own[player] = paths
 
-        players_opponent: List[m.Player] = helper.get_players(game, self.my_team, include_own=False, include_opp=True, include_stunned=False)
+        players_opponent: List[m.Player] = get_players(game, self.my_team, include_own=False, include_opp=True, include_stunned=False)
         paths_opposition: Dict[m.Player, List[pf.Path]] = dict()
         for player in players_opponent:
             paths = pf.get_all_paths(game, player, from_position=None, num_moves_used=None, allow_skill_reroll=True, max_search_distance=player.num_moves_left())
             paths_opposition[player] = paths
 
         # Create a heat-map of control zones
-        heat_map: helper.FfHeatMap = helper.FfHeatMap(game, self.my_team)
+        heat_map: FfHeatMap = FfHeatMap(game, self.my_team)
         heat_map.add_unit_by_paths(game, paths_opposition)
         heat_map.add_unit_by_paths(game, paths_own)
-        heat_map.add_players_moved(game, helper.get_players(game, self.my_team, include_own=True, include_opp=False, only_used=True))
+        heat_map.add_players_moved(game, get_players(game, self.my_team, include_own=True, include_opp=False, only_used=True))
         self.heat_map = heat_map
 
         all_actions: List[ActionSequence] = []
@@ -514,7 +1006,7 @@ class GrodBot(pb.Agent):
         Select square to push to.
         """
         # Loop through available squares
-        block_proc: Optional[p.Block] = helper.last_block_proc(game)
+        block_proc: Optional[p.Block] = last_block_proc(game)
         attacker: m.Player = block_proc.attacker
         defender: m.Player = block_proc.defender
         is_blitz_action = block_proc.blitz
@@ -655,7 +1147,7 @@ def potential_end_turn_action(game: g.Game) -> List[ActionSequence]:
     return actions
 
 
-def potential_block_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player) -> List[ActionSequence]:
+def potential_block_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player) -> List[ActionSequence]:
 
     # Note to self: need a "stand up and end move option.
     move_actions: List[ActionSequence] = []
@@ -678,7 +1170,7 @@ def potential_block_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.
     return move_actions
 
 
-def potential_blitz_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
+def potential_blitz_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
     move_actions: List[ActionSequence] = []
     for path in paths:
         path_steps = path.steps
@@ -705,7 +1197,7 @@ def potential_blitz_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.
     return move_actions
 
 
-def potential_pass_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
+def potential_pass_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
     move_actions: List[ActionSequence] = []
     for path in paths:
         path_steps = path.steps
@@ -735,7 +1227,7 @@ def potential_pass_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     return move_actions
 
 
-def potential_handoff_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
+def potential_handoff_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
     move_actions: List[ActionSequence] = []
     for path in paths:
         path_steps = path.steps
@@ -759,7 +1251,7 @@ def potential_handoff_actions(game: g.Game, heat_map: helper.FfHeatMap, player: 
     return move_actions
 
 
-def potential_foul_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
+def potential_foul_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player, paths: List[pf.Path]) -> List[ActionSequence]:
     move_actions: List[ActionSequence] = []
     for path in paths:
         path_steps = path.steps
@@ -785,7 +1277,7 @@ def potential_foul_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     return move_actions
 
 
-def potential_move_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, paths: List[pf.Path], is_continuation: bool = False) -> List[ActionSequence]:
+def potential_move_actions(game: g.Game, heat_map: FfHeatMap, player: m.Player, paths: List[pf.Path], is_continuation: bool = False) -> List[ActionSequence]:
 
     move_actions: List[ActionSequence] = []
     ball_square: m.Square = game.get_ball_position()
@@ -816,7 +1308,7 @@ def potential_move_actions(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     return move_actions
 
 
-def score_blitz(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, block_from_square: m.Square, defender: m.Player) -> float:
+def score_blitz(game: g.Game, heat_map: FfHeatMap, attacker: m.Player, block_from_square: m.Square, defender: m.Player) -> float:
     score: float = GrodBot.BASE_SCORE_BLITZ
 
     ball_carrier: Optional[m.Player] = game.get_ball_carrier()
@@ -849,18 +1341,18 @@ def score_blitz(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, bl
         score += 50.0              # Blitzing ball carrier
     if defender.position.is_adjacent(ball_position):
         score += 20.0   # Blitzing someone adjacent to ball carrier
-    if helper.direct_surf_squares(game, block_from_square, defender.position):
+    if direct_surf_squares(game, block_from_square, defender.position):
         score += 25.0  # A surf
     if game.get_adjacent_opponents(attacker, stunned=False, down=False) and not is_ball_carrier:
         score -= 10.0
     if attacker.position == block_from_square:
         score -= 20.0   # A Blitz where the block is the starting square is unattractive
-    if helper.in_scoring_range(game, defender):
+    if in_scoring_range(game, defender):
         score += 10.0  # Blitzing players closer to the endzone is attractive
     return score
 
 
-def score_foul(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, defender: m.Player, to_square: m.Square) -> float:
+def score_foul(game: g.Game, heat_map: FfHeatMap, attacker: m.Player, defender: m.Player, to_square: m.Square) -> float:
     score = GrodBot.BASE_SCORE_FOUL
     ball_carrier: Optional[m.Player] = game.get_ball_carrier()
 
@@ -887,7 +1379,7 @@ def score_foul(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, def
     return score
 
 
-def score_move(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool, str):
+def score_move(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool, str):
 
     scores: List[(float, bool, str)] = [
         [*score_receiving_position(game, heat_map, player, to_square), 'move to receiver'],
@@ -905,46 +1397,46 @@ def score_move(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_sq
     score, is_complete, description = scores[0]
 
     # All moves should avoid the sideline
-    if helper.distance_to_sideline(game, to_square) == 0:
+    if distance_to_sideline(game, to_square) == 0:
         score += GrodBot.ADDITIONAL_SCORE_SIDELINE
-    if helper.distance_to_sideline(game, to_square) == 1:
+    if distance_to_sideline(game, to_square) == 1:
         score += GrodBot.ADDITIONAL_SCORE_NEAR_SIDELINE
 
     return score, is_complete, description
 
 
-def score_receiving_position(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_receiving_position(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_carrier = game.get_ball_carrier()
     if ball_carrier is not None and (player.team != ball_carrier.team or player == game.get_ball_carrier()):
         return 0.0, True
 
     receivingness = player_receiver_ability(game, player)
     score = receivingness - 30.0
-    if helper.in_scoring_endzone(game, player.team, to_square):
-        num_in_range = len(helper.players_in_scoring_endzone(game, player.team, include_own=True, include_opp=False))
+    if in_scoring_endzone(game, player.team, to_square):
+        num_in_range = len(players_in_scoring_endzone(game, player.team, include_own=True, include_opp=False))
         if player.team.state.turn == 8:
             score += 40   # Pretty damned urgent to get to end zone!
         score -= num_in_range * num_in_range * 40  # Don't want too many catchers in the endzone ...
 
-    score += 5.0 * (max(helper.distance_to_scoring_endzone(game, player.team, player.position), player.get_ma()) - max(helper.distance_to_scoring_endzone(game, player.team, to_square), player.get_ma()))
+    score += 5.0 * (max(distance_to_scoring_endzone(game, player.team, player.position), player.get_ma()) - max(distance_to_scoring_endzone(game, player.team, to_square), player.get_ma()))
     # Above score doesn't push players to go closer than their MA from the endzone.
 
-    if helper.distance_to_scoring_endzone(game, player.team, to_square) > player.get_ma() + 2:
+    if distance_to_scoring_endzone(game, player.team, to_square) > player.get_ma() + 2:
         score -= 30.0
     opp_team = game.get_opp_team(player.team)
     opps: List[m.Player] = game.get_adjacent_players(player.position, opp_team, stunned=False, down=False)
     if opps:
         score -= 40.0 + 20.0 * len(opps)
     score -= 10.0 * len(game.get_adjacent_players(to_square, opp_team, stunned=False, down=False))
-    num_in_range = len(helper.players_in_scoring_distance(game, player.team, include_own=True, include_opp=False))
+    num_in_range = len(players_in_scoring_distance(game, player.team, include_own=True, include_opp=False))
     score -= num_in_range * num_in_range * 20.0     # Lower the score if we already have some receivers.
-    if helper.players_in(game, player.team, helper.squares_within(game, to_square, 2), include_opp=False, include_own=True):
+    if players_in(game, player.team, squares_within(game, to_square, 2), include_opp=False, include_own=True):
         score -= 20.0
 
     return score, True
 
 
-def score_move_towards_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_move_towards_ball(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_square: m.Square = game.get_ball_position()
     ball_carrier = game.get_ball_carrier()
     if ball_carrier is not None:
@@ -973,8 +1465,8 @@ def score_move_towards_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.
     # current_distance_to_ball = ball_square.distance(player.position)
 
     # Cancel the penalty for being near the sideline if the ball is on the sideline
-    # if helper.distance_to_sideline(game, ball_square) <= 1:
-    #     if helper.distance_to_sideline(game, to_square): score += 10.0
+    # if distance_to_sideline(game, ball_square) <= 1:
+    #     if distance_to_sideline(game, to_square): score += 10.0
 
     # Increase score if moving closer to the ball
     # score += (current_distance_to_ball - distance_to_ball)*3
@@ -982,7 +1474,7 @@ def score_move_towards_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.
     return score, True
 
 
-def score_move_to_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_move_to_ball(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_square: m.Square = game.get_ball_position()
     ball_carrier = game.get_ball_carrier()
     if (ball_square != to_square) or (ball_carrier is not None):
@@ -1001,7 +1493,7 @@ def score_move_to_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Playe
     score += - 10 * num_tz    # Lower score if lots of tackle zones on ball.
 
     # If there is only 1 or 3 players left to move, lets improve score of trying to pick the ball up
-    players_to_move: List[m.Player] = helper.get_players(game, player.team, include_own=True, include_opp=False, include_used=False, include_stunned=False)
+    players_to_move: List[m.Player] = get_players(game, player.team, include_own=True, include_opp=False, include_used=False, include_stunned=False)
     if len(players_to_move) == 1:
         score += 25
     if len(players_to_move) == 2:
@@ -1013,9 +1505,9 @@ def score_move_to_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Playe
         score += 9
 
     # Cancel the penalty for being near the sideline if the ball is on/near the sideline (it's applied later)
-    if helper.distance_to_sideline(game, ball_square) == 1:
+    if distance_to_sideline(game, ball_square) == 1:
         score -= GrodBot.ADDITIONAL_SCORE_NEAR_SIDELINE
-    if helper.distance_to_sideline(game, ball_square) == 0:
+    if distance_to_sideline(game, ball_square) == 0:
         score -= GrodBot.ADDITIONAL_SCORE_SIDELINE
 
     # Need to increase score if no other player is around to get the ball (to do)
@@ -1023,14 +1515,14 @@ def score_move_to_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Playe
     return score, False
 
 
-def score_move_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_move_ball(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     # ball_square: m.Square = game.get_ball_position()
     ball_carrier = game.get_ball_carrier()
     if (ball_carrier is None) or player != ball_carrier:
         return 0.0, True
 
     score = GrodBot.BASE_SCORE_MOVE_BALL
-    if helper.in_scoring_endzone(game, player.team, to_square):
+    if in_scoring_endzone(game, player.team, to_square):
         if player.team.state.turn == 8:
             score += 115.0  # Make overwhelmingly attractive
         else:
@@ -1042,24 +1534,24 @@ def score_move_ball(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, 
         opps: List[m.Player] = game.get_adjacent_players(to_square, team=game.get_opp_team(player.team), stunned=False)
         if opps:
             score -= (40.0 + 20.0 * len(opps))
-        opps_close_to_destination = helper.players_in(game, player.team, helper.squares_within(game, to_square, 2), include_own=False, include_opp=True, include_stunned=False)
+        opps_close_to_destination = players_in(game, player.team, squares_within(game, to_square, 2), include_own=False, include_opp=True, include_stunned=False)
         if opps_close_to_destination:
             score -= (20.0 + 5.0 * len(opps_close_to_destination))
-        if not helper.blitz_used(game):
+        if not blitz_used(game):
             score -= 30.0  # Lets avoid moving the ball until the Blitz has been used (often helps to free the move).
 
-        dist_player = helper.distance_to_scoring_endzone(game, player.team, player.position)
-        dist_destination = helper.distance_to_scoring_endzone(game, player.team, to_square)
+        dist_player = distance_to_scoring_endzone(game, player.team, player.position)
+        dist_destination = distance_to_scoring_endzone(game, player.team, to_square)
         score += 5.0 * (dist_player - dist_destination)  # Increase score the closer we get to the scoring end zone
 
         # Try to keep the ball central
-        if helper.distance_to_sideline(game, to_square) < 3:
+        if distance_to_sideline(game, to_square) < 3:
             score -= 30
 
     return score, True
 
 
-def score_sweep(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_sweep(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_carrier = game.get_ball_carrier()
     if ball_carrier is not None:
         ball_team = ball_carrier.team
@@ -1067,9 +1559,9 @@ def score_sweep(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_s
         ball_team = None
     if ball_team == player.team:
         return 0.0, True  # Don't sweep unless the other team has the ball
-    if helper.distance_to_defending_endzone(game, player.team, game.get_ball_position()) < 9:
+    if distance_to_defending_endzone(game, player.team, game.get_ball_position()) < 9:
         return 0.0, True  # Don't sweep when the ball is close to the endzone
-    if helper.players_in_scoring_distance(game, player.team, include_own=False, include_opp=True):
+    if players_in_scoring_distance(game, player.team, include_own=False, include_opp=True):
         return 0.0, True  # Don't sweep when there are opponent units in scoring range
 
     score = GrodBot.BASE_SCORE_MOVE_TO_SWEEP
@@ -1079,7 +1571,7 @@ def score_sweep(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_s
 
     # Now to evaluate ideal square for Sweeping:
 
-    x_preferred = int(helper.reverse_x_for_left(game, player.team, (game.state.pitch.width-2) / 4))
+    x_preferred = int(reverse_x_for_left(game, player.team, (game.state.pitch.width-2) / 4))
     y_preferred = int((game.state.pitch.height-2) / 2)
     score -= abs(y_preferred - to_square .y) * 10.0
 
@@ -1097,7 +1589,7 @@ def score_sweep(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_s
     return score, True
 
 
-def score_defensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_defensive_screen(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_square = game.get_ball_position()
     ball_carrier = game.get_ball_carrier()
     if ball_carrier is not None:
@@ -1118,8 +1610,8 @@ def score_defensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
 
     score = GrodBot.BASE_SCORE_DEFENSIVE_SCREEN
 
-    distance_ball_carrier_to_end = helper.distance_to_defending_endzone(game, player.team, ball_square)
-    distance_square_to_end = helper.distance_to_defending_endzone(game, player.team, to_square)
+    distance_ball_carrier_to_end = distance_to_defending_endzone(game, player.team, ball_square)
+    distance_square_to_end = distance_to_defending_endzone(game, player.team, to_square)
 
     if distance_square_to_end + 1.0 < distance_ball_carrier_to_end:
         score += 30.0  # Increase score defending on correct side of field.
@@ -1127,17 +1619,17 @@ def score_defensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     distance_to_ball = ball_square.distance(to_square)
     score += 4.0*max(5.0 - distance_to_ball, 0.0)  # Increase score defending in front of ball carrier
     score += distance_square_to_end/10.0  # Increase score a small amount to screen closer to opponents.
-    distance_to_closest_opponent = helper.distance_to_nearest_player(game, player.team, to_square, include_own=False, include_opp=True, include_stunned=False)
+    distance_to_closest_opponent = distance_to_nearest_player(game, player.team, to_square, include_own=False, include_opp=True, include_stunned=False)
     if distance_to_closest_opponent <= 1.5:
         score -= 30.0
     elif distance_to_closest_opponent <= 2.95:
         score += 10.0
     elif distance_to_closest_opponent > 2.95:
         score += 5.0
-    if helper.distance_to_sideline(game, to_square) == 1:
+    if distance_to_sideline(game, to_square) == 1:
         score -= GrodBot.ADDITIONAL_SCORE_NEAR_SIDELINE  # Cancel the negative score of being 1 from sideline.
 
-    distance_to_closest_friendly_used = helper.distance_to_nearest_player(game, player.team, to_square, include_own=True, include_opp=False, only_used=True)
+    distance_to_closest_friendly_used = distance_to_nearest_player(game, player.team, to_square, include_own=True, include_opp=False, only_used=True)
     if distance_to_closest_friendly_used >= 4:
         score += 2.0
     elif distance_to_closest_friendly_used >= 3:
@@ -1147,7 +1639,7 @@ def score_defensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     else:
         score -= 10.0  # Decrease score if too close to another defender.
 
-    distance_to_closest_friendly_unused = helper.distance_to_nearest_player(game, player.team, to_square, include_own=True, include_opp=False, include_used=True)
+    distance_to_closest_friendly_unused = distance_to_nearest_player(game, player.team, to_square, include_own=True, include_opp=False, include_used=True)
     if distance_to_closest_friendly_unused >= 4:
         score += 3.0
     elif distance_to_closest_friendly_unused >= 3:
@@ -1160,7 +1652,7 @@ def score_defensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     return score, True
 
 
-def score_offensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_offensive_screen(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
 
     # Another subtle one.  Basically if the ball carrier "breaks out", I want to screen him from
     # behind, rather than cage him.  I may even want to do this with an important receiver.
@@ -1179,28 +1671,28 @@ def score_offensive_screen(game: g.Game, heat_map: helper.FfHeatMap, player: m.P
     return score, True
 
 
-def score_caging(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_caging(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
     ball_carrier: m.Player = game.get_ball_carrier()
     if ball_carrier is None or ball_carrier.team != player.team or ball_carrier == player:
         return 0.0, True          # Noone has the ball.  Don't try to cage.
     ball_square: m.Square = game.get_ball_position()
 
     cage_square_groups: List[List[m.Square]] = [
-        helper.caging_squares_north_east(game, ball_square),
-        helper.caging_squares_north_west(game, ball_square),
-        helper.caging_squares_south_east(game, ball_square),
-        helper.caging_squares_south_west(game, ball_square)
+        caging_squares_north_east(game, ball_square),
+        caging_squares_north_west(game, ball_square),
+        caging_squares_south_east(game, ball_square),
+        caging_squares_south_west(game, ball_square)
         ]
 
-    dist_opp_to_ball = helper.distance_to_nearest_player(game, player.team, ball_square, include_own=False, include_opp=True, include_stunned=False)
-    avg_opp_ma = average_ma(game, helper.get_players(game, player.team, include_own=False, include_opp=True, include_stunned=False))
+    dist_opp_to_ball = distance_to_nearest_player(game, player.team, ball_square, include_own=False, include_opp=True, include_stunned=False)
+    avg_opp_ma = average_ma(game, get_players(game, player.team, include_own=False, include_opp=True, include_stunned=False))
 
     for curGroup in cage_square_groups:
-        if to_square in curGroup and not helper.players_in(game, player.team, curGroup, include_opp=False, include_own=True, only_blockable=True):
+        if to_square in curGroup and not players_in(game, player.team, curGroup, include_opp=False, include_own=True, only_blockable=True):
             # Test square is inside the cage corner and no player occupies the corner
             if to_square in curGroup:
                 score = GrodBot.BASE_SCORE_CAGE_BALL
-            dist = helper.distance_to_nearest_player(game, player.team, to_square, include_own=False, include_stunned=False, include_opp=True)
+            dist = distance_to_nearest_player(game, player.team, to_square, include_own=False, include_stunned=False, include_opp=True)
             score += dist_opp_to_ball - dist
             if dist_opp_to_ball > avg_opp_ma:
                 score -= 30.0
@@ -1208,7 +1700,7 @@ def score_caging(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_
                 score -= 30.0
             if to_square.is_adjacent(game.get_ball_position()):
                 score += 5
-            if helper.is_bishop_position_of(game, player, ball_carrier):
+            if is_bishop_position_of(game, player, ball_carrier):
                 score -= 2
             score += heat_map.get_cage_necessity_score(to_square)
             if not ball_carrier.state.used:
@@ -1220,7 +1712,7 @@ def score_caging(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_
     return 0, True
 
 
-def score_mark_opponent(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
+def score_mark_opponent(game: g.Game, heat_map: FfHeatMap, player: m.Player, to_square: m.Square) -> (float, bool):
 
     # Modification - no need to mark prone opponents already marked
     ball_carrier = game.get_ball_carrier()
@@ -1248,7 +1740,7 @@ def score_mark_opponent(game: g.Game, heat_map: helper.FfHeatMap, player: m.Play
             score += 30.0
 
     for opp in all_opponents:
-        if helper.distance_to_scoring_endzone(game, opp.team, to_square) < opp.get_ma() + 2:
+        if distance_to_scoring_endzone(game, opp.team, to_square) < opp.get_ma() + 2:
             score += 10.0  # Mark opponents in scoring range first.
             break         # Only add score once.
 
@@ -1289,12 +1781,12 @@ def score_mark_opponent(game: g.Game, heat_map: helper.FfHeatMap, player: m.Play
         score -= distance_to_ball / 5.0   # Mark opponents closer to ball when possible
 
     if ball_team is not None and ball_team != player.team:
-        distance_to_other_endzone = helper.distance_to_scoring_endzone(game, player.team, to_square)
+        distance_to_other_endzone = distance_to_scoring_endzone(game, player.team, to_square)
         # This way there is a preference for most advanced (distance wise) units.
     return score, True
 
 
-def score_handoff(game: g.Game, heat_map: helper.FfHeatMap, ball_carrier: m.Player, receiver: m.Player, from_square: m.Square) -> float:
+def score_handoff(game: g.Game, heat_map: FfHeatMap, ball_carrier: m.Player, receiver: m.Player, from_square: m.Square) -> float:
     if receiver == ball_carrier:
         return 0.0
 
@@ -1302,18 +1794,18 @@ def score_handoff(game: g.Game, heat_map: helper.FfHeatMap, ball_carrier: m.Play
     score += probability_fail_to_score(probability_catch_fail(game, receiver))
     if not ball_carrier.team.state.reroll_used:
         score += +10.0
-    score -= 5.0 * (helper.distance_to_scoring_endzone(game, ball_carrier.team, receiver.position) - helper.distance_to_scoring_endzone(game, ball_carrier.team, ball_carrier.position))
+    score -= 5.0 * (distance_to_scoring_endzone(game, ball_carrier.team, receiver.position) - distance_to_scoring_endzone(game, ball_carrier.team, ball_carrier.position))
     if receiver.state.used:
         score -= 30.0
-    if (game.num_tackle_zones_in(ball_carrier) > 0 or game.num_tackle_zones_in(receiver) > 0) and not helper.blitz_used(game):
+    if (game.num_tackle_zones_in(ball_carrier) > 0 or game.num_tackle_zones_in(receiver) > 0) and not blitz_used(game):
         score -= 50.0  # Don't try a risky hand-off if we haven't blitzed yet
-    if helper.in_scoring_range(game, receiver) and not helper.in_scoring_range(game, ball_carrier):
+    if in_scoring_range(game, receiver) and not in_scoring_range(game, ball_carrier):
         score += 40.0
     # score += heat_map.get_ball_move_square_safety_score(receiver.position)
     return score
 
 
-def score_pass(game: g.Game, heat_map: helper.FfHeatMap, passer: m.Player, from_square: m.Square, to_square: m.Square) -> float:
+def score_pass(game: g.Game, heat_map: FfHeatMap, passer: m.Player, from_square: m.Square, to_square: m.Square) -> float:
 
     receiver = game.get_player_at(to_square)
 
@@ -1330,17 +1822,17 @@ def score_pass(game: g.Game, heat_map: helper.FfHeatMap, passer: m.Player, from_
     score += probability_fail_to_score(probability_pass_fail(game, passer, from_square, dist))
     if not passer.team.state.reroll_used:
         score += +10.0
-    score = score - 5.0 * (helper.distance_to_scoring_endzone(game, receiver.team, receiver.position) - helper.distance_to_scoring_endzone(game, passer.team, passer.position))
+    score = score - 5.0 * (distance_to_scoring_endzone(game, receiver.team, receiver.position) - distance_to_scoring_endzone(game, passer.team, passer.position))
     if receiver.state.used:
         score -= 30.0
-    if game.num_tackle_zones_in(passer) > 0 or game.num_tackle_zones_in(receiver) > 0 and not helper.blitz_used(game):
+    if game.num_tackle_zones_in(passer) > 0 or game.num_tackle_zones_in(receiver) > 0 and not blitz_used(game):
         score -= 50.0
-    if helper.in_scoring_range(game, receiver) and not helper.in_scoring_range(game, passer):
+    if in_scoring_range(game, receiver) and not in_scoring_range(game, passer):
         score += 40.0
     return score
 
 
-def score_block(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, defender: m.Player) -> float:
+def score_block(game: g.Game, heat_map: FfHeatMap, attacker: m.Player, defender: m.Player) -> float:
     score = GrodBot.BASE_SCORE_BLOCK
     ball_carrier = game.get_ball_carrier()
     ball_square = game.get_ball_position()
@@ -1369,7 +1861,7 @@ def score_block(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, de
             score += -10.0
         if defender.has_skill(t.Skill.BLOCK):
             score += -10.0
-        if helper.attacker_would_surf(game, attacker, defender):
+        if attacker_would_surf(game, attacker, defender):
             score += 32.0
         if attacker.has_skill(t.Skill.LONER):
             score -= 10.0
@@ -1387,11 +1879,11 @@ def score_block(game: g.Game, heat_map: helper.FfHeatMap, attacker: m.Player, de
 def score_push(game: g.Game, from_square: m.Square, to_square: m.Square) -> float:
     score = 0.0
     ball_square = game.get_ball_position()
-    if helper.distance_to_sideline(game, to_square) == 0:
+    if distance_to_sideline(game, to_square) == 0:
         score = score + 10.0    # Push towards sideline
     if ball_square is not None and to_square .is_adjacent(ball_square):
         score = score - 15.0    # Push away from ball
-    if helper.direct_surf_squares(game, from_square, to_square):
+    if direct_surf_squares(game, from_square, to_square):
         score = score + 10.0
     return score
 
@@ -1402,7 +1894,7 @@ def check_follow_up(game: g.Game) -> bool:
     # What I want is to follow up, generally, if the defender is prone and not otherwise.
     active_player: m.Player = game.state.active_player
 
-    block_proc = helper.last_block_proc(game)
+    block_proc = last_block_proc(game)
 
     attacker: m.Player = block_proc.attacker
     defender: m.Player = block_proc.defender
@@ -1432,9 +1924,9 @@ def check_follow_up(game: g.Game) -> bool:
 
     if game.get_ball_carrier == defender:
         return True   # Always follow up if defender has ball
-    if helper.distance_to_sideline(game, follow_up_square) == 0:
+    if distance_to_sideline(game, follow_up_square) == 0:
         return False    # No if moving to sideline
-    if helper.distance_to_sideline(game, defender.position) == 0:
+    if distance_to_sideline(game, defender.position) == 0:
         return True  # Follow up if opponent is on sideline
     if follow_up_square.is_adjacent(game.get_ball_position()):
         return True  # Follow if moving next to ball
@@ -1455,7 +1947,7 @@ def check_follow_up(game: g.Game) -> bool:
 
 
 def check_reroll_block(game: g.Game, team: m.Team, block_results: List[ActionSequence], favor: m.Team) -> bool:
-    block_proc: Optional[p.Block] = helper.last_block_proc(game)
+    block_proc: Optional[p.Block] = last_block_proc(game)
     attacker: m.Player = block_proc.attacker
     defender: m.Player = block_proc.defender
     is_blitz_action = block_proc.blitz
@@ -1489,7 +1981,7 @@ def check_reroll_block(game: g.Game, team: m.Team, block_results: List[ActionSeq
         return False
 
 
-def scoring_urgency_score(game: g.Game, heat_map: helper.FfHeatMap, player: m.Player) -> float:
+def scoring_urgency_score(game: g.Game, heat_map: FfHeatMap, player: m.Player) -> float:
     if player.team.state.turn == 8:
         return 40
     return 0
