@@ -21,13 +21,19 @@ html {
 		font-family: 'Varela Round', sans-serif;
 		background: #F2F2F2;
 		font-size: 1.3em;
-		padding-top: 50px;
-        min-width:904px;
+		min-width:904px;
         margin: auto !important;  /* Firefox will set width as auto */
         /*width:904px;*/            /* As IE6 ignores !important it will set width as 904px; */
 	}
 }
 
+.left {
+    float: left;
+}
+
+.right {
+    float: right;
+}
 
 .modal-header .close {
     margin-top: -18px;
@@ -35,6 +41,15 @@ html {
 
 .btn {
     border-radius: 0px;
+}
+
+.btn-team {
+    width: 180px;
+
+    .glyphicon {
+        float:left;
+    }
+
 }
 
 .select {
@@ -81,12 +96,92 @@ a, a:focus, a:hover {
 
 }
 
+.nav-bar-trans {
+    background-color: rgba(0,0,0,0);
+    min-height: 28px;
+    border-width: 0 0 0px;
+    position: absolute;
+}
+
+.nav > li > a {
+    position: relative;
+    display: block;
+    padding: 0px 10px;
+
+    &:hover {
+        color: rgb(0, 0, 0);
+    }
+
+}
+
+.navbar-nav > li > a {
+    padding-top: 5px;
+    padding-bottom: 0px;
+}
+
+.navbar-collapse {
+    padding-right: 5px;
+    padding-left: 5px;
+}
+
 .nav-link {
     cursor: pointer;
 }
 
 .dropdown-toggle {
     cursor: pointer;
+}
+
+.btn {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    height: 26px;
+    font-size: small;
+    line-height: 0.84;
+    border-radius: 2px;
+}
+
+*.btn:active, .btn:focus, .btn:active:focus, .btn.active:focus {
+    outline: none !important;
+}
+
+.die {
+    background-color: white;
+    padding: 0px;
+    margin: 2px 0px 0px 2px;
+
+    img {
+        width: 24px;
+        height: 24px;
+    }
+
+}
+
+.btn-danger {
+    float: left;
+    margin-right: 2px;
+
+    &.btn-special {
+        background: rgb(255,255,255);
+        color: red;
+        font-weight: bolder;
+        &.special-active {
+            background: rgb(255,220,220);
+        }
+    }
+}
+
+.btn-primary {
+    float: right;
+    margin-left: 2px;
+    &.btn-special {
+        background: rgb(255,255,255);
+        color: #235A9F;
+        font-weight: bolder;
+        &.special-active {
+            background: rgb(220,220,255);
+        }
+    }
 }
 
 .rerolls {
@@ -185,8 +280,8 @@ a, a:focus, a:hover {
 	    padding-bottom: 4px;
 
         .scoreboard-content {
-            min-width: 900px;
-            max-width: 900px;
+            min-width: 1200px;
+            max-width: 1200px;
             margin: auto;
             padding-bottom: 0px;
 
@@ -230,25 +325,31 @@ a, a:focus, a:hover {
             height: 100%;
         }
 
-        .turnmarker {
-            height: 4px;
-            background-color: #ccc;
+        .turnmarkers {
+
+            min-width:1200px;
+
+
+            .turnmarker {
+                width: 50%;
+                height: 4px;
+                padding: 0px;
+                margin: 0px;
+                background-color: #ccc;
+            }
+
+            .turnmarker-home-turn {
+                width: 100%;
+                background-color: rgba(0,0,255,0.66);
+                float: left;
+            }
+
+            .turnmarker-away-turn {
+                width: 100%;
+                background-color: rgba(255,0,0,0.66);
+                float: right;
+            }
         }
-
-        .turnmarker-home {
-
-        }
-
-        .turnmarker-away {
-	    }
-
-	    .turnmarker-home-turn {
-            background-color: rgba(0,0,255,0.66);
-        }
-
-        .turnmarker-away-turn {
-            background-color: rgba(255,0,0,0.66);
-	    }
 
         .proc {
             background-color: #f5f5f5;
@@ -264,9 +365,166 @@ a, a:focus, a:hover {
 
 }
 
+.navbar-collapse {
+    padding-right: 5px;
+    padding-left: 0px;
+}
+
 .gamecontent {
 
-    height: 454px;
+    margin: auto;
+    width: 1200px;
+
+    .player-info {
+        height: 455px;
+        width: 148px;
+
+        &.away-box {
+            float:left;
+        }
+
+        &.home-box {
+            float:right;
+        }
+
+        .red {
+            background-color: rgba(255,0,0,0.1);
+        }
+
+        .blue {
+            background-color: rgba(0,0,255,0.1);
+        }
+
+        .team-box {
+            background-color: white;
+            height: 100%;
+            min-height: 64px;
+            border: 1px solid #ccc;
+        }
+
+        .home-info {
+            float: right;
+            width: 100%;
+        }
+
+        .away-info {
+            float: left;
+            width: 100%;
+        }
+
+        .icon-box {
+            float:left;
+            width: 36px;
+            padding: 4px;
+            margin-left: 4px;
+            margin-bottom: 4px;
+            border-radius: 2px;
+        }
+
+        .stats-box {
+            float:left;
+            font-size: 1.2em;
+            width: 100%;
+
+            .name-box {
+                padding: 2px;
+                font-weight: normal;
+                font-size: 0.9em;
+                color: black;
+                margin: 4px;
+                margin-bottom: 4px;
+                border-radius: 2px;
+
+                .small {
+                    font-size: 0.8em;
+                }
+
+                .tiny {
+                    font-size: 0.7em;
+                }
+
+            }
+
+            .role-box {
+                font-size: 0.8em;
+                color: rgba(0,0,0,0.5);
+            }
+
+            .attribute {
+                float: left;
+                margin-left: 4px;
+                padding-top: 1px;
+
+                .value {
+                    font-weight: normal;
+                    color: black;
+                    font-size: 0.785em;
+                    border-radius: 2px;
+                    width: 21.5px;
+                    height: 22px;
+                    line-height: 24px;
+                }
+
+                .skill {
+                    font-weight: normal;
+                    color: black;
+                    padding: 2px;
+                    padding-left: 4px;
+                    margin-bottom: 1px;
+                    margin-right: 8px;
+                    font-size: 0.785em;
+
+                    &.role-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.5);
+                        background-color: rgba(255, 0, 0, 0.1);
+                    }
+
+                    &.role-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.25);
+                        background-color: rgba(255, 0, 0, 0.1);
+                    }
+
+                    &.role-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.5);
+                        background-color: rgba(0, 0, 255, 0.1);
+                    }
+
+                    &.role-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.25);
+                        background-color: rgba(0, 0, 255, 0.1);
+                    }
+
+
+                    &.extra-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.0);
+                        background-color: rgba(255, 0, 0, 0.25);
+                    }
+
+                    &.extra-skill-red {
+                        border-left: 4px solid rgba(255, 0, 0, 0.0);
+                        background-color: rgba(255, 0, 0, 0.25);
+                    }
+
+                    &.extra-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.0);
+                        background-color: rgba(0, 0, 255, 0.25);
+                    }
+
+                    &.extra-skill-blue {
+                        border-left: 4px solid rgba(0, 0, 255, 0.0);
+                        background-color: rgba(0, 0, 255, 0.25);
+                    }
+
+
+                }
+            }
+
+            .skill-box {
+                width: 100%;
+            }
+        }
+
+    }
 
     .hint {
         position: relative;
@@ -274,6 +532,19 @@ a, a:focus, a:hover {
         width: 100%;
         height: 0px;
         line-height: 21pt;
+    }
+
+    .clock {
+        position: relative;
+        color: rgb(100,100,100);
+        width: 100%;
+        height: 0px;
+        line-height: 22pt;
+        font-size: 15px;
+    }
+
+    .buzzer {
+        color:red;
     }
 
     .actions {
@@ -290,6 +561,13 @@ a, a:focus, a:hover {
         width: 100%;
         margin: 0 auto;
         max-width: 900px;
+
+        .row-divider {
+            position: absolute;
+            width: 904px;
+            margin-left: -2px;
+        }
+
     }
 
     .square {
@@ -312,6 +590,11 @@ a, a:focus, a:hover {
             width: 191px;
             background-color: rgba(0,0,0,0.33);
             border-radius: 16px;
+
+            &.disabled {
+                opacity: 0.5;
+            }
+
             .action-dot {
                 height: 28px;
                 width: 28px;
@@ -326,11 +609,26 @@ a, a:focus, a:hover {
                     filter: grayscale(100%);
                 }
                 &.active:hover {
-                    border: 1px solid black;
                     background-color: rgba(100, 100, 100, 1);
+                    border: 1px solid rgba(0,0,0,1);
                     cursor: pointer;
+                    &.disabled {
+                        cursor: default;
+                    }
+                }
+                &.right {
+                    float:right;
+                    margin-right: 2px;
+                    margin-top: 1px;
                 }
             }
+            .action-text {
+                color: rgb(220, 220, 220);
+                margin: 10px;
+                margin-top: 6px;
+                line-height: 30px;
+            }
+
         }
     }
 
@@ -487,114 +785,12 @@ a, a:focus, a:hover {
         width: 902px;
         margin: auto;
 
-        .player-info {
-            min-height: 64px;
-            margin-bottom: 4px;
-
-            .red {
-                background-color: rgba(255,0,0,0.1);
-            }
-
-            .blue {
-                background-color: rgba(0,0,255,0.1);
-            }
-
-            .team-box {
-                background-color: white;
-                width: 50%;
-                padding: 4px;
-                height: 100%;
-                min-height: 64px;
-                border: 1px solid #ccc;
-            }
-
-            .home {
-                float: right;
-            }
-
-            .away {
-                float: left;
-            }
-
-            .icon-box {
-                float:left;
-                width: 58px;
-                padding: 4px;
-                border-radius: .25em;
-                border-top-left-radius: 0.25em;
-                border-top-right-radius: 0.25em;
-                border-bottom-right-radius: 0.25em;
-                border-bottom-left-radius: 0.25em;
-            }
-
-            .stats-box {
-                float:left;
-                margin-left:4px;
-                font-size: 1.1em;
-                width: 375px;
-
-                .name-box {
-                    padding: 2px;
-                    font-weight: normal;
-                    font-size: 1.0em;
-                    color: black;
-                }
-
-                .attribute {
-                    float:left;
-                    margin-right: 4px;
-                    margin-top: 4px;
-
-                    .value {
-                        width: 16px;
-                        font-weight: normal;
-                        color: black;
-                    }
-
-                    .skill {
-                        margin-right: 2px;
-                        font-weight: normal;
-                        color: black;
-                        background-color: rgba(0, 255, 0, 0.4);
-                    }
-                }
-            }
-
-        }
-
         .action-bar {
             border-color: #080808;
             min-height: 34px;
             color: white;
             margin-top: 2px;
             margin-bottom: 2px;
-
-            .btn {
-                margin-top: 2px;
-                margin-bottom: 2px;
-            }
-
-            .die {
-                background-color: white;
-                padding: 0px;
-                margin: 2px 0px 0px 2px;
-
-                img {
-                    width: 28px;
-                    height: 28px;
-                }
-
-            }
-
-            .btn-danger {
-                float: left;
-                margin-right: 2px;
-            }
-
-            .btn-primary {
-                float: right;
-                margin-left: 2px;
-            }
 
         }
 
@@ -604,7 +800,7 @@ a, a:focus, a:hover {
 
         width: 904px;
         margin: auto;
-        height:100%;
+        height: 454px;
         box-shadow: 0 0 0px rgba(0,0,0,0.6);
         -moz-box-shadow: 0 0 0px rgba(0,0,0,0.6);
         -webkit-box-shadow: 0 0 0px rgba(0,0,0,0.6);
@@ -659,6 +855,13 @@ a, a:focus, a:hover {
 
         .playericon {
             line-height: 28px;
+            position: relative;
+        }
+
+        .bigguy {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -20%);
             position: absolute;
         }
 
@@ -725,10 +928,23 @@ a, a:focus, a:hover {
         .ballicon {
             position: absolute;
             line-height: 30px;
+            top: 4px;
+            left: -4px;
+            width: 90%;
+            object-fit: scale-down;
+        }
+
+        .block_roll_icon {
+            position: absolute;
+            line-height: 30px;
+            top: 0px;
+            left: 2px;
         }
 
         .stateicon {
             position: absolute;
+            top: 1px;
+            left: 1px;
         }
     }
 
@@ -765,6 +981,9 @@ a, a:focus, a:hover {
     -moz-box-shadow: 0 0 1px rgba(0,0,0,0.6);
     -webkit-box-shadow: 0 0 1px rgba(0,0,0,0.6);
     -o-box-shadow: 0 0 1px rgba(0,0,0,0.6);
+    position: absolute;
+    width: 904px;
+    margin-left: -2px;
 
     .report {
         margin: 4px;
@@ -813,6 +1032,7 @@ a, a:focus, a:hover {
                 font-size: 16px;
                 line-height: 18px;
                 text-align: center;
+
             }
 
             .die.BB-attacker_down {

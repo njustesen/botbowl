@@ -11,7 +11,7 @@ import ffai
 
 
 def parse_enum(enum_class, name):
-    enum_name = name.upper().replace(" ", "_").replace("-", "_")
+    enum_name = name.upper().replace(" ", "_").replace("'", "").replace("é", "e").replace("-", "_")
     if enum_name not in enum_class.__members__:
         raise Exception("Uknown enum name " + enum_name + " (orig: " + name + ")")
     return enum_class[enum_name]
@@ -25,9 +25,9 @@ def get_line(start, end):
     >>> points2 = get_line((3, 4), (0, 0))
     >>> assert(set(points1) == set(points2))
     >>> print points1
-    [(0, 0), (1, 1), (1, 2), (2, 3), (3, 4)]
+    [(0, 0), (1, 1), (1, 3), (3, 3), (3, 4)]
     >>> print points2
-    [(3, 4), (2, 3), (1, 2), (1, 1), (0, 0)]
+    [(3, 4), (3, 3), (1, 3), (1, 1), (0, 0)]
     """
     # Setup initial conditions
     x1, y1 = start
@@ -99,3 +99,4 @@ def get_data_path(rel_path):
     root_dir = ffai.__file__.replace("__init__.py", "")
     filename = os.path.join(root_dir, "data/" + rel_path)
     return os.path.abspath(os.path.realpath(filename))
+

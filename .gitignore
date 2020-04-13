@@ -12,6 +12,11 @@ __pycache__/
 # IDEA
 .idea/
 .idea/*
+.vscode/
+.vscode/*
+
+# Node
+package-lock.json
 
 # Distribution / packaging
 .Python

@@ -1,0 +1,25 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+.badge {
+  padding: 1px 9px 2px;
+  font-size: 12.025px;
+  font-weight: bold;
+  white-space: nowrap;
+  color: #ffffff;
+  background-color: #999999;
+  -webkit-border-radius: 9px;
+  -moz-border-radius: 9px;
+  border-radius: 9px;
+}
+.review {background-color: #159957;} /* full Green */
+.review:hover {background-color: #117A45;}
+.robotics {background-color: #157878;} /* mix Blue-Green */
+.robotics:hover {background-color: #116060;}
+.games {background-color: #155799;} /* full Blue */
+.games:hover {background-color: #11457A;}
+.all {background-color: #dce6f0; color: #606c71;} /* Gray */
+.all:hover {background-color: #B0B8C0; color: #606c71;}
+.page-header { padding: 2rem 6rem; }

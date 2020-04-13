@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='ffai',
-      version="0.0.1",
+      version="0.0.9",
       include_package_data=True,
       install_requires=[
           'numpy',
@@ -9,7 +9,13 @@ setup(name='ffai',
           'Flask',
           'gym',
           'Jinja2',
-          'untangle'
+          'python-interface',
+          'stopit',
+          'requests',
+          'pytest',
+          'torch',
+          'torchvision',
+          'matplotlib'
       ],
       packages=find_packages()
 )

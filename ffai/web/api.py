@@ -9,20 +9,20 @@ This module contains functions to communicate with a game host to manage games.
 from ffai.web.host import *
 from ffai.core.game import *
 from ffai.core.load import *
-from ffai.ai.bots import *
+from ffai.ai.registry import list_bots
 
-# Create a game host
-host = Host()
+# Create a game in-memory host
+host = InMemoryHost()
 
 
-def new_game(away_team_id, home_team_id, away_agent=None, home_agent=None, config_name="ff-11.json"):
+def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, config_name="web.json", board_size=11):
     assert away_agent is not None
     assert home_agent is not None
-    config = get_config(config_name)
-    config.fast_mode = False
-    ruleset = get_rule_set(config.ruleset, all_rules=False)
-    home = get_team_by_id(home_team_id, ruleset)
-    away = get_team_by_id(away_team_id, ruleset)
+    config = load_config(config_name)
+    # config.competition_mode = True
+    ruleset = load_rule_set(config.ruleset, all_rules=False)
+    home = load_team_by_name(home_team_name, ruleset, board_size=board_size)
+    away = load_team_by_name(away_team_name, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
     game = Game(game_id, home, away, home_agent, away_agent, config)
     game.init()
@@ -44,13 +44,24 @@ def save_game_exists(name):
     return False
 
 
-def save_game(game_id, name):
+def save_game(game_id, name, team_id):
     name = name.replace("/", "").replace(".", "").lower()
-    host.save_game(game_id, name)
+    host.save_game(game_id, name, team_id)
 
 
 def get_game(game_id):
-    return host.get_game(game_id)
+    game = host.get_game(game_id)
+    if game is not None and game.actor is not None and game.actor.human:
+        game.refresh()
+    return game
+
+
+def get_replay(replay_id):
+    return Replay(replay_id=replay_id, load=True)
+
+
+def get_replay_ids():
+    return host.get_replay_ids()
 
 
 def load_game(name):
@@ -65,6 +76,10 @@ def get_saved_games():
     return host.get_saved_games()
 
 
-def get_teams(ruleset):
-    return get_all_teams(ruleset)
+def get_teams(ruleset, board_size=11):
+    return load_all_teams(ruleset, board_size=board_size)
 
+
+def get_bots():
+    bots = list_bots()
+    return bots

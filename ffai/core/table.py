@@ -55,6 +55,13 @@ class RollType(Enum):
     STAND_UP_ROLL = 21
     KO_READY_ROLL = 22
     SWELTERING_HEAT_ROLL = 23
+    BONE_HEAD_ROLL = 24
+    REALLY_STUPID_ROLL = 25
+    WILD_ANIMAL_ROLL = 26
+    LONER_ROLL = 27
+    REGENERATION_ROLL = 28
+    TAKE_ROOT_ROLL = 29
+    SHADOWING_ROLL = 30
 
 
 class OutcomeType(Enum):
@@ -99,7 +106,7 @@ class OutcomeType(Enum):
     KNOCKED_OUT = 43
     BADLY_HURT = 44
     INTERCEPTION = 46
-    BALL_CAUGhT = 47
+    BALL_CAUGHT = 47
     BALL_DROPPED = 48
     FAILED_DODGE = 49
     SUCCESSFUL_DODGE = 50
@@ -132,7 +139,7 @@ class OutcomeType(Enum):
     ACCURATE_PASS = 80
     INACCURATE_PASS = 81
     FUMBLE = 82
-    CATCH_FAILED = 83
+    FAILED_CATCH = 83
     HOME_RECEIVE = 84
     AWAY_RECEIVE = 85
     TAILS_WON = 86
@@ -158,8 +165,8 @@ class OutcomeType(Enum):
     PLAYER_NOT_READY = 107
     CATCH = 108
     SKILL_USED = 109
-    PLAYER_STAND_UP_SUCCESS = 110
-    PLAYER_STAND_UP_FAILURE = 111
+    STAND_UP = 110
+    FAILED_STAND_UP = 111
     BALL_OUT_OF_BOUNDS = 112
     FOLLOW_UP = 113
     FOUL = 114
@@ -168,7 +175,7 @@ class OutcomeType(Enum):
     DEAD = 117
     REROLL_USED = 118
     BLOCK_ROLL = 119
-    INTERCEPTION_FAILED = 120
+    FAILED_INTERCEPTION = 120
     TURN_ADDED = 121
     TURN_SKIPPED = 122
     BALL_BOUNCED = 123
@@ -184,6 +191,26 @@ class OutcomeType(Enum):
     END_OF_GAME_DRAW = 133
     PLAYER_HEATED = 134
     PLAYER_NOT_HEATED = 135
+    END_OF_GAME_DISQUALIFICATION = 136
+    FAILED_BONE_HEAD = 137
+    SUCCESSFUL_BONE_HEAD = 138
+    FAILED_REALLY_STUPID = 139
+    SUCCESSFUL_REALLY_STUPID = 140
+    FAILED_WILD_ANIMAL = 141
+    SUCCESSFUL_WILD_ANIMAL = 142
+    SUCCESSFUL_LONER = 143
+    FAILED_LONER = 144
+    SUCCESSFUL_PRO = 145
+    FAILED_PRO = 146
+    FAILED_REGENERATION = 147
+    SUCCESSFUL_REGENERATION = 148
+    SUCCESSFUL_LEAP = 149
+    FAILED_LEAP = 150
+    SUCCESSFUL_TAKE_ROOT = 151
+    FAILED_TAKE_ROOT = 152
+    JUMP_UP = 153
+    FAILED_JUMP_UP = 154
+    DECAYING = 155
 
 
 class PlayerActionType(Enum):
@@ -212,7 +239,7 @@ class PhysicalState(Enum):
 class CasualtyEffect(Enum):
     NONE = 1
     MNG = 2
-    NI = 3
+    NIGGLING = 3
     MA = 4
     AV = 5
     AG = 6
@@ -286,15 +313,15 @@ class ActionType(Enum):
     USE_REROLL = 24
     END_TURN = 25
     USE_APOTHECARY = 27
-    #USE_JUGGERNAUT = 29
-    #USE_WRESTLE = 30
-    INTERCEPTION = 34
+    USE_SKILL = 28
+    DONT_USE_SKILL = 29
     CONTINUE = 35
     SELECT_PLAYER = 37
     SELECT_NONE = 38
     DONT_USE_APOTHECARY = 40
-    SELECT_ROLL = 41
     DONT_USE_REROLL = 42
+    SELECT_FIRST_ROLL = 41
+    SELECT_SECOND_ROLL = 42
     STAND_UP = 43
     PUSH = 44
     SELECT_ATTACKER_DOWN = 46
@@ -307,6 +334,8 @@ class ActionType(Enum):
     SETUP_FORMATION_ZONE = 53
     SETUP_FORMATION_SPREAD = 54
     FOLLOW_UP = 55
+    LEAP = 56
+    STAB = 57
 
 
 class WeatherType(Enum):
@@ -364,8 +393,6 @@ class Skill(Enum):
     WILD_ANIMAL = 35
     RIGHT_STUFF = 36
     ALWAYS_HUNGRY = 37
-    REALLY_STUPID = 36
-    REGENERATION = 37
     THROW_TEAM_MATE = 38
     BONE_HEAD = 39
     DUMP_OFF = 40
@@ -398,6 +425,15 @@ class Skill(Enum):
     STRIP_BALL = 67
     GRAB = 68
     STAKES = 69
+    ANIMOSITY = 70
+    PILING_ON = 71
+    REALLY_STUPID = 72
+    REGENERATION = 73
+    MONSTROUS_MOUTH = 74
+    SWOOP = 75
+    FAN_FAVOURITE = 76
+    SWIFT_REACTION = 77
+    PRO = 78
 
 
 class PassDistance(Enum):
@@ -445,8 +481,8 @@ class Rules:
         CasualtyType.FRACTURED_LEG: CasualtyEffect.MNG,
         CasualtyType.SMASHED_HAND: CasualtyEffect.MNG,
         CasualtyType.PINCHED_NERVE: CasualtyEffect.MNG,
-        CasualtyType.DAMAGED_BACK: CasualtyEffect.NI,
-        CasualtyType.SMASHED_KNEE: CasualtyEffect.NI,
+        CasualtyType.DAMAGED_BACK: CasualtyEffect.NIGGLING,
+        CasualtyType.SMASHED_KNEE: CasualtyEffect.NIGGLING,
         CasualtyType.SMASHED_HIP: CasualtyEffect.MA,
         CasualtyType.SMASHED_ANKLE: CasualtyEffect.MA,
         CasualtyType.SERIOUS_CONCUSSION: CasualtyEffect.AV,
@@ -455,3 +491,9 @@ class Rules:
         CasualtyType.SMASHED_COLLAR_BONE: CasualtyEffect.ST,
         CasualtyType.DEAD: CasualtyEffect.DEAD
     }
+
+    #                0, 1, 3, 3, 4, 5, 6, 7, 8, 9, 10
+    agility_table = [6, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1]
+
+    miss_next_game = [CasualtyEffect.MNG, CasualtyEffect.AG, CasualtyEffect.AV, CasualtyEffect.MA, CasualtyEffect.ST,
+                      CasualtyEffect.NIGGLING]

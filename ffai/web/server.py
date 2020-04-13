@@ -10,7 +10,9 @@ from flask import Flask, request, render_template
 from ffai.web import api
 from ffai.core.load import *
 import json
-
+import random
+from ffai.ai.registry import make_bot
+import traceback
 
 app = Flask(__name__)
 
@@ -23,7 +25,21 @@ def home():
 @app.route('/game/create', methods=['PUT'])
 def create():
     data = json.loads(request.data)
-    game = api.new_game(data['game']['home_team_id'], data['game']['away_team_id'])
+    bot_list = api.get_bots()
+    # make_bot or Agent depending on choice... (unknown name => human)
+    homePlayer = data['game']['home_player']
+    if homePlayer in bot_list:
+        homeAgent = make_bot(homePlayer)
+    else:
+        homeAgent = Agent("Player 1", human=True)
+
+    awayPlayer = data['game']['away_player']
+    if awayPlayer in bot_list:
+        awayAgent = make_bot(awayPlayer)
+    else:
+        awayAgent = Agent("Player 1", human=True)
+
+    game = api.new_game(data['game']['home_team_name'], data['game']['away_team_name'], homeAgent, awayAgent)
     return json.dumps(game.to_json())
 
 
@@ -31,8 +47,11 @@ def create():
 def save():
     game_id = json.loads(request.data)['game_id']
     name = json.loads(request.data)['name']
+    # todo: team_id needed?
+    team_id = ""  # json.loads(request.data)['team_id']
+
     if len(name) > 2 and len(name) < 40 and not api.save_game_exists(name):
-        api.save_game(game_id, name)
+        api.save_game(game_id, name, team_id)
         return json.dumps("Game was successfully saved")
     else:
         raise Exception("Cannot save this game")
@@ -50,9 +69,18 @@ def get_all_games():
     })
 
 
+@app.route('/replays/', methods=['GET'])
+def get_all_replays():
+    replays = api.get_replay_ids()
+    return json.dumps({
+        'replays': replays
+    })
+
 @app.route('/teams/', methods=['GET'])
-def get_all_teams():
-    teams = api.get_teams()
+@app.route('/teams/<ruleset_name>', methods=['GET'])
+def get_all_teams(ruleset_name = 'BB2016'):
+    ruleset = load_rule_set(ruleset_name)
+    teams = api.get_teams(ruleset)
     team_list = []
     for team in teams:
         team_list.append(team.to_json())
@@ -64,15 +92,15 @@ def step(game_id):
     try:
         action = json.loads(request.data)['action']
         action_type = parse_enum(ActionType, action['action_type'])
-        pos = Square(action['pos']['x'], action['pos']['y']) if 'pos' in action and action['pos'] is not None else None
+        position = Square(action['position']['x'], action['position']['y']) if 'position' in action and action['position'] is not None else None
         player_id = action['player_id'] if 'player_id' in action else None
-        idx = action['idx'] if 'idx' in action else -1
         game = api.get_game(game_id)
         player = game.get_player(player_id) if player_id is not None else None
-        action = Action(action_type, pos=pos, player=player, idx=idx)
+        action = Action(action_type, position=position, player=player)
         game = api.step(game_id, action)
     except Exception as e:
         print(e)
+        traceback.print_exc()
         game = api.get_game(game_id)
     return json.dumps(game.to_json())
 
@@ -82,13 +110,28 @@ def get_game(game_id):
     return json.dumps(api.get_game(game_id).to_json())
 
 
+@app.route('/replays/<replay_id>', methods=['GET'])
+def get_replay(replay_id):
+    return json.dumps(api.get_replay(replay_id).to_json())
+
+
 @app.route('/game/load/<name>', methods=['GET'])
 def load_game(name):
-    return json.dumps(api.load_game(name).to_json())
+    save = api.load_game(name)
+
+    # Reset seed
+    seed = random.randint(0, 2**32-1)
+    save.game.set_seed(seed)
+
+    return json.dumps(save.to_json())
+
+@app.route('/bots/', methods=['GET'])
+def get_bots():
+    return json.dumps(api.get_bots())
 
 
-def start_server(debug=False, use_reloader=False):
-
+def start_server(debug=False, use_reloader=False, port=5000, host="0.0.0.0"):
+    
     # Change jinja notation to work with angularjs
     jinja_options = app.jinja_options.copy()
     jinja_options.update(dict(
@@ -102,4 +145,4 @@ def start_server(debug=False, use_reloader=False):
     app.jinja_options = jinja_options
 
     app.config['TEMPLATES_AUTO_RELOAD']=True
-    app.run(debug=debug, use_reloader=use_reloader)
+    app.run(host=host, debug=debug, use_reloader=use_reloader, port=port)

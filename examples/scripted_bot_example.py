@@ -1,8 +1,9 @@
-from ffai.web.api import *
-from ffai.ai.bots import ProcBot
-import ffai.ai.registry
-import time
+#!/usr/bin/env python3
 
+import ffai
+from ffai import Action, ActionType, Square, BBDieResult, Skill, PassDistance, Tile, Rules, Formation, ProcBot
+import ffai.ai.pathfinding as pf
+import time
 
 class MyScriptedBot(ProcBot):
 
@@ -10,6 +11,49 @@ class MyScriptedBot(ProcBot):
         super().__init__(name)
         self.my_team = None
         self.opp_team = None
+        self.actions = []
+        self.last_turn = 0
+        self.last_half = 0
+
+        self.off_formation = [
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "m", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "x", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "S"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "x"],
+            ["-", "-", "-", "-", "-", "s", "-", "-", "-", "0", "-", "-", "S"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "x"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "S"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "x", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "m", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
+        ]
+
+        self.def_formation = [
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "x", "-", "b", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "x", "-", "S", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "0"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "0"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "0"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "x", "-", "S", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "x", "-", "b", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"],
+            ["-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]
+        ]
+
+        self.off_formation = Formation("Wedge offense", self.off_formation)
+        self.def_formation = Formation("Zone defense", self.def_formation)
+        self.setup_actions = []
 
     def new_game(self, game, team):
         """
@@ -17,12 +61,8 @@ class MyScriptedBot(ProcBot):
         """
         self.my_team = team
         self.opp_team = game.get_opp_team(team)
-
-    def start_game(self, game):
-        """
-        Just start the game.
-        """
-        return Action(ActionType.START_GAME)
+        self.last_turn = 0
+        self.last_half = 0
 
     def coin_toss_flip(self, game):
         """
@@ -40,16 +80,52 @@ class MyScriptedBot(ProcBot):
 
     def setup(self, game):
         """
-        Move players from the reserves to the pitch
+        Use either a Wedge offensive formation or zone defensive formation.
         """
-        i = len(game.get_players_on_pitch(self.my_team))
-        reserves = game.get_reserves(self.my_team)
-        if i == 11 or len(reserves) == 0:
-            return Action(ActionType.END_SETUP)
-        player = reserves[0]
-        y = 3
-        x = 13 if game.is_team_side(Square(13, 3), self.my_team) else 14
-        return Action(ActionType.PLACE_PLAYER, player=player, pos=Square(x, y + i))
+        # Update teams
+        self.my_team = game.get_team_by_id(self.my_team.team_id)
+        self.opp_team = game.get_opp_team(self.my_team)
+
+        if self.setup_actions:
+            action = self.setup_actions.pop(0)
+            return action
+        else:
+            if game.get_receiving_team() == self.my_team:
+                self.setup_actions = self.off_formation.actions(game, self.my_team)
+                self.setup_actions.append(Action(ActionType.END_SETUP))
+            else:
+                self.setup_actions = self.def_formation.actions(game, self.my_team)
+                self.setup_actions.append(Action(ActionType.END_SETUP))
+
+    def reroll(self, game):
+        """
+        Select between USE_REROLL and DONT_USE_REROLL
+        """
+        reroll_proc = game.get_procedure()
+        context = reroll_proc.context
+        if type(context) == ffai.Dodge:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.Pickup:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.PassAction:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.Catch:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.GFI:
+            return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.Block:
+            attacker = context.attacker
+            attackers_down = 0
+            for die in context.roll.dice:
+                if die.get_value() == BBDieResult.ATTACKER_DOWN:
+                    attackers_down += 1
+                elif die.get_value() == BBDieResult.BOTH_DOWN and not attacker.has_skill(Skill.BLOCK) and not attacker.has_skill(Skill.WRESTLE):
+                    attackers_down += 1
+            if attackers_down > 0 and context.favor != self.my_team:
+                return Action(ActionType.USE_REROLL)
+            if attackers_down == len(context.roll.dice) and context.favor != self.opp_team:
+                return Action(ActionType.USE_REROLL)
+            return Action(ActionType.DONT_USE_REROLL)
 
     def place_ball(self, game):
         """
@@ -58,8 +134,8 @@ class MyScriptedBot(ProcBot):
         left_center = Square(7, 8)
         right_center = Square(20, 8)
         if game.is_team_side(left_center, self.opp_team):
-            return Action(ActionType.PLACE_BALL, pos=left_center)
-        return Action(ActionType.PLACE_BALL, pos=right_center)
+            return Action(ActionType.PLACE_BALL, position=left_center)
+        return Action(ActionType.PLACE_BALL, position=right_center)
 
     def high_kick(self, game):
         """
@@ -69,148 +145,446 @@ class MyScriptedBot(ProcBot):
         if game.is_team_side(game.get_ball_position(), self.my_team) and \
                 game.get_player_at(game.get_ball_position()) is None:
             for player in game.get_players_on_pitch(self.my_team, up=True):
-                if Skill.BLOCK in player.skills:
-                    return Action(ActionType.PLACE_PLAYER, player=player, pos=ball_pos)
+                if Skill.BLOCK in player.get_skills():
+                    return Action(ActionType.SELECT_PLAYER, player=player, position=ball_pos)
         return Action(ActionType.SELECT_NONE)
 
     def touchback(self, game):
         """
         Select player to give the ball to.
         """
+        p = None
         for player in game.get_players_on_pitch(self.my_team, up=True):
-            if Skill.BLOCK in player.skills:
+            if Skill.BLOCK in player.get_skills():
                 return Action(ActionType.SELECT_PLAYER, player=player)
-        return Action(ActionType.SELECT_NONE)
+            p = player
+        return Action(ActionType.SELECT_PLAYER, player=p)
 
     def turn(self, game):
         """
         Start a new player action.
         """
-        # Start a new player turn
-        players_available = set()
-        for action_choice in game.state.available_actions:
-            for player in action_choice.players:
-                players_available.add(player)
+        # Update teams
+        self.my_team = game.get_team_by_id(self.my_team.team_id)
+        self.opp_team = game.get_opp_team(self.my_team)
 
-        # Loop available players
-        for player in players_available:
+        # Reset actions if new turn
+        turn = game.get_agent_team(self).state.turn
+        half = game.state.half
+        if half > self.last_half or turn > self.last_turn:
+            self.actions.clear()
+            self.last_turn = turn
+            self.last_half = half
+            self.actions = []
+            #print(f"Half: {half}")
+            #print(f"Turn: {turn}")
 
-            # Start blitz action
-            if game.is_blitz_available():
-                return Action(ActionType.START_BLITZ, player=player)
+        # End turn if only action left
+        if len(game.state.available_actions) == 1:
+            if game.state.available_actions[0].action_type == ActionType.END_TURN:
+                self.actions = [Action(ActionType.END_TURN)]
 
-            # Start block action
-            if not game.is_blitz() and not game.is_quick_snap():
-                adjacent_player_squares = game.adjacent_player_squares(player, include_own=False, include_opp=True, only_blockable=True)
-                if player.state.up and len(adjacent_player_squares) > 0:
-                    opp_player = game.get_player_at(adjacent_player_squares[0])
-                    dice, favor = Block.dice_and_favor(game, player, opp_player)
-                    if favor == self.my_team and dice > 1:
-                        return Action(ActionType.START_BLOCK, player=player)
+        # Execute planned actions if any
+        if len(self.actions) > 0:
+            action = self._get_next_action()
+            return action
 
-            # Start pass action
-            ball_pos = game.get_ball_position()
-            player_with_ball = game.get_player_at(ball_pos)
-            if player_with_ball is not None and player_with_ball.team == self.my_team and game.is_pass_available():
-                return Action(ActionType.START_PASS, player=player)
+        # Split logic depending on offense, defense, and loose ball - and plan actions
+        ball_carrier = game.get_ball_carrier()
+        self._make_plan(game, ball_carrier)
+        action = self._get_next_action()
+        return action
 
-            # Start handoff action
-            if player_with_ball is not None and player_with_ball.team == self.my_team and game.is_handoff_available():
-                return Action(ActionType.START_HANDOFF, player=player)
+    def _get_next_action(self):
+        action = self.actions[0]
+        self.actions = self.actions[1:]
+        #print(f"Action: {action.to_json()}")
+        return action
 
-            # Start foul action
-            adjacent_player_squares = game.adjacent_player_squares(player, include_own=False, include_opp=True,
-                                                                   only_foulable=True)
-            if game.is_foul_available() and len(adjacent_player_squares) > 0:
-                return Action(ActionType.START_FOUL, player=player)
+    def _make_plan(self, game, ball_carrier):
+        print("1. Stand up marked players")
+        for player in self.my_team.players:
+            if player.position is not None and not player.state.up and not player.state.stunned and not player.state.used:
+                if game.num_tackle_zones_in(player) > 0:
+                    self.actions.append(Action(ActionType.START_MOVE, player=player))
+                    self.actions.append(Action(ActionType.STAND_UP))
+                    print(f"Stand up marked player {player.role.name}")
+                    return
 
-            # Start movement action
-            return Action(ActionType.START_MOVE, player=player)
+        print("2. Move ball carrier")
+        if ball_carrier is not None and ball_carrier.team == self.my_team and not ball_carrier.state.used:
+            print("2.1 Can ball carrier score with high probability")
+            td_path = pf.get_safest_scoring_path(game, ball_carrier)
+            if td_path is not None and td_path.prob >= 0.7:
+                self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
+                for step in td_path.steps:
+                    self.actions.append(Action(ActionType.MOVE, position=step))
+                print(f"Score with ball carrier, p={td_path.prob}")
+                return
 
-        # End turn
+            print("2.2 Hand-off action to scoring player")
+            if game.is_handoff_available():
+
+                # Get players in scoring range
+                unused_teammates = []
+                for player in self.my_team.players:
+                    if player.position is not None and player != ball_carrier and not player.state.used and player.state.up:
+                        unused_teammates.append(player)
+
+                # Find other players in scoring range
+                handoff_p = None
+                handoff_path = None
+                handoff_player = None
+                for player in unused_teammates:
+                    if game.get_distance_to_endzone(player) > player.get_ma() + 3:
+                        continue
+                    td_path = pf.get_safest_scoring_path(game, player)
+                    if td_path is None:
+                        continue
+                    path_from_ball_carrier = pf.get_safest_path_to_player(game, ball_carrier, player)
+                    if path_from_ball_carrier is None:
+                        continue
+                    p_catch = game.get_catch_prob(player, handoff=True, allow_catch_reroll=True)
+                    p = td_path.prob * path_from_ball_carrier.prob * p_catch
+                    if handoff_p is None or p > handoff_p:
+                        handoff_p = p
+                        handoff_path = path_from_ball_carrier
+                        handoff_player = player
+
+                # Hand-off if high probability or last turn
+                if handoff_path is not None and (handoff_p >= 0.7 or self.my_team.state.turn == 8):
+                    self.actions = [Action(ActionType.START_HANDOFF, player=ball_carrier)]
+                    for step in handoff_path.steps:
+                        self.actions.append(Action(ActionType.MOVE, position=step.x))
+                    self.actions.append(Action(ActionType.HANDOFF, position=handoff_player.position))
+                    print(f"Hand-off to scoring player, p={handoff_p}")
+                    return
+
+            print("2.3 Move safely towards the endzone")
+            if game.num_tackle_zones_in(ball_carrier) == 0:
+                td_path = pf.get_safest_scoring_path(game, ball_carrier, max_search_distance=30)
+                if td_path is not None:
+                    steps = []
+                    for step in td_path.steps:
+                        if game.num_tackle_zones_at(ball_carrier, step) > 0:
+                            break
+                        if len(steps) >= ball_carrier.num_moves_left():
+                            break
+                        steps.append(step)
+                    if len(steps) > 0:
+                        self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
+                        for step in steps:
+                            self.actions.append(Action(ActionType.MOVE, position=step))
+                        print(f"Move ball carrier {ball_carrier.role.name}")
+                        return
+
+        print("3. Safe blocks")
+        attacker, defender, p_self_up, p_opp_down, block_p_fumble_self, block_p_fumble_opp = self._get_safest_block(game)
+        if attacker is not None and p_self_up > 0.94 and block_p_fumble_self == 0:
+            self.actions.append(Action(ActionType.START_BLOCK, player=attacker))
+            self.actions.append(Action(ActionType.BLOCK, position=defender.position))
+            print(f"Safe block with {attacker.role.name} -> {defender.role.name}, p_self_up={p_self_up}, p_opp_down={p_opp_down}")
+            return
+
+        print("4. Pickup ball")
+        if game.get_ball_carrier() is None:
+            pickup_p = None
+            pickup_player = None
+            pickup_path = None
+            for player in self.my_team.players:
+                if player.position is not None and not player.state.used:
+                    path = pf.get_safest_path(game, player, game.get_ball_position())
+                    if path is not None:
+                        p = game.get_pickup_prob(player, game.get_ball_position(), allow_pickup_reroll=True)
+                        p = path.prob * p
+                        if pickup_p is None or p > pickup_p:
+                            pickup_p = p
+                            pickup_player = player
+                            pickup_path = path
+            if pickup_player is not None and pickup_p > 0.33:
+                self.actions.append(Action(ActionType.START_MOVE, player=pickup_player))
+                if not pickup_player.state.up:
+                    self.actions.append(Action(ActionType.STAND_UP))
+                for step in pickup_path.steps:
+                    self.actions.append(Action(ActionType.MOVE, position=step))
+                #print(f"Pick up the ball with {pickup_player.role.name}, p={pickup_p}")
+                # Find safest path towards endzone
+                if game.num_tackle_zones_at(pickup_player, game.get_ball_position()) == 0:
+                    td_path = pf.get_safest_scoring_path(game, pickup_player, from_position=game.get_ball_position(), num_moves_used=len(pickup_path.steps), max_search_distance=30)
+                    if td_path is not None:
+                        steps = []
+                        for step in td_path.steps:
+                            if game.num_tackle_zones_at(pickup_player, step) > 0:
+                                break
+                            if len(steps) + len(pickup_path.steps) >= pickup_player.get_ma():
+                                break
+                            steps.append(step)
+                        if len(steps) > 0:
+                            self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
+                            for step in steps:
+                                self.actions.append(Action(ActionType.MOVE, position=step))
+                            print(f"- Move ball carrier {pickup_player.role.name}")
+                return
+
+        # Scan for unused players that are not marked
+        open_players = []
+        for player in self.my_team.players:
+            if player.position is not None and not player.state.used and game.num_tackle_zones_in(player) == 0:
+                open_players.append(player)
+
+        print("5. Move receivers into scoring distance if not already")
+        for player in open_players:
+            if player.has_skill(Skill.CATCH) and player != ball_carrier:
+                if game.get_distance_to_endzone(player) > player.num_moves_left():
+                    continue
+                td_path = pf.get_safest_scoring_path(game, player, max_search_distance=30)
+                steps = []
+                for step in td_path.steps:
+                    if len(steps) >= player.get_ma() + (3 if not player.state.up else 0):
+                        break
+                    if game.num_tackle_zones_at(player, step) > 0:
+                        break
+                    if step.distance(td_path.steps[-1]) < player.get_ma():
+                        break
+                    steps.append(step)
+                if len(steps) > 0:
+                    self.actions.append(Action(ActionType.START_MOVE, player=player))
+                    if not player.state.up:
+                        self.actions.append(Action(ActionType.STAND_UP))
+                    for step in steps:
+                        self.actions.append(Action(ActionType.MOVE, position=step))
+                    print(f"Move receiver {player.role.name}")
+                    return
+
+        print("6. Blitz with open block players")
+        if game.is_blitz_available():
+            best_blitz_attacker = None
+            best_blitz_defender = None
+            best_blitz_score = None
+            best_blitz_path = None
+            for blitzer in open_players:
+                if blitzer.position is not None and not blitzer.state.used and blitzer.has_skill(Skill.BLOCK):
+                    for opp_player in self.opp_team.players:
+                        if opp_player.position is None or opp_player.position.distance(blitzer.position) > blitzer.num_moves_left():
+                            continue
+                        if opp_player.state.up and not (opp_player.has_skill(Skill.BLOCK) and opp_player != ball_carrier):
+                            for adjacent_position in game.get_adjacent_squares(opp_player.position, occupied=False):
+                                path = pf.get_safest_path(game, blitzer, adjacent_position, num_moves_used=1)
+                                if path is None:
+                                    continue
+                                # Include an addition GFI to block if needed
+                                moves = blitzer.get_ma() if blitzer.state.up or blitzer.has_skill(Skill.JUMP_UP) else blitzer.get_ma() + 3
+                                if len(path.steps) > moves:
+                                    path.prob = path.prob * (5.0/6.0)
+                                p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_blitz_probs(blitzer, adjacent_position, opp_player)
+                                p_self_up = path.prob * (1-p_self)
+                                p_opp = path.prob * p_opp
+                                p_fumble_opp = p_fumble_opp * path.prob
+                                if blitzer == game.get_ball_carrier():
+                                    p_fumble_self = path.prob + (1 - path.prob) * p_fumble_self
+                                score = p_self_up + p_opp + p_fumble_opp - p_fumble_self
+                                if best_blitz_score is None or score > best_blitz_score:
+                                    best_blitz_attacker = blitzer
+                                    best_blitz_defender = opp_player
+                                    best_blitz_score = score
+                                    best_blitz_path = path
+            if best_blitz_attacker is not None and best_blitz_score >= 1.25:
+                self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
+                if not best_blitz_attacker.state.up:
+                    self.actions.append(Action(ActionType.STAND_UP))
+                for step in best_blitz_path.steps:
+                    self.actions.append(Action(ActionType.MOVE, position=step))
+                self.actions.append(Action(ActionType.BLOCK, position=best_blitz_defender.position))
+                print(f"Blitz with {best_blitz_attacker.role.name}, score={best_blitz_score}")
+                return
+
+        print("7. Make cage around ball carrier")
+        cage_positions = [
+            Square(game.get_ball_position().x - 1, game.get_ball_position().y - 1),
+            Square(game.get_ball_position().x + 1, game.get_ball_position().y - 1),
+            Square(game.get_ball_position().x - 1, game.get_ball_position().y + 1),
+            Square(game.get_ball_position().x + 1, game.get_ball_position().y + 1)
+        ]
+        if ball_carrier is not None:
+            for cage_position in cage_positions:
+                if game.get_player_at(cage_position) is None and not game.is_out_of_bounds(cage_position):
+                    for player in open_players:
+                        if player == ball_carrier or player.position in cage_positions:
+                            continue
+                        if player.position.distance(cage_position) > player.num_moves_left():
+                            continue
+                        if game.num_tackle_zones_in(player) > 0:
+                            continue
+                        path = pf.get_safest_path(game, player, cage_position, max_search_distance=20)
+                        if path is not None and path.prob > 0.94:
+                            self.actions.append(Action(ActionType.START_MOVE, player=player))
+                            if not player.state.up:
+                                self.actions.append(Action(ActionType.STAND_UP))
+                            for step in path.steps:
+                                self.actions.append(Action(ActionType.MOVE, position=step))
+                            print(f"Move towards ball {player.role.name}")
+                            return
+
+        # Scan for assist positions
+        assist_positions = []
+        for player in game.get_opp_team(self.my_team).players:
+            if player.position is None or not player.state.up:
+                continue
+            opponents = game.get_adjacent_opponents(player, down=False)
+            for opponent in opponents:
+                att_str, def_str = game.get_block_strengths(player, opponent)
+                if def_str == att_str:
+                    for open_position in game.get_adjacent_squares(player.position, occupied=False):
+                        if len(game.get_adjacent_players(open_position, team=self.opp_team, down=False)):
+                            assist_positions.append(open_position)
+
+        print("8. Move non-marked players to assist")
+        for player in open_players:
+            for assist_position in assist_positions:
+                path = pf.get_safest_path(game, player, assist_position)
+                if path is not None and path.prob == 1:
+                    self.actions.append(Action(ActionType.START_MOVE, player=player))
+                    if not player.state.up:
+                        self.actions.append(Action(ActionType.STAND_UP))
+                    for step in path.steps:
+                        self.actions.append(Action(ActionType.MOVE, position=step))
+                    print(f"Move assister {player.role.name} to {assist_position.to_json}")
+                    return
+
+        print("9. Move towards the ball")
+        for player in open_players:
+            if player == ball_carrier:
+                continue
+            if game.num_tackle_zones_in(player) > 0:
+                continue
+            if ball_carrier is None:
+                path = pf.get_safest_path(game, player, game.get_ball_position(), max_search_distance=30)
+            else:
+                path = pf.get_safest_path_to_player(game, player, ball_carrier)
+            if path is not None:
+                steps = []
+                for step in path.steps:
+                    if len(steps) >= player.get_ma() + (3 if not player.state.up else 0):
+                        break
+                    if ball_carrier is not None and ball_carrier.team == self.my_team and step in game.get_adjacent_squares(ball_carrier.position):
+                        break
+                    steps.append(step)
+                    if game.num_tackle_zones_at(player, step) > 0:
+                        break
+                if len(steps) > 0:
+                    self.actions.append(Action(ActionType.START_MOVE, player=player))
+                    if not player.state.up:
+                        self.actions.append(Action(ActionType.STAND_UP))
+                    for step in steps:
+                        self.actions.append(Action(ActionType.MOVE, position=step))
+                    print(f"Move towards ball {player.role.name}")
+                    return
+
+        print("10. Risky blocks")
+        attacker, defender, p_self_up, p_opp_down, block_p_fumble_self, block_p_fumble_opp = self._get_safest_block(game)
+        if attacker is not None and (p_opp_down > (1-p_self_up) or block_p_fumble_opp > 0):
+            self.actions.append(Action(ActionType.START_BLOCK, player=attacker))
+            self.actions.append(Action(ActionType.BLOCK, position=defender.position))
+            print(f"Block with {player.role.name} -> {defender.role.name}, p_self_up={p_self_up}, p_opp_down={p_opp_down}")
+            return
+
+        print("11. End turn")
+        self.actions.append(Action(ActionType.END_TURN))
+
+    def _get_safest_block(self, game):
+        block_attacker = None
+        block_defender = None
+        block_p_self_up = None
+        block_p_opp_down = None
+        block_p_fumble_self = None
+        block_p_fumble_opp = None
+        for attacker in self.my_team.players:
+            if attacker.position is not None and not attacker.state.used and attacker.state.up:
+                for defender in game.get_adjacent_opponents(attacker, down=False):
+                    p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_block_probs(attacker, defender)
+                    p_self_up = (1-p_self)
+                    if block_p_self_up is None or (p_self_up > block_p_self_up and p_opp >= p_fumble_self):
+                        block_p_self_up = p_self_up
+                        block_p_opp_down = p_opp
+                        block_attacker = attacker
+                        block_defender = defender
+                        block_p_fumble_self = p_fumble_self
+                        block_p_fumble_opp = p_fumble_opp
+        return block_attacker, block_defender, block_p_self_up, block_p_opp_down, block_p_fumble_self, block_p_fumble_opp
+
+
+    def quick_snap(self, game):
+        return Action(ActionType.END_TURN)
+
+    def blitz(self, game):
         return Action(ActionType.END_TURN)
 
     def player_action(self, game):
-        """
-        Move, block, pass, handoff or foul with the active player.
-        """
-        player = game.state.active_player
-
-        # Loop through available actions
-        for action_choice in game.state.available_actions:
-
-            # Move action?
-            if action_choice.action_type == ActionType.MOVE:
-
-                # Loop through adjacent empty squares
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-                    if len(agi_rolls) == 0:
-                        return Action(ActionType.MOVE, pos=position)
-
-            # Block action?
-            if action_choice.action_type == ActionType.BLOCK:
-
-                # Loop through available blocks
-                for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
-
-                    # Only do blocks with 1 die if attacker has block
-                    if block_rolls >= 2 or (block_rolls == 1 and Skill.BLOCK in player.skills):
-                        opp_player = game.get_player_at(position)
-                        return Action(ActionType.BLOCK, pos=position)
-
-            # Pass action?
-            if action_choice.action_type == ActionType.PASS:
-
-                # Loop through players to pass to
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-
-                    catcher = game.get_player_at(position)
-                    pass_distance = game.pass_distance(player, position)
-
-                    # Don't pass to empty squares or long bombs
-                    if catcher is not None and pass_distance != PassDistance.LONG_BOMB:
-                        return Action(ActionType.PASS, pos=position)
-
-            # Hand-off action
-            if action_choice.action_type == ActionType.HANDOFF:
-
-                # Loop through players to hand-off to
-                for position, agi_rolls in zip(action_choice.positions, action_choice.agi_rolls):
-                    return Action(ActionType.HANDOFF, pos=position)
-
-            # Foul action
-            if action_choice.action_type == ActionType.FOUL:
-
-                # Loop through players to foul
-                for position, block_rolls in zip(action_choice.positions, action_choice.block_rolls):
-                    return Action(ActionType.FOUL, pos=position)
-
+        # Execute planned actions if any
+        if len(self.actions) > 0:
+            action = self._get_next_action()
+            return action
+        ball_carrier = game.get_ball_carrier()
+        if ball_carrier == game.get_active_player():
+            td_path = pf.get_safest_scoring_path(game, ball_carrier)
+            if td_path is not None and td_path.prob <= 0.9:
+                self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
+                for step in td_path.steps:
+                    self.actions.append(Action(ActionType.MOVE, position=step))
+                #print(f"Scoring with {ball_carrier.role.name}, p={td_path.prob}")
+                return
         return Action(ActionType.END_PLAYER_TURN)
+
 
     def block(self, game):
         """
         Select block die or reroll.
         """
+        # Get attacker and defender
+        attacker = game.get_procedure().attacker
+        defender = game.get_procedure().defender
+        is_blitz = game.get_procedure().blitz
+        dice = game.num_block_dice(attacker, defender, blitz=is_blitz)
+
         # Loop through available dice results
         actions = set()
         for action_choice in game.state.available_actions:
             actions.add(action_choice.action_type)
 
+        # 1. DEFENDER DOWN
         if ActionType.SELECT_DEFENDER_DOWN in actions:
             return Action(ActionType.SELECT_DEFENDER_DOWN)
 
+        if ActionType.SELECT_DEFENDER_STUMBLES in actions and not (defender.has_skill(Skill.DODGE) and not attacker.has_skill(Skill.TACKLE)):
+            return Action(ActionType.SELECT_DEFENDER_STUMBLES)
+
+        if ActionType.SELECT_BOTH_DOWN in actions and not defender.has_skill(Skill.BLOCK) and attacker.has_skill(Skill.BLOCK):
+            return Action(ActionType.SELECT_BOTH_DOWN)
+
+        # 2. BOTH DOWN if opponent carries the ball and doesn't have block
+        if ActionType.SELECT_BOTH_DOWN in actions and game.get_ball_carrier() == defender and not defender.has_skill(Skill.BLOCK):
+            return Action(ActionType.SELECT_BOTH_DOWN)
+
+        # 3. USE REROLL if defender carries the ball
+        if ActionType.USE_REROLL in actions and game.get_ball_carrier() == defender:
+            return Action(ActionType.USE_REROLL)
+
+        # 4. PUSH
         if ActionType.SELECT_DEFENDER_STUMBLES in actions:
             return Action(ActionType.SELECT_DEFENDER_STUMBLES)
 
         if ActionType.SELECT_PUSH in actions:
             return Action(ActionType.SELECT_PUSH)
 
+        # 5. BOTH DOWN
         if ActionType.SELECT_BOTH_DOWN in actions:
             return Action(ActionType.SELECT_BOTH_DOWN)
 
-        if ActionType.USE_REROLL in actions:
+        # 6. USE REROLL to avoid attacker down unless a one-die block
+        if ActionType.USE_REROLL in actions and dice > 1:
             return Action(ActionType.USE_REROLL)
 
+        # 7. ATTACKER DOWN
         if ActionType.SELECT_ATTACKER_DOWN in actions:
             return Action(ActionType.SELECT_ATTACKER_DOWN)
 
@@ -220,7 +594,7 @@ class MyScriptedBot(ProcBot):
         """
         # Loop through available squares
         for position in game.state.available_actions[0].positions:
-            return Action(ActionType.PUSH, pos=position)
+            return Action(ActionType.PUSH, position=position)
 
     def follow_up(self, game):
         """
@@ -230,7 +604,7 @@ class MyScriptedBot(ProcBot):
         for position in game.state.available_actions[0].positions:
             # Always follow up
             if player.position != position:
-                return Action(ActionType.FOLLOW_UP, pos=position)
+                return Action(ActionType.FOLLOW_UP, position=position)
 
     def apothecary(self, game):
         """
@@ -244,9 +618,9 @@ class MyScriptedBot(ProcBot):
         Select interceptor.
         """
         for action in game.state.available_actions:
-            if action.action_type == ActionType.INTERCEPTION:
+            if action.action_type == ActionType.SELECT_PLAYER:
                 for player, agi_rolls in zip(action.players, action.agi_rolls):
-                    return Action(ActionType.INTERCEPTION, player=player)
+                    return Action(ActionType.SELECT_PLAYER, player=player)
         return Action(ActionType.SELECT_NONE)
 
     def pass_action(self, game):
@@ -284,47 +658,74 @@ class MyScriptedBot(ProcBot):
         return Action(ActionType.USE_REROLL)
         # return Action(ActionType.DONT_USE_REROLL)
 
+    def use_juggernaut(self, game):
+        return Action(ActionType.USE_SKILL)
+        # return Action(ActionType.DONT_USE_SKILL)
+
+    def use_wrestle(self, game):
+        return Action(ActionType.USE_SKILL)
+        # return Action(ActionType.DONT_USE_SKILL)
+
+    def use_stand_firm(self, game):
+        return Action(ActionType.USE_SKILL)
+        # return Action(ActionType.DONT_USE_SKILL)
+
+    def use_pro(self, game):
+        return Action(ActionType.USE_SKILL)
+        # return Action(ActionType.DONT_USE_SKILL)
+
     def end_game(self, game):
         """
         Called when a game endw.
         """
-        winner = game.get_winner()
+        winner = game.get_winning_team()
         print("Casualties: ", game.num_casualties())
         if winner is None:
             print("It's a draw")
         elif winner == self.my_team:
             print("I ({}) won".format(self.name))
+            print(self.my_team.state.score, "-", self.opp_team.state.score)
         else:
             print("I ({}) lost".format(self.name))
+            print(self.my_team.state.score, "-", self.opp_team.state.score)
 
 
 # Register MyScriptedBot
-register_bot('scripted', MyScriptedBot)
+ffai.register_bot('scripted', MyScriptedBot)
 
 if __name__ == "__main__":
 
+    # Uncomment to this to evaluate the bot against the random baseline
+    '''
     # Load configurations, rules, arena and teams
-    config = get_config("ff-11.json")
+    config = ffai.load_config("bot-bowl-ii")
     config.competition_mode = False
     # config = get_config("ff-7.json")
     # config = get_config("ff-5.json")
     # config = get_config("ff-3.json")
-    ruleset = get_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
-    arena = get_arena(config.arena)
-    home = get_team_by_id("human-1", ruleset)
-    away = get_team_by_id("human-2", ruleset)
+    ruleset = ffai.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
+    arena = ffai.load_arena(config.arena)
+    home = ffai.load_team_by_filename("human", ruleset)
+    away = ffai.load_team_by_filename("human", ruleset)
 
-    # Play 100 games
-    for i in range(100):
-        away_agent = MyScriptedBot("Scripted Bot 1")
-        home_agent = MyScriptedBot("Scripted Bot 2")
+    # Play 10 games
+    for i in range(10):
+        home_agent = ffai.make_bot('scripted')
+        home_agent.name = "Scripted Bot"
+        away_agent = ffai.make_bot('random')
+        away_agent.name = "Random Bot"
         config.debug_mode = False
-        game = Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))
         start = time.time()
         game.init()
-        game.step()
         end = time.time()
         print(end - start)
+    '''
+
+    import ffai.web.server as server
+
+    if __name__ == "__main__":
+        server.start_server(debug=True, use_reloader=False)

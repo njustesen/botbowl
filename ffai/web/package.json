@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "gulp": "^3.9.1",
-    "gulp-watch": "^5.0.0"
+    "gulp-watch": "^5.0.1"
   },
   "main": "gulpfile.js",
   "scripts": {

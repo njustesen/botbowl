@@ -1,0 +1,13 @@
+theme: jekyll-theme-cayman
+title: Bot Bowl
+description: AI Competition in Blood Bowl
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: true
+markdown: kramdown
+kramdown:
+  parse_block_html: true
+include:
+  - index.md

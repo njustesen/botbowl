@@ -8,12 +8,12 @@
                 <div class="col-lg-4">
                     <div class="form-group">
                         <h4>Home Team</h4>
-                        <select id="homeTeam" ng-model="home_team_id" class="form-control">
-                            <option ng-repeat="team in teams" value="{{team.team_id}}">{{team.name}} ({{team.race}})</option>
+                        <select id="homeTeam" ng-model="home_team_name" class="form-control">
+                            <option ng-repeat="team in teams" value="{{team.name}}">{{team.name}} ({{team.race}})</option>
                         </select>
                     </div>
                 </div>
-                <div class="col-xs-8 text-left" ng-if="home_team_id != null">
+                <div class="col-xs-8 text-left" ng-if="home_team_name != null">
                     <div class="row">
                         <div class="col-xs-12">
                         <table class="table table-striped">
@@ -29,12 +29,12 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class="text-center">{{ getTeam(home_team_id).fan_factor }}</td>
-                                    <td class="text-center">{{ getTeam(home_team_id).rerolls }}</td>
-                                    <td class="text-center"><span class="team-icon"><img src="static/img/team_status/apoth.gif" class="{{ getTeam(home_team_id).apothecary ? 'available' : 'used' }}" title="{{ getTeam(home_team_id) ? 'Apothecary' : 'No apothecary' }}" width="20px" height="20px" /></span></td>
-                                    <td class="text-center">{{ getTeam(home_team_id).cheerleaders }}</td>
-                                    <td class="text-center">{{ getTeam(home_team_id).ass_coaches }}</td>
-                                    <td class="text-center">{{ getTeam(home_team_id).treasury }}</td>
+                                    <td class="text-center">{{ getTeam(home_team_name).fan_factor }}</td>
+                                    <td class="text-center">{{ getTeam(home_team_name).rerolls }}</td>
+                                    <td class="text-center"><span class="team-icon"><img src="static/img/team_status/apoth.gif" class="{{ getTeam(home_team_name).apothecary ? 'available' : 'used' }}" title="{{ getTeam(home_team_name) ? 'Apothecary' : 'No apothecary' }}" width="20px" height="20px" /></span></td>
+                                    <td class="text-center">{{ getTeam(home_team_name).cheerleaders }}</td>
+                                    <td class="text-center">{{ getTeam(home_team_name).ass_coaches }}</td>
+                                    <td class="text-center">{{ getTeam(home_team_name).treasury }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -42,7 +42,7 @@
                     </div>
                 </div>
             </div>
-            <div ng-if="home_team_id != null">
+            <div ng-if="home_team_name != null">
 
                 <button type="button" class="btn btn-default" ng-click="hide_home_players = !hide_home_players" ng-init="hide_home_players=true">{{ hide_home_players ? 'Show roster' : 'Hide roster'}}</button>
 
@@ -61,18 +61,32 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="player in getTeam(home_team_id).players">
+                                <tr ng-repeat="(key,player) in getTeam(home_team_name).players_by_id">
                                     <td>{{ player.nr }}. {{ player.name}}</td>
-                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, true, getTeam(home_team_id).race, false) }}" /> {{ player.position_name }}</td>
+                                    <td><img width="20px" ng-src="static/img/iconssmall/{{playerIcon(player, true, getTeam(home_team_name).race) }}" /> {{ player.role }}</td>
                                     <td class="text-center">{{ player.ma }}</td>
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
                                     <td class="text-center">{{ player.av }}</td>
-                                    <td><span class="" ng-repeat="skill in player.skills">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
+                                    <td><span class="" ng-repeat="skill in player.role_skills.concat(player.extra_skills)">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="form-group">
+                        <h4>Coach:</h4>
+                        <select id="homePlayer" ng-model="home_player" class="form-control">
+                            <option value="human">Human</option>
+                            <option ng-repeat="bot in bots" value="{{bot}}">{{prettify(bot)}}</option>
+                        </select>    
+                    </div>
+                </div>
+                <div class="col-xs-8 text-left">
+
                 </div>
             </div>
 
@@ -82,12 +96,12 @@
                 <div class="col-lg-4">
                     <div class="form-group">
                         <h4>Away Team</h4>
-                        <select id="awayTeam" ng-model="away_team_id" class="form-control">
-                            <option ng-repeat="team in teams" value="{{team.team_id}}">{{team.name}} ({{team.race}})</option>
+                        <select id="awayTeam" ng-model="away_team_name" class="form-control">
+                            <option ng-repeat="team in teams" value="{{team.name}}">{{team.name}} ({{team.race}})</option>
                         </select>
                     </div>
                 </div>
-                <div class="col-xs-8 text-left" ng-if="away_team_id != null">
+                <div class="col-xs-8 text-left" ng-if="away_team_name != null">
                     <div class="row">
                         <div class="col-xs-12">
                         <table class="table table-striped">
@@ -103,12 +117,12 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td class="text-center">{{ getTeam(away_team_id).fan_factor }}</td>
-                                    <td class="text-center">{{ getTeam(away_team_id).rerolls }}</td>
-                                    <td class="text-center"><span class="team-icon"><img src="static/img/team_status/apoth.gif" class="{{ getTeam(away_team_id).apothecary ? 'available' : 'used' }}" title="{{ getTeam(away_team_id) ? 'Apothecary' : 'No apothecary' }}" width="20px" height="20px" /></span></td>
-                                    <td class="text-center">{{ getTeam(away_team_id).cheerleaders }}</td>
-                                    <td class="text-center">{{ getTeam(away_team_id).ass_coaches }}</td>
-                                    <td class="text-center">{{ getTeam(away_team_id).treasury }}</td>
+                                    <td class="text-center">{{ getTeam(away_team_name).fan_factor }}</td>
+                                    <td class="text-center">{{ getTeam(away_team_name).rerolls }}</td>
+                                    <td class="text-center"><span class="team-icon"><img src="static/img/team_status/apoth.gif" class="{{ getTeam(away_team_name).apothecary ? 'available' : 'used' }}" title="{{ getTeam(away_team_name) ? 'Apothecary' : 'No apothecary' }}" width="20px" height="20px" /></span></td>
+                                    <td class="text-center">{{ getTeam(away_team_name).cheerleaders }}</td>
+                                    <td class="text-center">{{ getTeam(away_team_name).ass_coaches }}</td>
+                                    <td class="text-center">{{ getTeam(away_team_name).treasury }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -117,7 +131,7 @@
                 </div>
             </div>
 
-            <div ng-if="away_team_id != null">
+            <div ng-if="away_team_name != null">
                 <button type="button" class="btn btn-default" ng-click="hide_away_players = !hide_away_players" ng-init="hide_away_players=true">{{ hide_away_players ? 'Show roster' : 'Hide roster'}}</button>
 
                 <div class="row" ng-hide="hide_away_players" style="margin-top:12px">
@@ -136,25 +150,39 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr ng-repeat="player in getTeam(away_team_id).players">
+                                <tr ng-repeat="(key, player) in getTeam(away_team_name).players_by_id">
                                     <td>{{ player.nr }}. {{ player.name}}</td>
-                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, false, getTeam(away_team_id).race, false) }}" /> {{ player.position_name }}</td>
+                                    <td><img width="20px" src="static/img/iconssmall/{{ playerIcon(player, false, getTeam(away_team_name).race) }}" /> {{ player.role }}</td>
                                     <td class="text-center">{{ player.ma }}</td>
                                     <td class="text-center">{{ player.st }}</td>
                                     <td class="text-center">{{ player.ag }}</td>
                                     <td class="text-center">{{ player.av }}</td>
-                                    <td><span class="" ng-repeat="skill in player.skills">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
+                                    <td><span class="" ng-repeat="skill in player.role_skills.concat(player.extra_skills)">{{ prettify(skill) }}{{$last ? '' : ', '}}</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="form-group">
+                        <h4>Coach:</h4>
+                        <select id="awayPlayer" ng-model="away_player" class="form-control">
+                            <option value="human">Human</option>
+                            <option ng-repeat="bot in bots" value="{{bot}}">{{prettify(bot)}}</option>
+                        </select>   
+                    </div> 
+                </div>
+            </div>
+            <div class="col-xs-8 text-left">
 
+            </div>
+        </div>
             <hr/>
 
             <div class="text-center">
-                <button type="submit" ng-disabled="away_team_id == home_team_id && away_team_id != null" class="btn btn-success" ng-click="save(game, false)">Create Game</button>
+                <button type="submit" ng-disabled="home_team_name == null || away_team_name == null" class="btn btn-success" ng-click="createGame(game)">Create Game</button>
             </div>
         </form>
 

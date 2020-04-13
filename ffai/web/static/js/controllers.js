@@ -1,7 +1,8 @@
 
-appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
-    function GameListCtrl($scope, $window, GameService) {
+appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', 'ReplayService',
+    function GameListCtrl($scope, $window, GameService, ReplayService) {
         $scope.games = [];
+        $scope.replays = [];
         $scope.savedGames = [];
 
         GameService.findAll().success(function(data) {
@@ -9,9 +10,22 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
             $scope.savedGames = data.saved_games;
         });
 
+        ReplayService.findAll().success(function(data) {
+            $scope.replays = data.replays;
+        });
+
         $scope.loadGame = function loadGame(name){
             GameService.load(name).success(function(data) {
-                 $window.location.href = '/#/game/play/' + data.game_id
+                 $window.location.href = '/#/game/play/' + data.game.game_id + '/' + data.team_id + '/'
+            }).error(function(status, data) {
+                console.log(status);
+                console.log(data);
+            });
+        };
+
+        $scope.loadReplay = function loadReplay(replay_id){
+            ReplayService.get(replay_id).success(function(data) {
+                 $window.location.href = '/#/game/replay/' + data.replay_id
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
@@ -38,10 +52,11 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService',
     }
 ]);
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService) {
+appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
+        $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
@@ -49,23 +64,36 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             $scope.teams = data;
         });
 
-        $scope.getTeam = function getTeam(team_id){
+        BotService.listAll().success(function(data) {
+            $scope.bots = data;
+        });
+        
+        $scope.getTeam = function getTeam(team_name){
             for (let i in $scope.teams){
-                if ($scope.teams[i].team_id === team_id){
+                if ($scope.teams[i].name === team_name){
                     return $scope.teams[i];
                 }
             }
             return null;
         };
 
+        $scope.playerIcon = function playerIcon(player, isHome, race){
+            return IconService.getPlayerIcon(race, player.role, isHome, false);
+        };
+
+        $scope.prettify = function prettify(text){
+            let pretty = text.replace("SETUP_FORMATION_", "").toLowerCase().split("_").join(" ");
+            return pretty.charAt(0).toUpperCase() + pretty.slice(1);
+        };
+
         $scope.home_player = "human";
         $scope.away_player = "human";
 
-        $scope.save = function save(game, shouldPublish) {
+        $scope.createGame = function createGame(game) {
             //var content = $('#textareaContent').val();
             game = {};
-            game.state.home_team_id = $scope.home_team_id;
-            game.state.away_team_id = $scope.away_team_id;
+            game.home_team_name = $scope.home_team_name;
+            game.away_team_name = $scope.away_team_name;
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
@@ -79,8 +107,10 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
     }
 ]);
 
-appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService',
-    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService) {
+appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location', '$sce', 'GameService', 'IconService', 'GameLogService', 'ReplayService', 'BigGuyService',
+    function GamePlayCtrl($scope, $routeParams, $location, $sce, GameService, IconService, GameLogService, ReplayService, BigGuyService) {
+        $scope.RELOAD_TIME_SLOW = 1000;
+        $scope.RELOAD_TIME_FAST = 200;
         $scope.game = {};
         $scope.reportsLimit = 20;
         $scope.saved = false;
@@ -93,10 +123,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.available_positions = [];
         $scope.modalVisible = false;
         $scope.modelError = false;
-        $scope.passOptions = false;
-        $scope.passHint = false;
+        $scope.special_actions = [];
+        $scope.special_action_selected = null;
         $scope.gridClass = 'none';
         $scope.opp_turn = false;
+        $scope.clock = "";
         $scope.local_state = {
             balls: [],
             board: [],
@@ -105,29 +136,56 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             player_positions: {}
         };
 
-        var id = $routeParams.id;
+        $scope.game_id = $routeParams.id;
         $scope.team_id = $routeParams.team_id;
         $scope.spectating = window.location.href.indexOf('/spectate/') >= 0;
+        $scope.replaying = window.location.href.indexOf('/replay/') >= 0;
+        $scope.replaySpeed = 200;
+        if ($scope.replaying){
+            $scope.replay_id = $scope.game_id;
+            $scope.spectating = true;
+            $scope.replayIsPlaying = false;
+            $scope.replayStep = 0;
+        }
 
         $scope.getAvailable = function getAvailable(square){
-            if (square.special_action_type === "PASS" && $scope.passOptions) {
-                return square.special_available;
+            if ($scope.special_action_selected !== null && square.special_actions.length > 0) {
+                return square.special_actions.indexOf($scope.special_action_selected.action_type) > -1;
             } else {
                 return square.available;
             }
         };
 
-        $scope.getAgiRolls = function getAgiRolls(square){
-            if (square.special_action_type === "PASS" && $scope.passOptions) {
-                return square.special_agi_rolls;
+        $scope.getAgiRolls = function getAgiRolls(square, scaled){
+            if ($scope.special_action_selected !== null && square.special_agi_rolls[$scope.special_action_selected.action_type] !== undefined) {
+                let rolls = square.special_agi_rolls[$scope.special_action_selected.action_type];
+                if (scaled){
+                    if ($scope.special_action_selected.action_type === "STAB"){
+                        let scaled_rolls = [];
+                        for (let idx in rolls) {
+                            let roll = rolls[idx];
+                            scaled_rolls.push(Math.ceil(roll / 2));
+                        }
+                        return scaled_rolls;
+                    }
+                }
+                return rolls;
             } else {
                 return square.agi_rolls;
             }
         };
 
+        $scope.getBlockRoll = function getBlockRoll(square){
+            if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1) {
+                return 0;
+            } else {
+                return square.block_roll;
+            }
+        };
+
         $scope.getActionType = function getActionType(square){
-            if (square.special_action_type === "PASS" && $scope.passOptions) {
-                return square.special_action_type;
+            if ($scope.special_action_selected !== null) {
+                return $scope.special_action_selected.action_type;
             } else {
                 return square.action_type;
             }
@@ -135,7 +193,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         document.addEventListener('keydown', function(event) {
             if (event.ctrlKey){
-                $scope.passOptions = !$scope.passOptions;
+
+                $scope.$apply();
+            }
+            if (event.shiftKey){
+
                 $scope.$apply();
             }
         });
@@ -143,7 +205,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.saveGame = function saveGame(name){
             $scope.modelError = false;
             // Get state
-            GameService.save($scope.game.game_id, name).success(function(data) {
+            GameService.save($scope.game.game_id, name, $scope.team_id).success(function(data) {
                 $scope.saved = true;
                 $scope.modalVisible = false;
             }).error(function(status, data) {
@@ -170,7 +232,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return str.replace(
                 /\w\S*/g,
                 function(txt) {
-                    return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+                    return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase().replace("_", " ");
                 }
             );
         };
@@ -184,7 +246,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 line = line.replace("<score-sorted>", Math.max($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) + " - " + Math.min($scope.game.state.home_team.state.score, $scope.game.state.away_team.state.score) );
 
                 if (report.skill !== null){
-                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill) + '</span>');
+                    line = line.replace("<skill>", '<span class="label label-success skill">' + $scope.title(report.skill.replace("_", " ")) + '</span>');
                 }
                 let n = report.n;
                 if (typeof(n) === "string"){
@@ -212,17 +274,20 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return null;
         };
 
+        $scope.isPlayerActive = function isPlayerActive(player){
+            return player.player_id === $scope.game.state.active_player_id || player.player_id === $scope.game.active_other_player_id;
+        };
+
         $scope.playerIcon = function playerIcon(player){
             let team = $scope.teamOfPlayer(player);
-            let icon_base = IconService.playerIcons[team.race][player.role];
-            let icon_num = "1";
-            let team_letter = player.team_id === $scope.game.state.home_team.team_id ? "b" : "";
-            let angle = player.player_id === $scope.game.state.active_player_id ? "an" : "";
-            return icon_base + icon_num + team_letter + angle + ".gif";
+            let isHome = player.team_id === $scope.game.state.home_team.team_id;
+            return IconService.getPlayerIcon(team.race, player.role, isHome, $scope.isPlayerActive(player));
         };
 
         $scope.getCursor = function getCursor(square){
-            if (square.available && square.action_type === "HANDOFF"){
+            if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1 && $scope.special_action_selected.action_type === "STAB"){
+                return "cursor: url(static/img/icons/actions/stab.gif), auto";
+            } else if (square.available && square.action_type === "HANDOFF"){
                 return "cursor: url(static/img/icons/actions/handover.gif), auto";
             } else if (square.available && square.action_type === "BLOCK"){
                 return "cursor: url(static/img/icons/actions/block.gif), auto";
@@ -232,6 +297,29 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "cursor: url(static/img/icons/actions/pass.gif), auto";
             }
             return "";
+        };
+
+        $scope.clickSpecialAction = function clickSpecialAction(action){
+            if ($scope.special_action_selected !== action){
+                $scope.special_action_selected = action;
+            } else {
+                $scope.special_action_selected = null;
+            }
+        };
+
+        $scope.clickSkillAction = function clickSkillAction(event, skillAction){
+            event.stopPropagation();
+            for (let idx in $scope.game.state.available_actions) {
+                let a = $scope.game.state.available_actions[idx];
+                if (a.disabled){
+                    continue;
+                }
+                if (a.action_type === "USE_SKILL" && skillAction === 'use'){
+                    $scope.pickActionType(a);
+                } else if (a.action_type === "DONT_USE_SKILL" && skillAction === 'dont-use'){
+                    $scope.pickActionType(a);
+                }
+            }
         };
 
         $scope.clickAction = function clickAction(event, action){
@@ -269,11 +357,28 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (action.player_ids.indexOf($scope.selectedPlayer().player_id) === -1) {
                     continue;
                 }
-                if (action.action_type.indexOf("START_") >= 0 && action.action_type.split("START_")[1].toLowerCase() === typeName){
+                if (action.action_type.indexOf("START_") >= 0 && (typeName === '' || action.action_type.split("START_")[1].toLowerCase() === typeName)){
                     return true;
                 }
             }
             return false;
+        };
+
+        $scope.playerSkillAction = function playerSkillAction(x, y){
+            for (let idx in $scope.game.state.available_actions){
+                let action = $scope.game.state.available_actions[idx];
+                if ($scope.agent_id != null && $scope.agent_id !== action.agent_id){
+                    action.disabled = true;
+                }
+                let player =  $scope.local_state.board[y][x].player;
+                if (player === null || action.player_ids.indexOf(player.player_id) === -1) {
+                    continue;
+                }
+                if (action.action_type.indexOf("USE_SKILL") >= 0){
+                    return $scope.title(action.skill).toLowerCase();
+                }
+            }
+            return null;
         };
 
         $scope.newSquare = function newSquare(player_id, x, y, area, sub_area, number){
@@ -290,6 +395,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     ball = ball_obj;
                 }
             }
+            let big_guy = true;
+            if (player !== null){
+                big_guy = (BigGuyService.bigGuys.indexOf(player["role"]) > -1);
+            }
             return {
                 x: x,
                 y: y,
@@ -297,35 +406,46 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 player_icon: player_icon,
                 selected: false,
                 available: false,
-                special_available: false,
                 action_type: undefined,
-                special_action_type: undefined,
-                agi_roll: 0,
-                special_agi_roll: 0,
+                agi_rolls: [],
+                special_actions: [],
+                special_agi_rolls: [],
                 roll: false,
                 block_roll: 0,
                 area: area,
                 sub_area: sub_area,
                 ball: ball,
-                num: number
+                num: number,
+                big_guy: big_guy
             };
         };
 
-        $scope.clearSquareAction = function clearSquare(square) {
+        $scope.clearSquareAction = function clearSquareAction(square) {
             square.available = false;
             square.agi_roll = 0;
             square.block_roll = 0;
             square.action_type = undefined;
         };
 
+        $scope.actionButtonName = function actionButtonName(action_type){
+            if (action_type === "USE_REROLL"){
+                return 'Re-roll';
+            } else if (action_type === "DONT_USE_REROLL"){
+                return "Don't re-roll";
+            }
+            return $scope.prettify(action_type);
+        };
+
         $scope.setAvailablePositions = function setAvailablePositions(){
             $scope.available_select_positions = [];
             $scope.available_move_positions = [];
+            $scope.available_leap_positions = [];
             $scope.available_block_positions = [];
             $scope.available_handoff_positions = [];
             $scope.available_pass_positions = [];
             $scope.available_foul_positions = [];
             $scope.available_dodge_rolls = [];
+            $scope.available_leap_rolls = [];
             $scope.available_block_rolls = [];
             $scope.available_block_agi_rolls = [];
             $scope.available_handoff_rolls = [];
@@ -333,18 +453,21 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_players = [];
             $scope.available_interception_players = [];
             $scope.available_interception_rolls = [];
-            $scope.available_special_pass_actions = [];
-            $scope.available_special_rolls = [];
-            $scope.passHint = false;
+            $scope.special_action = [];
+            $scope.special_agi_rolls = {};
+            $scope.special_positions = {};
+            $scope.available_select_rolls = [];
             $scope.main_action = null;
+            $scope.blocked = false;
+            $scope.special_action_selected = null;
             for (let idx in $scope.game.state.available_actions){
                 let action = $scope.game.state.available_actions[idx];
                 if (action.disabled){
                     continue;
                 }
                 if (action.positions.length > 0){
-                    // If an available player is selected
                     $scope.main_action = action;
+                    // If an available player is selected
                     if (action.player_ids.length === 0 || ($scope.selectedPlayer() != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0) || action.player_ids.length === 1){
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;
@@ -353,7 +476,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         } else if (action.action_type === "PASS"){
                             $scope.available_pass_positions = action.positions;
                             $scope.available_pass_rolls = action.agi_rolls;
-                            $scope.passHint = true;
+                            $scope.special_actions.push("PASS");
+                            $scope.special_agi_rolls["PASS"] = action.agi_rolls;
+                            $scope.special_positions["PASS"] = action.positions;
                         } else if (action.action_type === "HANDOFF"){
                             $scope.available_handoff_positions = action.positions;
                         } else if (action.action_type === "FOUL"){
@@ -361,6 +486,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         } else if (action.action_type === "MOVE"){
                             $scope.available_move_positions = action.positions;
                             $scope.available_dodge_rolls = action.agi_rolls;
+                        } else if (action.action_type === "LEAP") {
+                            $scope.special_actions.push("LEAP");
+                            $scope.special_agi_rolls["LEAP"] = action.agi_rolls;
+                            $scope.special_positions["LEAP"] = action.positions;
+                        } else if (action.action_type === "STAB"){
+                            $scope.special_actions.push("STAB");
+                            $scope.special_agi_rolls["STAB"] = action.agi_rolls;
+                            $scope.special_positions["STAB"] = action.positions;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -371,8 +504,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     let active_player = $scope.getPlayer(active_player_id);
                     let stand_up_position = active_player.position;
                     $scope.available_select_positions = [stand_up_position];
+                    $scope.available_select_rolls = action.agi_rolls;
                 }
-                if (action.action_type === "INTERCEPTION") {
+                if (action.action_type === "SELECT_PLAYER" && action.agi_rolls.length > 0) {
                     $scope.available_interception_players = action.player_ids;
                     $scope.available_interception_rolls = action.agi_rolls;
                     $scope.main_action = action;
@@ -398,9 +532,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
             // Select squares
             for (let i in $scope.available_select_positions){
-                let pos = $scope.available_select_positions[i];
+                let position = $scope.available_select_positions[i];
+                let roll = null;
+                if ($scope.available_select_rolls.length > i){
+                    roll = $scope.available_select_rolls[i];
+                }
                 // Reserves positions
-                if (pos == null && $scope.selected_square != null && $scope.selected_square.area === 'pitch'){
+                if (position == null && $scope.selected_square != null && $scope.selected_square.area === 'pitch'){
                     if ($scope.main_action.team_id === $scope.game.state.home_team.team_id){
                         for (let y = 0; y < $scope.local_state.home_dugout.length; y++){
                             for (let x = 0; x < $scope.local_state.home_dugout[y].length; x++){
@@ -421,21 +559,22 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         }
                     }
                     // Pitch positions
-                } else if (pos != null) {
-                    $scope.local_state.board[pos.y][pos.x].available = true;
+                } else if (position != null) {
+                    $scope.local_state.board[position.y][position.x].available = true;
+                    $scope.local_state.board[position.y][position.x].agi_rolls = roll;
                     if ($scope.main_action !== null) {
-                        $scope.local_state.board[pos.y][pos.x].action_type = $scope.main_action.action_type;
+                        $scope.local_state.board[position.y][position.x].action_type = $scope.main_action.action_type;
                     }
                 }
                 // Crowd in dugouts - available during pushes
-                if (pos != null){
-                    if (pos.x === 0 && pos.y > 0 && pos.y < $scope.local_state.board.length - 1){
-                        $scope.local_state.away_dugout[pos.y-1][1].available = true;
-                        $scope.local_state.away_dugout[pos.y-1][1].action_type = $scope.main_action.action_type;
+                if (position != null){
+                    if (position.x === 0 && position.y > 0 && position.y < $scope.local_state.board.length - 1){
+                        $scope.local_state.away_dugout[position.y-1][1].available = true;
+                        $scope.local_state.away_dugout[position.y-1][1].action_type = $scope.main_action.action_type;
                     }
-                    if (pos.x === $scope.local_state.board[0].length - 1 && pos.y > 0 && pos.y < $scope.local_state.board.length - 1){
-                        $scope.local_state.home_dugout[pos.y-1][0].available = true;
-                        $scope.local_state.home_dugout[pos.y-1][0].action_type = $scope.main_action.action_type;
+                    if (position.x === $scope.local_state.board[0].length - 1 && position.y > 0 && position.y < $scope.local_state.board.length - 1){
+                        $scope.local_state.home_dugout[position.y-1][0].available = true;
+                        $scope.local_state.home_dugout[position.y-1][0].action_type = $scope.main_action.action_type;
                     }
                 }
             }
@@ -446,34 +585,34 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
 
             // Pass squares
-            for (let i in $scope.available_pass_positions) {
-                let pos = $scope.available_pass_positions[i];
-                let player = $scope.local_state.board[pos.y][pos.x].player;
-                if (player !== null){
-                    let team = $scope.teamOfPlayer(player);
-                    if (team.team_id === $scope.local_state.current_team_id && player.state.up) {
-                        $scope.local_state.board[pos.y][pos.x].available = true;
-                        $scope.local_state.board[pos.y][pos.x].action_type = "PASS";
-                        if ($scope.available_pass_rolls.length > i) {
-                            $scope.local_state.board[pos.y][pos.x].agi_rolls = $scope.available_pass_rolls[i];
+            if ($scope.available_pass_positions.length > 0) {
+                let ballPos = $scope.game.state.pitch.balls[0].position;
+                let passer = $scope.local_state.board[ballPos.y][ballPos.x].player;
+                        let passerTeam = $scope.teamOfPlayer(passer);
+                for (let i in $scope.available_pass_positions) {
+                    let position = $scope.available_pass_positions[i];
+                    let player = $scope.local_state.board[position.y][position.x].player;
+                    if (player !== null) {
+                        let catcherTeam = $scope.teamOfPlayer(player);
+                        if (catcherTeam.team_id === passerTeam.team_id && player.state.up) {
+                            $scope.local_state.board[position.y][position.x].available = true;
+                            $scope.local_state.board[position.y][position.x].action_type = "PASS";
+                            if ($scope.available_pass_rolls.length > i) {
+                                $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_pass_rolls[i];
+                            }
                         }
                     }
-                }
-                $scope.local_state.board[pos.y][pos.x].special_available = true;
-                $scope.local_state.board[pos.y][pos.x].special_action_type = "PASS";
-                if ($scope.available_pass_rolls.length > i) {
-                    $scope.local_state.board[pos.y][pos.x].special_agi_rolls = $scope.available_pass_rolls[i];
                 }
             }
 
             // Interception squares
             for (let i in $scope.available_interception_players){
                 let player_id = $scope.available_interception_players[i];
-                let pos = $scope.local_state.player_positions[player_id];
-                $scope.local_state.board[pos.y][pos.x].available = true;
-                $scope.local_state.board[pos.y][pos.x].action_type = "INTERCEPTION";
+                let position = $scope.local_state.player_positions[player_id];
+                $scope.local_state.board[position.y][position.x].available = true;
+                $scope.local_state.board[position.y][position.x].action_type = "SELECT_PLAYER";
                 if ($scope.available_interception_rolls.length > i){
-                    $scope.local_state.board[pos.y][pos.x].agi_rolls = $scope.available_interception_rolls[i];
+                    $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_interception_rolls[i];
                 }
             }
 
@@ -489,32 +628,43 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Block squares
             for (let i in $scope.available_block_positions) {
-                let pos = $scope.available_block_positions[i];
-                $scope.local_state.board[pos.y][pos.x].available = true;
-                $scope.local_state.board[pos.y][pos.x].action_type = "BLOCK";
+                let position = $scope.available_block_positions[i];
+                $scope.local_state.board[position.y][position.x].available = true;
+                $scope.local_state.board[position.y][position.x].action_type = "BLOCK";
                 if ($scope.available_block_rolls.length > i){
-                    $scope.local_state.board[pos.y][pos.x].block_roll = $scope.available_block_rolls[i];
+                    $scope.local_state.board[position.y][position.x].block_roll = $scope.available_block_rolls[i];
                 }
                 if ($scope.available_block_agi_rolls.length > i){
-                    $scope.local_state.board[pos.y][pos.x].agi_rolls = $scope.available_block_agi_rolls[i];
+                    $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_block_agi_rolls[i];
                 }
             }
 
             // Foul squares
             for (let i in $scope.available_foul_positions) {
-                let pos = $scope.available_foul_positions[i];
-                $scope.local_state.board[pos.y][pos.x].available = true;
-                $scope.local_state.board[pos.y][pos.x].action_type = "FOUL";
-                $scope.local_state.board[pos.y][pos.x].available_foul_position = true;
+                let position = $scope.available_foul_positions[i];
+                $scope.local_state.board[position.y][position.x].available = true;
+                $scope.local_state.board[position.y][position.x].action_type = "FOUL";
+                $scope.local_state.board[position.y][position.x].available_foul_position = true;
             }
 
             // Hand-off squares
             for (let i in $scope.available_handoff_positions) {
-                let pos = $scope.available_handoff_positions[i];
-                $scope.local_state.board[pos.y][pos.x].available = true;
-                $scope.local_state.board[pos.y][pos.x].action_type = "HANDOFF";
+                let position = $scope.available_handoff_positions[i];
+                $scope.local_state.board[position.y][position.x].available = true;
+                $scope.local_state.board[position.y][position.x].action_type = "HANDOFF";
                 if ($scope.available_dodge_rolls.length > i){
-                    $scope.local_state.board[pos.y][pos.x].agi_rolls = $scope.available_handoff_rolls[i];
+                    $scope.local_state.board[position.y][position.x].agi_rolls = $scope.available_handoff_rolls[i];
+                }
+            }
+            // Special actions: TODO: do like this for all actions
+            for (let i in $scope.special_actions) {
+                let action = $scope.special_actions[i];
+                for (let j in $scope.special_positions[action]) {
+                    let pos = $scope.special_positions[action][j];
+                    $scope.local_state.board[pos.y][pos.x].special_actions.push(action);
+                    if ($scope.special_agi_rolls[action].length > j){  // TODO: Is this check necessary?
+                        $scope.local_state.board[pos.y][pos.x].special_agi_rolls[action] = $scope.special_agi_rolls[action][j];
+                    }
                 }
             }
         };
@@ -594,21 +744,136 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         $scope.newAction = function newAction(action_type){
             return {
-                'player_from_id': null,
-                'player_to_id': null,
-                'pos_from': null,
-                'pos_to': null,
-                'team_home': null,
+                'player_id': null,
+                'position': null,
+                //'position_to': null,
+                //'team_home': null,
+                'team_id': $scope.team_id,
                 'idx': -1,
                 'action_type': action_type
             };
         };
 
+        $scope.padWithZeroes = function padWithZeroes(number, length) {
+            var my_string = '' + number;
+            while (my_string.length < length) {
+                my_string = '0' + my_string;
+            }
+            return my_string;
+        };
+
+        $scope.teamAgent = function teamAgent(team){
+            if (team.team_id == $scope.game.state.home_team.team_id){
+                return $scope.game.home_agent;
+            } else if (team.team_id == $scope.game.state.away_team.team_id){
+                return $scope.game.away_agent;
+            }
+            return null;
+        };
+
+        $scope.agentTeam = function agentTeam(agent){
+            if (agent.agent_id == $scope.game.home_agent.agent_id){
+                return $scope.game,state.home_team;
+            } else if (agent.agent_id == $scope.game.away_agent.agent_id){
+                return $scope.game,state.agent_team;
+            }
+            return null;
+        };
+
+        $scope.agentIdTeam = function agentIdTeam(agent_id){
+            if (agent_id == $scope.game.home_agent.agent_id){
+                return $scope.game,state.home_team;
+            } else if (agent_id == $scope.game.away_agent.agent_id){
+                return $scope.game,state.agent_team;
+            }
+            return null;
+        };
+
+        $scope.getTeamClock = function getTeamClock(team){
+            for (var i=0; i < $scope.game.state.clocks.length; i++){
+                let clock = $scope.game.state.clocks[i];
+                if (team.team_id == clock.team_id){
+                    return clock;
+                }
+            }
+            return null;
+        };
+
+        $scope.getActiveClock = function getActiveClock(){
+            let out = null;
+            for (var i=0; i < $scope.game.state.clocks.length; i++){
+                let c = $scope.game.state.clocks[i];
+                if (!c.is_primary){
+                     return c;
+                } else {
+                    out = c;
+                }
+            }
+            return out;
+        };
+
+        $scope.getSecondsLeft = function getSecondsLeft(clock, ratio){
+            let now = new Date() / 1000;
+            let runningTime = clock.running_time;
+            if (clock.is_running){
+                // Calculate running time
+                runningTime = now - clock.started_at - clock.paused_seconds;
+            }
+            let secondsLeft = clock.seconds - runningTime;
+            if (ratio){
+                return runningTime / clock.seconds;
+            }
+            return secondsLeft;
+        };
+
+        $scope.setClock = function setClock(){
+
+            // Set width of turnmarkers
+            let clock = $scope.getTeamClock($scope.game.state.away_team);
+            if (clock != null){
+                let awayTimeRatio = 1 - $scope.getSecondsLeft(clock, true);
+                if (awayTimeRatio != null){
+                    $('#turnmarker-away').width((awayTimeRatio * 100) + '%');
+                }
+            } else {
+                $('#turnmarker-away').width('0%');
+            }
+            clock = $scope.getTeamClock($scope.game.state.home_team);
+            if (clock != null){
+                let homeTimeRatio = 1 - $scope.getSecondsLeft(clock, true);
+                if (homeTimeRatio != null){
+                    $('#turnmarker-home').width((homeTimeRatio * 100) + '%');
+                }
+            } else {
+                $('#turnmarker-home').width('0%');
+            }
+
+            // Set clock to actor's time left
+            let activeClock = $scope.getActiveClock();
+
+            // Update clock
+            if (activeClock != null){
+                let secondsLeft = Math.max(0, $scope.getSecondsLeft(activeClock, false));
+                var m = Math.floor(secondsLeft / 60);
+                var s = Math.floor(secondsLeft % 60);
+                $scope.$apply(function(){
+                    $scope.clock = $scope.padWithZeroes(m, 2) + ":" + $scope.padWithZeroes(s, 2);
+                });
+            } else {
+                $scope.$apply(function(){
+                    $scope.clock = "";
+                });
+            }
+        };
+
         $scope.checkForReload = function checkForReload(time){
-            if ($scope.available_positions.length === 0 && !$scope.game.game_over){
+            if ($scope.available_positions.length === 0 && !$scope.game.state.game_over){
                 setTimeout(function(){
-                    if (!$scope.loading && !$scope.refreshing && ($scope.game.state.available_actions.length === 0 || $scope.opp_turn)){
-                        $scope.act($scope.newAction('CONTINUE'));
+                    if (!$scope.loading && !$scope.refreshing){
+                        if ($scope.opp_turn){
+                            // It's opponent's turn
+                            $scope.act($scope.newAction('CONTINUE'));
+                        }
                     }
                 }, time);
             }
@@ -663,7 +928,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.playerReadyStateClass = function playerStateClass(player){
-            if (player.state.heated || player.state.bone_headed || player.state.hypnotized || player.state.used){
+            if (player.state.heated || player.state.bone_headed || player.state.hypnotized || player.state.used){
                 return "secondary";
             } else if (player.state.up){
                 return "success";
@@ -712,7 +977,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return {
                 'player_id': player_id,
                 // 'pos_from': $scope.selected_square != null && $scope.selected_square.area === 'pitch' ? {'x': $scope.selected_square.x, 'y': $scope.selected_square.y} : null,
-                'pos': square.area === 'pitch' || square.area === 'crowd' ? {'x': square.x, 'y': square.y} : null,
+                'position': square.area === 'pitch' || square.area === 'crowd' ? {'x': square.x, 'y': square.y} : null,
                 'idx': -1,
                 'action_type': action_type
             };
@@ -728,8 +993,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             // If position is available
             if ($scope.main_action != null && $scope.getAvailable(square)){
 
-                // Hot-fix for interceptions
-                if ($scope.main_action.action_type === 'INTERCEPTION' || $scope.main_action.action_type === "SELECT_PLAYER"){
+                // Select player
+                if ($scope.main_action.action_type === "SELECT_PLAYER"){
                     $scope.selected_square = square;
                 }
 
@@ -833,8 +1098,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         return "2nd half";
                     }
                 }
-            } else if ($scope.game.game_over && team == null){
-                return "Game is Over";
+            } else if ($scope.game.state.game_over && team == null){
+                return "Game over";
             } else if ($scope.game.state.half === 1 && team == null){
                 return "1st half";
             } else if ($scope.game.state.half === 2 && team == null){
@@ -889,7 +1154,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.opp_turn = true;
             for (let idx in $scope.game.state.available_actions) {
                 let action = $scope.game.state.available_actions[idx];
-                if ($scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
+                if ($scope.replaying || action.disabled || $scope.spectating || ($scope.team_id !== undefined && action.team_id !== $scope.team_id)) {
                     action.disabled = true;
                     continue;
                 }
@@ -897,7 +1162,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
         };
 
+        $scope.lastReportIdx = 0;
+
         $scope.act = function act(action){
+            if ($scope.loading || $scope.refreshing){
+                return;
+            }
             console.log(action);
             if (action.action_type === "END_TURN" || action.action_type === "PASS"){
                 $scope.resetSquares(true);
@@ -911,12 +1181,30 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
+                //$scope.updateClock();
                 //$scope.updateMoveLines();
                 $scope.refreshing = false;
                 document.getElementById('gamelog').scrollTop = 0;
-                let time = $scope.game.state.reports.length > 0 && $scope.showReport($scope.game.state.reports[$scope.game.state.reports.length-1]) ? 10 : 0;
-                $scope.checkForReload(time);
+                let time = 10;
+                if ($scope.game.state.reports.length > 0){
+                    let newestReport = $scope.game.state.reports[$scope.game.state.reports.length-1];
+                    if (newestReport.outcome_type in GameLogService.log_timouts){
+                        if ($scope.game.state.reports.length === $scope.lastReportIdx){
+                            time = 100;
+                        } else if ($scope.game.state.reports[$scope.game.state.reports.length-1].outcome_type in GameLogService.log_timouts){
+                            time = GameLogService.log_timouts[$scope.game.state.reports[$scope.game.state.reports.length-1]];
+
+                        } else {
+                            time = 10;
+                        }
+                        $scope.lastReportIdx = $scope.game.state.reports.length;
+                    }
+                }
+                if (time !== null){
+                    $scope.checkForReload(time);
+                }
                 $scope.saved = false;
+                $scope.blocked = false;
             }).error(function(status, data) {
                 $location.path("/#/");
             });
@@ -925,7 +1213,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.pickActionType = function pickActionType(action){
             if (action.action_type === "PLACE_BALL" && $scope.local_state.balls.length > 0){
                 let a = $scope.newAction(action.action_type);
-                a.pos = $scope.local_state.balls[0].position;
+                a.position = $scope.local_state.balls[0].position;
                 $scope.act(a);
             } else if (action.player_ids.length > 0 && $scope.selectedPlayer != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0){
                 let a = $scope.newAction(action.action_type);
@@ -935,7 +1223,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 let a = $scope.newAction(action.action_type);
                 $scope.act(a);
             }
-
         };
 
         $scope.showActionAsDice = function showActionAsDice(action) {
@@ -957,6 +1244,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             return false;
         };
 
+        $scope.showActionAsSpecialButton = function showActionAsSpecialButton(action) {
+            return $scope.special_actions.indexOf(action.action_type) > -1;
+        };
+
         $scope.showActionAsButton = function showActionAsButton(action) {
             if (action.action_type === "SELECT_ATTACKER_DOWN"){
                 return false;
@@ -972,6 +1263,18 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
             if (action.action_type === "SELECT_DEFENDER_DOWN"){
                 return false;
+            }
+            if (action.action_type === "USE_SKILL"){
+                return false;
+            }
+            if (action.action_type === "DONT_USE_SKILL"){
+                for (let idx in $scope.game.state.available_actions) {
+                    let a = $scope.game.state.available_actions[idx];
+                    if (a.action_type === "USE_SKILL"){
+                        return false;  // Dump off exception
+                    }
+                }
+                return true;
             }
             if (action.action_type !== "START_GAME" && action.action_type.indexOf("START_") > -1){
                 return false;
@@ -1010,25 +1313,126 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 lastY = y;
             });
         };
+        
+        $scope.runTimeLoop = function runTimeLoop(time, game_id){
+            if ($scope.game.state.game_over){
+                $scope.setClock();
+                return;
+            }
+            setTimeout(function(){
+                if (!window.location.href.includes(game_id)){
+                    return;
+                }
+                $scope.setClock();
+                var clock = $scope.getActiveClock();
+                if (clock != null){
+                    if ($scope.getSecondsLeft(clock, false) < 0 && !$scope.refreshing){
+                        $scope.reload();
+                    } else {
+                        $scope.runTimeLoop(time, game_id);
+                    }
+                } else {
+                    $scope.runTimeLoop(time, game_id);
+                }
+            }, time);
+        };
 
-        // Get game-state when document is ready
-        $( document ).ready(function() {
-            GameService.get(id).success(function (data) {
-                $scope.game = data;
+        $scope.runPlayLoop = function runPlayLoop(){
+            setTimeout(function(){
+                if ($scope.replayIsPlaying) {
+                    $scope.nextStep();
+                    $scope.$apply();
+                }
+                $scope.runPlayLoop();
+            }, $scope.replaySpeed);
+        };
+
+        $scope.numOfSteps = function (){
+            return  Object.keys($scope.replay.steps).length;
+        };
+
+        $scope.nextStep = function (){
+            if ($scope.replayStep + 1 < $scope.numOfSteps()){
+                $scope.replayStep += 1;
+                let stepId = Object.keys($scope.replay.steps)[$scope.replayStep];
+                $scope.game = $scope.replay.steps[stepId];
                 $scope.disableOppActions();
                 $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
                 $scope.setLocalState();
                 $scope.setAvailablePositions();
-                //$scope.updateMoveLines();
-                $scope.loading = false;
-                console.log(data);
-                $scope.checkForReload(2500);
-                $scope.saved = false;
-            }).error(function (status, data) {
-                $location.path("/#/");
-            });
-        });
+            } else {
+                $scope.replayIsPlaying = false;
+            }
+        };
 
+        $scope.playOrPause = function(){
+            $scope.replayIsPlaying = !$scope.replayIsPlaying;
+        };
+
+        $scope.prevStep = function (){
+            if ($scope.replayStep > 0){
+                $scope.replayStep -= 1;
+                let stepId = Object.keys($scope.replay.steps)[$scope.replayStep];
+                $scope.game = $scope.replay.steps[stepId];
+                $scope.disableOppActions();
+                $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                $scope.setLocalState();
+                $scope.setAvailablePositions();
+            } else {
+                $scope.replayIsPlaying = false;
+            }
+        };
+
+        $scope.reload = function reload(){
+            $scope.refreshing = true;
+            if ($scope.replaying){
+
+                ReplayService.get($scope.replay_id).success(function (data) {
+                    $scope.replay = data;
+                    $scope.game = data.steps[0];
+                    $scope.disableOppActions();
+                    $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                    $scope.setLocalState();
+                    $scope.setAvailablePositions();
+                    //$scope.updateMoveLines();
+                    $scope.loading = false;
+                    $scope.refreshing = false;
+                    console.log(data);
+                    $scope.saved = false;
+                    $scope.blocked = false;
+                    $scope.runPlayLoop();
+                }).error(function (status, data) {
+                    $location.path("/#/");
+                });
+
+            } else {
+
+                GameService.get($scope.game_id).success(function (data) {
+                    $scope.game = data;
+                    $scope.disableOppActions();
+                    $scope.playersById = Object.assign({}, $scope.game.state.home_team.players_by_id, $scope.game.state.away_team.players_by_id);
+                    $scope.setLocalState();
+                    $scope.setAvailablePositions();
+                    //$scope.updateMoveLines();
+                    $scope.loading = false;
+                    $scope.refreshing = false;
+                    console.log(data);
+                    $scope.checkForReload(2500);
+                    $scope.saved = false;
+                    $scope.blocked = false;
+                    $scope.runTimeLoop(20, data.game_id);
+                }).error(function (status, data) {
+                    $location.path("/#/");
+                });
+
+            }
+
+        };
+
+        // Get game-state when document is ready
+        $( document ).ready(function() {
+            $scope.reload();
+        });
 
     }
 ]);

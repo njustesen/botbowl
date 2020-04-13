@@ -1,7 +1,7 @@
 {
-    "name": "Fantasy Football 7",
+    "name": "FFAI 7",
     "arena": "ff-pitch-7.txt",
-    "ruleset": "LRB5-Experimental.xml",
+    "ruleset": "BB2016",
     "dungeon": false,
     "roster_size": 9,
     "pitch_max": 7,
@@ -17,7 +17,11 @@
     "defensive_formations": ["def_spread.txt"],
     "offensive_formations": ["off_wedge.txt"],
     "time_limits": {
-        "turn": 160,
-        "opp_choice": 10
+        "game": 15360,
+        "turn": 180,
+        "secondary": 10,
+        "disqualification": 5,
+        "init": 10,
+        "end": 10
     }
 }
