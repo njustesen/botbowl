@@ -82,8 +82,5 @@ def get_teams(ruleset, board_size=11):
 
 
 def get_bots():
-    bots = []
-    for bot in list_bots():
-        if bot in included_bot_names:
-            bots.append(bot)
+    bots = list_bots()
     return bots

@@ -9,7 +9,7 @@ from ffai.core.model import Agent
 from ffai.ai.registry import register_bot
 
 
-class ChrashBot(Agent):
+class CrashBot(Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -26,4 +26,4 @@ class ChrashBot(Agent):
 
 
 # Register bot
-register_bot('crash', ChrashBot)
+register_bot('crash', CrashBot)

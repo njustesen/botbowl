@@ -608,7 +608,7 @@ class Game:
                 self.actor = self.home_agent
             elif self.state.available_actions[0].team == self.state.away_team:
                 self.actor = self.away_agent
-    
+ 
     def report(self, outcome):
         """
         Adds the outcome to the game's reports.
@@ -1557,7 +1557,7 @@ class Game:
     def get_adjacent_opponents(self, player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
         """
         Returns a list of adjacent opponents to the player it its current position.
-        :param position:
+        :param player:
         :param diagonal: Whether to include diagonally adjacent players.
         :param down: Whether to include down players.
         :param standing: Whether to include standing players.
@@ -1570,7 +1570,7 @@ class Game:
     def get_adjacent_teammates(self, player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
         """
         Returns a list of adjacent teammates to the player it its current position.
-        :param position:
+        :param player:
         :param diagonal: Whether to include diagonally adjacent players.
         :param down: Whether to include down players.
         :param standing: Whether to include standing players.
