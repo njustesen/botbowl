@@ -5,11 +5,10 @@ from .env import FFAIEnv
 from .layers import *
 from .registry import *
 from .pathfinding import *
-from .bothelper import *
 from .competition import *
 from .renderer import *
-from .bots import RandomBot
-from .bots import ProcBot
+from .proc_bot import *
+from .bots import *
 
 ruleset = load_rule_set('BB2016')
 

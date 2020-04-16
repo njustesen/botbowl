@@ -23,7 +23,3 @@ class InitCrashBot(Agent):
 
     def end_game(self, game):
         pass
-
-
-# Register bots
-register_bot('init-crash', InitCrashBot)

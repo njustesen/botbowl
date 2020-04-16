@@ -13,7 +13,6 @@ from ffai.ai.registry import list_bots
 
 # Create a game in-memory host
 host = InMemoryHost()
-included_bot_names = ["scripted", "random"]
 
 
 def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, config_name="web.json", board_size=11):
@@ -82,8 +81,5 @@ def get_teams(ruleset, board_size=11):
 
 
 def get_bots():
-    bots = []
-    for bot in list_bots():
-        if bot in included_bot_names:
-            bots.append(bot)
+    bots = list_bots()
     return bots
