@@ -476,7 +476,7 @@ class FFAIEnv(gym.Env):
                                 FFAIEnv.square_size * y + FFAIEnv.square_size + FFAIEnv.top_bar_height, fill='white',
                                 width=1)
 
-    def render(self, feature_layers=False):
+    def render(self, feature_layers=False, reward_array=None):
 
         if self.root is None:
             self.root = tk.Tk()
@@ -620,6 +620,11 @@ class FFAIEnv(gym.Env):
                     col = 0
                     row += 1
 
+        if reward_array is not None:
+            for i,k in enumerate(reward_array): 
+                val = reward_array[k]
+                self.cv.create_text(self.game.arena.width * FFAIEnv.square_size*1.4, 10+i*12,
+                                    text='{}  {}'.format(val,k), fill='black', anchor=tk.W ) 
         self.root.update_idletasks()
         self.root.update()
 

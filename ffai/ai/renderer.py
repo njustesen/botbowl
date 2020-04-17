@@ -73,6 +73,7 @@ class Renderer:
                                     width=2)
 
     def render(self, obs, idx, feature_layers=False):
+       
         width = len(obs['board']['occupied'][0])
         height = len(obs['board']['occupied'])
         cv_width = width * Renderer.square_size
