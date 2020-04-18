@@ -810,8 +810,9 @@ class GrodBot(pb.Agent):
             players_available = game.get_players_on_pitch(self.my_team, up=True)
             if players_available:
                 players_sorted = sorted(players_available, key=lambda x: player_blitz_ability(game, x), reverse=True)
+                players_available = [player for player in players_available if game.num_tackle_zones_in(player) == 0]
                 player = players_sorted[0]
-                return m.Action(t.ActionType.PLACE_PLAYER, player=player, position=ball_pos)
+                return m.Action(t.ActionType.SELECT_PLAYER, player=player, position=ball_pos)
         return m.Action(t.ActionType.SELECT_NONE)
 
     def touchback(self, game: g.Game):
