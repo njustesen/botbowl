@@ -623,7 +623,7 @@ class FFAIEnv(gym.Env):
         if reward_array is not None:
             for i,k in enumerate(reward_array): 
                 val = reward_array[k]
-                self.cv.create_text(self.game.arena.width * FFAIEnv.square_size*1.4, 10+i*12,
+                self.cv.create_text(self.game.arena.width * FFAIEnv.square_size+2, 10+i*12,
                                     text='{}  {}'.format(val,k), fill='black', anchor=tk.W ) 
         self.root.update_idletasks()
         self.root.update()
