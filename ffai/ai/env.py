@@ -163,7 +163,7 @@ class FFAIEnv(gym.Env):
         self.home_team = home_team
         self.away_team = away_team
         self.actor = Agent("Gym Learner", human=True)
-        self.opp_actor = opp_actor if opp_actor is not None else RandomBot("Random")
+        self.opp_actor = Agent("Gym Learner", human=True)
         self._seed = None
         self.seed()
         self.root = None
