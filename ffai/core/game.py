@@ -2131,3 +2131,9 @@ class Game:
                 return self.state.stack.items[idx]
         return None
 
+    def get_tile(self, position):
+        """
+        :param position: a Square on the board.
+        :return: the tile type at the given position.
+        """
+        return self.arena.board[position.y][position.x]
