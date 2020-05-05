@@ -1,15 +1,11 @@
 """
 ==========================
-Author: Kevin Glass / Peter Moore
-Year: 2019
+Author: Niels Justesen
+Year: 2020
 ==========================
-This module contains a generic A* Path Finder, along with a specific test implementation.  Originally written in Java by
-Kevin Glass: http://www.cokeandcode.com/main/tutorials/path-finding/ and converted to Python, with modifications, by
-Peter Moore.  The main modifications,
-    1. Create_paths, which finds solutions to all nodes within search_distance
-    3. Support for adding costs as if they are probabilities via p_s = 1-(1-p1)*(1-p2)
-    3. Simple class implementations as well as run code that demonstrates the results via main()
+This module contains pathfinding functionalities for FFAI.
 """
+
 from typing import Optional, List
 from ffai.core.model import Player, Square
 from ffai.core.table import Skill, WeatherType, Tile
@@ -75,7 +71,7 @@ class Node:
         assert can_use_dodge_p <= 1
         dodge_used_now_p = (1-p) * can_use_dodge_p
         assert dodge_used_now_p <= 1
-        can_use_rr_p = 0 if not rr else (1 - dodge_used_now_p) * (1 - self.rr_used_prob)
+        can_use_rr_p = 0 if not rr else (1 - can_use_dodge_p) * (1 - self.rr_used_prob)
         assert can_use_rr_p <= 1
         rr_used_now_p = (1-p) * can_use_rr_p
         assert rr_used_now_p < 1
@@ -83,7 +79,8 @@ class Node:
         success_skill = dodge_used_now_p * p
         success_reroll = rr_used_now_p * p
         success = success_first + success_skill + success_reroll
-        assert success < 1
+        if success >= 1:
+            raise Exception(f"{success}: {success_first} + {success_skill} + {success_reroll}")
         self.prob *= success
         self.dodge_used_prob += success_skill
         self.rr_used_prob += success_reroll
@@ -102,7 +99,8 @@ class Node:
         success_skill = sure_feet_used_now_p * p
         success_reroll = rr_used_now_p * p
         success = success_first + success_skill + success_reroll
-        assert success < 1
+        if success >= 1:
+            raise Exception(f"{success}: {success_first} + {success_skill} + {success_reroll}")
         self.prob *= success
         self.sure_feet_used_prob += success_skill
         self.rr_used_prob += success_reroll
@@ -167,6 +165,13 @@ class ParetoFrontier:
         self.nodes = new
         self.nodes.append(node)
 
+    def get_best(self):
+        best = None
+        for node in self.nodes:
+            if best is None or node.prob > best.prob or (node.prob == best.prob and node.moves < best.moves):
+                best = node
+        return best
+
 
 def _alter_state(game, player, from_position, moves_used):
     orig_player, orig_ball = None, None
@@ -195,14 +200,30 @@ def _reset_state(game, player, orig_player, orig_ball):
         game.ball = orig_ball
 
 
-def find_path(game, player, position=None, target_x=None, target_player=None, allow_rr=False, blitz=False, max_moves=None) -> Optional[Path]:
+def _collect_path(node):
+    steps = []
+    n = node
+    while n is not None:
+        steps.append(n.position)
+        n = n.parent
+    steps.reverse()
+    steps = steps[1:]
+    path = Path(steps, prob=node.prob)
+    path.dodge_used_prob = node.dodge_used_prob
+    path.sure_feet_used_prob = node.sure_feet_used_prob
+    path.rr_used_prob = node.rr_used_prob
+    return path
+
+
+def find_path(game, player, position=None, target_x=None, target_player=None, allow_rr=False, blitz=False, max_moves=None, all=False) -> Optional[Path]:
 
     # Only one target type
-    assert position is None or (target_x is None and target_player is None)
-    assert target_x is None or (position is None and target_player is None)
-    assert target_player is None or (position is None and target_x is None and target_player.position is not None)
-
-    #print(f"From [{player.position.x}. {player.position.y}] to [{position.x}. {position.y}]")
+    if all:
+        assert position is None and target_player is None and target_x is None
+    else:
+        assert position is None or (target_x is None and target_player is None)
+        assert target_x is None or (position is None and target_player is None)
+        assert target_player is None or (position is None and target_x is None and target_player.position is not None)
 
     # Goal positions used if no position is given
     goals = []
@@ -210,7 +231,7 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
         goals.append(position)
 
     # If we are already at the target
-    if player.position == position or \
+    if (player is not None and player.position == position) or \
             (target_x is not None and player.position.x == target_x) or \
             (target_player is not None and target_player.position.is_adjacent(player.position)):
         return Path([], 1.0)
@@ -219,12 +240,13 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
     if position is not None and game.get_player_at(position) is not None:
         return None
 
+    # Blitzes
+    pareto_blitzes = {}
+
     # Max search depth
     if max_moves is None:
-        standup = 0 if player.state.up or player.has_skill(Skill.JUMP_UP) else 3
-        ma = player.get_ma() - player.state.moves - standup
-        gfis = 3 if player.has_skill(Skill.SPRINT) else 2
-        max_moves = ma + gfis
+        ma = player.get_ma()
+        max_moves = player.num_moves_left()
     else:
         ma = max_moves
 
@@ -249,11 +271,9 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
         # pull out the first node in our open list
         current = openset.first()
         openset.remove(current)
-        #print(f"Current: [{current.position.x},{current.position.y}]")
 
         # Check if it's still on the pareto frontier
         if not current in pareto_frontiers[current.position].nodes:
-            #print(f"No longer on Pareto")
             continue
 
         # Stop if this path can't become better than the best
@@ -278,18 +298,17 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
 
             # If out of moves or out of reach stop here
             if position is not None and current.moves + current.position.distance(position) > max_moves:
-                #print(f"To far from goal")
                 continue
             if target_player is not None and current.moves + current.position.distance(target_player.position) - 1 + (1 if blitz else 0) > max_moves:
-                #print(f"To far from target player")
                 continue
             if target_x is not None and current.moves + abs(current.position.x - target_x) + (1 if blitz else 0) > max_moves:
-                #print(f"To far from target player")
                 continue
-
-            # Square explored for the first time
-            if neighbour not in pareto_frontiers:
-                pareto_frontiers[neighbour] = ParetoFrontier()
+            if all and blitz:
+                adjacent_opponents = game.get_adjacent_players(neighbour, team=game.get_opp_team(player.team), down=False)
+                if adjacent_opponents and current.moves >= max_moves - 1:
+                    continue
+                if not adjacent_opponents and current.moves >= max_moves - 2:
+                    continue
 
             # Make expanded node
             node = Node(neighbour, parent=current, moves=1)
@@ -301,7 +320,17 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
             if dodge_p < 1.0:
                 node.add_dodge_prob(dodge_p, dodge_skill=can_use_dodge, rr=can_use_rr)
 
-            #print(f"Exploring: [{neighbour.x},{neighbour.y}]")
+            # If a potential blitz position, copy node and add to blitzes
+            if all and blitz and game.get_adjacent_players(node.position, down=False, team=game.get_opp_team(player.team)):
+                if blitz and node.moves < max_moves:
+                    blitz_node = copy.copy(node)
+                    blitz_node.add_moves(1)
+                    if blitz_node.moves >= ma:
+                        can_use_rr = allow_rr and game.can_use_reroll(player.team)
+                        blitz_node.add_gfi_prob(5 / 6, sure_feet_skill=player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
+                    if blitz_node.position not in pareto_blitzes:
+                        pareto_blitzes[blitz_node.position] = ParetoFrontier()
+                    pareto_blitzes[blitz_node.position].add(blitz_node)
 
             # Check if goal was reached
             goal_reached = False
@@ -323,21 +352,19 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
                 # Check if path beats the best
                 if best is None:
                     best = node
-                    #print("Path found")
                 elif node.prob > best.prob:
                     best = node
-                    #print("New best path found")
                 elif node.prob == best.prob and node.moves < best.moves:
                     best = node
-                    #print("New best path found")
             else:
 
                 # No moves left
                 if current.moves == max_moves:
-                    #print(f"No more moves left")
                     continue
 
                 # Add to pareto frontier
+                if neighbour not in pareto_frontiers:
+                    pareto_frontiers[neighbour] = ParetoFrontier()
                 pareto_frontiers[neighbour].add(node)
 
                 # If it's on the pareto frontier
@@ -345,23 +372,27 @@ def find_path(game, player, position=None, target_x=None, target_player=None, al
 
                     # Add it to the open set
                     openset.append(node)
-                    #print(f"Added to Pareto and openset: [{neighbour.x},{neighbour.y}]")
 
     # Search is over - backtrack for goals to find safest path
+    if all:
+        paths = []
+        # Reset pareto frontiers and recreate from blitzes
+        if blitz:
+            pareto_frontiers = pareto_blitzes
+        # Pareto nodes?
+        for position, frontier in pareto_frontiers.items():
+            best = frontier.get_best()
+            if best.parent is None:
+                continue
+            path = _collect_path(best)
+            paths.append(path)
+        return paths
+
     if best is None:
-        #print("No path found")
         return None
+
     node = best
-    steps = []
-    while node is not None:
-        steps.append(node.position)
-        node = node.parent
-    steps.reverse()
-    steps = steps[1:]
-    path = Path(steps, prob=best.prob)
-    path.dodge_used_prob = best.dodge_used_prob
-    path.sure_feet_used_prob = best.sure_feet_used_prob
-    path.rr_used_prob = best.rr_used_prob
+    path = _collect_path(node)
     return path
 
 
@@ -396,42 +427,11 @@ def get_safest_path_to_endzone(game, player, from_position=None, allow_team_rero
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    x = 1 if player.team == game.state.home_team else game.arena.width - 2
+    x = game.get_opp_endzone_x(player.team)
     path = find_path(game, player, target_x=x, allow_rr=allow_team_reroll, blitz=False)
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
-
     return path
-
-
-def get_safest_path_forward(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None):
-    """
-    :param game:
-    :param player:
-    :param from_position: position to start movement from. If None, it will start from the player's current position.
-    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
-    :param allow_team_reroll: allow team rerolls to be used.
-    :return: a path containing the list of squares that forms the safest (and thereafter shortest) path toward the endzone while this is not guaranteed.
-    """
-    if from_position is not None and num_moves_used != 0:
-        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    x = 1 if player.team == game.state.home_team else game.arena.width - 2
-    d = abs(player.position.x - x)
-    max_moves = player.num_moves_left()
-    if d > player.num_moves_left():
-        if x < player.position.x:
-            x += d - max_moves
-        else:
-            x -= d - max_moves
-    path = find_path(game, player, target_x=x, allow_rr=allow_team_reroll, max_moves=max_moves+5)
-    if from_position is not None and num_moves_used != 0:
-        _reset_state(game, player, orig_player, orig_ball)
-
-    if path is not None and len(path) > max_moves:
-        path.steps = path.steps[max_moves:]
-
-    return path
-
 
 
 def get_safest_path_to_player(game, player, target_player, from_position=None, allow_team_reroll=False, num_moves_used=None, blitz=False):
@@ -442,6 +442,7 @@ def get_safest_path_to_player(game, player, target_player, from_position=None, a
     :param from_position: position to start movement from. If None, it will start from the player's current position.
     :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
     :param allow_team_reroll: allow team rerolls to be used.
+    :param blitz: whether it is a blitz move.
     :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
     a position that is adjacent to the other player and the probability of success.
     """
@@ -453,3 +454,22 @@ def get_safest_path_to_player(game, player, target_player, from_position=None, a
 
     return path
 
+
+def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None, blitz=False):
+    """
+    :param game:
+    :param player: the player to move
+    :param from_position: position to start movement from. If None, it will start from the player's current position.
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.
+    :param blitz: only finds blitz moves if True.
+    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
+    a position that is adjacent to the other player and the probability of success.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    path = find_path(game, player, allow_rr=allow_team_reroll, blitz=blitz, all=True)
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+
+    return path

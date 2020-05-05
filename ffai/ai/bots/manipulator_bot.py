@@ -42,7 +42,3 @@ class ManipulatorBot(Agent):
         elif game.away_agent == self:
             game.state.away_team.state.score = 1000
         pass
-
-
-# Register bot
-register_bot('manipulator', ManipulatorBot)

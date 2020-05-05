@@ -1,4 +1,3 @@
-from ffai.core.load import *
 from ffai.core.game import *
 from ffai.ai.bots.random_bot import *
 from copy import deepcopy

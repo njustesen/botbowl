@@ -35,8 +35,3 @@ class JustInTimeBot(Agent):
 
     def end_game(self, game):
         pass
-
-
-# Register bots
-register_bot('just-in-time', JustInTimeBot)
-

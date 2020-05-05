@@ -1,7 +1,5 @@
-import pytest
-from ffai.ai.registry import register_bot, make_bot
+from ffai.ai.registry import make_bot
 from ffai.core.game import *
-from ffai.ai.bots.random_bot import RandomBot
 
 
 def test_team():

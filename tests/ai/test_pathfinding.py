@@ -4,7 +4,7 @@ import pytest
 import ffai.ai.pathfinding as pf
 
 
-PROP_PRECISION = 0.0006
+PROP_PRECISION = 0.000000001
 
 
 def test_neighbors():
@@ -16,7 +16,7 @@ def test_neighbors():
         path = pf.get_safest_path(game, player, neighbor)
         assert len(path.steps) == 1 and path.steps[0] == neighbor
         assert path.prob == 1.0
-test_neighbors()
+
 
 
 def test_out_of_bounds():
@@ -199,12 +199,40 @@ def test_path_to_endzone_away():
     assert path is not None
     assert len(path) == 3
 
-def test_path_forward():
+
+def test_all_paths():
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
     player.role.ma = 6
-    position = Square(1, 4)
+    position = Square(1, 1)
     game.put(player, position)
-    path = pf.get_safest_path_forward(game, player)
-    assert path is not None
-    assert len(path) == player.num_moves_left()
+    paths = pf.get_all_paths(game, player)
+    assert paths is not None
+    assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
+
+
+def test_all_blitz_paths():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    game.put(player, Square(1, 1))
+    opp_player = game.get_reserves(game.state.home_team)[0]
+    game.put(opp_player, Square(3, 3))
+    paths = pf.get_all_paths(game, player, blitz=True)
+    assert paths is not None
+    assert len(paths) == 8
+
+
+def test_all_blitz_paths_two():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    game.put(player, Square(1, 1))
+    opp_player = game.get_reserves(game.state.home_team)[0]
+    game.put(opp_player, Square(3, 3))
+    opp_player = game.get_reserves(game.state.home_team)[1]
+    game.put(opp_player, Square(4, 3))
+    paths = pf.get_all_paths(game, player, blitz=True)
+    assert paths is not None
+    assert len(paths) == 10
+

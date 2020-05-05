@@ -13,8 +13,10 @@ class Renderer:
     black = '#000000'
     white = '#ffffff'
     crowd = '#113311'
-    blue = '#2277cc'
-    red = '#cc7722'
+    blue = '#6666cc'
+    red = '#cc6666'
+    blue_endzone = '#2222cc'
+    red_endzone = '#cc2222'
     ball = '#ff00cc'
     field = '#77cc77'
     wing = '#55aa55'
@@ -99,9 +101,9 @@ class Renderer:
                 if y == height-1 or y == 0 or x == 0 or x == width-1:
                     fill = Renderer.crowd
                 elif obs['board']['own touchdown'][y][x]:
-                    fill = Renderer.blue
+                    fill = Renderer.blue_endzone
                 elif obs['board']['opp touchdown'][y][x]:
-                    fill = Renderer.red
+                    fill = Renderer.red_endzone
                 else:
                     fill = Renderer.field
                 self.cvs[idx].create_rectangle(Renderer.square_size*x, Renderer.square_size*y + Renderer.top_bar_height, Renderer.square_size*x + Renderer.square_size, Renderer.square_size*y + Renderer.square_size + Renderer.top_bar_height, fill=fill, outline=Renderer.black)
