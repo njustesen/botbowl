@@ -40,7 +40,8 @@ class Node:
     def __init__(self, position, parent=None, moves=0):
         self.parent: Optional[Node] = parent
         self.position = position
-        self.costs = [0, 0, 0, 0, 0]
+        self.costs = [0, 0]
+        #self.costs = [0, 0, 0, 0, 0]  # Not sure if we need these additional info
         if parent is not None:
             self.moves = parent.moves + moves
             self.prob = parent.prob
@@ -56,11 +57,11 @@ class Node:
         self.update_costs()
 
     def update_costs(self):
-        self.costs[0] = 1-self.prob
+        self.costs[0] = round(1-self.prob, 2)
         self.costs[1] = self.moves
-        self.costs[2] = self.dodge_used_prob
-        self.costs[3] = self.sure_feet_used_prob
-        self.costs[4] = self.rr_used_prob
+        #self.costs[2] = self.dodge_used_prob  # Not sure if we need these additional info
+        #self.costs[3] = self.sure_feet_used_prob  # Not sure if we need these additional info
+        #self.costs[4] = self.rr_used_prob  # Not sure if we need these additional info
 
     def add_moves(self, moves):
         self.moves += moves
@@ -84,7 +85,7 @@ class Node:
         self.prob *= success
         self.dodge_used_prob += success_skill
         self.rr_used_prob += success_reroll
-        self.update_costs()
+        self.costs[0] = round(1-self.prob, 2)
 
     def add_gfi_prob(self, p:float, sure_feet_skill=False, rr=False):
         can_use_sure_feet_p = 0 if not sure_feet_skill else 1 - self.sure_feet_used_prob
@@ -104,7 +105,7 @@ class Node:
         self.prob *= success
         self.sure_feet_used_prob += success_skill
         self.rr_used_prob += success_reroll
-        self.update_costs()
+        self.costs[0] = round(1-self.prob, 2)
 
 
 class SortedList:
