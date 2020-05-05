@@ -174,6 +174,246 @@ class ParetoFrontier:
         return best
 
 
+class Pathfinder:
+
+    def __init__(self, game, player, position=None, target_x=None, target_player=None, allow_rr=False, blitz=False, max_moves=None, all=False):
+        self.game = game
+        self.player = player
+        self.position = position
+        self.target_x = target_x
+        self.target_player = target_player
+        self.allow_rr = allow_rr
+        self.blitz = blitz
+        self.all = all
+        self.pareto_blitzes = {}
+        self.pareto_frontiers = {}
+        self.best = None
+        self.openset = SortedList(lambda x: x.prob)
+        self.max_moves = max_moves
+        # Max search depth
+        if self.max_moves is None:
+            self.ma = self.player.get_ma()
+            self.max_moves = self.player.num_moves_left()
+        else:
+            self.ma = self.max_moves
+        # Goal positions used if no position is given
+        self.goals = []
+        if self.position is not None:
+            self.goals.append(self.position)
+        # Only one target type
+        if self.all:
+            assert self.position is None and self.target_player is None and self.target_x is None
+        else:
+            assert self.position is None or (self.target_x is None and self.target_player is None)
+            assert self.target_x is None or (self.position is None and self.target_player is None)
+            assert self.target_player is None or (
+                        self.position is None and self.target_x is None and self.target_player.position is not None)
+
+    def _collect_path(self, node):
+        steps = []
+        n = node
+        while n is not None:
+            steps.append(n.position)
+            n = n.parent
+        steps.reverse()
+        steps = steps[1:]
+        path = Path(steps, prob=node.prob)
+        path.dodge_used_prob = node.dodge_used_prob
+        path.sure_feet_used_prob = node.sure_feet_used_prob
+        path.rr_used_prob = node.rr_used_prob
+        return path
+
+    def _can_beat_best(self, node):
+        if self.best is not None:
+            if node.prob < self.best.prob:
+                return False
+            if self.position is not None:
+                if node.prob == self.best.prob and node.moves + node.position.distance(self.position) + (
+                1 if self.blitz else 0) > self.best.moves:
+                    return False
+            elif self.target_player is not None:
+                if node.prob == self.best.prob and node.moves + node.position.distance(
+                        self.target_player.position) - 1 + (1 if self.blitz else 0) > self.best.moves:
+                    return False
+            elif self.target_x is not None:
+                if node.prob == self.best.prob and node.moves + abs(
+                        node.position.x - self.target_x) > self.best.moves:
+                    return False
+            else:
+                if node.prob == self.best.prob and node.moves + 1 > self.best.moves:
+                    return False
+        return True
+
+    def _target_out_of_reach(self, current, position):
+        # If out of moves or out of reach stop here
+        if self.position is not None and current.moves + current.position.distance(self.position) > self.max_moves:
+            return True
+        if self.target_player is not None and current.moves + current.position.distance(
+                self.target_player.position) - 1 + (1 if self.blitz else 0) > self.max_moves:
+            return True
+        if self.target_x is not None and current.moves + abs(current.position.x - self.target_x) + (1 if self.blitz else 0) > self.max_moves:
+            return True
+        if self.all and self.blitz:
+            adjacent_opponents = self.game.get_adjacent_players(position,
+                                                                team=self.game.get_opp_team(self.player.team),
+                                                                down=False)
+            if adjacent_opponents and current.moves >= self.max_moves - 1:
+                return True
+            if not adjacent_opponents and current.moves >= self.max_moves - 2:
+                return True
+        return False
+
+    def _get_child(self, current, neighbour):
+        node = Node(neighbour, parent=current, moves=1)
+        dodge_p = self.game.get_dodge_prob_from(self.player, from_position=current.position, to_position=neighbour)
+        can_use_dodge = self.player.has_skill(Skill.DODGE) and not self.game.get_adjacent_players(current.position,
+                                                                                                  self.player.team,
+                                                                                                  down=False,
+                                                                                                  skill=Skill.TACKLE)
+        can_use_rr = self.allow_rr and self.game.can_use_reroll(self.player.team)
+        if node.moves > self.ma:
+            node.add_gfi_prob(5 / 6, sure_feet_skill=self.player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
+        if dodge_p < 1.0:
+            node.add_dodge_prob(dodge_p, dodge_skill=can_use_dodge, rr=can_use_rr)
+        return node
+
+    def _add_blitz(self, node):
+        blitz_node = copy.copy(node)
+        blitz_node.add_moves(1)
+        if blitz_node.moves >= self.ma:
+            can_use_rr = self.allow_rr and self.game.can_use_reroll(self.player.team)
+            blitz_node.add_gfi_prob(5 / 6, sure_feet_skill=self.player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
+        if blitz_node.position not in self.pareto_blitzes:
+            self.pareto_blitzes[blitz_node.position] = ParetoFrontier()
+        self.pareto_blitzes[blitz_node.position].add(blitz_node)
+
+    def _goal_reached(self, node):
+        if self.target_x is not None and node.position.x == self.target_x:
+            return True
+        elif self.target_player is not None and node.position.distance(self.target_player.position) == 1:
+            return True
+        elif node.position == self.position:
+            return True
+        return False
+
+    def _collect_paths(self) -> List[Path]:
+        paths = []
+        # Reset pareto frontiers and recreate from blitzes
+        if self.blitz:
+            self.pareto_frontiers = self.pareto_blitzes
+        # Pareto nodes?
+        for position, frontier in self.pareto_frontiers.items():
+            best = frontier.get_best()
+            if best.parent is None:
+                continue
+            path = self._collect_path(best)
+            paths.append(path)
+        return paths
+
+    def get_path(self) -> Optional[Path]:
+        paths = self.get_paths()
+        if len(paths) > 0:
+            return paths[0]
+        else:
+            return None
+
+    def get_paths(self) -> List[Path]:
+
+        # If we are already at the target
+        if (self.player is not None and self.player.position == self.position) or \
+                (self.target_x is not None and self.player.position.x == self.target_x) or \
+                (self.target_player is not None and self.target_player.position.is_adjacent(self.player.position)):
+            return [Path([], 1.0)]
+
+        # If the destination is blocked, we can't get there
+        if self.position is not None and self.game.get_player_at(self.position) is not None:
+            return []
+
+        # Make initial node
+        init_node = Node(self.player.position)
+        self.openset.append(init_node)
+        self.pareto_frontiers[init_node.position] = ParetoFrontier()
+        self.pareto_frontiers[init_node.position].add(init_node)
+
+        # while we have unexpanded nodes
+        while len(self.openset) > 0:
+
+            # pull out the first node in our open list
+            current = self.openset.first()
+            self.openset.remove(current)
+
+            # Check if it's still on the pareto frontier
+            if not current in self.pareto_frontiers[current.position].nodes:
+                continue
+
+            # Stop if this path can't become better than the best
+            if not self._can_beat_best(current):
+                continue
+
+            # Expand
+            for neighbour in self.game.get_adjacent_squares(current.position, occupied=False):
+
+                if self._target_out_of_reach(current, neighbour):
+                    continue
+
+                # Make expanded node
+                node = self._get_child(current, neighbour)
+
+                # If a potential blitz position, copy node and add to blitzes
+                if self.all and \
+                            self.blitz and \
+                            self.game.get_adjacent_players(node.position, down=False, team=self.game.get_opp_team(self.player.team)) and \
+                            self.blitz and \
+                            node.moves < self.max_moves:
+                    self._add_blitz(node)
+
+                # Check if goal was reached
+                goal_reached = self._goal_reached(node)
+
+                if goal_reached:
+                    # Extra move/GFI when blitzing
+                    if self.blitz and node.moves == self.max_moves:
+                        continue  # No moves left to blitz
+                    if self.blitz and node.moves >= self.ma:
+                        can_use_rr = self.allow_rr and self.game.can_use_reroll(self.player.team)
+                        node.add_moves(1)
+                        node.add_gfi_prob(5/6, sure_feet_skill=self.player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
+                    # Check if path beats the best
+                    if self.best is None:
+                        self.best = node
+                    elif node.prob > self.best.prob:
+                        self.best = node
+                    elif node.prob == self.best.prob and node.moves < self.best.moves:
+                        self.best = node
+                else:
+
+                    # No moves left
+                    if current.moves == self.max_moves:
+                        continue
+
+                    # Add to pareto frontier
+                    if neighbour not in self.pareto_frontiers:
+                        self.pareto_frontiers[neighbour] = ParetoFrontier()
+                    self.pareto_frontiers[neighbour].add(node)
+
+                    # If it's on the pareto frontier
+                    if node in self.pareto_frontiers[neighbour].nodes:
+
+                        # Add it to the open set
+                        self.openset.append(node)
+
+        # Search is over - backtrack for goals to find safest path
+        if self.all:
+            return self._collect_paths()
+
+        if self.best is None:
+            return []
+
+        node = self.best
+        path = self._collect_path(node)
+        return [path]
+
+
 def _alter_state(game, player, from_position, moves_used):
     orig_player, orig_ball = None, None
     if from_position is not None or moves_used is not None:
@@ -201,202 +441,6 @@ def _reset_state(game, player, orig_player, orig_ball):
         game.ball = orig_ball
 
 
-def _collect_path(node):
-    steps = []
-    n = node
-    while n is not None:
-        steps.append(n.position)
-        n = n.parent
-    steps.reverse()
-    steps = steps[1:]
-    path = Path(steps, prob=node.prob)
-    path.dodge_used_prob = node.dodge_used_prob
-    path.sure_feet_used_prob = node.sure_feet_used_prob
-    path.rr_used_prob = node.rr_used_prob
-    return path
-
-
-def find_path(game, player, position=None, target_x=None, target_player=None, allow_rr=False, blitz=False, max_moves=None, all=False) -> Optional[Path]:
-
-    # Only one target type
-    if all:
-        assert position is None and target_player is None and target_x is None
-    else:
-        assert position is None or (target_x is None and target_player is None)
-        assert target_x is None or (position is None and target_player is None)
-        assert target_player is None or (position is None and target_x is None and target_player.position is not None)
-
-    # Goal positions used if no position is given
-    goals = []
-    if position is not None:
-        goals.append(position)
-
-    # If we are already at the target
-    if (player is not None and player.position == position) or \
-            (target_x is not None and player.position.x == target_x) or \
-            (target_player is not None and target_player.position.is_adjacent(player.position)):
-        return Path([], 1.0)
-
-    # If the destination is blocked, we can't get there
-    if position is not None and game.get_player_at(position) is not None:
-        return None
-
-    # Blitzes
-    pareto_blitzes = {}
-
-    # Max search depth
-    if max_moves is None:
-        ma = player.get_ma()
-        max_moves = player.num_moves_left()
-    else:
-        ma = max_moves
-
-    # Nodes on the Pareto-front are maintained
-    pareto_frontiers = {}
-
-    # Keep reference to best path to goal so far
-    best = None
-
-    # Make open list sorted by probability
-    openset = SortedList(lambda x: x.prob)
-
-    # Make initial node
-    init_node = Node(player.position)
-    openset.append(init_node)
-    pareto_frontiers[init_node.position] = ParetoFrontier()
-    pareto_frontiers[init_node.position].add(init_node)
-
-    # while we have unexpanded nodes
-    while len(openset) > 0:
-
-        # pull out the first node in our open list
-        current = openset.first()
-        openset.remove(current)
-
-        # Check if it's still on the pareto frontier
-        if not current in pareto_frontiers[current.position].nodes:
-            continue
-
-        # Stop if this path can't become better than the best
-        if best is not None:
-            if current.prob < best.prob:
-                continue
-            if position is not None:
-                if current.prob == best.prob and current.moves + current.position.distance(position) + (1 if blitz else 0) > best.moves:
-                    continue
-            elif target_player is not None:
-                if current.prob == best.prob and current.moves + current.position.distance(target_player.position) - 1 + (1 if blitz else 0) > best.moves:
-                    continue
-            elif target_x is not None:
-                if current.prob == best.prob and current.moves + abs(current.position.x - target_x) > best.moves:
-                    continue
-            else:
-                if current.prob == best.prob and current.moves + 1 > best.moves:
-                    continue
-
-        # Expand
-        for neighbour in game.get_adjacent_squares(current.position, occupied=False):
-
-            # If out of moves or out of reach stop here
-            if position is not None and current.moves + current.position.distance(position) > max_moves:
-                continue
-            if target_player is not None and current.moves + current.position.distance(target_player.position) - 1 + (1 if blitz else 0) > max_moves:
-                continue
-            if target_x is not None and current.moves + abs(current.position.x - target_x) + (1 if blitz else 0) > max_moves:
-                continue
-            if all and blitz:
-                adjacent_opponents = game.get_adjacent_players(neighbour, team=game.get_opp_team(player.team), down=False)
-                if adjacent_opponents and current.moves >= max_moves - 1:
-                    continue
-                if not adjacent_opponents and current.moves >= max_moves - 2:
-                    continue
-
-            # Make expanded node
-            node = Node(neighbour, parent=current, moves=1)
-            dodge_p = game.get_dodge_prob_from(player, from_position=current.position, to_position=neighbour)
-            can_use_dodge = player.has_skill(Skill.DODGE) and not game.get_adjacent_players(current.position, player.team, down=False, skill=Skill.TACKLE)
-            can_use_rr = allow_rr and game.can_use_reroll(player.team)
-            if node.moves > ma:
-                node.add_gfi_prob(5/6, sure_feet_skill=player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
-            if dodge_p < 1.0:
-                node.add_dodge_prob(dodge_p, dodge_skill=can_use_dodge, rr=can_use_rr)
-
-            # If a potential blitz position, copy node and add to blitzes
-            if all and blitz and game.get_adjacent_players(node.position, down=False, team=game.get_opp_team(player.team)):
-                if blitz and node.moves < max_moves:
-                    blitz_node = copy.copy(node)
-                    blitz_node.add_moves(1)
-                    if blitz_node.moves >= ma:
-                        can_use_rr = allow_rr and game.can_use_reroll(player.team)
-                        blitz_node.add_gfi_prob(5 / 6, sure_feet_skill=player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
-                    if blitz_node.position not in pareto_blitzes:
-                        pareto_blitzes[blitz_node.position] = ParetoFrontier()
-                    pareto_blitzes[blitz_node.position].add(blitz_node)
-
-            # Check if goal was reached
-            goal_reached = False
-            if target_x is not None and node.position.x == target_x:
-                goal_reached = True
-            elif target_player is not None and node.position.distance(target_player.position) == 1:
-                goal_reached = True
-            elif node.position == position:
-                goal_reached = True
-
-            if goal_reached:
-                # Extra move/GFI when blitzing
-                if blitz and node.moves == max_moves:
-                    continue  # No moves left to blitz
-                if blitz and node.moves >= ma:
-                    can_use_rr = allow_rr and game.can_use_reroll(player.team)
-                    node.add_moves(1)
-                    node.add_gfi_prob(5/6, sure_feet_skill=player.has_skill(Skill.SURE_FEET), rr=can_use_rr)
-                # Check if path beats the best
-                if best is None:
-                    best = node
-                elif node.prob > best.prob:
-                    best = node
-                elif node.prob == best.prob and node.moves < best.moves:
-                    best = node
-            else:
-
-                # No moves left
-                if current.moves == max_moves:
-                    continue
-
-                # Add to pareto frontier
-                if neighbour not in pareto_frontiers:
-                    pareto_frontiers[neighbour] = ParetoFrontier()
-                pareto_frontiers[neighbour].add(node)
-
-                # If it's on the pareto frontier
-                if node in pareto_frontiers[neighbour].nodes:
-
-                    # Add it to the open set
-                    openset.append(node)
-
-    # Search is over - backtrack for goals to find safest path
-    if all:
-        paths = []
-        # Reset pareto frontiers and recreate from blitzes
-        if blitz:
-            pareto_frontiers = pareto_blitzes
-        # Pareto nodes?
-        for position, frontier in pareto_frontiers.items():
-            best = frontier.get_best()
-            if best.parent is None:
-                continue
-            path = _collect_path(best)
-            paths.append(path)
-        return paths
-
-    if best is None:
-        return None
-
-    node = best
-    path = _collect_path(node)
-    return path
-
-
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
     """
     :param game:
@@ -409,7 +453,8 @@ def get_safest_path(game, player, position, from_position=None, allow_team_rerol
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    path = find_path(game, player, position, allow_rr=allow_team_reroll, blitz=blitz)
+    finder = Pathfinder(game, player, position, allow_rr=allow_team_reroll, blitz=blitz)
+    path = finder.get_path()
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
 
@@ -429,7 +474,8 @@ def get_safest_path_to_endzone(game, player, from_position=None, allow_team_rero
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
     x = game.get_opp_endzone_x(player.team)
-    path = find_path(game, player, target_x=x, allow_rr=allow_team_reroll, blitz=False)
+    finder = Pathfinder(game, player, target_x=x, allow_rr=allow_team_reroll, blitz=False)
+    path = finder.get_path()
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
     return path
@@ -449,7 +495,8 @@ def get_safest_path_to_player(game, player, target_player, from_position=None, a
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    path = find_path(game, player, allow_rr=allow_team_reroll, target_player=target_player, blitz=blitz)
+    finder = Pathfinder(game, player, allow_rr=allow_team_reroll, target_player=target_player, blitz=blitz)
+    path = finder.get_path()
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
 
@@ -469,8 +516,9 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    path = find_path(game, player, allow_rr=allow_team_reroll, blitz=blitz, all=True)
+    finder = Pathfinder(game, player, allow_rr=allow_team_reroll, blitz=blitz, all=True)
+    paths = finder.get_paths()
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
 
-    return path
+    return paths

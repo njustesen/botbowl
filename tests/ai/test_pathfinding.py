@@ -14,9 +14,8 @@ def test_neighbors():
     game.put(player, position)
     for neighbor in game.get_adjacent_squares(position):
         path = pf.get_safest_path(game, player, neighbor)
-        assert len(path.steps) == 1 and path.steps[0] == neighbor
+        assert len(path) == 1 and path.steps[0] == neighbor
         assert path.prob == 1.0
-
 
 
 def test_out_of_bounds():
