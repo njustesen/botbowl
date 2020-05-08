@@ -12,15 +12,17 @@ import matplotlib.pyplot as plt
 import sys
 
 # Architecture
-num_hidden_nodes = 512
-num_cnn_kernels = [32, 64]
+#num_hidden_nodes = 512
+#num_cnn_kernels = [32, 64]
 
-model_name = 'FFAI-v2'
+#model_name = 'FFAI-v2'
+model_name = 'FFAI-ppcg-v2'
 model_filename = "models/" + model_name
 log_filename = "logs/" + model_name + ".dat"
 
 
 class CNNPolicy(nn.Module):
+
     def __init__(self, spatial_shape, non_spatial_inputs, hidden_nodes, kernels, actions):
         super(CNNPolicy, self).__init__()
 
@@ -40,7 +42,6 @@ class CNNPolicy(nn.Module):
         self.critic = nn.Linear(hidden_nodes, 1)
         self.actor = nn.Linear(hidden_nodes, actions)
 
-        self.train()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -109,324 +110,201 @@ class CNNPolicy(nn.Module):
         return values, action_probs
 
 
-def main():
-    spatial_obs_space = es[0].observation_space.spaces['board'].shape
-    board_dim = (spatial_obs_space[1], spatial_obs_space[2])
-    board_squares = spatial_obs_space[1] * spatial_obs_space[2]
+class A2CAgent(Agent):
 
-    non_spatial_obs_space = es[0].observation_space.spaces['state'].shape[0] + es[0].observation_space.spaces['procedures'].shape[0] + es[0].observation_space.spaces['available-action-types'].shape[0]
-    non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
-    num_non_spatial_action_types = len(non_spatial_action_types)
-    spatial_action_types = FFAIEnv.positional_action_types
-    num_spatial_action_types = len(spatial_action_types)
-    num_spatial_actions = num_spatial_action_types * spatial_obs_space[1] * spatial_obs_space[2]
-    action_space = num_non_spatial_action_types + num_spatial_actions
+    def __init__(self, name):
+        super().__init__(name)
+        self.my_team = None
+        self.env = self.make_env('FFAI-v2')
 
-    def compute_action_masks(observations):
+        self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
+        self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
+        self.board_squares = self.spatial_obs_space[1] * self.spatial_obs_space[2]
+
+        self.non_spatial_obs_space = self.env.observation_space.spaces['state'].shape[0] + \
+                                self.env.observation_space.spaces['procedures'].shape[0] + \
+                                self.env.observation_space.spaces['available-action-types'].shape[0]
+        self.non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+        self.num_non_spatial_action_types = len(self.non_spatial_action_types)
+        self.spatial_action_types = FFAIEnv.positional_action_types
+        self.num_spatial_action_types = len(self.spatial_action_types)
+        self.num_spatial_actions = self.num_spatial_action_types * self.spatial_obs_space[1] * self.spatial_obs_space[2]
+        self.action_space = self.num_non_spatial_action_types + self.num_spatial_actions
+        self.is_home = True
+
+        # MODEL
+        #self.policy = CNNPolicy(self.spatial_obs_space, self.non_spatial_obs_space, hidden_nodes=num_hidden_nodes,
+        #                     kernels=num_cnn_kernels, actions=self.action_space)
+        self.policy = torch.load(model_filename)
+        self.policy.eval()
+        self.end_setup = False
+
+    def new_game(self, game, team):
+        self.my_team = team
+        self.is_home = self.my_team == game.state.home_team
+
+    def _flip(self, board):
+        flipped = {}
+        for name, layer in board.items():
+            flipped[name] = np.flip(layer, 1)
+        return flipped
+
+    def act(self, game):
+
+        if self.end_setup:
+            self.end_setup = False
+            return ffai.Action(ActionType.END_SETUP)
+
+        # Get observation
+        self.env.game = game
+        observation = self.env.get_observation()
+
+        # Flip board observation if away team - we probably only trained as home team
+        if not self.is_home:
+            observation['board'] = self._flip(observation['board'])
+
+        obs = [observation]
+        spatial_obs, non_spatial_obs = self._update_obs(obs)
+
+        action_masks = self._compute_action_masks(obs)
+        action_masks = torch.tensor(action_masks, dtype=torch.bool)
+
+        values, actions = self.policy.act(
+            Variable(spatial_obs),
+            Variable(non_spatial_obs),
+            Variable(action_masks))
+
+        # Create action from output
+        action = actions[0]
+        value = values[0]
+        action_type, x, y = self._compute_action(action.numpy()[0])
+        position = Square(x, y) if action_type in FFAIEnv.positional_action_types else None
+
+        # Flip position
+        if not self.is_home and position is not None:
+            position = Square(game.arena.width - 1 - position.x, position.y)
+
+        #print(action_type)
+        action = ffai.Action(action_type, position=position, player=None)
+
+        if action_type.name.lower().startswith('setup'):
+            self.end_setup = True
+
+        #print(action_type)
+
+        # Return action to the framework
+        return action
+
+    def end_game(self, game):
+        winner = game.get_winning_team()
+        print("Casualties: ", game.num_casualties())
+        if winner is None:
+            print("It's a draw")
+        elif winner == self.my_team:
+            print("I ({}) won".format(self.name))
+            print(self.my_team.state.score, "-", self.env.game.get_opp_team(self.my_team).state.score)
+        else:
+            print("I ({}) lost".format(self.name))
+            print(self.my_team.state.score, "-", self.env.game.get_opp_team(self.my_team).state.score)
+        pass
+
+
+    def _compute_action_masks(self, observations):
         masks = []
         m = False
         for ob in observations:
-            mask = np.zeros(action_space)
+            mask = np.zeros(self.action_space)
             i = 0
-            for action_type in non_spatial_action_types:
+            for action_type in self.non_spatial_action_types:
                 mask[i] = ob['available-action-types'][action_type.name]
                 i += 1
-            for action_type in spatial_action_types:
+            for action_type in self.spatial_action_types:
                 if ob['available-action-types'][action_type.name] == 0:
-                    mask[i:i+board_squares] = 0
+                    mask[i:i+self.board_squares] = 0
                 elif ob['available-action-types'][action_type.name] == 1:
                     position_mask = ob['board'][f"{action_type.name.replace('_', ' ').lower()} positions"]
-                    position_mask_flatten = np.reshape(position_mask, (1, board_squares))
-                    for j in range(board_squares):
+                    position_mask_flatten = np.reshape(position_mask, (1, self.board_squares))
+                    for j in range(self.board_squares):
                         mask[i + j] = position_mask_flatten[0][j]
-                i += board_squares
+                i += self.board_squares
             assert 1 in mask
             if m:
                 print(mask)
             masks.append(mask)
         return masks
 
-    def compute_action(action_idx):
-        if action_idx < len(non_spatial_action_types):
-            return non_spatial_action_types[action_idx], 0, 0
-        spatial_idx = action_idx - num_non_spatial_action_types
-        spatial_pos_idx = spatial_idx % board_squares
-        spatial_y = int(spatial_pos_idx / board_dim[1])
-        spatial_x = int(spatial_pos_idx % board_dim[1])
-        spatial_action_type_idx = int(spatial_idx / board_squares)
-        spatial_action_type = spatial_action_types[spatial_action_type_idx]
+    def _compute_action(self, action_idx):
+        if action_idx < len(self.non_spatial_action_types):
+            return self.non_spatial_action_types[action_idx], 0, 0
+        spatial_idx = action_idx - self.num_non_spatial_action_types
+        spatial_pos_idx = spatial_idx % self.board_squares
+        spatial_y = int(spatial_pos_idx / self.board_dim[1])
+        spatial_x = int(spatial_pos_idx % self.board_dim[1])
+        spatial_action_type_idx = int(spatial_idx / self.board_squares)
+        spatial_action_type = self.spatial_action_types[spatial_action_type_idx]
         return spatial_action_type, spatial_x, spatial_y
 
-    # Clear log file
-    try:
-        os.remove(log_filename)
-    except OSError:
-        pass
+    def _update_obs(self, observations):
+        """
+        Takes the observation returned by the environment and transforms it to an numpy array that contains all of
+        the feature layers and non-spatial info.
+        """
+        spatial_obs = []
+        non_spatial_obs = []
 
-    # MODEL
-    ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels, actions=action_space)
+        for obs in observations:
+            spatial_ob = np.stack(obs['board'].values())
 
-    # OPTIMIZER
-    optimizer = optim.RMSprop(ac_agent.parameters(), learning_rate)
+            state = list(obs['state'].values())
+            procedures = list(obs['procedures'].values())
+            actions = list(obs['available-action-types'].values())
 
-    # MEMORY STORE
-    memory = Memory(steps_per_update, num_processes, spatial_obs_space, (1, non_spatial_obs_space), action_space)
+            non_spatial_ob = np.stack(state+procedures+actions)
 
-    # PPCG
-    difficulty = 0.0
-    dif_delta = 0.01
+            # feature_layers = np.expand_dims(feature_layers, axis=0)
+            non_spatial_ob = np.expand_dims(non_spatial_ob, axis=0)
 
-    # Reset environments
-    obs = envs.reset(difficulty)
-    spatial_obs, non_spatial_obs = update_obs(obs)
+            spatial_obs.append(spatial_ob)
+            non_spatial_obs.append(non_spatial_ob)
 
-    # Add obs to memory
-    memory.spatial_obs[0].copy_(spatial_obs)
-    memory.non_spatial_obs[0].copy_(non_spatial_obs)
-
-    # Variables for storing stats
-    all_updates = 0
-    all_episodes = 0
-    all_steps = 0
-    episodes = 0
-    proc_rewards = np.zeros(num_processes)
-    proc_tds = np.zeros(num_processes)
-    episode_rewards = []
-    episode_tds = []
-    wins = []
-    value_losses = []
-    policy_losses = []
-    log_updates = []
-    log_episode = []
-    log_steps = []
-    log_win_rate = []
-    log_td_rate = []
-    log_mean_reward = []
-    log_difficulty = []
-
-    renderer = ffai.Renderer()
-
-    while all_steps < num_steps:
-
-        for step in range(steps_per_update):
-
-            action_masks = compute_action_masks(obs)
-            action_masks = torch.tensor(action_masks, dtype=torch.bool)
-
-            values, actions = ac_agent.act(
-                Variable(memory.spatial_obs[step]),
-                Variable(memory.non_spatial_obs[step]),
-                Variable(action_masks))
-
-            action_objects = []
-
-            for action in actions:
-                action_type, x, y = compute_action(action.numpy()[0])
-                action_object = {
-                    'action-type': action_type,
-                    'x': x,
-                    'y': y
-                }
-                action_objects.append(action_object)
-
-            obs, env_reward, shaped_reward, tds_scored, done, info = envs.step(action_objects, difficulty=difficulty)
-            #envs.render()
-            '''
-            for j in range(len(obs)):
-                ob = obs[j]
-                renderer.render(ob, j)
-            '''
-
-            reward = torch.from_numpy(np.expand_dims(np.stack(env_reward), 1)).float()
-            shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
-            r = reward.numpy()
-            sr = shaped_reward.numpy()
-            for i in range(num_processes):
-                proc_rewards[i] += sr[i]
-                proc_tds[i] += tds_scored[i]
-
-            # If done then clean the history of observations.
-            masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-            dones = masks.squeeze()
-            episodes += num_processes - int(dones.sum().item())
-            for i in range(num_processes):
-                if done[i]:
-                    if r[i] > 0:
-                        wins.append(1)
-                        difficulty += dif_delta
-                    elif r[i] < 0:
-                        wins.append(0)
-                        difficulty -= dif_delta
-                    else:
-                        wins.append(0.5)
-                        difficulty -= dif_delta
-                    difficulty = min(1.0, max(0, difficulty))
-                    episode_rewards.append(proc_rewards[i])
-                    episode_tds.append(proc_tds[i])
-                    proc_rewards[i] = 0
-                    proc_tds[i] = 0
-
-            # Update the observations returned by the environment
-            spatial_obs, non_spatial_obs = update_obs(obs)
-
-            # insert the step taken into memory
-            memory.insert(step, spatial_obs, non_spatial_obs,
-                          actions.data, values.data, shaped_reward, masks, action_masks)
-
-        next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
-
-        # Compute returns
-        memory.compute_returns(next_value, gamma)
-
-        spatial = Variable(memory.spatial_obs[:-1])
-        spatial = spatial.view(-1, *spatial_obs_space)
-        non_spatial = Variable(memory.non_spatial_obs[:-1])
-        non_spatial = non_spatial.view(-1, non_spatial.shape[-1])
-
-        actions = Variable(torch.LongTensor(memory.actions.view(-1, 1)))
-        actions_mask = Variable(memory.action_masks[:-1])
-
-        # Evaluate the actions taken
-        action_log_probs, values, dist_entropy = ac_agent.evaluate_actions(spatial, non_spatial, actions, actions_mask)
-
-        values = values.view(steps_per_update, num_processes, 1)
-        action_log_probs = action_log_probs.view(steps_per_update, num_processes, 1)
-
-        advantages = Variable(memory.returns[:-1]) - values
-        value_loss = advantages.pow(2).mean()
-        #value_losses.append(value_loss)
-
-        # Compute loss
-        action_loss = -(Variable(advantages.data) * action_log_probs).mean()
-        #policy_losses.append(action_loss)
-
-        optimizer.zero_grad()
-
-        total_loss = (value_loss * value_loss_coef + action_loss - dist_entropy * entropy_coef)
-        total_loss.backward()
-
-        nn.utils.clip_grad_norm_(ac_agent.parameters(), max_grad_norm)
-
-        optimizer.step()
-
-        memory.non_spatial_obs[0].copy_(memory.non_spatial_obs[-1])
-        memory.spatial_obs[0].copy_(memory.spatial_obs[-1])
-
-        # Updates
-        all_updates += 1
-        # Episodes
-        all_episodes += episodes
-        episodes = 0
-        # Steps
-        all_steps += num_processes * steps_per_update
-
-        # Logging
-        if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
-            td_rate = np.mean(episode_tds)
-            episode_tds.clear()
-            mean_reward = np.mean(episode_rewards)
-            episode_rewards.clear()
-            win_rate = np.mean(wins)
-            wins.clear()
-            #mean_value_loss = np.mean(value_losses)
-            #mean_policy_loss = np.mean(policy_losses)    
-            
-            log_updates.append(all_updates)
-            log_episode.append(all_episodes)
-            log_steps.append(all_steps)
-            log_win_rate.append(win_rate)
-            log_td_rate.append(td_rate)
-            log_mean_reward.append(mean_reward)
-            log_difficulty.append(difficulty)
-
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
-
-            log_to_file = "{}, {}, {}, {}, {}, {}\n" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
-
-            print(log)
-
-            # Save to files
-            with open(log_filename, "a") as myfile:
-                myfile.write(log_to_file)
-
-            # Saving the agent
-            torch.save(ac_agent, "models/" + model_name)
-
-            episodes = 0
-            value_losses.clear()
-            policy_losses.clear()
-            
-            # plot
-            fig, axs = plt.subplots(1, 4, figsize=(16, 5))
-            axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-            axs[0].plot(log_steps, log_mean_reward)
-            axs[0].set_title('Reward')
-            #axs[0].set_ylim(bottom=0.0)
-            axs[0].set_xlim(left=0)
-            axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-            axs[1].plot(log_steps, log_td_rate)
-            axs[1].set_title('TD/Episode')
-            axs[1].set_ylim(bottom=0.0)
-            axs[1].set_xlim(left=0)
-            axs[2].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-            axs[2].plot(log_steps, log_win_rate)
-            axs[2].set_title('Win rate')            
-            axs[2].set_yticks(np.arange(0, 1.001, step=0.1))
-            axs[2].set_xlim(left=0)
-            axs[3].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-            axs[3].plot(log_steps, log_difficulty)
-            axs[3].set_title('Difficulty')
-            axs[3].set_yticks(np.arange(0, 1.001, step=0.1))
-            axs[3].set_xlim(left=0)
-            fig.tight_layout()
-            fig.savefig("plots/"+model_name+".png")
-            plt.close('all')
-
-            # Save model
-            torch.save(ac_agent, "models/" + model_name)
-
-    torch.save(ac_agent, "models/" + model_name)
-    envs.close()
+        return torch.from_numpy(np.stack(spatial_obs)).float(), torch.from_numpy(np.stack(non_spatial_obs)).float()
 
 
-def update_obs(observations):
-    """
-    Takes the observation returned by the environment and transforms it to an numpy array that contains all of
-    the feature layers and non-spatial info
-    """
-    spatial_obs = []
-    non_spatial_obs = []
-
-    for obs in observations:
-        '''
-        for k, v in obs['board'].items():
-            print(k)
-            print(v)
-        '''
-        spatial_ob = np.stack(obs['board'].values())
-
-        state = list(obs['state'].values())
-        procedures = list(obs['procedures'].values())
-        actions = list(obs['available-action-types'].values())
-
-        non_spatial_ob = np.stack(state+procedures+actions)
-
-        # feature_layers = np.expand_dims(feature_layers, axis=0)
-        non_spatial_ob = np.expand_dims(non_spatial_ob, axis=0)
-
-        spatial_obs.append(spatial_ob)
-        non_spatial_obs.append(non_spatial_ob)
-
-    return torch.from_numpy(np.stack(spatial_obs)).float(), torch.from_numpy(np.stack(non_spatial_obs)).float()
+    def make_env(self, env_name):
+        env = gym.make(env_name)
+        return env
 
 
-def make_env(worker_id):
-    print("Initializing worker", worker_id, "...")
-    env = gym.make(env_name)
-    return env
+# Register the bot to the framework
+ffai.register_bot('my-a2c-bot', A2CAgent)
 
+import ffai.web.server as server
 
 if __name__ == "__main__":
-    main()
+    server.start_server(debug=True, use_reloader=False)
+'''
+if __name__ == "__main__":
+
+    # Load configurations, rules, arena and teams
+    config = ffai.load_config("bot-bowl-ii")
+    config.competition_mode = False
+    ruleset = ffai.load_rule_set(config.ruleset)
+    arena = ffai.load_arena(config.arena)
+    home = ffai.load_team_by_filename("human", ruleset)
+    away = ffai.load_team_by_filename("human", ruleset)
+    config.competition_mode = False
+    config.debug_mode = False
+
+    # Play 10 games
+    game_times = []
+    for i in range(10):
+        away_agent = ffai.make_bot('my-a2c-bot')
+        home_agent = ffai.make_bot("random")
+
+        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game.config.fast_mode = True
+
+        print("Starting game", (i+1))
+        game.init()
+        print("Game is over")
+'''

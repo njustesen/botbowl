@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import sys
 
 
 # Training configuration
@@ -22,6 +23,7 @@ value_loss_coef = 0.5
 max_grad_norm = 0.05
 log_interval = 50
 save_interval = 500
+ppcg = False
 
 # Environment
 env_name = "FFAI-1-v2"
@@ -30,7 +32,7 @@ env_name = "FFAI-1-v2"
 #env_name = "FFAI-5-v2"
 #num_steps = 100000000 # Increase training time
 # env_name = "FFAI-v2"
-reset_steps = 2000  # The environment is reset after this many steps it gets stuck
+reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 # If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
 FFAIEnv.play_on_both_sides = False
 
@@ -229,11 +231,20 @@ def worker(remote, parent_remote, env, worker_id):
         command, data = remote.recv()
         if command == 'step':
             steps += 1
-            action = data
+            action, dif = data[0], data[1]
             obs, reward, done, info = env.step(action)
             tds_scored = info['touchdowns'] - tds
             tds = info['touchdowns']
             reward_shaped = reward_function(env, info, shaped=True)
+            ball_carrier = env.game.get_ball_carrier()
+            # PPCG
+            if dif < 1.0:
+                if ball_carrier and ball_carrier.team == env.game.state.home_team:
+                    extra_endzone_squares = int((1.0 - dif) * 25.0)
+                    distance_to_endzone = ball_carrier.position.x - 1
+                    if distance_to_endzone <= extra_endzone_squares:
+                        #reward_shaped += rewards_own[OutcomeType.TOUCHDOWN]
+                        env.game.state.stack.push(Touchdown(env.game, ball_carrier))
             if done or steps >= reset_steps:
                 # If we  get stuck or something - reset the environment
                 if steps >= reset_steps:
@@ -244,9 +255,11 @@ def worker(remote, parent_remote, env, worker_id):
                 tds = 0
             remote.send((obs, reward, reward_shaped, tds_scored, done, info))
         elif command == 'reset':
+            dif = data
             steps = 0
             tds = 0
             obs = env.reset()
+            # set_difficulty(env, dif)
             remote.send(obs)
         elif command == 'render':
             env.render()
@@ -272,13 +285,13 @@ class VecEnv():
         for remote in self.work_remotes:
             remote.close()
 
-    def step(self, actions):
+    def step(self, actions, difficulty=1.0):
         cumul_rewards = None
         cumul_shaped_rewards = None
         cumul_tds_scored = None
         cumul_dones = None
         for remote, action in zip(self.remotes, actions):
-            remote.send(('step', action))
+            remote.send(('step', [action, difficulty]))
         results = [remote.recv() for remote in self.remotes]
         obs, rews, rews_shaped, tds, dones, infos = zip(*results)
         if cumul_rewards is None:
@@ -295,9 +308,9 @@ class VecEnv():
             cumul_dones |= np.stack(dones)
         return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_tds_scored, cumul_dones, infos
 
-    def reset(self):
+    def reset(self, difficulty=1.0):
         for remote in self.remotes:
-            remote.send(('reset', None))
+            remote.send(('reset', difficulty))
         return np.stack([remote.recv() for remote in self.remotes])
 
     def render(self):
@@ -386,8 +399,12 @@ def main():
     # MEMORY STORE
     memory = Memory(steps_per_update, num_processes, spatial_obs_space, (1, non_spatial_obs_space), action_space)
 
+    # PPCG
+    difficulty = 0.0
+    dif_delta = 0.01
+
     # Reset environments
-    obs = envs.reset()
+    obs = envs.reset(difficulty)
     spatial_obs, non_spatial_obs = update_obs(obs)
 
     # Add obs to memory
@@ -412,6 +429,9 @@ def main():
     log_win_rate = []
     log_td_rate = []
     log_mean_reward = []
+    log_difficulty = []
+
+    renderer = ffai.Renderer()
 
     while all_steps < num_steps:
 
@@ -435,10 +455,15 @@ def main():
                     'y': y
                 }
                 action_objects.append(action_object)
-                
 
-            obs, env_reward, shaped_reward, tds_scored, done, info = envs.step(action_objects)
-            # TODO: Render
+            obs, env_reward, shaped_reward, tds_scored, done, info = envs.step(action_objects, difficulty=difficulty)
+            #envs.render()
+            '''
+            for j in range(len(obs)):
+                ob = obs[j]
+                renderer.render(ob, j)
+            '''
+
             reward = torch.from_numpy(np.expand_dims(np.stack(env_reward), 1)).float()
             shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
             r = reward.numpy()
@@ -455,10 +480,17 @@ def main():
                 if done[i]:
                     if r[i] > 0:
                         wins.append(1)
+                        difficulty += dif_delta
                     elif r[i] < 0:
                         wins.append(0)
+                        difficulty -= dif_delta
                     else:
                         wins.append(0.5)
+                        difficulty -= dif_delta
+                    if ppcg:
+                        difficulty = min(1.0, max(0, difficulty))
+                    else:
+                        difficulty = 1
                     episode_rewards.append(proc_rewards[i])
                     episode_tds.append(proc_tds[i])
                     proc_rewards[i] = 0
@@ -535,12 +567,13 @@ def main():
             log_win_rate.append(win_rate)
             log_td_rate.append(td_rate)
             log_mean_reward.append(mean_reward)
+            log_difficulty.append(difficulty)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f} " \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
 
-            log_to_file = "{}, {}, {}, {}, {}\n" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward)
+            log_to_file = "{}, {}, {}, {}, {}, {}, {}\n" \
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
 
             print(log)
 
@@ -556,7 +589,10 @@ def main():
             policy_losses.clear()
             
             # plot
-            fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+            if ppcg:
+                fig, axs = plt.subplots(1, 4, figsize=(16, 5))
+            else:
+                fig, axs = plt.subplots(1, 3, figsize=(12, 5))
             axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
             axs[0].plot(log_steps, log_mean_reward)
             axs[0].set_title('Reward')
@@ -572,6 +608,12 @@ def main():
             axs[2].set_title('Win rate')            
             axs[2].set_yticks(np.arange(0, 1.001, step=0.1))
             axs[2].set_xlim(left=0)
+            if ppcg:
+                axs[3].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+                axs[3].plot(log_steps, log_difficulty)
+                axs[3].set_title('Difficulty')
+                axs[3].set_yticks(np.arange(0, 1.001, step=0.1))
+                axs[3].set_xlim(left=0)
             fig.tight_layout()
             fig.savefig("plots/"+model_name+".png")
             plt.close('all')
