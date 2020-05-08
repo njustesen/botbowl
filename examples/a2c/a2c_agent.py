@@ -130,8 +130,6 @@ class A2CAgent(Agent):
         self.is_home = True
 
         # MODEL
-        #self.policy = CNNPolicy(self.spatial_obs_space, self.non_spatial_obs_space, hidden_nodes=num_hidden_nodes,
-        #                     kernels=num_cnn_kernels, actions=self.action_space)
         self.policy = torch.load(model_filename)
         self.policy.eval()
         self.end_setup = False
@@ -181,13 +179,11 @@ class A2CAgent(Agent):
         if not self.is_home and position is not None:
             position = Square(game.arena.width - 1 - position.x, position.y)
 
-        #print(action_type)
         action = ffai.Action(action_type, position=position, player=None)
 
+        # Let's just end the setup right after picking a formation
         if action_type.name.lower().startswith('setup'):
             self.end_setup = True
-
-        #print(action_type)
 
         # Return action to the framework
         return action
@@ -279,6 +275,7 @@ import ffai.web.server as server
 
 if __name__ == "__main__":
     server.start_server(debug=True, use_reloader=False)
+
 '''
 if __name__ == "__main__":
 
@@ -292,9 +289,11 @@ if __name__ == "__main__":
     config.competition_mode = False
     config.debug_mode = False
 
-    # Play 10 games
+    # Play 100 games
     game_times = []
-    for i in range(10):
+    wins = 0
+    draws = 0
+    for i in range(100):
         away_agent = ffai.make_bot('my-a2c-bot')
         home_agent = ffai.make_bot("random")
 
@@ -304,4 +303,12 @@ if __name__ == "__main__":
         print("Starting game", (i+1))
         game.init()
         print("Game is over")
+
+        winner = game.get_winner()
+        if winner is None:
+            draws += 1
+        elif winner == away_agent:
+            wins += 1
+
+    print(f"Wins/Draws/Losses: {wins}/{draws}/{100-wins-draws}")
 '''

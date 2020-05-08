@@ -20,7 +20,7 @@ Results from the round-robin tournament:
 | NO ONE  | 5/5/0  | –      | 0/0/10  | 0/0/10   | 3/7/0  | 8      | 12   | 20     |
 | GrodBot | 10/0/0 | 10/0/0 | –       | 4/5/1    | 10/0/0 | 34     | 5    | 1      |
 | EvoGrod | 10/0/0 | 10/0/0 | 1/5/4   | –        | 10/0/0 | 31     | 5    | 4      |
-| A2C     | 0/10/0 | 0/7/3  | 0/0/10  | 0/0/10   | –   0  | 17     | 23   |        |
+| A2C     | 0/10/0 | 0/7/3  | 0/0/10  | 0/0/10   | –      | 0      | 17   | 23     | 
 
 GrodBot and EvoGrod were the best two bots in the round-robin tournament and thus played a final best-of-five series to find the winner. Here, GrodBot won with three wins and one tie in four games. Videos of the finals with commentaries by bzl11 can be seen below:
 
