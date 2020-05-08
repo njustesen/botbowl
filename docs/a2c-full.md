@@ -204,5 +204,7 @@ blitz and move towards the endzone and hopefully score.
 - If the ball lands in the backfield, move players randomly around in the hope of picking it up. If the ball is close enough to the line of scrimmage it can 
 sometimes score from this situation.
 - If standing adjacent to the opponent's ball carrier, block him.
+- Perform reasonable blocks at the line of scrimmage.
+- It's hard to see, but it seems that agent is fouling a lot on the line of scrimmage as well.
 
 Can you come up with better ways to guide the RL agent during training? Can you achieve a higher win rate with more parameters and more training?
