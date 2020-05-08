@@ -14,7 +14,7 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 ## Reinforcement Learning
 1. [**Reinforcement Learning I: OpenAI Gym Environment**](gym.md)
 2. [**Reinforcement Learning II: A2C**](a2c.md)
-3. **Reinforcement Learning III: Enhancements** (coming soon)
+3. [**Reinforcement Learning III: The Full Board**](a2c-full.md)
 4. **Reinforcement Learning IV: Self-play** (coming soon)
 
 ## Submission
