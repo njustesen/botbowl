@@ -12,9 +12,6 @@ import matplotlib.pyplot as plt
 import sys
 
 # Architecture
-#num_hidden_nodes = 512
-#num_cnn_kernels = [32, 64]
-
 #model_name = 'FFAI-v2'
 model_name = 'FFAI-ppcg-v2'
 model_filename = "models/" + model_name

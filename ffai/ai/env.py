@@ -283,6 +283,9 @@ class FFAIEnv(gym.Env):
     def get_game(self):
         return self.game
 
+    def get_observation(self):
+        return self._observation(self.game)
+
     def _observation(self, game):
         obs = {
             'board': {},
