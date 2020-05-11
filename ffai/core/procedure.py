@@ -2735,7 +2735,7 @@ class Push(Procedure):
         self.push_to = None
         self.follow_to = None
         self.squares = None
-        self.selector = pusher
+        self.selector = game.get_active_player()
         self.crowd = False
 
     def step(self, action):
@@ -2763,7 +2763,7 @@ class Push(Procedure):
             if self.knock_down or self.crowd:
                 KnockDown(self.game, self.player, in_crowd=self.crowd, armor_roll=not self.crowd)
 
-            # Chain push
+            # Follow up
             if not self.chain:
                 FollowUp(self.game, self.pusher, self.player, self.follow_to)
 
@@ -2798,14 +2798,14 @@ class Push(Procedure):
         # Get possible squares
         if self.squares is None:
             # Sidestep and grab cancels out eachother - otherwise let the grabber or sidestepper select adjacent square
-            if self.player.has_skill(Skill.SIDE_STEP) and not self.pusher.has_skill(Skill.GRAB):
+            if self.player.has_skill(Skill.SIDE_STEP) and (self.chain or not self.pusher.has_skill(Skill.GRAB)):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.SIDE_STEP))
                 self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
                 self.selector = self.player
                 if len(self.squares) > 0:
                     if self.player.team != self.game.state.current_team:
                         self.game.add_secondary_clock(self.player.team)
-            elif self.pusher.has_skill(Skill.GRAB) and not self.player.has_skill(Skill.SIDE_STEP):
+            elif not self.chain and self.pusher.has_skill(Skill.GRAB) and not self.player.has_skill(Skill.SIDE_STEP):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.GRAB))
                 self.squares = self.game.get_adjacent_squares(self.player.position, occupied=False)
             # If no free squares
