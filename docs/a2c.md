@@ -8,7 +8,7 @@ temporal difference learning, and parallelization in RL. If you are unfamiliar w
 - Reinforcement Learning ([Richard Sutton's book Reinforcement Learning: An Introduction](https://www.google.com/search?q=richard+sutton+introduction+reinforcement+learning))
 - Asynchronous/Synchronous Advantage Actor-Critic methods ([Asynchronous Methods for Deep Reinforcement Learning by Mnih et al.](https://arxiv.org/pdf/1602.01783.pdf) and [OpenAI Baselines: ACKTR & A2C](https://openai.com/blog/baselines-acktr-a2c/)) 
 
-The code presented in this tutorial is based on [examples/a2c/a2c_example.py](examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
+The code presented in this tutorial is based on [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
 of A2C](https://github.com/p-kar/a2c-acktr-vizdoom) by Pratyush Kar and the [FFAI-A2C](https://github.com/lasseuth1/blood_bowl2) 
 repository by Lasse Møller Uth and Christopher Jakobsen, which is no longer compatible with the newer versions of FFAI. 
 
@@ -36,8 +36,8 @@ sample an action type, and then for some action types also a position. This can 
 Reinforcement Learning](https://arxiv.org/pdf/1708.04782.pdf) since StarCraft has a similar action space. 
 
 Instead of using branching, we believe it is more efficient to unroll the entire action space into one branch. In this 
-approach, we have one action for each non-spatial action as well as $$W \times H$$ actions for each spatial action type, 
-where $$W$$ and $$H$$ is the width and height of the spatial feature layers which are equal to the board 
+approach, we have one action for each non-spatial action as well as W * H actions for each spatial action type, 
+where W and H is the width and height of the spatial feature layers which are equal to the board 
 size plus a one-tile padding, since push actions can be out of bounds.  
  
 ![Single-branch action space](img/action-space.png?raw=true "Single-branch action space")
@@ -461,7 +461,7 @@ The training process is plotted as the script runs. Here are the results we got 
 
 ![FFAI-5-v2 Results](img/FFAI-5-v2.png?raw=true "FFAI-5-v2 Results")
 
-Run the script to see if you can reproduce some of the results.
+Run the script to see if you can reproduce some of the results. Can you find better hyper-parameters or reward shaping rules?
 
 ## Next Steps
 We were able to learn strong policies for the one, three, and five-player variants of Blood Bowl against a random opponent. 

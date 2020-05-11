@@ -5,6 +5,7 @@ from ffai import Action, ActionType, Square, BBDieResult, Skill, PassDistance, T
 import ffai.ai.pathfinding as pf
 import time
 
+
 class MyScriptedBot(ProcBot):
 
     def __init__(self, name):
@@ -145,7 +146,7 @@ class MyScriptedBot(ProcBot):
         if game.is_team_side(game.get_ball_position(), self.my_team) and \
                 game.get_player_at(game.get_ball_position()) is None:
             for player in game.get_players_on_pitch(self.my_team, up=True):
-                if Skill.BLOCK in player.get_skills():
+                if Skill.BLOCK in player.get_skills() and game.num_tackle_zones_in(player) == 0:
                     return Action(ActionType.SELECT_PLAYER, player=player, position=ball_pos)
         return Action(ActionType.SELECT_NONE)
 
@@ -211,10 +212,10 @@ class MyScriptedBot(ProcBot):
                     print(f"Stand up marked player {player.role.name}")
                     return
 
-        print("2. Move ball carrier")
+        print("2. Move ball carrier to endzone")
         if ball_carrier is not None and ball_carrier.team == self.my_team and not ball_carrier.state.used:
             print("2.1 Can ball carrier score with high probability")
-            td_path = pf.get_safest_scoring_path(game, ball_carrier)
+            td_path = pf.get_safest_path_to_endzone(game, ball_carrier, allow_team_reroll=True)
             if td_path is not None and td_path.prob >= 0.7:
                 self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
                 for step in td_path.steps:
@@ -236,15 +237,15 @@ class MyScriptedBot(ProcBot):
                 handoff_path = None
                 handoff_player = None
                 for player in unused_teammates:
-                    if game.get_distance_to_endzone(player) > player.get_ma() + 3:
+                    if game.get_distance_to_endzone(player) > player.num_moves_left():
                         continue
-                    td_path = pf.get_safest_scoring_path(game, player)
+                    td_path = pf.get_safest_path_to_endzone(game, player, allow_team_reroll=True)
                     if td_path is None:
                         continue
-                    path_from_ball_carrier = pf.get_safest_path_to_player(game, ball_carrier, player)
+                    path_from_ball_carrier = pf.get_safest_path_to_player(game, ball_carrier, player, allow_team_reroll=True)
                     if path_from_ball_carrier is None:
                         continue
-                    p_catch = game.get_catch_prob(player, handoff=True, allow_catch_reroll=True)
+                    p_catch = game.get_catch_prob(player, handoff=True, allow_catch_reroll=True, allow_team_reroll=True)
                     p = td_path.prob * path_from_ball_carrier.prob * p_catch
                     if handoff_p is None or p > handoff_p:
                         handoff_p = p
@@ -262,10 +263,18 @@ class MyScriptedBot(ProcBot):
 
             print("2.3 Move safely towards the endzone")
             if game.num_tackle_zones_in(ball_carrier) == 0:
-                td_path = pf.get_safest_scoring_path(game, ball_carrier, max_search_distance=30)
-                if td_path is not None:
+                paths = pf.get_all_paths(game, ball_carrier)
+                best_path = None
+                best_distance = 100
+                target_x = game.get_opp_endzone_x(self.my_team)
+                for path in paths:
+                    distance_to_endzone = abs(target_x - path.steps[-1].x)
+                    if path.prob == 1 and (best_path is None or distance_to_endzone < best_distance):
+                        best_path = path
+                        best_distance = distance_to_endzone
+                if best_path is not None:
                     steps = []
-                    for step in td_path.steps:
+                    for step in best_path.steps:
                         if game.num_tackle_zones_at(ball_carrier, step) > 0:
                             break
                         if len(steps) >= ball_carrier.num_moves_left():
@@ -293,14 +302,15 @@ class MyScriptedBot(ProcBot):
             pickup_path = None
             for player in self.my_team.players:
                 if player.position is not None and not player.state.used:
-                    path = pf.get_safest_path(game, player, game.get_ball_position())
-                    if path is not None:
-                        p = game.get_pickup_prob(player, game.get_ball_position(), allow_pickup_reroll=True)
-                        p = path.prob * p
-                        if pickup_p is None or p > pickup_p:
-                            pickup_p = p
-                            pickup_player = player
-                            pickup_path = path
+                    if player.position.distance(game.get_ball_position()) <= player.get_ma() + 2:
+                        path = pf.get_safest_path(game, player, game.get_ball_position())
+                        if path is not None:
+                            p = game.get_pickup_prob(player, game.get_ball_position(), allow_team_reroll=True)
+                            p = path.prob * p
+                            if pickup_p is None or p > pickup_p:
+                                pickup_p = p
+                                pickup_player = player
+                                pickup_path = path
             if pickup_player is not None and pickup_p > 0.33:
                 self.actions.append(Action(ActionType.START_MOVE, player=pickup_player))
                 if not pickup_player.state.up:
@@ -310,10 +320,18 @@ class MyScriptedBot(ProcBot):
                 #print(f"Pick up the ball with {pickup_player.role.name}, p={pickup_p}")
                 # Find safest path towards endzone
                 if game.num_tackle_zones_at(pickup_player, game.get_ball_position()) == 0:
-                    td_path = pf.get_safest_scoring_path(game, pickup_player, from_position=game.get_ball_position(), num_moves_used=len(pickup_path.steps), max_search_distance=30)
-                    if td_path is not None:
+                    paths = pf.get_all_paths(game, pickup_player, from_position=game.get_ball_position(), num_moves_used=len(pickup_path))
+                    best_path = None
+                    best_distance = 100
+                    target_x = game.get_opp_endzone_x(self.my_team)
+                    for path in paths:
+                        distance_to_endzone = abs(target_x - path.steps[-1].x)
+                        if path.prob == 1 and (best_path is None or distance_to_endzone < best_distance):
+                            best_path = path
+                            best_distance = distance_to_endzone
+                    if best_path is not None:
                         steps = []
-                        for step in td_path.steps:
+                        for step in best_path.steps:
                             if game.num_tackle_zones_at(pickup_player, step) > 0:
                                 break
                             if len(steps) + len(pickup_path.steps) >= pickup_player.get_ma():
@@ -337,24 +355,33 @@ class MyScriptedBot(ProcBot):
             if player.has_skill(Skill.CATCH) and player != ball_carrier:
                 if game.get_distance_to_endzone(player) > player.num_moves_left():
                     continue
-                td_path = pf.get_safest_scoring_path(game, player, max_search_distance=30)
-                steps = []
-                for step in td_path.steps:
-                    if len(steps) >= player.get_ma() + (3 if not player.state.up else 0):
-                        break
-                    if game.num_tackle_zones_at(player, step) > 0:
-                        break
-                    if step.distance(td_path.steps[-1]) < player.get_ma():
-                        break
-                    steps.append(step)
-                if len(steps) > 0:
-                    self.actions.append(Action(ActionType.START_MOVE, player=player))
-                    if not player.state.up:
-                        self.actions.append(Action(ActionType.STAND_UP))
-                    for step in steps:
-                        self.actions.append(Action(ActionType.MOVE, position=step))
-                    print(f"Move receiver {player.role.name}")
-                    return
+                paths = pf.get_all_paths(game, ball_carrier)
+                best_path = None
+                best_distance = 100
+                target_x = game.get_opp_endzone_x(self.my_team)
+                for path in paths:
+                    distance_to_endzone = abs(target_x - path.steps[-1].x)
+                    if path.prob == 1 and (best_path is None or distance_to_endzone < best_distance):
+                        best_path = path
+                        best_distance = distance_to_endzone
+                if best_path is not None:
+                    steps = []
+                    for step in best_path.steps:
+                        if len(steps) >= player.get_ma() + (3 if not player.state.up else 0):
+                            break
+                        if game.num_tackle_zones_at(player, step) > 0:
+                            break
+                        if step.distance(best_path.steps[-1]) < player.get_ma():
+                            break
+                        steps.append(step)
+                    if len(steps) > 0:
+                        self.actions.append(Action(ActionType.START_MOVE, player=player))
+                        if not player.state.up:
+                            self.actions.append(Action(ActionType.STAND_UP))
+                        for step in steps:
+                            self.actions.append(Action(ActionType.MOVE, position=step))
+                        print(f"Move receiver {player.role.name}")
+                        return
 
         print("6. Blitz with open block players")
         if game.is_blitz_available():
@@ -364,30 +391,22 @@ class MyScriptedBot(ProcBot):
             best_blitz_path = None
             for blitzer in open_players:
                 if blitzer.position is not None and not blitzer.state.used and blitzer.has_skill(Skill.BLOCK):
-                    for opp_player in self.opp_team.players:
-                        if opp_player.position is None or opp_player.position.distance(blitzer.position) > blitzer.num_moves_left():
-                            continue
-                        if opp_player.state.up and not (opp_player.has_skill(Skill.BLOCK) and opp_player != ball_carrier):
-                            for adjacent_position in game.get_adjacent_squares(opp_player.position, occupied=False):
-                                path = pf.get_safest_path(game, blitzer, adjacent_position, num_moves_used=1)
-                                if path is None:
-                                    continue
-                                # Include an addition GFI to block if needed
-                                moves = blitzer.get_ma() if blitzer.state.up or blitzer.has_skill(Skill.JUMP_UP) else blitzer.get_ma() + 3
-                                if len(path.steps) > moves:
-                                    path.prob = path.prob * (5.0/6.0)
-                                p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_blitz_probs(blitzer, adjacent_position, opp_player)
-                                p_self_up = path.prob * (1-p_self)
-                                p_opp = path.prob * p_opp
-                                p_fumble_opp = p_fumble_opp * path.prob
-                                if blitzer == game.get_ball_carrier():
-                                    p_fumble_self = path.prob + (1 - path.prob) * p_fumble_self
-                                score = p_self_up + p_opp + p_fumble_opp - p_fumble_self
-                                if best_blitz_score is None or score > best_blitz_score:
-                                    best_blitz_attacker = blitzer
-                                    best_blitz_defender = opp_player
-                                    best_blitz_score = score
-                                    best_blitz_path = path
+                    blitz_paths = pf.get_all_paths(game, blitzer, blitz=True)
+                    for path in blitz_paths:
+                        final_position = path.steps[-1] if len(path) > 0 else blitzer.position
+                        for defender in game.get_adjacent_players(final_position, team=game.get_opp_team(blitzer.team)):
+                            p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_blitz_probs(blitzer, final_position, defender)
+                            p_self_up = path.prob * (1-p_self)
+                            p_opp = path.prob * p_opp
+                            p_fumble_opp = p_fumble_opp * path.prob
+                            if blitzer == game.get_ball_carrier():
+                                p_fumble_self = path.prob + (1 - path.prob) * p_fumble_self
+                            score = p_self_up + p_opp + p_fumble_opp - p_fumble_self
+                            if best_blitz_score is None or score > best_blitz_score:
+                                best_blitz_attacker = blitzer
+                                best_blitz_defender = defender
+                                best_blitz_score = score
+                                best_blitz_path = path
             if best_blitz_attacker is not None and best_blitz_score >= 1.25:
                 self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
                 if not best_blitz_attacker.state.up:
@@ -415,14 +434,14 @@ class MyScriptedBot(ProcBot):
                             continue
                         if game.num_tackle_zones_in(player) > 0:
                             continue
-                        path = pf.get_safest_path(game, player, cage_position, max_search_distance=20)
+                        path = pf.get_safest_path(game, player, cage_position)
                         if path is not None and path.prob > 0.94:
                             self.actions.append(Action(ActionType.START_MOVE, player=player))
                             if not player.state.up:
                                 self.actions.append(Action(ActionType.STAND_UP))
                             for step in path.steps:
                                 self.actions.append(Action(ActionType.MOVE, position=step))
-                            print(f"Move towards ball {player.role.name}")
+                            print(f"Make cage around towards ball carrier {player.role.name}")
                             return
 
         # Scan for assist positions
@@ -433,9 +452,9 @@ class MyScriptedBot(ProcBot):
             opponents = game.get_adjacent_opponents(player, down=False)
             for opponent in opponents:
                 att_str, def_str = game.get_block_strengths(player, opponent)
-                if def_str == att_str:
+                if def_str >= att_str:
                     for open_position in game.get_adjacent_squares(player.position, occupied=False):
-                        if len(game.get_adjacent_players(open_position, team=self.opp_team, down=False)):
+                        if len(game.get_adjacent_players(open_position, team=self.opp_team, down=False)) == 1:
                             assist_positions.append(open_position)
 
         print("8. Move non-marked players to assist")
@@ -458,9 +477,11 @@ class MyScriptedBot(ProcBot):
             if game.num_tackle_zones_in(player) > 0:
                 continue
             if ball_carrier is None:
-                path = pf.get_safest_path(game, player, game.get_ball_position(), max_search_distance=30)
-            else:
+                path = pf.get_safest_path(game, player, game.get_ball_position())
+            elif ball_carrier.team != self.my_team:
                 path = pf.get_safest_path_to_player(game, player, ball_carrier)
+            else:
+                continue
             if path is not None:
                 steps = []
                 for step in path.steps:
@@ -526,7 +547,7 @@ class MyScriptedBot(ProcBot):
             return action
         ball_carrier = game.get_ball_carrier()
         if ball_carrier == game.get_active_player():
-            td_path = pf.get_safest_scoring_path(game, ball_carrier)
+            td_path = pf.get_safest_path_to_endzone(game, ball_carrier)
             if td_path is not None and td_path.prob <= 0.9:
                 self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
                 for step in td_path.steps:
@@ -534,7 +555,6 @@ class MyScriptedBot(ProcBot):
                 #print(f"Scoring with {ball_carrier.role.name}, p={td_path.prob}")
                 return
         return Action(ActionType.END_PLAYER_TURN)
-
 
     def block(self, game):
         """
@@ -726,6 +746,7 @@ if __name__ == "__main__":
     '''
 
     import ffai.web.server as server
+    import grodbot
 
     if __name__ == "__main__":
         server.start_server(debug=True, use_reloader=False)

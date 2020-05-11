@@ -1988,13 +1988,21 @@ class Game:
     def get_distance_to_endzone(self, player):
         """
         :param player:
-        :return: direct distance to the nearest endzone tile.
+        :return: direct distance to the nearest opponent endzone tile.
         """
         assert player.position is not None
-        if player.team == self.state.home_team:
-            return self.arena.width - player.position.x
+        x = self.get_opp_endzone_x(player.team)
+        return abs(x - player.position.x)
+
+    def get_opp_endzone_x(self, team):
+        """
+        :param player:
+        :return: the x-coordinate of the opponents endzone
+        """
+        if team == self.state.home_team:
+            return 1
         else:
-            return player.position.x - 1
+            return self.arena.width - 2
 
     def get_interceptors(self, position_from, position_to, team):
         """
@@ -2131,3 +2139,9 @@ class Game:
                 return self.state.stack.items[idx]
         return None
 
+    def get_tile(self, position):
+        """
+        :param position: a Square on the board.
+        :return: the tile type at the given position.
+        """
+        return self.arena.board[position.y][position.x]

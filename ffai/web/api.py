@@ -15,7 +15,7 @@ from ffai.ai.registry import list_bots
 host = InMemoryHost()
 
 
-def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, config_name="web.json", board_size=11):
+def new_game(away_team_name, home_team_name, home_agent=None, away_agent=None, config_name="web.json", board_size=11):
     assert away_agent is not None
     assert home_agent is not None
     config = load_config(config_name)
