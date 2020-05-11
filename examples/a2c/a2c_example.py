@@ -11,6 +11,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import sys
 
+import pdb 
 
 # Training configuration
 num_steps = 1000000
@@ -134,7 +135,7 @@ class CNNPolicy(nn.Module):
         # The outputs
         self.critic = nn.Linear(hidden_nodes, 1)
         self.actor = nn.Linear(hidden_nodes, actions)
-
+        pdb.set_trace()
         self.train()
         self.reset_parameters()
 
