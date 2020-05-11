@@ -207,6 +207,7 @@ a:hover {
 .game-free #gamelog {
   resize: none;
   cursor: default;
+  z-index: -1;
 }
 .game-free #gamelog.disabled {
   cursor: default;
