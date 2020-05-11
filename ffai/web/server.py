@@ -28,18 +28,21 @@ def create():
     bot_list = api.get_bots()
     # make_bot or Agent depending on choice... (unknown name => human)
     homePlayer = data['game']['home_player']
+    num_human_players = 0
     if homePlayer in bot_list:
         homeAgent = make_bot(homePlayer)
     else:
-        homeAgent = Agent("Player 1", human=True)
+        num_human_players += 1
+        homeAgent = Agent(f"Player {num_human_players}", human=True)
 
     awayPlayer = data['game']['away_player']
     if awayPlayer in bot_list:
         awayAgent = make_bot(awayPlayer)
     else:
-        awayAgent = Agent("Player 1", human=True)
+        num_human_players += 1
+        awayAgent = Agent(f"Player {num_human_players}", human=True)
 
-    game = api.new_game(data['game']['home_team_name'], data['game']['away_team_name'], homeAgent, awayAgent)
+    game = api.new_game(home_team_name=data['game']['home_team_name'], away_team_name=data['game']['away_team_name'], home_agent=homeAgent, away_agent=awayAgent)
     return json.dumps(game.to_json())
 
 

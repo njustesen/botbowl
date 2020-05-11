@@ -79,15 +79,13 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            game_copy_away = self.safe_clone()
             self.actor = self.away_agent
-            self.away_agent.new_game(game_copy_away, game_copy_away.state.away_team)
+            self.away_agent.new_game(self, self.state.away_team)
             self.actor = None
         if not self.home_agent.human:
             self.actor = self.home_agent
-            game_copy_home = self.safe_clone()
             self.actor = None
-            self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
+            self.home_agent.new_game(self, self.state.home_team)
 
         self.set_available_actions()
         # Record state
