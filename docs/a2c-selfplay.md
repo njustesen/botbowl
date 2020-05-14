@@ -1,4 +1,4 @@
-# Reinforcement Learning III: The Full Board
+# Reinforcement Learning II: The Full Board
 
 In the previous tutorial we learned how to apply the reinforcement learning (RL) algorithm A2C to FFAI's gym environments, however, only on the 
 variants with smaller board sizes. In this tutorial, we will first describe our attempt to apply the same approach to the variant with 
