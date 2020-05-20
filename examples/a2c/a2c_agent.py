@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 import sys
 
 # Architecture
-#model_name = 'FFAI-v2'
-model_name = 'FFAI-ppcg-v2'
+model_name = 'FFAI-v2'
+env_name = 'FFAI-v2'
 model_filename = "models/" + model_name
 log_filename = "logs/" + model_name + ".dat"
 
@@ -109,10 +109,10 @@ class CNNPolicy(nn.Module):
 
 class A2CAgent(Agent):
 
-    def __init__(self, name):
+    def __init__(self, name, env_name=env_name, filename=model_filename):
         super().__init__(name)
         self.my_team = None
-        self.env = self.make_env('FFAI-v2')
+        self.env = self.make_env(env_name)
 
         self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
         self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
@@ -130,7 +130,7 @@ class A2CAgent(Agent):
         self.is_home = True
 
         # MODEL
-        self.policy = torch.load(model_filename)
+        self.policy = torch.load(filename)
         self.policy.eval()
         self.end_setup = False
 
@@ -189,18 +189,7 @@ class A2CAgent(Agent):
         return action
 
     def end_game(self, game):
-        winner = game.get_winning_team()
-        print("Casualties: ", game.num_casualties())
-        if winner is None:
-            print("It's a draw")
-        elif winner == self.my_team:
-            print("I ({}) won".format(self.name))
-            print(self.my_team.state.score, "-", self.env.game.get_opp_team(self.my_team).state.score)
-        else:
-            print("I ({}) lost".format(self.name))
-            print(self.my_team.state.score, "-", self.env.game.get_opp_team(self.my_team).state.score)
         pass
-
 
     def _compute_action_masks(self, observations):
         masks = []
@@ -262,7 +251,6 @@ class A2CAgent(Agent):
 
         return torch.from_numpy(np.stack(spatial_obs)).float(), torch.from_numpy(np.stack(non_spatial_obs)).float()
 
-
     def make_env(self, env_name):
         env = gym.make(env_name)
         return env
@@ -271,16 +259,17 @@ class A2CAgent(Agent):
 # Register the bot to the framework
 ffai.register_bot('my-a2c-bot', A2CAgent)
 
+'''
 import ffai.web.server as server
 
 if __name__ == "__main__":
     server.start_server(debug=True, use_reloader=False)
-
 '''
+
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-ii")
+    config = ffai.load_config("ff-1")
     config.competition_mode = False
     ruleset = ffai.load_rule_set(config.ruleset)
     arena = ffai.load_arena(config.arena)
@@ -293,10 +282,18 @@ if __name__ == "__main__":
     game_times = []
     wins = 0
     draws = 0
-    for i in range(100):
-        away_agent = ffai.make_bot('my-a2c-bot')
-        home_agent = ffai.make_bot("random")
+    n = 100
+    is_home = True
+    tds_away = 0
+    tds_home = 0
+    for i in range(n):
 
+        if is_home:
+            away_agent = ffai.make_bot('random')
+            home_agent = ffai.make_bot('my-a2c-bot')
+        else:
+            away_agent = ffai.make_bot('my-a2c-bot')
+            home_agent = ffai.make_bot("random")
         game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
@@ -307,8 +304,14 @@ if __name__ == "__main__":
         winner = game.get_winner()
         if winner is None:
             draws += 1
-        elif winner == away_agent:
+        elif winner == home_agent and is_home:
+            wins += 1
+        elif winner == away_agent and not is_home:
             wins += 1
 
-    print(f"Wins/Draws/Losses: {wins}/{draws}/{100-wins-draws}")
-'''
+        tds_home += game.get_agent_team(home_agent).state.score
+        tds_away += game.get_agent_team(away_agent).state.score
+
+    print(f"Home/Draws/Away: {wins}/{draws}/{n-wins-draws}")
+    print(f"Home TDs per game: {tds_home/n}")
+    print(f"Away TDs per game: {tds_away/n}")

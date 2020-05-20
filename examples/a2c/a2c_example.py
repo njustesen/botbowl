@@ -10,7 +10,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import sys
-
+from a2c_agent import A2CAgent
+import ffai
+import random
 
 # Training configuration
 num_steps = 1000000
@@ -29,15 +31,22 @@ ppcg = False
 env_name = "FFAI-1-v2"
 #env_name = "FFAI-3-v2"
 #num_steps = 10000000 # Increase training time
+#log_interval = 100
 #env_name = "FFAI-5-v2"
 #num_steps = 100000000 # Increase training time
+#log_interval = 1000
+#save_interval = 5000
 # env_name = "FFAI-v2"
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
-# If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
-FFAIEnv.play_on_both_sides = False
+
+# Self-play
+selfplay = False  # Use this to enable/disable self-play
+selfplay_window = 1
+selfplay_save_steps = int(num_steps / 10)
+selfplay_swap_steps = selfplay_save_steps
 
 # Architecture
-num_hidden_nodes = 256
+num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
 
 model_name = env_name
@@ -203,6 +212,7 @@ class CNNPolicy(nn.Module):
         action_probs = F.softmax(actions, dim=1)
         return values, action_probs
 
+
 def reward_function(env, info, shaped=False):
     r = 0
     for outcome in env.get_outcomes():
@@ -226,6 +236,8 @@ def worker(remote, parent_remote, env, worker_id):
 
     steps = 0
     tds = 0
+    tds_opp = 0
+    next_opp = ffai.make_bot('random')
 
     while True:
         command, data = remote.recv()
@@ -235,6 +247,8 @@ def worker(remote, parent_remote, env, worker_id):
             obs, reward, done, info = env.step(action)
             tds_scored = info['touchdowns'] - tds
             tds = info['touchdowns']
+            tds_opp_scored = info['opp_touchdowns'] - tds_opp
+            tds_opp = info['opp_touchdowns']
             reward_shaped = reward_function(env, info, shaped=True)
             ball_carrier = env.game.get_ball_carrier()
             # PPCG
@@ -250,19 +264,25 @@ def worker(remote, parent_remote, env, worker_id):
                 if steps >= reset_steps:
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
+                env.opp_actor = next_opp
                 obs = env.reset()
                 steps = 0
                 tds = 0
-            remote.send((obs, reward, reward_shaped, tds_scored, done, info))
+                tds_opp = 0
+            remote.send((obs, reward, reward_shaped, tds_scored, tds_opp_scored, done, info))
         elif command == 'reset':
             dif = data
             steps = 0
             tds = 0
+            tds_opp = 0
+            env.opp_actor = next_opp
             obs = env.reset()
             # set_difficulty(env, dif)
             remote.send(obs)
         elif command == 'render':
             env.render()
+        elif command == 'swap':
+            next_opp = data
         elif command == 'close':
             break
 
@@ -289,24 +309,27 @@ class VecEnv():
         cumul_rewards = None
         cumul_shaped_rewards = None
         cumul_tds_scored = None
+        cumul_tds_opp_scored = None
         cumul_dones = None
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', [action, difficulty]))
         results = [remote.recv() for remote in self.remotes]
-        obs, rews, rews_shaped, tds, dones, infos = zip(*results)
+        obs, rews, rews_shaped, tds, tds_opp, dones, infos = zip(*results)
         if cumul_rewards is None:
             cumul_rewards = np.stack(rews)
             cumul_shaped_rewards = np.stack(rews_shaped)
             cumul_tds_scored = np.stack(tds)
+            cumul_tds_opp_scored = np.stack(tds_opp)
         else:
             cumul_rewards += np.stack(rews)
             cumul_shaped_rewards += np.stack(rews_shaped)
             cumul_tds_scored += np.stack(tds)
+            cumul_tds_opp_scored += np.stack(tds_opp)
         if cumul_dones is None:
             cumul_dones = np.stack(dones)
         else:
             cumul_dones |= np.stack(dones)
-        return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_tds_scored, cumul_dones, infos
+        return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_tds_scored, cumul_tds_opp_scored, cumul_dones, infos
 
     def reset(self, difficulty=1.0):
         for remote in self.remotes:
@@ -316,7 +339,10 @@ class VecEnv():
     def render(self):
         for remote in self.remotes:
             remote.send(('render', None))
-        return
+
+    def swap(self, agent):
+        for remote in self.remotes:
+            remote.send(('swap', agent))
 
     def close(self):
         if self.closed:
@@ -418,8 +444,10 @@ def main():
     episodes = 0
     proc_rewards = np.zeros(num_processes)
     proc_tds = np.zeros(num_processes)
+    proc_tds_opp = np.zeros(num_processes)
     episode_rewards = []
     episode_tds = []
+    episode_tds_opp = []
     wins = []
     value_losses = []
     policy_losses = []
@@ -428,8 +456,19 @@ def main():
     log_steps = []
     log_win_rate = []
     log_td_rate = []
+    log_td_rate_opp = []
     log_mean_reward = []
     log_difficulty = []
+
+    # self-play
+    selfplay_next_save = selfplay_save_steps
+    selfplay_next_swap = selfplay_swap_steps
+    selfplay_models = 0
+    if selfplay:
+        model_path = f"models/{model_name}_selfplay_0"
+        torch.save(ac_agent, model_path)
+        envs.swap(A2CAgent(name=f"selfplay-0", env_name=env_name, filename=model_path))
+        selfplay_models += 1
 
     renderer = ffai.Renderer()
 
@@ -456,8 +495,9 @@ def main():
                 }
                 action_objects.append(action_object)
 
-            obs, env_reward, shaped_reward, tds_scored, done, info = envs.step(action_objects, difficulty=difficulty)
+            obs, env_reward, shaped_reward, tds_scored, tds_opp_scored, done, info = envs.step(action_objects, difficulty=difficulty)
             #envs.render()
+
             '''
             for j in range(len(obs)):
                 ob = obs[j]
@@ -471,6 +511,7 @@ def main():
             for i in range(num_processes):
                 proc_rewards[i] += sr[i]
                 proc_tds[i] += tds_scored[i]
+                proc_tds_opp[i] += tds_opp_scored[i]
 
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
@@ -493,8 +534,10 @@ def main():
                         difficulty = 1
                     episode_rewards.append(proc_rewards[i])
                     episode_tds.append(proc_tds[i])
+                    episode_tds_opp.append(proc_tds_opp[i])
                     proc_rewards[i] = 0
                     proc_tds[i] = 0
+                    proc_tds_opp[i] = 0
 
             # Update the observations returned by the environment
             spatial_obs, non_spatial_obs = update_obs(obs)
@@ -550,10 +593,35 @@ def main():
         # Steps
         all_steps += num_processes * steps_per_update
 
+        # Self-play save
+        if selfplay and all_steps >= selfplay_next_save:
+            selfplay_next_save = max(all_steps+1, selfplay_next_save+selfplay_save_steps)
+            model_path = f"models/{model_name}_selfplay_{selfplay_models}"
+            print(f"Saving {model_path}")
+            torch.save(ac_agent, model_path)
+            selfplay_models += 1
+
+        # Self-play swap
+        if selfplay and all_steps >= selfplay_next_swap:
+            selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
+            lower = max(0, selfplay_models-1-(selfplay_window-1))
+            i = random.randint(lower, selfplay_models-1)
+            model_path = f"models/{model_name}_selfplay_{i}"
+            print(f"Swapping opponent to {model_path}")
+            envs.swap(A2CAgent(name=f"selfplay-{i}", env_name=env_name, filename=model_path))
+
+        # Save
+        if all_updates % save_interval == 0 and len(episode_rewards) >= num_processes:
+            # Save to files
+            with open(log_filename, "a") as myfile:
+                myfile.write(log_to_file)
+
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
             td_rate = np.mean(episode_tds)
+            td_rate_opp = np.mean(episode_tds_opp)
             episode_tds.clear()
+            episode_tds_opp.clear()
             mean_reward = np.mean(episode_rewards)
             episode_rewards.clear()
             win_rate = np.mean(wins)
@@ -566,43 +634,43 @@ def main():
             log_steps.append(all_steps)
             log_win_rate.append(win_rate)
             log_td_rate.append(td_rate)
+            log_td_rate_opp.append(td_rate_opp)
             log_mean_reward.append(mean_reward)
             log_difficulty.append(difficulty)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, TD rate opp: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
 
             log_to_file = "{}, {}, {}, {}, {}, {}, {}\n" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, mean_reward, difficulty)
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
 
             print(log)
-
-            # Save to files
-            with open(log_filename, "a") as myfile:
-                myfile.write(log_to_file)
-
-            # Saving the agent
-            torch.save(ac_agent, "models/" + model_name)
 
             episodes = 0
             value_losses.clear()
             policy_losses.clear()
+
+            # Save model
+            torch.save(ac_agent, "models/" + model_name)
             
             # plot
+            n = 3
             if ppcg:
-                fig, axs = plt.subplots(1, 4, figsize=(16, 5))
-            else:
-                fig, axs = plt.subplots(1, 3, figsize=(12, 5))
+                n += 1
+            fig, axs = plt.subplots(1, n, figsize=(4*n, 5))
             axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
             axs[0].plot(log_steps, log_mean_reward)
             axs[0].set_title('Reward')
             #axs[0].set_ylim(bottom=0.0)
             axs[0].set_xlim(left=0)
             axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-            axs[1].plot(log_steps, log_td_rate)
+            axs[1].plot(log_steps, log_td_rate, label="Learner")
             axs[1].set_title('TD/Episode')
             axs[1].set_ylim(bottom=0.0)
             axs[1].set_xlim(left=0)
+            if selfplay:
+                axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+                axs[1].plot(log_steps, log_td_rate_opp, color="red", label="Opponent")
             axs[2].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
             axs[2].plot(log_steps, log_win_rate)
             axs[2].set_title('Win rate')            
@@ -615,11 +683,9 @@ def main():
                 axs[3].set_yticks(np.arange(0, 1.001, step=0.1))
                 axs[3].set_xlim(left=0)
             fig.tight_layout()
-            fig.savefig("plots/"+model_name+".png")
+            fig.savefig(f"plots/{model_name}{'_selfplay' if selfplay else ''}.png")
             plt.close('all')
 
-            # Save model
-            torch.save(ac_agent, "models/" + model_name)
 
     torch.save(ac_agent, "models/" + model_name)
     envs.close()

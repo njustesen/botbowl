@@ -150,7 +150,7 @@ class FFAIEnv(gym.Env):
         Reroll
     ]
 
-    play_on_both_sides = False
+
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.3"
@@ -376,19 +376,17 @@ class FFAIEnv(gym.Env):
         for action_choice in game.get_available_actions():
             # idx = FFAIEnv.actions.index(action_choice.action_type)
             action_name = action_choice.action_type.name
+            # Ignore end setup action if setup is illegal
+            if action_choice.action_type == ActionType.END_SETUP and not game.is_setup_legal(active_team):
+                continue
             obs['available-action-types'][action_name] = 1.0
 
         return obs
 
     def reset(self):
-        if not FFAIEnv.play_on_both_sides or self.rnd.randint(0, 2) == 0:
-            self.team_id = self.home_team.team_id
-            home_agent = self.actor
-            away_agent = self.opp_actor
-        else:
-            self.team_id = self.away_team.team_id
-            home_agent = self.opp_actor
-            away_agent = self.actor
+        self.team_id = self.home_team.team_id
+        home_agent = self.actor
+        away_agent = self.opp_actor
         seed = self.rnd.randint(0, 2**31)
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
