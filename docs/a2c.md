@@ -442,7 +442,7 @@ memory.non_spatial_obs[0].copy_(non_spatial_obs)
 
 When the memory is full (20 steps has been reached), reward values are discounted and training is performed on the data in the memory where after it is flushed.
 
-Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](examples/a2c/a2c_example.py) to understand how the learning works. 
+Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py) to understand how the learning works. 
 Because the neural network is written in pytorch, you can run the code in debug mode and go through the code line by line.
 
 ## Results
