@@ -92,20 +92,16 @@ class Replay:
 
 class TimeLimits:
 
-    def __init__(self, game, turn, secondary, disqualification, init, end):
-        self.game = game
+    def __init__(self, turn, secondary, init, end):
         self.turn = turn
         self.secondary = secondary
-        self.disqualification = disqualification
         self.init = init
         self.end = end
 
     def to_json(self):
-         return {
-            'game': self.game,
+        return {
             'turn': self.turn,
             'secondary': self.secondary,
-            'disqualification': self.disqualification,
             'init': self.init,
             'end': self.end
         }

@@ -6,10 +6,6 @@ Year: 2018
 This module contains the Game class, which is the main class and interface used to interact with a game in FFAI.
 """
 
-from copy import deepcopy
-
-import numpy as np
-
 from ffai.core.load import *
 from ffai.core.procedure import *
 
@@ -33,7 +29,6 @@ class Game:
 
         self.start_time = None
         self.end_time = None
-        self.disqualified_agent = None
         self.last_request_time = None
         self.last_action_time = None
         self.forced_action = None
@@ -56,21 +51,9 @@ class Game:
             'can_home_team_use_reroll': self.can_use_reroll(self.state.home_team),
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
-            'disqualified_agent_id': self.disqualified_agent.agent_id if self.disqualified_agent is not None else None,
             'time_limits': self.config.time_limits.to_json(),
             'active_other_player_id': self.get_other_active_player_id()
         }
-
-    def safe_clone(self):
-        # Make dummy agents for the clone
-        home_agent = self.home_agent
-        away_agent = self.away_agent
-        self.home_agent = Agent(home_agent.name, agent_id=home_agent.agent_id)
-        self.away_agent = Agent(away_agent.name, agent_id=away_agent.agent_id)
-        clone = deepcopy(self)
-        self.home_agent = home_agent
-        self.away_agent = away_agent
-        return clone
 
     def init(self):
         """
@@ -79,15 +62,15 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            game_copy_away = self.safe_clone()
+            #game_copy_away = self.safe_clone()
             self.actor = self.away_agent
-            self.away_agent.new_game(game_copy_away, game_copy_away.state.away_team)
+            self.away_agent.new_game(self, self.state.away_team)
             self.actor = None
         if not self.home_agent.human:
             self.actor = self.home_agent
-            game_copy_home = self.safe_clone()
+            #game_copy_home = self.safe_clone()
             self.actor = None
-            self.home_agent.new_game(game_copy_home, game_copy_home.state.home_team)
+            self.home_agent.new_game(self, self.state.home_team)
 
         self.set_available_actions()
         # Record state
@@ -148,11 +131,13 @@ class Game:
                 # Query agent for action
                 self.last_request_time = time.time()
                 self.action = self._safe_act()
-                # self.action = self._safe_act()
                 
                 # Check if time limit was violated
                 self.last_action_time = time.time()
-                self.check_clocks()  # Might modify the action if clock was violated
+
+                # Check clocks if competition mode
+                if self.config.competition_mode:
+                    self._check_clocks()  # Might override the action if clock was violated
 
                 # Did the game terminate?
                 if self.state.game_over:
@@ -169,30 +154,18 @@ class Game:
 
     def refresh(self):
         """
-        Checks clocks and runs forced actions. Can be called in human games.
+        Checks clocks and runs forced actions. Useful in called in human games.
         """
         self.action = None
-        self.check_clocks()
+        if self.config.competition_mode:
+            self._check_clocks()
         if self.action is not None:
             self.step(self.action)
 
-    def check_clocks(self):
+    def _check_clocks(self):
         """
         Checks if clocks are done.
         """
-        # Only use clocks in competition mode
-        if not self.config.competition_mode:
-            return
-
-        # Timed out?
-        if self.is_timed_out():
-            print("Game timed out")
-            self.action = None
-            self.remove_clocks()
-            self.disqualified_agent = self.actor
-            self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.get_agent_team(self.actor)))
-            self._end_game()
-            return
 
         # No time limit for this action
         if not self.has_agent_clock(self.actor):
@@ -201,16 +174,6 @@ class Game:
         # Agent too slow?
         clock = self.get_agent_clock(self.actor)
         if clock.is_done():
-            
-            # Disqualification? Relevant for hanging bots in competitions
-            if clock.get_running_time() > clock.seconds + self.config.time_limits.disqualification:
-                print(f"Time violation. {self.actor.name} will be disqualified!")
-                self.action = None
-                self.remove_clocks()
-                self.disqualified_agent = self.actor
-                self.report(Outcome(OutcomeType.END_OF_GAME_DISQUALIFICATION, team=self.get_agent_team(self.actor)))
-                self._end_game()
-                return
 
             # End the actor's turn
             done = True
@@ -247,35 +210,10 @@ class Game:
         self.state.game_over = True
 
         # Let agents know that the game ended
-        now = None
         if not self.home_agent.human:
-            self.actor = self.home_agent  # In case it crashes or timeouts we have someone to blame
-            if self.config.competition_mode:
-                self.actor = self.home_agent
-                clone = self.safe_clone()
-                now = time.time()
-                self.home_agent.end_game(clone)
-                self.actor = None
-            else:
-                self.home_agent.end_game(self)
-            # Disqualify if too long
-            if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
-                print("End time violated by " + self.home_agent.name + ". Time used: " + time.time() - now)
-                self.disqualified_agent = self.home_agent
+            self.home_agent.end_game(self)
         if not self.away_agent.human:
-            self.actor = self.away_agent  # In case it crashes or timeouts we have someone to blame
-            if self.config.competition_mode:
-                self.actor = self.away_agent
-                clone = self.safe_clone()
-                now = time.time()
-                self.away_agent.end_game(clone)
-                self.actor = None
-            else:
-                self.away_agent.end_game(self)
-            # Disqualify if too long
-            if self.config.competition_mode and time.time() > now + self.config.time_limits.end:
-                print("End time violated by " + self.away_agent.name + ". Time used: " + time.time() - now)
-                self.disqualified_agent = self.away_agent
+            self.away_agent.end_game(self)
 
         # Record state
         if self.replay is not None:
@@ -331,18 +269,16 @@ class Game:
         return False
 
     def _safe_act(self):
-        '''
-        Clone the game before requesting an action so agent can't manipulate it.
-        '''
-        if self.config.competition_mode:
-            action = self.actor.act(self.safe_clone())
-            if not type(action) == Action:
-                return None
-            # Correct player object
-            if action.player is not None:
-                action.player = self.state.player_by_id[action.player.player_id]
-            return action
-        return self.actor.act(self)
+        """
+        Gets action from agent and sets correct player reference.
+        """
+        action = self.actor.act(self)
+        if not type(action) == Action:
+            return None
+        # Correct player object
+        if action.player is not None:
+            action.player = self.state.player_by_id[action.player.player_id]
+        return action
 
     def _forced_action(self):
         '''
@@ -558,12 +494,18 @@ class Game:
         clock = Clock(team, self.config.time_limits.turn, is_primary=True)
         self.state.clocks.append(clock)
 
-    def get_seconds_left(self, team):
+    def get_seconds_left(self, team=None):
         '''
         Returns the number of seconds left on the clock for the given team and None if the given team has no clock.
         '''
+        if team is None:
+            if self.actor is None:
+                return None
+            t = self.get_agent_team(self.actor)
+        else:
+            t = team
         for clock in self.state.clocks:
-            if clock.team == team:
+            if clock.team == t:
                 return clock.get_seconds_left()
         return None
         
@@ -1319,16 +1261,6 @@ class Game:
             return self.state.termination_opp
         return self.state.termination_turn
 
-    def is_timed_out(self):
-        """
-        Returns true if the game timed out - i.e. it was longer than the allowed self.config.time_limits.game - only if in competition mode.
-        """
-        if not self.config.competition_mode:
-            return
-        if self.end_time is None or self.start_time is None:
-            return False
-        return self.end_time - self.start_time > self.config.time_limits.game
-
     def get_team_by_id(self, team_id):
         """
         :param team_id:
@@ -1347,16 +1279,11 @@ class Game:
         A disqualified player will lose.
         If the game is over, the team with most TDs win.
         """
-        # Disqualified players lose
-        if self.disqualified_agent is not None:
-            return self.get_other_agent(self.disqualified_agent)
-        
         # If game timed out the current player lost
-        if self.is_timed_out():
-            if self.home_agent == self.actor:
-                return self.away_agent
-            elif self.away_agent == self.actor:
-                return self.home_agent
+        if self.home_agent == self.actor:
+            return self.away_agent
+        elif self.away_agent == self.actor:
+            return self.home_agent
         
         # If the game is over the player with most TDs wins
         if self.state.game_over:
