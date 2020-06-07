@@ -423,6 +423,7 @@ class Block(Procedure):
 
             # Roll
             self.roll = DiceRoll([], roll_type=RollType.BLOCK_ROLL)
+
             for i in range(abs(dice)):
                 self.roll.dice.append(BBDie(self.game.rnd))
 
@@ -3024,8 +3025,8 @@ class Setup(Procedure):
 
         if formation is not None:
             actions = formation.actions(self.game, self.team)
-            for action in actions:
-                self.step(action)
+            for a in actions:
+                self.step(a)
             return False
 
         if action.action_type == ActionType.END_SETUP:

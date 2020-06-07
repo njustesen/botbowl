@@ -31,7 +31,6 @@ that takes random actions will be added to the competition as a baseline.
     - Opponent decisions: 5s
     - Initialization: 20s
     - Game End: 10s
-    - Disqualification after delay of: 5s
 - We use [this configuration file](https://github.com/njustesen/ffai/blob/master/ffai/data/config/bot-bowl-ii.json) for FFAI
 - You are allowed to submit an extension of an existing bot that was developed by someone else, as long as it is a significant improvement. We reserve the right to disqualify 
 bots that play similarly to the existing bot.
