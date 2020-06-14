@@ -386,7 +386,7 @@ class Game:
             self.state.stack.pop()
 
         # Is game over
-        if self.state.stack.is_empty():
+        if self.state.stack.is_empty() -> bool:
             return False  # Can continue without user input
 
         if self.config.debug_mode:
@@ -554,7 +554,7 @@ class Game:
         """
         self.state.reports.append(outcome)
 
-    def is_team_side(self, position, team):
+    def is_team_side(self, position, team) -> bool:
         """
         :param position:
         :param team:
@@ -576,7 +576,7 @@ class Game:
                     tiles.append(Square(x, y))
         return tiles
 
-    def is_scrimmage(self, position):
+    def is_scrimmage(self, position) -> bool:
         """
         :param position:
         :return: Returns True if pos is on the scrimmage line.
@@ -599,13 +599,13 @@ class Game:
         """
         self.state.pitch.balls.clear()
 
-    def is_last_turn(self):
+    def is_last_turn(self) -> bool:
         """
         :return: True if this turn is the last turn of the game.
         """
         return self.get_next_team().state.turn == self.config.rounds and self.state.half == 2
 
-    def is_last_round(self):
+    def is_last_round(self) -> bool:
         """
         :return: True if this round is the las round of the game.
         """
@@ -688,7 +688,7 @@ class Game:
         """
         return self.state.turn_order
 
-    def is_home_team(self, team):
+    def is_home_team(self, team) -> bool:
         """
         :return: True if team is the home team.
         """
@@ -742,7 +742,7 @@ class Game:
                 return proc
         return None
 
-    def can_use_reroll(self, team):
+    def can_use_reroll(self, team) -> bool:
         """
         :param team:
         :return: True if the team can use reroll right now (i.e. this turn).
@@ -771,7 +771,7 @@ class Game:
             return self.state.receiving_this_drive
         return self.state.receiving_first_half if half == 1 else self.state.kicking_first_half
 
-    def has_ball(self, player):
+    def has_ball(self, player) -> bool:
         """
         :param player:
         :return: True if player has the ball.
@@ -786,14 +786,14 @@ class Game:
         for ball in self.state.pitch.balls:
             return ball
 
-    def is_touchdown(self, player):
+    def is_touchdown(self, player) -> bool:
         """
         :param player:
         :return: True if player is in the opponent's endzone with the ball.
         """
         return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team)
 
-    def is_blitz_available(self):
+    def is_blitz_available(self) -> bool:
         """
         :return: True if the current team can make a blitz this turn.
         """
@@ -801,7 +801,7 @@ class Game:
         if turn is not None:
             return turn.blitz_available
 
-    def is_pass_available(self):
+    def is_pass_available(self) -> bool:
         """
         :return: True if the current team can make a pass this turn.
         """
@@ -809,7 +809,7 @@ class Game:
         if turn is not None:
             return turn.pass_available
 
-    def is_handoff_available(self):
+    def is_handoff_available(self) -> bool:
         """
         :return: True if the current team can make a handoff this turn.
         """
@@ -817,7 +817,7 @@ class Game:
         if turn is not None:
             return turn.handoff_available
 
-    def is_foul_available(self):
+    def is_foul_available(self) -> bool:
         """
         :return: True if the current team can make a foul this turn.
         """
@@ -825,7 +825,7 @@ class Game:
         if turn is not None:
             return turn.foul_available
 
-    def is_blitz(self):
+    def is_blitz(self) -> bool:
         """
         :return: True if the current turn is a Blitz!
         """
@@ -833,7 +833,7 @@ class Game:
         if turn is not None:
             return turn.blitz
 
-    def is_quick_snap(self):
+    def is_quick_snap(self) -> bool:
         """
         :return: True if the current turn is a Quick Snap!
         """
@@ -1129,7 +1129,7 @@ class Game:
         else:
             return None
 
-    def is_setup_legal(self, team):
+    def is_setup_legal(self, team) -> bool:
         """
         :param team:
         :return: Whether the team has set up legally.
@@ -1143,7 +1143,7 @@ class Game:
             return False
         return True
 
-    def is_setup_legal_count(self, team, tile=None, max_players=11, min_players=3):
+    def is_setup_legal_count(self, team, tile=None, max_players=11, min_players=3) -> bool:
         """
         :param team:
         :param tile: The tile area to check.
@@ -1165,7 +1165,7 @@ class Game:
             return False
         return True
 
-    def num_casualties(self, team=None):
+    def num_casualties(self, team=None) -> int:
         """
         :param team: If None, return the sum of both teams casualties.
         :return: The number of casualties suffered by team.
@@ -1185,7 +1185,7 @@ class Game:
             return self.state.away_team
         return None
 
-    def is_setup_legal_scrimmage(self, team, min_players=3):
+    def is_setup_legal_scrimmage(self, team, min_players=3) -> bool:
         """
         :param team:
         :param min_players:
@@ -1195,7 +1195,7 @@ class Game:
             return self.is_setup_legal_count(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
         return self.is_setup_legal_count(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
 
-    def is_setup_legal_wings(self, team, min_players=0, max_players=2):
+    def is_setup_legal_wings(self, team, min_players=0, max_players=2) -> bool:
         """
         :param team:
         :param min_players:
@@ -1335,7 +1335,7 @@ class Game:
             self.actor = agent
         self.away_agent = agent
 
-    def has_report_of_type(self, outcome_type, last=None):
+    def has_report_of_type(self, outcome_type, last=None) -> bool:
         """
         :param outcome_type:
         :return: True if the the game has reported an outcome of the given type. If last is specified, only the recent number of reports are checked.
@@ -1397,7 +1397,7 @@ class Game:
         else:
             return self.get_player_at(ball_position)
 
-    def is_out_of_bounds(self, position):
+    def is_out_of_bounds(self, position) -> bool:
         """
         :param position:
         :return: True if pos is out of bounds.
@@ -1558,7 +1558,7 @@ class Game:
                                 assists.append(player_at)
         return assists
 
-    def can_assist(self, player, foul=False):
+    def can_assist(self, player, foul=False) -> bool:
         """
         :param assister: The player which potentially can assist
         :param opp_player: The opponent player to assist against
@@ -1797,7 +1797,7 @@ class Game:
         elif st_for < st_against:
             return -2
 
-    def num_assists_at(self, attacker, defender, position, foul: bool = False):
+    def num_assists_at(self, attacker, defender, position, foul: bool = False) -> int:
         '''
         Return net assists for a block of player on opp_player when player has moved to position first.  Required for
         calculating assists after moving in a Blitz action.
