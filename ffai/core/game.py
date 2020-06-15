@@ -277,7 +277,7 @@ class Game:
             action.player = self.state.player_by_id[action.player.player_id]
         return action
 
-    def _forced_action(self):
+    def _forced_action(self) -> Action:
         '''
         Return action that prioritize to end the player's turn.
         '''
@@ -779,7 +779,7 @@ class Game:
         ball = self.get_ball_at(player.position)
         return True if ball is not None and ball.is_carried else False
 
-    def get_ball(self):
+    def get_ball(self) -> Ball:
         """
         :return: A ball on the pitch or None.
         """
@@ -1439,7 +1439,7 @@ class Game:
         assert len(squares) > 0
         return squares
 
-    def get_square(self, x, y):
+    def get_square(self, x, y) -> Square:
         """
         Returns an existing square object for the given position to avoid a new instantiation. If the square object
         is out of bounds it may be instantiated.
@@ -1607,7 +1607,7 @@ class Game:
         defender_strength += len(self.get_assisting_players(defender, attacker))
         return attacker_strength, defender_strength
 
-    def num_block_dice(self, attacker, defender, blitz=False, dauntless_success=False):
+    def num_block_dice(self, attacker, defender, blitz=False, dauntless_success=False) -> int:
         """
         :param attacker: 
         :param defender: 
@@ -1668,7 +1668,7 @@ class Game:
         self.move(attacker, orig_position)
         return p_self, p_opp, p_fumble_self, p_fumble_opp
 
-    def get_dodge_prob(self, player, position, allow_dodge_reroll=True, allow_team_reroll=False):
+    def get_dodge_prob(self, player, position, allow_dodge_reroll=True, allow_team_reroll=False) -> float:
         """
         :param player:
         :param position:
@@ -1688,7 +1688,7 @@ class Game:
             p += (1.0-p)*p
         return p
 
-    def get_catch_prob(self, player, accurate=False, interception=False, handoff=False, allow_catch_reroll=True, allow_team_reroll=False):
+    def get_catch_prob(self, player, accurate=False, interception=False, handoff=False, allow_catch_reroll=True, allow_team_reroll=False) -> float:
         """
         :param player:
         :param accurate: whether it is an accurate pass
@@ -1708,7 +1708,7 @@ class Game:
             p += (1.0-p)*p
         return p
 
-    def get_dodge_prob_from(self, player, from_position, to_position, allow_dodge_reroll=False, allow_team_reroll=False):
+    def get_dodge_prob_from(self, player, from_position, to_position, allow_dodge_reroll=False, allow_team_reroll=False) -> float:
         """
         :param player:
         :param position:
@@ -1722,7 +1722,7 @@ class Game:
         self.move(player, orig_position)
         return p
 
-    def get_pickup_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False):
+    def get_pickup_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False) -> float:
         """
         :param player:
         :param position: the position of the ball
@@ -1740,7 +1740,7 @@ class Game:
             p += (1.0-p)*p
         return p
 
-    def get_pass_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False):
+    def get_pass_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False) -> float:
         """
         :param player:
         :param position: the position of the ball
@@ -1758,7 +1758,7 @@ class Game:
             p += (1.0-p)*p
         return p
 
-    def num_block_dice_at(self, attacker, defender, position, blitz=False, dauntless_success=False):
+    def num_block_dice_at(self, attacker, defender, position, blitz=False, dauntless_success=False) -> int:
         """
         :param attacker:
         :param defender:
@@ -1896,7 +1896,7 @@ class Game:
                     distances.append(distance)
         return squares, distances
 
-    def get_pass_distance(self, from_position, to_position):
+    def get_pass_distance(self, from_position, to_position) -> PassDistance:
         """
         :param from_position:
         :param to_position:
