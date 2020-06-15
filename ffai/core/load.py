@@ -49,7 +49,7 @@ def parse_sc(sc):
     return parsed
 
 
-def load_rule_set(name, debug=False, all_rules=True):
+def load_rule_set(name, debug=False, all_rules=True) -> RuleSet:
     """
     :param name: The name of the ruleset - this should match the filename of the .xml file to load in data/rules/ (without extension)
     :param debug:
@@ -187,7 +187,7 @@ def load_team(path, ruleset) -> Team:
     return team
 
 
-def load_arena(name):
+def load_arena(name) -> TwoPlayerArena:
     """
     :param name: The filename to load.
     :return: The arena at data/arena/<name>
@@ -216,7 +216,7 @@ def load_arena(name):
     return TwoPlayerArena(np.array(board))
 
 
-def load_config(name):
+def load_config(name) -> Configuration:
     """
     :param name: the filename to load.
     :return: The configuration in data/config/<name>
@@ -261,7 +261,7 @@ def load_config(name):
     return config
 
 
-def load_formation(name, directory=None, size=11):
+def load_formation(name, directory=None, size=11) -> Formation:
     """
     :param name: the filename to load.
     :param path: path to a text file describing the setup formation. If None, the FFAI formation path will be used.
