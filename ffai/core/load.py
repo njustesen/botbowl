@@ -157,14 +157,14 @@ def load_team_by_filename(name, ruleset, board_size=11):
     raise Exception("Team file not found.")
 
 
-def load_team_by_name(name, ruleset, board_size=11):
+def load_team_by_name(name, ruleset, board_size=11) -> Team:
     for team in load_all_teams(ruleset, board_size):
         if team.name == name:
             return team
     raise Exception(f"Team with name '{name}' not found.")
 
 
-def load_team(path, ruleset):
+def load_team(path, ruleset) -> Team:
     """
     :param path: path to team file name.
     :param ruleset:
