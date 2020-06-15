@@ -222,7 +222,7 @@ class Game:
             self.replay.record_step(self)
             self.replay.dump(self.game_id)
 
-    def _is_action_allowed(self, action):
+    def _is_action_allowed(self, action) -> bool:
         """
         Checks whether the specified action is allowed by comparing to actions in self.state.available_actions.
         :param action:
@@ -311,7 +311,7 @@ class Game:
         return out
         #return []
 
-    def _one_step(self, action):
+    def _one_step(self, action) -> bool:
         """
         Executes one step in the game if it is allowed.
         :param action: Action from agent. Can be None if no action is required.
@@ -386,7 +386,7 @@ class Game:
             self.state.stack.pop()
 
         # Is game over
-        if self.state.stack.is_empty() -> bool:
+        if self.state.stack.is_empty():
             return False  # Can continue without user input
 
         if self.config.debug_mode:
@@ -447,7 +447,7 @@ class Game:
                 return clock
         return None
 
-    def has_clock(self, team):
+    def has_clock(self, team) -> bool:
         '''
         Returns true if the given team has a clock.
         '''
@@ -456,7 +456,7 @@ class Game:
                 return True
         return False
 
-    def has_agent_clock(self, agent):
+    def has_agent_clock(self, agent) -> bool:
         '''
         Returns true if the given agent's team has a clock.
         '''
@@ -583,7 +583,7 @@ class Game:
         """
         return self.arena.board[position.y][position.x] in TwoPlayerArena.scrimmage_tiles
 
-    def is_wing(self, position, right):
+    def is_wing(self, position, right) -> bool:
         """
         :param position:
         :param right: Whether to check on the right side of the arena. If False, it will check on the left side.
