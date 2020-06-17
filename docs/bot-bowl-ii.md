@@ -35,21 +35,6 @@ that takes random actions will be added to the competition as a baseline.
 - You are allowed to submit an extension of an existing bot that was developed by someone else, as long as it is a significant improvement. We reserve the right to disqualify 
 bots that play similarly to the existing bot.
 
-## Docker Containers
-As a new initiative this year, bots will run in docker containers. Participants can submit their bot as a regular python 
-package or optionally as a docker image. 
-
-To facilitate docker containers, we are working on a new competition module that use the HTTP protocol to communicate with agents.
-We aim to publish the module before June. It should, however, not influence your bot development as it will simply be a wrapper around the existing 
-bot interface in FFAI.
-
-Using docker has several advantages: 
-
-1. It will be harder to cheat because the game and the agents run in separate processes. 
-2. Participants can optionally setup their own docker images if they have particular requirements.
-3. Any programming language can potentially be used. This will require quite a lot of work, so we don't expect to see bots developed in other languages than python.
-4. Files can be written and read withing the docker container if needed. 
-
 ## Computational Resources
 The philosophy of Bot Bowl is to limit the computational resources at run-time to that of a regular laptop. We of course encourage participants to use as much computation as they can afford to train/evolve their bots before the competition. 
 The exact instance specification will be specified at a later date but don't expect any GPUs. 
