@@ -1,4 +1,4 @@
-# Submit Your Bot to Blood Bowl
+# Submit your Bot to Blood Bowl
 
 ## Bots as Servers
 
