@@ -14,10 +14,8 @@ ffai.register_bot('my-random-bot', MyRandomBot)
 ```
 
 In Bot Bowl II, every bot plays ten games against each other bot. During each series of ten games, the two competing bots will 
-be instantiated just once, then play the ten games in a sequence, and finally shut down. Before each new game in the series, the ```new_game()``` 
-method is called and at the end of each game, ```end_game()``` is called. This allows you to save important information about the
-game in case you want your bot to adapt before the next game. You can save files locally (use only relative paths) but it probably 
-won't be necessary since the agent's process is kept alive anyway. Better just store it in memory.
+be instantiated just once, then play the ten games of the series, and finally shut down. Before each new game in the series, the ```new_game()``` method is called and at the end of each game, ```end_game()``` is called. This allows you to easily adapt 
+your strategy based on the game result. It is, however, not possible to save data between the series but this is hardly useful anyways. 
 
 ## Submission link
 
