@@ -17,6 +17,8 @@ In Bot Bowl II, every bot plays ten games against each other bot. During each se
 be instantiated just once, then play the ten games of the series, and finally shut down. Before each new game in the series, the ```new_game()``` method is called and at the end of each game, ```end_game()``` is called. This allows you to easily adapt 
 your strategy based on the game result. It is, however, not possible to save data between the series but this is hardly useful anyways. 
 
+If you want to understand how the competition server works in more detail, take a look at the [https://github.com/njustesen/ffai/blob/master/examples/competition_example.py](competition example).
+
 ## Submission link
 
 Coming soon
