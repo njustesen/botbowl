@@ -20,10 +20,9 @@ If you want to understand how the competition server works in more detail, take 
 
 ## Submission link
 
-Submit your bot using this link.
-https://forms.gle/NmqAr5r8dsoDQtHLA
+Submit your bot here https://forms.gle/NmqAr5r8dsoDQtHLA.
 
-If you want to re-submit, simply make a new submission with the same bot name.
+If you want to re-submit, simply make a new submission using the same bot name.
 
 ## Verification
 Within one week after the submission deadline, we will test your bot against the  baseline random and contact you to verify that the results are as expected. 
