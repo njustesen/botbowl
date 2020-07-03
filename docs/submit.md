@@ -20,7 +20,7 @@ If you want to understand how the competition server works in more detail, take 
 
 ## Submission link
 
-Submit your bot here https://forms.gle/NmqAr5r8dsoDQtHLA.
+Submit your bot using this [Google Form](https://forms.gle/NmqAr5r8dsoDQtHLA).
 
 If you want to re-submit, simply make a new submission using the same bot name.
 
