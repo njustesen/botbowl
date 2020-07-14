@@ -12,7 +12,7 @@ import numpy as np
 
 from ffai.core.load import *
 from ffai.core.procedure import *
-
+import pdb
 
 class Game:
 
@@ -317,6 +317,7 @@ class Game:
                         print("Illegal player: None")
                     else:
                         print("Illegal player:", action.player.to_json(), action.action_type.name)
+                        pdb.set_trace()
                     return False
                 # Check position argument
                 if len(action_choice.positions) > 0 and action.position not in action_choice.positions:

@@ -82,6 +82,24 @@ class OwnTackleZoneLayer(FeatureLayer):
     def name(self):
         return "own tackle zones"
 
+class OwnUnmarkedTackleZoneLayer(FeatureLayer):
+
+    def produce(self, game):
+        out = np.zeros((game.arena.height, game.arena.width))
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        if active_team is None:
+            return out
+        for player in active_team.players:
+            if player.position is not None:
+                if player.has_tackle_zone() and game.num_tackle_zones_in(player)==0:
+                    for square in game.get_adjacent_squares(player.position):
+                        out[square.y][square.x] += 0.125
+        return out
+
+    def name(self):
+        return "own unmarked tackle zones"
+
+        
 
 class OppTackleZoneLayer(FeatureLayer):
 
@@ -410,6 +428,20 @@ class OwnHalfLayer(FeatureLayer):
     def name(self):
         return "own half"
 
+class PitchLayer(FeatureLayer):
+
+    def produce(self, game):
+        out = np.ones((game.arena.height, game.arena.width))
+        out[ : ,  0] = 0
+        out[ : , -1] = 0
+        out[ 0 ,  :] = 0
+        out[-1 ,  :] = 0
+        return out
+
+    def name(self):
+        return "pitch layer"
+        
+        
 
 class OwnTouchdownLayer(FeatureLayer):
 

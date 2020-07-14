@@ -19,6 +19,9 @@ from copy import deepcopy
 
 class FFAIEnv(gym.Env):
 
+    class_initialized = False 
+    scripted_behavior = [] 
+
     square_size = 16
     square_size_fl = 4
     top_bar_height = 42
@@ -153,6 +156,16 @@ class FFAIEnv(gym.Env):
 
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
+        
+        if FFAIEnv.class_initialized == False: 
+            FFAIEnv.class_initialized = True 
+            print("FFAI inittialized!")
+        self.scripted_behavior = FFAIEnv.scripted_behavior
+        
+        self.actions                    = FFAIEnv.actions
+        self.positional_action_types    = FFAIEnv.positional_action_types
+        self.simple_action_types        = FFAIEnv.simple_action_types
+        
         self.__version__ = "0.0.3"
         self.config = config
         self.config.competition_mode = False
@@ -188,23 +201,25 @@ class FFAIEnv(gym.Env):
             BlockDiceLayer(),
             ActivePlayerLayer(),
             TargetPlayerLayer(),
-            MALayer(),
-            STLayer(),
-            AGLayer(),
-            AVLayer(),
+            #MALayer(),
+            #STLayer(),
+            #AGLayer(),
+            #AVLayer(),
             MovemenLeftLayer(),
             BallLayer(),
-            OwnHalfLayer(),
+            #OwnHalfLayer(), 
             OwnTouchdownLayer(),
             OppTouchdownLayer(),
             SkillLayer(Skill.BLOCK),
             SkillLayer(Skill.DODGE),
             SkillLayer(Skill.SURE_HANDS),
             SkillLayer(Skill.CATCH),
-            SkillLayer(Skill.PASS)
+            SkillLayer(Skill.PASS),
+            PitchLayer(), #Home made
+            OwnUnmarkedTackleZoneLayer() #home made 
         ]
 
-        for action_type in FFAIEnv.positional_action_types:
+        for action_type in self.positional_action_types:
             self.layers.append(AvailablePositionLayer(action_type))
 
         arena = load_arena(self.config.arena)
@@ -213,20 +228,25 @@ class FFAIEnv(gym.Env):
             'board': spaces.Box(low=0, high=1, shape=(len(self.layers), arena.height, arena.width)),
             'state': spaces.Box(low=0, high=1, shape=(50,)),
             'procedures': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.procedures),)),
-            'available-action-types': spaces.Box(low=0, high=1, shape=(len(FFAIEnv.actions),))
+            'available-action-types': spaces.Box(low=0, high=1, shape=(len(self.actions),))
         })
 
         self.action_space = spaces.Dict({
-            'action-type': spaces.Discrete(len(FFAIEnv.actions)),
+            'action-type': spaces.Discrete(len(self.actions)),
             'x': spaces.Discrete(arena.width),
             'y': spaces.Discrete(arena.height)
         })
 
     def step(self, action):
-        if type(action['action-type']) is ActionType and action['action-type'] in FFAIEnv.actions:
+        if type(action['action-type']) is ActionType and action['action-type'] in self.actions:
             action_type = action['action-type']
         else:
-            action_type = FFAIEnv.actions[int(action['action-type'])]
+            action_type = self.actions[int(action['action-type'])]
+        
+        
+            
+        
+        
         p = Square(action['x'], action['y']) if action['x'] is not None and action['y'] is not None else None
         position = None
         player = None
@@ -240,6 +260,31 @@ class FFAIEnv(gym.Env):
         self.game.step(action)
         if action.action_type in FFAIEnv.offensive_formation_action_types or action.action_type in FFAIEnv.defensive_formation_action_types:
             self.game.step(Action(ActionType.END_SETUP))
+        
+        
+        loop_again = True 
+        while loop_again: 
+            loop_again = False 
+            
+            # if ActionType.PLACE_BALL in [a.action_type for a in self.game.get_available_actions()]: 
+                # s="<-yolo2-"
+                # for a in self.game.get_available_actions(): 
+                    # s += a.action_type.name + " "
+                # s+="-->\n"
+                # print(s)
+            
+            for eval_func, scripted_action in self.scripted_behavior: 
+                #print("here!")
+                if eval_func(self.game):
+                    loop_again = True
+                    action = scripted_action(self.game)
+                    self.game.step(action)
+                    break
+
+                    
+        if action.action_type in FFAIEnv.offensive_formation_action_types or action.action_type in FFAIEnv.defensive_formation_action_types:
+            self.game.step(Action(ActionType.END_SETUP))
+        
         reward = 0
         if self.game.get_winner() is not None:
             reward = 1 if self.game.get_winner() == self.actor else -1
@@ -258,6 +303,7 @@ class FFAIEnv(gym.Env):
             #print("Progression: ", progression)
         self.last_ball_x = ball_position.x if ball_position is not None else None
         self.last_ball_team = ball_team
+        
         info = {
             'cas_inflicted': len(self.game.get_casualties(team)),
             'opp_cas_inflicted': len(self.game.get_casualties(opp_team)),
@@ -267,7 +313,17 @@ class FFAIEnv(gym.Env):
             'round': self.game.state.round,
             'ball_progression': progression
         }
-        return self._observation(self.game), reward, self.game.state.game_over, info
+        
+        
+        done = self.game.state.game_over
+        if self.lecture is not None: 
+            info['lecture'] = self.lecture.name
+            training_done, training_outcome =  self.lecture.training_done(self.game)
+            done = self.game.state.game_over or training_done
+            if done: 
+                info["lecture_outcome"] = training_outcome
+            
+        return self._observation(self.game), reward, done, info
 
     def seed(self, seed=None):
         if seed is None:
@@ -370,20 +426,25 @@ class FFAIEnv(gym.Env):
         self.last_obs = obs
 
         # Actions
-        for action_type in FFAIEnv.actions:
+        for action_type in self.actions:
             obs['available-action-types'][action_type.name] = 0.0
 
         for action_choice in game.get_available_actions():
-            # idx = FFAIEnv.actions.index(action_choice.action_type)
+            # idx = self.actions.index(action_choice.action_type)
             action_name = action_choice.action_type.name
             # Ignore end setup action if setup is illegal
             if action_choice.action_type == ActionType.END_SETUP and not game.is_setup_legal(active_team):
                 continue
-            obs['available-action-types'][action_name] = 1.0
+            
+            #if action_choice.action_type == ActionType.PLACE_BALL: 
+            #    print ("WTFF2?! ")
+            
+            if action_choice.action_type in self.actions: 
+                obs['available-action-types'][action_name] = 1.0
 
         return obs
 
-    def reset(self):
+    def reset(self, lecture=None):
         self.team_id = self.home_team.team_id
         home_agent = self.actor
         away_agent = self.opp_actor
@@ -403,6 +464,10 @@ class FFAIEnv(gym.Env):
         self.own_team = self.game.get_agent_team(self.actor)
         self.opp_team = self.game.get_agent_team(self.opp_actor)
 
+        self.lecture = lecture 
+        if self.lecture is not None: 
+            self.lecture.reset_game(self.game)
+            
         return self._observation(self.game)
 
     def get_outcomes(self):
@@ -413,10 +478,10 @@ class FFAIEnv(gym.Env):
     def available_action_types(self):
         if isinstance(self.game.get_procedure(), Setup):
             if self.game.get_kicking_team().team_id == self.team_id:
-                return [FFAIEnv.actions.index(action_type) for action_type in self.defensive_formation_action_types]
+                return [self.actions.index(action_type) for action_type in self.defensive_formation_action_types]
             else:
-                return [FFAIEnv.actions.index(action_type) for action_type in self.offensive_formation_action_types]
-        return [action.action_type for action in self.game.state.available_actions if action.action_type in FFAIEnv.actions]
+                return [self.actions.index(action_type) for action_type in self.offensive_formation_action_types]
+        return [action.action_type for action in self.game.state.available_actions if action.action_type in self.actions]
 
     def available_positions(self, action_type):
         action = None
@@ -425,7 +490,7 @@ class FFAIEnv(gym.Env):
                 action = a
         if action is None:
             return []
-        if action.action_type in FFAIEnv.positional_action_types:
+        if action.action_type in self.positional_action_types:
             if action.positions:
                 return [position for position in action.positions if position is not None]
             elif action.players:
@@ -435,7 +500,7 @@ class FFAIEnv(gym.Env):
     def _available_players(self, action_type):
         action = None
         for a in self.game.state.available_actions:
-            if a.action_type == FFAIEnv.actions[action_type]:
+            if a.action_type == self.actions[action_type]:
                 action = a
         if action is None:
             return []
@@ -576,7 +641,14 @@ class FFAIEnv(gym.Env):
                                     fill=FFAIEnv.ball, outline=FFAIEnv.black, width=1)
 
             # Non-spatial
-            self.cv.create_text(self.game.arena.width*FFAIEnv.square_size/2.0, 10, text='Half: {}, Weather: {}'.format(self.game.state.half, self.game.state.weather.name), fill='black')
+            proc = ""
+            for procedure in self.game.state.stack.items:
+                if procedure.__class__ in FFAIEnv.procedures:
+                # proc_idx = FFAIEnv.procedures.index(procedure.__class__)
+                    proc_name = procedure.__class__.__name__
+                    proc +=  proc_name + "+"
+                    
+            self.cv.create_text(self.game.arena.width*FFAIEnv.square_size/2.0, 10, text='Half: {}, Proc: {}'.format(self.game.state.half, proc), fill='black')
             self.cv.create_text(self.game.arena.width*FFAIEnv.square_size/2.0, 34, text='{}: Score: {}, Turn: {}, RR: {}/{}, Bribes: {}'.format(
                 self.game.state.away_team.name,
                 self.game.state.away_team.state.score,
@@ -593,6 +665,9 @@ class FFAIEnv(gym.Env):
                                     self.game.state.home_team.state.rerolls_start,
                                     self.game.state.home_team.state.bribes), fill='red')
 
+            
+                    
+            
         # Feature layers
         if feature_layers:
             row = 0
@@ -629,3 +704,22 @@ class FFAIEnv(gym.Env):
         self.root = None
         self.cv = None
 
+    def add_scripted_behavior(eval_func, scripted_func): 
+        if FFAIEnv.class_initialized: 
+            raise "Implementation error:  Can't call FFAIEnv.add_scripted_behavior() after object has been created"
+        
+        FFAIEnv.scripted_behavior.append( (eval_func, scripted_func) )
+    
+    def remove_actiontype(action): 
+        if not action in FFAIEnv.actions: 
+            raise "Implementation error: Trying to remove an action that doesn't exist"  
+        FFAIEnv.actions.remove(action)
+        
+        if action in FFAIEnv.simple_action_types: 
+            FFAIEnv.simple_action_types.remove(action)
+        elif action in FFAIEnv.positional_action_types: 
+            FFAIEnv.positional_action_types.remove(action)
+        else: 
+            raise "Implementation error: Should never end up here!"  
+        
+    
