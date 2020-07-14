@@ -16,6 +16,8 @@ import tkinter as tk
 import math
 from copy import deepcopy
 
+from pdb import set_trace
+
 
 class FFAIEnv(gym.Env):
 
@@ -176,7 +178,7 @@ class FFAIEnv(gym.Env):
         self.home_team = home_team
         self.away_team = away_team
         self.actor = Agent("Gym Learner", human=True)
-        self.opp_actor = opp_actor if opp_actor is not None else RandomBot("Random")
+        self.opp_actor = Agent("Gym Learner", human=True)
         self._seed = None
         self.seed()
         self.root = None
@@ -542,7 +544,7 @@ class FFAIEnv(gym.Env):
                                 FFAIEnv.square_size * y + FFAIEnv.square_size + FFAIEnv.top_bar_height, fill='white',
                                 width=1)
 
-    def render(self, feature_layers=False):
+    def render(self, feature_layers=False, reward_array=None):
 
         if self.root is None:
             self.root = tk.Tk()
@@ -696,6 +698,12 @@ class FFAIEnv(gym.Env):
                     col = 0
                     row += 1
 
+        if reward_array is not None:
+            #set_trace()
+            for i,k in enumerate(reward_array): 
+                val = reward_array[k]
+                self.cv.create_text(self.game.arena.width * FFAIEnv.square_size+2, 10+i*12,
+                                    text='{:.1f}  {}'.format(val,k), fill='black', anchor=tk.W ) 
         self.root.update_idletasks()
         self.root.update()
 
