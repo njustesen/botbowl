@@ -62,6 +62,7 @@ class RollType(Enum):
     REGENERATION_ROLL = 28
     TAKE_ROOT_ROLL = 29
     SHADOWING_ROLL = 30
+    BRIBE_ROLL = 31
 
 
 class OutcomeType(Enum):
@@ -211,6 +212,10 @@ class OutcomeType(Enum):
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
     DECAYING = 155
+    BRIBE_USED = 156
+    BRIBE_SUCCESSFUL = 157
+    BRIBE_FAILED = 158
+    
 
 
 class PlayerActionType(Enum):
