@@ -12,7 +12,7 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-import tkinter as tk
+#import tkinter as tk
 import math
 from copy import deepcopy
 
@@ -463,13 +463,16 @@ class FFAIEnv(gym.Env):
         self.last_ball_team = None
         self.last_ball_x = None
         self.game.init()
-        self.own_team = self.game.get_agent_team(self.actor)
-        self.opp_team = self.game.get_agent_team(self.opp_actor)
-
+        
         self.lecture = lecture 
         if self.lecture is not None: 
             self.lecture.reset_game(self.game)
-            
+        #else: 
+        #    self.game.init()
+        
+        self.own_team = self.game.get_agent_team(self.actor)
+        self.opp_team = self.game.get_agent_team(self.opp_actor)
+
         return self._observation(self.game)
 
     def get_outcomes(self):
