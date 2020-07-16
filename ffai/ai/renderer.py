@@ -1,6 +1,6 @@
-import tkinter as tk
+#import tkinter as tk
 import math
-from tkinter import *
+#from tkinter import *
 
 
 class Renderer:
