@@ -12,12 +12,16 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-import tkinter as tk
+try: 
+    import tkinter as tk
+except: 
+    pass 
+    
 import math
 from copy import deepcopy
 from ffai.core.procedure import Setup 
 
-from pdb import set_trace
+#from pdb import set_trace
 
 
 class FFAIEnv(gym.Env):
