@@ -12,9 +12,10 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-#import tkinter as tk
+import tkinter as tk
 import math
 from copy import deepcopy
+from ffai.core.procedure import Setup 
 
 from pdb import set_trace
 
@@ -203,21 +204,21 @@ class FFAIEnv(gym.Env):
             BlockDiceLayer(),
             ActivePlayerLayer(),
             TargetPlayerLayer(),
-            #MALayer(),
-            #STLayer(),
-            #AGLayer(),
-            #AVLayer(),
+            MALayer(),
+            STLayer(),
+            AGLayer(),
+            AVLayer(),
             MovemenLeftLayer(),
             BallLayer(),
-            #OwnHalfLayer(), 
+            OwnHalfLayer(), 
             OwnTouchdownLayer(),
             OppTouchdownLayer(),
             SkillLayer(Skill.BLOCK),
             SkillLayer(Skill.DODGE),
             SkillLayer(Skill.SURE_HANDS),
             SkillLayer(Skill.CATCH),
-            SkillLayer(Skill.PASS),
-            PitchLayer(), #Home made
+            #SkillLayer(Skill.PASS),
+            #PitchLayer(), #Home made
             OwnUnmarkedTackleZoneLayer() #home made 
         ]
 
@@ -268,13 +269,6 @@ class FFAIEnv(gym.Env):
         while loop_again: 
             loop_again = False 
             
-            # if ActionType.PLACE_BALL in [a.action_type for a in self.game.get_available_actions()]: 
-                # s="<-yolo2-"
-                # for a in self.game.get_available_actions(): 
-                    # s += a.action_type.name + " "
-                # s+="-->\n"
-                # print(s)
-            
             for eval_func, scripted_action in self.scripted_behavior: 
                 #print("here!")
                 if eval_func(self.game):
@@ -306,6 +300,9 @@ class FFAIEnv(gym.Env):
         self.last_ball_x = ball_position.x if ball_position is not None else None
         self.last_ball_team = ball_team
         
+        
+        reset_reward = self.game.state.stack.size() > 0 and isinstance( self.game.get_procedure() , Setup) 
+        
         info = {
             'cas_inflicted': len(self.game.get_casualties(team)),
             'opp_cas_inflicted': len(self.game.get_casualties(opp_team)),
@@ -313,18 +310,22 @@ class FFAIEnv(gym.Env):
             'opp_touchdowns': opp_team.state.score,
             'half': self.game.state.round,
             'round': self.game.state.round,
-            'ball_progression': progression
+            'ball_progression': progression, 
+            'reset_reward': reset_reward
         }
         
         
         done = self.game.state.game_over
+        
         if self.lecture is not None: 
-            info['lecture'] = self.lecture.name
             training_done, training_outcome =  self.lecture.training_done(self.game)
             done = self.game.state.game_over or training_done
-            if done: 
-                info["lecture_outcome"] = training_outcome
+            info['lecture'] = (self.lecture.name, self.lecture.get_level(), training_outcome) 
             
+        
+            
+            
+        
         return self._observation(self.game), reward, done, info
 
     def seed(self, seed=None):
