@@ -17,7 +17,7 @@ class FeatureLayer:
     def name(self):
         raise NotImplementedError("Must be overridden by subclass")
 
-
+        
 class OccupiedLayer(FeatureLayer):
 
     def produce(self, game):
@@ -486,3 +486,61 @@ class CrowdLayer(FeatureLayer):
 
     def name(self):
         return "opp crowd"
+
+
+class StateLayer(FeatureLayer): 
+    def produce(self, game):
+        return np.ones((game.arena.height, game.arena.width)) * self.get_state(game)
+    def get_state(self, game): 
+        raise NotImplementedError("Must be overridden by subclass")
+
+class IsMoveStateLayer(StateLayer): 
+    def get_state(self, game): 
+        return  1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.MOVE else 0.0
+    def name(self): return "is move action"
+
+class IsHandoffStateLayer(StateLayer): 
+    def get_state(self, game): 
+        return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.HANDOFF else 0.0
+    def name(self): return "is handoff action"
+
+class IsBlitzStateLayer(StateLayer): 
+    def get_state(self, game): 
+        return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLITZ else 0.0
+    def name(self): return "is blitz action"
+    
+class IsBlockStateLayer(StateLayer): 
+    def get_state(self, game): 
+        return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLOCK else 0.0
+    def name(self): return "is block action"
+
+class IsHandoffAvailStateLayer(StateLayer): 
+    def get_state(self, game): return 1.0 if game.is_handoff_available() else 0.0
+    def name(self): return "handoff available"
+
+class IsBlitzAvailStateLayer(StateLayer): 
+    def get_state(self, game): return 1.0 if game.is_blitz_available() else 0.0
+    def name(self): return "blitz available"
+
+class IsRerollAvailStateLayer(StateLayer): 
+    def get_state(self, game): 
+        #active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        #return 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
+        return 1.0 if len(game.state.available_actions) > 0 and not game.state.available_actions[0].team.state.reroll_used else 0.0
+    def name(self): return "reroll available"
+    
+class IsLastTurnStateLayer(StateLayer): 
+    def get_state(self, game): return game.state.round == 8
+    def name(self): return "is last turn"
+
+# class StateLayer(StateLayer): 
+    # def get_state(self, game): return 
+    # def name(self): return ""
+
+
+  
+
+
+      
+        
+        
