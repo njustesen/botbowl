@@ -456,11 +456,7 @@ class FFAIEnv(gym.Env):
     def reset(self, lecture=None):
         self.team_id = self.home_team.team_id
         home_agent = self.actor
-        
-        if lecture is not None and lecture.get_opp_actor() is not None: 
-            away_agent = lecture.get_opp_actor() 
-        else: 
-            away_agent = self.opp_actor 
+        away_agent = self.opp_actor 
         
         #away_agent = self.opp_actor
         seed = self.rnd.randint(0, 2**31)
@@ -478,7 +474,7 @@ class FFAIEnv(gym.Env):
         self.game.init()
         
         self.own_team = self.game.get_agent_team(self.actor)
-        self.opp_team = self.game.get_agent_team(away_agent)
+        self.opp_team = self.game.get_agent_team(self.opp_actor)
 
         
         self.lecture = lecture 
