@@ -69,7 +69,7 @@ class FFAIEnv(gym.Env):
         ActionType.SELECT_PLAYER,
         ActionType.MOVE,
         ActionType.BLOCK,
-        #ActionType.PASS,
+        ActionType.PASS,
         #ActionType.FOUL,
         ActionType.HANDOFF,
         #ActionType.LEAP,
@@ -77,7 +77,7 @@ class FFAIEnv(gym.Env):
         ActionType.START_MOVE,
         ActionType.START_BLOCK,
         ActionType.START_BLITZ,
-        #ActionType.START_PASS,
+        ActionType.START_PASS,
         #ActionType.START_FOUL,
         ActionType.START_HANDOFF,
         ActionType.USE_SKILL,
@@ -126,7 +126,7 @@ class FFAIEnv(gym.Env):
         ActionType.FOLLOW_UP,
         ActionType.MOVE,
         ActionType.BLOCK,
-        #ActionType.PASS,
+        ActionType.PASS,
         #ActionType.FOUL,
         ActionType.HANDOFF,
         #ActionType.LEAP,
@@ -135,7 +135,7 @@ class FFAIEnv(gym.Env):
         ActionType.START_MOVE,
         ActionType.START_BLOCK,
         ActionType.START_BLITZ,
-        #ActionType.START_PASS,
+        ActionType.START_PASS,
         #ActionType.START_FOUL,
         ActionType.START_HANDOFF
     ]
@@ -155,7 +155,7 @@ class FFAIEnv(gym.Env):
         Push,
         FollowUp,
         #Apothecary,
-        #PassAction,
+        PassAction,
         Interception,
         Reroll
     ]
@@ -228,9 +228,11 @@ class FFAIEnv(gym.Env):
             OwnUnmarkedTackleZoneLayer(), 
             IsMoveStateLayer(), 
             IsHandoffStateLayer(),
+            IsPassStateLayer(),
             IsBlitzStateLayer(),
             IsBlockStateLayer(), 
             IsHandoffAvailStateLayer(), 
+            IsPassAvailStateLayer(), 
             IsBlitzAvailStateLayer(), 
             IsRerollAvailStateLayer(), 
             IsLastTurnStateLayer()

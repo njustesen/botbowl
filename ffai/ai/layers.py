@@ -504,6 +504,12 @@ class IsHandoffStateLayer(StateLayer):
         return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.HANDOFF else 0.0
     def name(self): return "is handoff action"
 
+class IsPassStateLayer(StateLayer): 
+    def get_state(self, game): 
+        return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.PASS else 0.0
+    def name(self): return "is pass action"
+
+    
 class IsBlitzStateLayer(StateLayer): 
     def get_state(self, game): 
         return 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLITZ else 0.0
@@ -517,6 +523,10 @@ class IsBlockStateLayer(StateLayer):
 class IsHandoffAvailStateLayer(StateLayer): 
     def get_state(self, game): return 1.0 if game.is_handoff_available() else 0.0
     def name(self): return "handoff available"
+
+class IsPassAvailStateLayer(StateLayer): 
+    def get_state(self, game): return 1.0 if game.is_pass_available() else 0.0
+    def name(self): return "pass available"
 
 class IsBlitzAvailStateLayer(StateLayer): 
     def get_state(self, game): return 1.0 if game.is_blitz_available() else 0.0
