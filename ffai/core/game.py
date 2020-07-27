@@ -355,7 +355,8 @@ class Game:
                 if not self._is_action_allowed(action):
                     if self.config.debug_mode:
                         print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
-                    print("Mattias Debug - Wrong Action") 
+                    print(f"Mattias Debug - Wrong Action: {action.action_type}") 
+                    
                     return True  # Game needs user input
 
         # Run proc
