@@ -114,3 +114,5 @@ ENV/
 
 # mypy
 .mypy_cache/
+examples/FFAI-v2_2020-07-19
+examples/FFAI-v2_2020-07-20
