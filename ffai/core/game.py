@@ -336,7 +336,6 @@ class Game:
         if action is None and len(self.state.available_actions) > 0:
             if self.config.debug_mode:
                 print("None action is not allowed when actions are available")
-            print("Mattias Debug - None Action")
             return True  # Game needs user input
 
         # If action but it's not available
@@ -348,15 +347,12 @@ class Game:
                 else:
                     if self.config.debug_mode:
                         print("CONTINUE action is not allowed when actions are available")
-                    print("Mattias Debug - Continue  Action") 
                     return True  # Game needs user input
             else:
                 # Only allowed actions
                 if not self._is_action_allowed(action):
                     if self.config.debug_mode:
                         print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
-                    print(f"Mattias Debug - Wrong Action: {action.action_type}") 
-                    
                     return True  # Game needs user input
 
         # Run proc
