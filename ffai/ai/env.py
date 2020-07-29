@@ -9,7 +9,7 @@ This module contains the FFAIEnv class; FFAI implementing the Open AI Gym interf
 import gym
 from gym import spaces
 from ffai.core import Game, load_rule_set, load_arena
-from ffai.ai.bots.random_bot import RandomBot
+#from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.bots.almost_random_bot import AlmostRandomBot
 from ffai.ai.layers import *
 import uuid
@@ -342,7 +342,7 @@ class FFAIEnv(gym.Env):
         if seed is None:
             self._seed = np.random.randint(0, 2**31)
         self.rnd = np.random.RandomState(self._seed)
-        if isinstance(self.opp_actor, RandomBot):
+        if isinstance(self.opp_actor, AlmostRandomBot):
             self.opp_actor.rnd = self.rnd
         return self._seed
 
