@@ -6,11 +6,12 @@ Year: 2018
 This module contains a random bot that takes random actions.
 """
 import numpy as np
-from ffai.core.model import Agent, ActionType, Action
+from ffai.core.model import Agent, ActionType, Action, Square 
 from ffai.ai.registry import register_bot
 from ffai.core.procedure import PlaceBall 
 
 class AlmostRandomBot(Agent):
+
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -21,15 +22,14 @@ class AlmostRandomBot(Agent):
     def new_game(self, game, team):
         self.my_team = team
         self.actions_taken = 0
+        self.opp_team = game.get_opp_team(team)
 
     def act(self, game):
         
         self.actions_taken += 1
         
         if len(game.state.pitch.board) == 17: # 11 player board  
-            
             proc = game.get_procedure()
-            
             if isinstance(proc, PlaceBall):
                 return self.place_ball(game)
             
@@ -56,4 +56,4 @@ class AlmostRandomBot(Agent):
     def end_game(self, game):
         pass
 
-
+register_bot("almost-random", AlmostRandomBot)
