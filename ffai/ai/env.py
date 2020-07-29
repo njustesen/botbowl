@@ -10,8 +10,10 @@ import gym
 from gym import spaces
 from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
+from ffai.ai.bots.almost_random_bot import AlmostRandomBot
 from ffai.ai.layers import *
 import uuid
+
 try: 
     import tkinter as tk
 except: 
@@ -183,7 +185,7 @@ class FFAIEnv(gym.Env):
         self.home_team = home_team
         self.away_team = away_team
         self.actor = Agent("Gym Learner", human=True)
-        self.opp_actor = opp_actor if opp_actor is not None else RandomBot("Random")
+        self.opp_actor = opp_actor if opp_actor is not None else AlmostRandomBot("Almost-Random")
         self._seed = None
         self.seed()
         self.root = None
