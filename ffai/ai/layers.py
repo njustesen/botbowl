@@ -490,7 +490,7 @@ class CrowdLayer(FeatureLayer):
 
 class StateLayer(FeatureLayer): 
     def produce(self, game):
-        return np.ones((game.arena.height, game.arena.width)) * self.get_state(game)
+        return np.ones((game.arena.height, game.arena.width)) * float(self.get_state(game)) 
     def get_state(self, game): 
         raise NotImplementedError("Must be overridden by subclass")
 
@@ -542,6 +542,16 @@ class IsRerollAvailStateLayer(StateLayer):
 class IsLastTurnStateLayer(StateLayer): 
     def get_state(self, game): return game.state.round == 8
     def name(self): return "is last turn"
+
+    
+    
+class WeHaveBallStateLayer(StateLayer): 
+    def get_state(self, game): 
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        carrier = game.get_ball_carrier()
+        return carrier is not None and active_team is not None and carrier in active_team.players 
+        
+    def name(self): return "we have ball"
 
 # class StateLayer(StateLayer): 
     # def get_state(self, game): return 

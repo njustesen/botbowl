@@ -175,7 +175,7 @@ class FFAIEnv(gym.Env):
         self.positional_action_types    = FFAIEnv.positional_action_types
         self.simple_action_types        = FFAIEnv.simple_action_types
         
-        self.__version__ = "0.0.3"
+        self.__version__ = "0.0.3_mattias"
         self.config = config
         self.config.competition_mode = False
         self.config.fast_mode = True
@@ -237,7 +237,8 @@ class FFAIEnv(gym.Env):
             #IsPassAvailStateLayer(), 
             IsBlitzAvailStateLayer(), 
             IsRerollAvailStateLayer(), 
-            IsLastTurnStateLayer()
+            #IsLastTurnStateLayer(),
+            WeHaveBallStateLayer() 
         ]
 
         for action_type in self.positional_action_types:
