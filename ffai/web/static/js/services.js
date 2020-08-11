@@ -231,7 +231,9 @@ appServices.factory('GameLogService', function() {
             "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll",
             "STAND_UP": "<player> stood up.",
             "FAILED_STAND_UP": "<player> failed to stand up",
-            "FAILED_JUMP_UP": "<player> failed to jump up"
+            "FAILED_JUMP_UP": "<player> failed to jump up", 
+            "SUCCESSFUL_HYPNOTIC_GAZE": "<player> successfully <b>hypnotized</b> <opp_player>", 
+            "FAILED_HYPNOTIC_GAZE": "<player> failed to <b>hypnotize</b> <opp_player>"
         },
         log_timouts: {
             'GAME_STARTED': 100,
@@ -377,7 +379,9 @@ appServices.factory('GameLogService', function() {
             "FAILED_TAKE_ROOT": 1000,
             "STAND_UP": 10,
             "FAILED_STAND_UP": 1000,
-            "FAILED_JUMP_UP": 1000
+            "FAILED_JUMP_UP": 1000, 
+            "SUCCESSFUL_HYPNOTIC_GAZE": 100, 
+            "FAILED_HYPNOTIC_GAZE": 1000  
         }
 
 
