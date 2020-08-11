@@ -211,6 +211,9 @@ class OutcomeType(Enum):
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
     DECAYING = 155
+    SUCCESSFUL_HYPNOTIC_GAZE = 156
+    FAILED_HYPNOTIC_GAZE = 157 
+    
 
 
 class PlayerActionType(Enum):
@@ -336,6 +339,7 @@ class ActionType(Enum):
     FOLLOW_UP = 55
     LEAP = 56
     STAB = 57
+    HYPNOTIC_GAZE = 58
 
 
 class WeatherType(Enum):

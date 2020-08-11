@@ -13,6 +13,7 @@ from ffai.core.model import *
 from ffai.core.table import *
 import time
 
+from pytest import set_trace 
 
 class Procedure:
 
@@ -2426,7 +2427,13 @@ class PlayerAction(Procedure):
             self.turn.pass_available = False
 
             return True
-
+            
+        elif action.action_type == ActionType.HYPNOTIC_GAZE:
+            EndPlayerTurn(self.game, self.player)
+            target_opponent = self.game.get_player_at(action.position)
+            HypnoticGaze(self.game, self.player, target_opponent)
+            return True 
+            
     def available_actions(self):
 
         if self.player.state.used:
@@ -2594,6 +2601,23 @@ class PlayerAction(Procedure):
             if len(positions) > 0:
                 actions.append(ActionChoice(ActionType.PASS, team=self.player.team,
                                             positions=positions, agi_rolls=agi_rolls))
+        
+        # Hypnotic gaze action 
+        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player_action_type == PlayerActionType.MOVE: 
+            hypno_positions = [] 
+            agi_rolls = [] 
+            for opponent in self.game.get_adjacent_opponents(self.player, down=False):
+                if opponent.has_tackle_zone(): 
+                    hypno_positions.append(opponent.position)
+                    
+                    modifiers = 1 - self.game.num_tackle_zones_in(self.player) 
+                    target = Rules.agility_table[self.player.get_ag()]
+                    agi_rolls.append(min(6, max(2, target - modifiers)))
+                    
+                    
+            actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, agi_rolls=rolls ))
+                
+        
         if self.dump_off:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))
         else:
@@ -3304,6 +3328,18 @@ class Turn(Procedure):
             
             return True
 
+        if action.player.state.hypnotized and action.action_type in [ActionType.START_MOVE, 
+                                                                     ActionType.START_BLITZ, 
+                                                                     ActionType.START_FOUL, 
+                                                                     ActionType.START_PASS, 
+                                                                     ActionType.START_HANDOFF, 
+                                                                     ActionType.START_BLOCK]: 
+            action.player.state.hypnotized = False 
+            
+            
+            
+            
+            
         # Start movement action
         if action.action_type == ActionType.START_MOVE:
             self.start_player_action(OutcomeType.MOVE_ACTION_STARTED, PlayerActionType.MOVE, action.player)
@@ -3823,3 +3859,43 @@ class Loner(Procedure):
             # no re-roll
             self.result = False
             return True
+
+class HypnoticGaze(Procedure): 
+    def __init__(self, game, player, target_player): 
+        super().__init__(game)
+        self.player = player
+        self.target_player = target_player 
+        self.roll = None
+        self.reroll = None 
+        
+    def start(self): 
+        pass 
+    
+    def step(self, action): 
+        if self.roll is None: 
+            #agility roll with tz modifiers except target_player
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.modifiers = 1 - self.game.num_tackle_zones_in(self.player) 
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            
+            
+            if self.roll.is_d6_success(): 
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_HYPNOTIC_GAZE, player=self.player, rolls=[self.roll]))
+                self.target_player.state.hypnotized = True 
+                return True 
+            
+            self.game.report(Outcome(OutcomeType.FAILED_HYPNOTIC_GAZE, player=self.player, rolls=[self.roll]))
+            self.reroll = Reroll(self.game, self.player, self)
+            return False 
+        
+        
+        assert self.reroll is not None 
+        
+        if self.reroll.use_reroll: 
+            self.roll = None 
+            self.reroll = None 
+            return False 
+        
+        return True 
+
+        
