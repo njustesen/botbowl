@@ -13,8 +13,6 @@ from ffai.core.model import *
 from ffai.core.table import *
 import time
 
-from pytest import set_trace 
-
 class Procedure:
 
     def __init__(self, game, context=None):
