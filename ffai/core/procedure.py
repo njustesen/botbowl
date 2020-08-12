@@ -2161,7 +2161,7 @@ class PassAction(Procedure):
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
 
             # Check if re-roll available
-            self.reroll = Reroll(self.game, self.passer, context=self)
+            self.reroll = Reroll(self.game, self.passer, context=self.context)
             return False
 
         # If re-roll used
