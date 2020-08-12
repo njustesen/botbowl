@@ -302,7 +302,7 @@ FFAI comes with five environments with various difficulty:
 
 - **FFAI-v2:** 11 players on a 26x15 pitch (traditional size)
 - **FFAI-7-v2:** 7 players on a 20x11 pitch
-- **FFAI-5-v2:** 5 players on a 16x9 pitch
+- **FFAI-5-v2:** 5 players on a 16x8 pitch
 - **FFAI-3-v2:** 3 players on a 12x5 pitch
 - **FFAI-1-v2:** 1 player on a 4x3 pitch
 
