@@ -494,6 +494,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("STAB");
                             $scope.special_agi_rolls["STAB"] = action.agi_rolls;
                             $scope.special_positions["STAB"] = action.positions;
+                        
+                        } else if (action.action_type === "HYPNOTIC_HAZE"){
+                            $scope.special_actions.push("HYPNOTIC_HAZE");
+                            $scope.special_agi_rolls["HYPNOTIC_HAZE"] = action.agi_rolls;
+                            $scope.special_positions["HYPNOTIC_HAZE"] = action.positions;
+                        
+                        
                         } else {
                             $scope.available_select_positions = action.positions;
                         }

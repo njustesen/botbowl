@@ -2601,7 +2601,7 @@ class PlayerAction(Procedure):
                                             positions=positions, agi_rolls=agi_rolls))
         
         # Hypnotic gaze action 
-        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player_action_type == PlayerActionType.MOVE: 
+        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and  self.player.state.up and self.player_action_type == PlayerActionType.MOVE: 
             hypno_positions = [] 
             agi_rolls = [] 
             for opponent in self.game.get_adjacent_opponents(self.player, down=False):
@@ -2610,10 +2610,9 @@ class PlayerAction(Procedure):
                     
                     modifiers = 1 - self.game.num_tackle_zones_in(self.player) 
                     target = Rules.agility_table[self.player.get_ag()]
-                    agi_rolls.append(min(6, max(2, target - modifiers)))
+                    agi_rolls.append([min(6, max(2, target - modifiers))])
                     
-                    
-            actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, agi_rolls=rolls ))
+            actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, agi_rolls=agi_rolls ))
                 
         
         if self.dump_off:
