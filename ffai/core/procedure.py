@@ -175,68 +175,86 @@ class Armor(Procedure):
         self.armor_rolled = False
         self.foul = foul
         self.inflictor = inflictor
+        self.roll = None 
+        self.ejection = None 
+        self.ejected = False 
 
     def step(self, action):
 
         # Roll
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.ARMOR_ROLL)
-        roll.modifiers = self.modifiers
-        roll.target = self.player.get_av() + 1
-        result = roll.get_sum() + self.modifiers
-        self.armor_rolled = True
+        if self.roll is None: 
+            self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.ARMOR_ROLL)
+            self.roll.modifiers = self.modifiers
+            self.roll.target = self.player.get_av() + 1
+            result = self.roll.get_sum() + self.modifiers
+            self.armor_rolled = True
 
-        armor_broken = False
-        mighty_blow_used = False
-        dirty_player_used = False
+            self.armor_broken = False
+            mighty_blow_used = False
+            dirty_player_used = False
 
-        if not self.foul:
-            # Armor broken - Claws
-            if roll.sum >= 8 and self.inflictor is not None and self.inflictor.has_skill(Skill.CLAWS):
-                armor_broken = True
+            if not self.foul:
+                # Armor broken - Claws
+                if self.roll.sum >= 8 and self.inflictor is not None and self.inflictor.has_skill(Skill.CLAWS):
+                    self.armor_broken = True
 
-            # Armor broken
-            if result >= roll.target:
-                armor_broken = True
-            elif result == roll.target -1 and self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW):
-                # only use mighty_blow if it makes the armour break
-                roll.modifiers += 1
-                armor_broken = True
-                mighty_blow_used = True
-        else:
+                # Armor broken
+                if result >= self.roll.target:
+                    self.armor_broken = True
+                elif result == self.roll.target -1 and self.inflictor is not None and self.inflictor.has_skill(Skill.MIGHTY_BLOW):
+                    # only use mighty_blow if it makes the armour break
+                    self.roll.modifiers += 1
+                    self.armor_broken = True
+                    mighty_blow_used = True
+            else:
 
-            # Armor broken - Dirty player
-            if self.inflictor is not None and self.inflictor.has_skill(Skill.DIRTY_PLAYER) \
-                    and result + 1 > self.player.get_av():
-                roll.modifiers += 1
-                armor_broken = True
-                dirty_player_used = True
+                # Armor broken - Dirty player
+                if self.inflictor is not None and self.inflictor.has_skill(Skill.DIRTY_PLAYER) \
+                        and result + 1 > self.player.get_av():
+                    self.roll.modifiers += 1
+                    self.armor_broken = True
+                    dirty_player_used = True
 
-            # Armor broken
-            if result >= roll.target:
-                armor_broken = True
+                # Armor broken
+                if result >= self.roll.target:
+                    self.armor_broken = True
 
-        # EJECTION?
-        ejected = False
-        if self.foul:
-            if roll.same():
-                if not self.inflictor.has_skill(Skill.SNEAKY_GIT) or armor_broken:
-                    self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.inflictor))
-                    Turnover(self.game)
-                    Ejection(self.game, self.inflictor)
-                    ejected = True
+            # EJECTION?
+            self.ejected = False
+            if self.foul:
+                if self.roll.same():
+                    if not self.inflictor.has_skill(Skill.SNEAKY_GIT) or self.armor_broken:
+                        #self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.inflictor))
+                        #Turnover(self.game)
+                        #Ejection(self.game, self.inflictor)
+                        self.ejected = True
 
-        # Break armor - roll injury
-        if armor_broken:
-            Injury(self.game, self.player, self.inflictor, foul=self.foul,
-                   mighty_blow_used=mighty_blow_used, dirty_player_used=dirty_player_used, ejected=ejected)
-            self.game.report(Outcome(OutcomeType.ARMOR_BROKEN, player=self.player, opp_player=self.inflictor,
-                                     rolls=[roll]))
-        else:
+            # Break armor - roll injury
+            if self.armor_broken:
+                Injury(self.game, self.player, self.inflictor, foul=self.foul,
+                       mighty_blow_used=mighty_blow_used, dirty_player_used=dirty_player_used, ejected=self.ejected)
+                self.game.report(Outcome(OutcomeType.ARMOR_BROKEN, player=self.player, opp_player=self.inflictor,
+                                         rolls=[self.roll]))
+                return True 
+        
+        if not self.armor_broken:
             self.game.report(Outcome(OutcomeType.ARMOR_NOT_BROKEN, player=self.player, opp_player=self.inflictor,
-                                     rolls=[roll]))
+                                     rolls=[self.roll]))
+            #Handle ejection 
+            if self.ejected: 
+                if self.ejection is None: 
+                    self.ejection = Ejection(self.game, self.inflictor) 
+                    return False 
+                
+                assert self.ejection is not None
+                
+                if not self.ejection.bribe_successful: 
+                    Turnover(self.game)
+                return True 
 
         return True
 
+        
 
 class Stab(Procedure):
 
@@ -917,15 +935,61 @@ class CoinTossKickReceive(Procedure):
     def available_actions(self):
         return self.aa
 
+class Bribe(Procedure): 
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.bribe_roll = None 
+        self.bribe_successful = False 
+        self.bribe_used = False 
+         
+        
+    def step(self, action):
+        self.player.team.state.bribes 
+        if self.player.team.state.bribes > 0 and self.bribe_roll is None: 
+            
+            #TODO: Create Bribe-procedure and return False. Then 
+            self.bribe_used = True 
+            
+            #Use immidietly TODO: Get player input  
+            self.bribe_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.BRIBE_ROLL)
+            self.player.team.state.bribes -= 1 
+            
+            self.game.report(Outcome(OutcomeType.BRIBE_USED, player=self.player))
+        
+            if self.bribe_roll.sum>1: 
+                self.game.report(Outcome(OutcomeType.BRIBE_SUCCESSFUL, player=self.player))
+                self.bribe_successful = True 
+                 
+            else: 
+                self.game.report(Outcome(OutcomeType.BRIBE_FAILED, player=self.player))
+                self.bribe_successful = False 
+        return True 
+        
 
 class Ejection(Procedure):
 
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-
+        self.bribe_successful = False 
+        self.bribe = None 
+        
     def step(self, action):
-        self.game.pitch_to_dungeon(self.player)
+        
+        if self.bribe == None: 
+            self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
+            self.bribe = Bribe(self.game, self.player)
+            return False
+
+        assert self.bribe is not None 
+        
+        self.bribe_successful = self.bribe.bribe_successful 
+        if not self.bribe_successful: 
+            if self.bribe.bribe_used: 
+                self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
+            self.game.pitch_to_dungeon(self.player)
+        
         return True
 
     def available_actions(self):
@@ -1036,61 +1100,77 @@ class Injury(Procedure):
         self.ejected = ejected
         self.in_crowd = in_crowd
 
+        self.roll = None 
+        self.ejection = None 
+        
     def step(self, action):
 
         # TODO: Necromancer
 
-        # Roll
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.INJURY_ROLL)
-        self.injury_rolled = True
+        if self.roll is None: 
+        
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.INJURY_ROLL)
+            self.injury_rolled = True
 
-        # Skill modifiers
-        thick_skull = -1 if self.player.has_skill(Skill.THICK_SKULL) else 0
-        stunty = 1 if self.player.has_skill(Skill.STUNTY) else 0
-        mighty_blow = 0
-        dirty_player = 0
-        niggling = self.player.num_niggling_injuries()
-        if self.inflictor is not None:
-            dirty_player = 1 if self.inflictor.has_skill(Skill.DIRTY_PLAYER) and not self.dirty_player_used and \
-                                self.foul else 0
-            mighty_blow = 1 if self.inflictor.has_skill(Skill.MIGHTY_BLOW) and not self.mighty_blow_used and not \
-                self.foul else 0
+            # EJECTION
+            if self.foul and self.roll.same():
+                self.ejected = True 
+            
+            # Skill modifiers
+            thick_skull = -1 if self.player.has_skill(Skill.THICK_SKULL) else 0
+            stunty = 1 if self.player.has_skill(Skill.STUNTY) else 0
+            mighty_blow = 0
+            dirty_player = 0
+            niggling = self.player.num_niggling_injuries()
+            
+            if self.inflictor is not None:
+                dirty_player = 1 if self.inflictor.has_skill(Skill.DIRTY_PLAYER) and not self.dirty_player_used and \
+                                    self.foul else 0
+                mighty_blow = 1 if self.inflictor.has_skill(Skill.MIGHTY_BLOW) and not self.mighty_blow_used and not \
+                    self.foul else 0
 
-        # EJECTION
-        if self.foul and not self.ejected:
-            if roll.same():
-                if not self.inflictor.has_skill(Skill.SNEAKY_GIT):
-                    self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.inflictor))
-                    Turnover(self.game)
-                    Ejection(self.game, self.inflictor)
 
-        # CASUALTY
-        roll.modifiers = stunty + mighty_blow + dirty_player + niggling
-        if roll.get_result() >= 10:
-            roll.modifiers = stunty + mighty_blow + dirty_player
-            self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[roll]))
-            Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY))
-            return True
+            # CASUALTY
+            self.roll.modifiers = stunty + mighty_blow + dirty_player + niggling
+            if self.roll.get_result() >= 10:
+                self.roll.modifiers = stunty + mighty_blow + dirty_player
+                self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[self.roll]))
+                Casualty(self.game, self.player, self.roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY))
+            
+            else:  
+                # KOD
+                self.roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
+                if self.roll.get_result() >= 8:
+                    KnockOut(self.game, self.player, roll=self.roll, inflictor=self.inflictor)
+                    
+                
+                else: 
+                    # STUNNED
+                    self.roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
+                    if self.player.has_skill(Skill.BALL_AND_CHAIN):
+                        KnockOut(self.game, self.player, roll=self.roll, inflictor=self.inflictor)
+                    else:
+                        self.game.report(Outcome(OutcomeType.STUNNED, player=self.player, opp_player=self.inflictor,
+                                                 rolls=[self.roll]))
+                        if self.in_crowd:
+                            self.game.pitch_to_reserves(self.player)
+                        else:
+                            self.player.place_prone()
+                            self.player.state.stunned = True
 
-        # KOD
-        roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
-        if roll.get_result() >= 8:
-            KnockOut(self.game, self.player, roll=roll, inflictor=self.inflictor)
-            return True
-
-        # STUNNED
-        roll.modifiers = thick_skull + stunty + mighty_blow + dirty_player + niggling
-        if self.player.has_skill(Skill.BALL_AND_CHAIN):
-            KnockOut(self.game, self.player, roll=roll, inflictor=self.inflictor)
-        else:
-            self.game.report(Outcome(OutcomeType.STUNNED, player=self.player, opp_player=self.inflictor,
-                                     rolls=[roll]))
-            if self.in_crowd:
-                self.game.pitch_to_reserves(self.player)
-            else:
-                self.player.place_prone()
-                self.player.state.stunned = True
-
+        #Handle ejection 
+        if self.ejected: 
+            if self.ejection is None: 
+                self.ejection = Ejection(self.game, self.inflictor) 
+                return False 
+            
+            assert self.ejection is not None
+            
+            if not self.ejection.bribe_successful: 
+                Turnover(self.game)
+            
+        
         return True
 
     def available_actions(self):
