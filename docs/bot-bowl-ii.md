@@ -73,4 +73,4 @@ Scripted Plus Bot is a scripted bot based on the one from the [tutorials](https:
 Congratulations to Minigrod (RogueLichen) for winning Bot Bowl II and to Gotebot for winning the ML prize. The authors of both bots will each recieve $500.
 
 ## Highlights
-Watch the highlight video here: https://www.youtube.com/embed/qajXQhrBuV0
+Watch the highlight video here: [https://www.youtube.com/embed/qajXQhrBuV0](https://www.youtube.com/embed/qajXQhrBuV0).
