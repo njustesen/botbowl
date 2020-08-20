@@ -2,6 +2,7 @@ import pytest
 from tests.util import *
 
 
+
 @pytest.mark.parametrize("reroll",  [True, False])
 @pytest.mark.parametrize("success", [True, False])
 
@@ -13,11 +14,12 @@ def test_hypnotize(success, reroll):
     players = game.get_players_on_pitch(team)
     player = players[0]
     player.extra_skills = [Skill.HYPNOTIC_GAZE]
-    game.put(player, Square(12, 11))
+    player.role.ag = 3 
+    game.put(player, Square(2, 3))
     
     opponents = game.get_players_on_pitch(game.get_opp_team(team))
     opp_player = opponents[0] 
-    opp_square = Square(11, 11)
+    opp_square = Square(2, 2)
     game.put(opp_player, opp_square)
     
     D6.FixedRolls.clear()
@@ -32,6 +34,10 @@ def test_hypnotize(success, reroll):
         
         
     game.step(Action(ActionType.START_MOVE, player=player))
+    
+    actions = game.get_available_actions() 
+    pytest.set_trace() 
+    
     game.step(Action(ActionType.HYPNOTIC_GAZE, position = opp_square))
 
     if reroll: 
