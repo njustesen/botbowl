@@ -75,6 +75,8 @@ class PythonSocketClient(Agent):
 
     def act(self, game):
         seconds = game.get_seconds_left()
+        replay = game.replay
+        game.replay = None
         try:
             self._connect()
             request = Request('act', game=game)
@@ -87,22 +89,28 @@ class PythonSocketClient(Agent):
                         print(f"Invalid response type: {response}")
                     elif response.object is None and type(response.object) == Action:
                         print(f"Invalid action type: {type(response.object)}")
-                    elif response.token != self.token:
-                        print(f"Invalid token: {response.token}")
-                    elif response.request_id != request.request_id:
-                        print(f"Invalid request_id: {response.request_id}")
+                    elif str(response.token) != str(self.token):
+                        print(f"Invalid token: {response.token} != {self.token}")
+                    elif str(response.request_id) != str(request.request_id):
+                        print(f"Invalid request_id: {response.request_id} != {request.request_id}")
                     else:
+                        game.replay = replay
                         return response.object
                 except Exception as e:
-                    print(f"Error parsing message: ", e)
+                    print(f"Error parsing message from {self.name}: ", e)
+                    for proc in game.get_procedure_names():
+                        print(proc)
                 seconds = game.get_seconds_left()
         except Exception as e:
             print(f"{self.name} failed to communicate: ", e)
             print("Returning None action")
+        game.replay = replay
         return None
 
     def new_game(self, game, team):
         seconds = game.get_seconds_left()
+        replay = game.replay
+        game.replay = None
         try:
             self._connect()
             request = Request('new_game', game=game, team=team)
@@ -114,20 +122,24 @@ class PythonSocketClient(Agent):
                     response = receive_data(sockets[self.agent_id], timeout=(seconds if seconds is not None else None))
                     if type(response) != Response:
                         print(f"Invalid response type: {response}")
-                    if response.token != self.token:
-                        print(f"Invalid token: {response.token}")
-                    elif response.request_id != request.request_id:
-                        print(f"Invalid request_id: {response.request_id}")
+                    elif str(response.token) != str(self.token):
+                        print(f"Invalid token: {response.token} != {self.token}")
+                    elif str(response.request_id) != str(request.request_id):
+                        print(f"Invalid request_id: {response.request_id} != {request.request_id}")
                     else:
+                        game.replay = replay
                         return
                 except Exception as e:
                     print(f"Error parsing message: ", e)
                 seconds = game.get_seconds_left()
         except Exception as e:
             print(f"{self.name} failed to communicate: ", e)
+        game.replay = replay
 
     def end_game(self, game):
         seconds = game.get_seconds_left()
+        replay = game.replay
+        game.replay = None
         try:
             self._connect()
             request = Request('end_game', game=game)
@@ -139,18 +151,20 @@ class PythonSocketClient(Agent):
                     response = receive_data(sockets[self.agent_id], timeout=(seconds if seconds is not None else None))
                     if type(response) != Response:
                         print(f"Invalid response type: {response}")
-                    if response.token != self.token:
-                        print(f"Invalid token: {response.token}")
-                    elif response.request_id != request.request_id:
-                        print(f"Invalid request_id: {response.request_id}")
+                    elif str(response.token) != str(self.token):
+                        print(f"Invalid token: {response.token} != {self.token}")
+                    elif str(response.request_id) != str(request.request_id):
+                        print(f"Invalid request_id: {response.request_id} != {request.request_id}")
                     else:
                         self._close()
+                        game.replay = replay
                         return
                 except Exception as e:
                     print(f"Error parsing message: ", e)
                 seconds = game.get_seconds_left()
         except Exception as e:
             print(f"{self.name} failed to communicate: ", e)
+        game.replay = replay
 
     def _close(self):
         sockets[self.agent_id].close()
@@ -171,8 +185,11 @@ class PythonSocketServer(Agent):
     def run(self):
         while True:
             try:
+                print("socket accept")
                 socket, client_address = self.socket.accept()
+                print("receive data")
                 request = receive_data(socket)
+                print("data received")
                 if type(request) is not Request:
                     raise Exception(f"Unreadable request {request}")
                 if request.command == 'act':

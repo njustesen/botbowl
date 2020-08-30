@@ -193,6 +193,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.spectating = window.location.href.indexOf('/spectate/') >= 0;
         $scope.replaying = window.location.href.indexOf('/replay/') >= 0;
         $scope.replaySpeed = 200;
+        $scope.replayDoneLoading = false;
+        $scope.loadingSteps = false
+
         if ($scope.replaying){
             $scope.replay_id = $scope.game_id;
             $scope.spectating = true;
@@ -1389,8 +1392,27 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }, time);
         };
 
+        $scope.loadReplaySteps = function loadReplaySteps(){
+            $scope.loadingSteps = true;
+            ReplayService.getSteps($scope.replay_id, $scope.numOfSteps(), 10).success(function (data) {
+                for (let key in data){
+                    $scope.replay.steps[key] = data[key];
+                }
+                if (Object.keys(data).length == 0){
+                    $scope.replayDoneLoading = true;
+                }
+                $scope.loadingSteps = false;
+            }).error(function (status, data) {
+                $location.path("/#/");
+                $scope.loadingSteps = false;
+            });
+        };
+
         $scope.runPlayLoop = function runPlayLoop(){
             setTimeout(function(){
+                if (!$scope.replayDoneLoading && !$scope.loadingSteps){
+                    $scope.loadReplaySteps();
+                }
                 if ($scope.replayIsPlaying) {
                     $scope.nextStep();
                     $scope.$apply();
@@ -1400,7 +1422,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.numOfSteps = function (){
-            return  Object.keys($scope.replay.steps).length;
+            return Object.keys($scope.replay.steps).length;
         };
 
         $scope.nextStep = function (){
@@ -1567,6 +1589,10 @@ appServices.factory('ReplayService', function($http) {
     return {
         get: function(id) {
             return $http.get(options.api.base_url + '/replays/' + id);
+        },
+
+        getSteps: function(id, from_idx, num_steps) {
+            return $http.get(options.api.base_url + '/steps/' + id + "/" + from_idx + "/" + num_steps);
         },
 
         findAll: function() {
@@ -1762,7 +1788,8 @@ appServices.factory('GameLogService', function() {
             "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll",
             "STAND_UP": "<player> stood up.",
             "FAILED_STAND_UP": "<player> failed to stand up",
-            "FAILED_JUMP_UP": "<player> failed to jump up"
+            "FAILED_JUMP_UP": "<player> failed to jump up",
+            "ACTION_SELECT_DIE": ""
         },
         log_timouts: {
             'GAME_STARTED': 100,

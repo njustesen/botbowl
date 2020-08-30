@@ -468,6 +468,11 @@ class Block(Procedure):
 
         # Remove secondary clocks
         assert self.selected_die is not None
+
+        BBDie.FixedRolls.append(self.selected_die)
+        die = BBDie(BBDie.FixedRolls)
+        self.game.report(Outcome(OutcomeType.ACTION_SELECT_DIE, team=self.favor, rolls=[DiceRoll([die])]))
+
         self.game.remove_secondary_clocks()
 
         # Dice result
@@ -3047,9 +3052,15 @@ class Setup(Procedure):
 
         if action.action_type == ActionType.PLACE_PLAYER:
             if action.position is None:
-                self.game.pitch_to_reserves(action.player)
+                if action.player.position is not None:
+                    self.game.pitch_to_reserves(action.player)
+                else:
+                    print("Ignoring PLACE_PLAYER action: Already in reserves")
             elif action.player.position is None:
-                self.game.reserves_to_pitch(action.player, action.position)
+                if action.position is not None:
+                    self.game.reserves_to_pitch(action.player, action.position)
+                else:
+                    print("Ignoring PLACE_PLAYER action: Already in reserves")
             else:
                 player_at = self.game.get_player_at(action.position)
                 if player_at is not None:
