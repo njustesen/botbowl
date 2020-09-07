@@ -38,6 +38,10 @@ appServices.factory('ReplayService', function($http) {
             return $http.get(options.api.base_url + '/replays/' + id);
         },
 
+        getSteps: function(id, from_idx, num_steps) {
+            return $http.get(options.api.base_url + '/steps/' + id + "/" + from_idx + "/" + num_steps);
+        },
+
         findAll: function() {
             return $http.get(options.api.base_url + '/replays/');
         }
@@ -231,7 +235,8 @@ appServices.factory('GameLogService', function() {
             "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll",
             "STAND_UP": "<player> stood up.",
             "FAILED_STAND_UP": "<player> failed to stand up",
-            "FAILED_JUMP_UP": "<player> failed to jump up"
+            "FAILED_JUMP_UP": "<player> failed to jump up",
+            "ACTION_SELECT_DIE": ""
         },
         log_timouts: {
             'GAME_STARTED': 100,

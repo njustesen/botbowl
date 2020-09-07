@@ -11,41 +11,58 @@ import numpy as np
 import uuid
 import time
 import json
+import pickle
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
 
 
+class ReplayStep:
+
+    def __init__(self, game, num_reports):
+        self.game = game
+        self.num_reports = num_reports
+
+
 class Replay:
 
-    def __init__(self, replay_id, load=False, simple=False):
+    def __init__(self, replay_id, load=False):
         self.replay_id = replay_id
         self.steps = {}
         self.actions = {}
+        self.reports = []
         self.idx = 0
         if load:
             filename = get_data_path('replays') + "/" + replay_id + ".rep"
-            replay = json.load(open(filename, "r"))
-            if simple:
-                self.steps = replay['steps'][0]
-                self.actions = []
-            else:
-                self.steps = replay['steps']
-                self.actions = replay['actions']
+            replay = pickle.load(open(filename, "rb"))
+            self.steps = replay.steps
+            self.actions = replay.actions
+            self.reports = replay.reports
             self.idx = 0
+            # Construct step reports
+            for idx, step in self.steps.items():
+                if step.num_reports == 0:
+                    step.game['state']['reports'] = []
+                else:
+                    step.game['state']['reports'] = [report.to_json() for report in self.reports[:step.num_reports]]
 
     def record_step(self, game):
-        self.steps[self.idx] = game.to_json()
+        state = game.to_json(ignore_reports=True)
+        self.steps[self.idx] = ReplayStep(state, len(game.state.reports))
         self.idx += 1
 
     def record_action(self, action):
         self.actions[self.idx] = action.to_json() if action is not None else None
         self.idx += 1
 
-    def dump(self, replay_id):
-        name = self.steps[0]['home_agent']['name'] + "_VS_" + self.steps[0]['away_agent']['name'] + "_" + str(replay_id)
+    def dump(self, game):
+        replay_id = game.game_id
+        self.reports = game.state.reports
+        name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(replay_id)
         filename = get_data_path('replays') + '/' + name + '.rep'
-        json.dump(self.to_json(), open(filename, "w"))
+        print(f"Saving replay to {filename}")
+        pickle.dump(self, open(filename, "wb"))
+        print(f"Replay saved to {filename}")
 
     def next(self):
         if len(self.steps) == 0 or self.idx + 1 >= len(self.steps):
@@ -80,8 +97,8 @@ class Replay:
     def to_json(self):
         return {
             'replay_id': self.replay_id,
-            'steps': {idx : step for idx, step in self.steps.items()},
-            'actions': {idx : action for idx, action in self.actions.items()}
+            'steps': {idx: step.game for idx, step in self.steps.items()},
+            'actions': {idx: action for idx, action in self.actions.items()}
         }
 
     def to_simple_json(self):
@@ -92,20 +109,16 @@ class Replay:
 
 class TimeLimits:
 
-    def __init__(self, game, turn, secondary, disqualification, init, end):
-        self.game = game
+    def __init__(self, turn, secondary, init, end):
         self.turn = turn
         self.secondary = secondary
-        self.disqualification = disqualification
         self.init = init
         self.end = end
 
     def to_json(self):
-         return {
-            'game': self.game,
+        return {
             'turn': self.turn,
             'secondary': self.secondary,
-            'disqualification': self.disqualification,
             'init': self.init,
             'end': self.end
         }
@@ -359,7 +372,7 @@ class GameState:
         self.clocks = []
         self.rerolled_procs = set()
 
-    def to_json(self):
+    def to_json(self, ignore_reports=False):
         return {
             'half': self.half,
             'kicking_first_half': self.kicking_first_half.team_id if self.kicking_first_half is not None else None,
@@ -375,12 +388,12 @@ class GameState:
             'weather': self.weather.name,
             'gentle_gust': self.gentle_gust,
             'available_actions': [action.to_json() for action in self.available_actions],
-            'reports': [report.to_json() for report in self.reports],
+            'reports': [report.to_json() for report in self.reports] if not ignore_reports else [],
             'current_team_id': self.current_team.team_id if self.current_team is not None else None,
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'clocks': [ clock.to_json() for clock in self.clocks ]
+            'clocks': [clock.to_json() for clock in self.clocks]
         }
 
 

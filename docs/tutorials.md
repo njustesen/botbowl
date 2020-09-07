@@ -18,7 +18,7 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 4. [**Reinforcement Learning IV: Self-play**](a2c-selfplay.md)
 
 ## Submission
-1. **Submit to Bot Bowl** (coming soon)
+1. [**Submit to Bot Bowl**](submit.md)
 
 If you find any problems or have questions as you go through the tutorials, please report an issue on [https://github.com/njustesen/ffai/](github).
 You are also welcome to join the discussions on our [https://discord.gg/MTXMuae](Discord server).

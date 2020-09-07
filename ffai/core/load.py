@@ -253,13 +253,11 @@ def load_config(name):
     turn = None
     opp = None
     if data['time_limits'] is not None:
-        game = data['time_limits']['game']
         turn = data['time_limits']['turn']
         secondary = data['time_limits']['secondary']
-        disqualification = data['time_limits']['disqualification']
         init = data['time_limits']['init']
         end = data['time_limits']['end']
-    config.time_limits = TimeLimits(game=game, turn=turn, secondary=secondary, disqualification=disqualification, init=init, end=end)
+    config.time_limits = TimeLimits(turn=turn, secondary=secondary, init=init, end=end)
     return config
 
 

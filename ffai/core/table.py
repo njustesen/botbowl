@@ -211,6 +211,7 @@ class OutcomeType(Enum):
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
     DECAYING = 155
+    ACTION_SELECT_DIE = 1000
 
 
 class PlayerActionType(Enum):

@@ -112,10 +112,18 @@ def step(game_id):
 def get_game(game_id):
     return json.dumps(api.get_game(game_id).to_json())
 
-
 @app.route('/replays/<replay_id>', methods=['GET'])
 def get_replay(replay_id):
-    return json.dumps(api.get_replay(replay_id).to_json())
+    replay = api.get_replay(replay_id)
+    replay.steps = api.get_replay_steps(replay_id, 0, 100)
+    replay_str = json.dumps(replay.to_json())
+    return replay_str
+
+@app.route('/steps/<replay_id>/<from_idx>/<num_steps>', methods=['GET'])
+def get_steps(replay_id, from_idx, num_steps):
+    steps = api.get_replay_steps(replay_id, int(from_idx), int(num_steps))
+    steps_str = {idx: step.game for idx, step in steps.items()}
+    return steps_str
 
 
 @app.route('/game/load/<name>', methods=['GET'])
