@@ -3069,7 +3069,7 @@ class Setup(Procedure):
             ActionChoice(ActionType.PLACE_PLAYER, team=self.team,
                          players=self.game.get_players_on_pitch(
                              self.team) if self.reorganize else self.game.get_players_on_pitch(
-                             self.team) +self.game.get_reserves(self.team),
+                             self.team) + self.game.get_reserves(self.team),
                          positions=positions),
             ActionChoice(ActionType.END_SETUP, team=self.team)
         ]
