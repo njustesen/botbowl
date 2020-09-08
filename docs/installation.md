@@ -35,6 +35,6 @@ If you cloned the repository and installed locally, you can start the web server
 ```
 python examples/server_example.py 
 ```
-and then go the [http://127.0.0.1:5000/](http://127.0.0.1:5000/) to play a game.
+and then go the [http://127.0.0.1:1234/](http://127.0.0.1:1234/) to play a game.
 
 If you ran into issues, please seek help at our [Discord server](https://discord.gg/MTXMuae).
