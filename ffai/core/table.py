@@ -62,6 +62,7 @@ class RollType(Enum):
     REGENERATION_ROLL = 28
     TAKE_ROOT_ROLL = 29
     SHADOWING_ROLL = 30
+    BRIBE_ROLL = 31
 
 
 class OutcomeType(Enum):
@@ -211,6 +212,9 @@ class OutcomeType(Enum):
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
     DECAYING = 155
+    BRIBE_USED = 156
+    SUCCESSFUL_BRIBE = 157
+    FAILED_BRIBE = 158
     ACTION_SELECT_DIE = 1000
 
 
@@ -337,6 +341,8 @@ class ActionType(Enum):
     FOLLOW_UP = 55
     LEAP = 56
     STAB = 57
+    USE_BRIBE = 58
+    DONT_USE_BRIBE = 59
 
 
 class WeatherType(Enum):

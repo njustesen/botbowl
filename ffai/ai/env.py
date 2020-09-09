@@ -75,7 +75,9 @@ class FFAIEnv(gym.Env):
         ActionType.SETUP_FORMATION_WEDGE,
         ActionType.SETUP_FORMATION_LINE,
         ActionType.SETUP_FORMATION_SPREAD,
-        ActionType.SETUP_FORMATION_ZONE
+        ActionType.SETUP_FORMATION_ZONE,
+        ActionType.USE_BRIBE,
+        ActionType.DONT_USE_BRIBE
     ]
 
     simple_action_types = [
@@ -97,7 +99,9 @@ class FFAIEnv(gym.Env):
         ActionType.SELECT_PUSH,
         ActionType.SELECT_DEFENDER_STUMBLES,
         ActionType.SELECT_DEFENDER_DOWN,
-        ActionType.SELECT_NONE
+        ActionType.SELECT_NONE,
+        ActionType.USE_BRIBE,
+        ActionType.DONT_USE_BRIBE
     ]
 
     defensive_formation_action_types = [
@@ -147,10 +151,9 @@ class FFAIEnv(gym.Env):
         Apothecary,
         PassAction,
         Interception,
-        Reroll
+        Reroll,
+        Ejection
     ]
-
-
 
     def __init__(self, config, home_team, away_team, opp_actor=None):
         self.__version__ = "0.0.3"

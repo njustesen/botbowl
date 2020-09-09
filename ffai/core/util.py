@@ -88,6 +88,9 @@ class Stack:
     def pop(self):
         return self.items.pop()
 
+    def remove(self, item):
+        self.items.remove(item)
+
     def peek(self):
         return self.items[len(self.items)-1]
 

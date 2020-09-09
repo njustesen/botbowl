@@ -1196,9 +1196,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             time = 100;
                         } else if ($scope.game.state.reports[$scope.game.state.reports.length-1].outcome_type in GameLogService.log_timouts){
                             time = GameLogService.log_timouts[$scope.game.state.reports[$scope.game.state.reports.length-1]];
-
-                        } else {
-                            time = 10;
                         }
                         $scope.lastReportIdx = $scope.game.state.reports.length;
                     }

@@ -375,9 +375,10 @@ class Game:
         while not self.state.stack.is_empty() and self.state.stack.peek().done:
             if self.config.debug_mode:
                 print("--Proc={}".format(self.state.stack.peek()))
-            # Call end before popping
-            self.state.stack.peek().end()
-            self.state.stack.pop()
+            # Call end before removing
+            proc_end = self.state.stack.peek()
+            proc_end.end()
+            self.state.stack.remove(proc_end)
 
         # Record state
         if self.replay is not None:
