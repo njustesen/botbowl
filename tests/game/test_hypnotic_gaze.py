@@ -36,7 +36,7 @@ def test_hypnotize(success, reroll):
     game.step(Action(ActionType.START_MOVE, player=player))
     
     actions = game.get_available_actions() 
-    pytest.set_trace() 
+    #pytest.set_trace() 
     
     game.step(Action(ActionType.HYPNOTIC_GAZE, position = opp_square))
 

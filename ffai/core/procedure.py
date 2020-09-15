@@ -2681,19 +2681,20 @@ class PlayerAction(Procedure):
                                             positions=positions, agi_rolls=agi_rolls))
         
         # Hypnotic gaze action 
-        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and  self.player.state.up and self.player_action_type == PlayerActionType.MOVE: 
-            hypno_positions = [] 
-            agi_rolls = [] 
-            for opponent in self.game.get_adjacent_opponents(self.player, down=False):
-                if opponent.has_tackle_zone(): 
-                    hypno_positions.append(opponent.position)
-                    
-                    modifiers = 1 - self.game.num_tackle_zones_in(self.player) 
-                    target = Rules.agility_table[self.player.get_ag()]
-                    agi_rolls.append([min(6, max(2, target - modifiers))])
-                    
-            actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, agi_rolls=agi_rolls ))
-                
+        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and  self.player.state.up and \
+                self.player_action_type == PlayerActionType.MOVE: 
+            
+            hypno_positions = self.game.get_hypno_targets(self.player)
+            
+            if len(hypno_positions)>0: 
+                modifier    = self.game.get_hypno_modifier(self.player)
+                target      = Rules.agility_table[self.player.get_ag()]
+                agi_roll    = min(6, max(2, target - modifier))
+                agi_rolls = [agi_roll]*len(hypno_positions)
+
+                actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, 
+                                            skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, 
+                                            agi_rolls=agi_rolls ))
         
         if self.dump_off:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))
@@ -3952,9 +3953,8 @@ class HypnoticGaze(Procedure):
         if self.roll is None: 
             #agility roll with tz modifiers except target_player
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.roll.modifiers = 1 - self.game.num_tackle_zones_in(self.player) 
+            self.roll.modifiers = self.game.get_hypno_modifier(self.player)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
-            
             
             if self.roll.is_d6_success(): 
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_HYPNOTIC_GAZE, player=self.player, rolls=[self.roll]))
