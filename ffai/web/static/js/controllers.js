@@ -141,6 +141,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.spectating = window.location.href.indexOf('/spectate/') >= 0;
         $scope.replaying = window.location.href.indexOf('/replay/') >= 0;
         $scope.replaySpeed = 200;
+        $scope.replayDoneLoading = false;
+        $scope.loadingSteps = false
+
         if ($scope.replaying){
             $scope.replay_id = $scope.game_id;
             $scope.spectating = true;
@@ -1200,9 +1203,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             time = 100;
                         } else if ($scope.game.state.reports[$scope.game.state.reports.length-1].outcome_type in GameLogService.log_timouts){
                             time = GameLogService.log_timouts[$scope.game.state.reports[$scope.game.state.reports.length-1]];
-
-                        } else {
-                            time = 10;
                         }
                         $scope.lastReportIdx = $scope.game.state.reports.length;
                     }
@@ -1344,8 +1344,27 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }, time);
         };
 
+        $scope.loadReplaySteps = function loadReplaySteps(){
+            $scope.loadingSteps = true;
+            ReplayService.getSteps($scope.replay_id, $scope.numOfSteps(), 10).success(function (data) {
+                for (let key in data){
+                    $scope.replay.steps[key] = data[key];
+                }
+                if (Object.keys(data).length == 0){
+                    $scope.replayDoneLoading = true;
+                }
+                $scope.loadingSteps = false;
+            }).error(function (status, data) {
+                $location.path("/#/");
+                $scope.loadingSteps = false;
+            });
+        };
+
         $scope.runPlayLoop = function runPlayLoop(){
             setTimeout(function(){
+                if (!$scope.replayDoneLoading && !$scope.loadingSteps){
+                    $scope.loadReplaySteps();
+                }
                 if ($scope.replayIsPlaying) {
                     $scope.nextStep();
                     $scope.$apply();
@@ -1355,7 +1374,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.numOfSteps = function (){
-            return  Object.keys($scope.replay.steps).length;
+            return Object.keys($scope.replay.steps).length;
         };
 
         $scope.nextStep = function (){

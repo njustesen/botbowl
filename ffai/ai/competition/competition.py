@@ -134,7 +134,7 @@ class TimeoutException(Exception): pass
 
 class Competition:
 
-    def __init__(self, agent_a, agent_b, team_a, team_b, config, ruleset, arena, n=2):
+    def __init__(self, agent_a, agent_b, team_a, team_b, config, ruleset, arena, n=2, record=False):
         self.agent_a = agent_a
         self.agent_b = agent_b
         self.team_a = team_a
@@ -147,6 +147,7 @@ class Competition:
         self.results = None
         self.ruleset = ruleset
         self.arena = arena
+        self.record = record
 
     def run(self):
         results = []
@@ -156,13 +157,14 @@ class Competition:
             away_agent = self.agent_b if i % 2 == 0 else self.agent_a
             home_team = self.team_a if i % 2 == 0 else self.team_b
             away_team = self.team_b if i % 2 == 0 else self.team_a
-            game = Game(i, home_team, away_team, home_agent, away_agent, self.config, arena=self.arena, ruleset=self.ruleset)
-            try:
-                game.init()
-                print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
-            except Exception as e:
-                crashed = True
-                print("Game crashed:", e)
+            game = Game(i, home_team, away_team, home_agent, away_agent, self.config, arena=self.arena, ruleset=self.ruleset, record=self.record)
+            #try:
+            game.init()
+            print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
+            #except Exception as e:
+            #    crashed = True
+            #    print(e)
+            #    print("Game crashed:")
             result = GameResult(game, crashed=crashed)
             results.append(result)
         self.results = CompetitionResults(self.agent_a.name, self.agent_b.name, results)

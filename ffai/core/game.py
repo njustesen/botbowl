@@ -36,12 +36,12 @@ class Game:
         self.action = None
         self.ff_map = None
 
-    def to_json(self):
+    def to_json(self, ignore_reports=False):
         return {
             'game_id': self.game_id,
             'start_time': self.start_time,
             'end_time': self.end_time,
-            'state': self.state.to_json(),
+            'state': self.state.to_json(ignore_reports=ignore_reports),
             'stack': self.get_procedure_names(),
             'home_agent': self.home_agent.to_json(),
             'away_agent': self.away_agent.to_json(),
@@ -99,16 +99,8 @@ class Game:
         # Update game
         while True:
 
-            # Record state
-            if self.replay is not None:
-                self.replay.record_action(self.action)
-
             # Perform game step
             done = self._one_step(self.action)
-
-            # Record state
-            if self.replay is not None:
-                self.replay.record_step(self)
 
             # Game over
             if self.state.game_over:
@@ -215,12 +207,7 @@ class Game:
         # Record state
         if self.replay is not None:
             self.replay.record_step(self)
-            self.replay.dump(self.game_id)
-
-        # Record state
-        if self.replay is not None:
-            self.replay.record_step(self)
-            self.replay.dump(self.game_id)
+            self.replay.dump(self)
 
     def _is_action_allowed(self, action):
         """
@@ -274,7 +261,11 @@ class Game:
             return None
         # Correct player object
         if action.player is not None:
-            action.player = self.state.player_by_id[action.player.player_id]
+            if action.player.player_id not in self.state.player_by_id.keys():
+                print(f"Unknown player id {action.player.player_id}")
+                action.player = None
+            else:
+               action.player = self.state.player_by_id[action.player.player_id]
         return action
 
     def _forced_action(self):
@@ -351,7 +342,10 @@ class Game:
                 # Only allowed actions
                 if not self._is_action_allowed(action):
                     if self.config.debug_mode:
-                        print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
+                        if type(action) is Action:
+                            print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
+                        else:
+                            print(f"Action not allowed {action}")
                     return True  # Game needs user input
 
         # Run proc
@@ -381,9 +375,15 @@ class Game:
         while not self.state.stack.is_empty() and self.state.stack.peek().done:
             if self.config.debug_mode:
                 print("--Proc={}".format(self.state.stack.peek()))
-            # Call end before popping
-            self.state.stack.peek().end()
-            self.state.stack.pop()
+            # Call end before removing
+            proc_end = self.state.stack.peek()
+            proc_end.end()
+            self.state.stack.remove(proc_end)
+
+        # Record state
+        if self.replay is not None:
+            if action is not None and action.action_type is not ActionType.PLACE_BALL:
+                self.replay.record_step(self)
 
         # Is game over
         if self.state.stack.is_empty():
@@ -553,6 +553,9 @@ class Game:
         Adds the outcome to the game's reports.
         """
         self.state.reports.append(outcome)
+
+    def is_started(self):
+        return self.start_time is not None
 
     def is_team_side(self, position, team):
         """

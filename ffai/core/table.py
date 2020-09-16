@@ -62,6 +62,7 @@ class RollType(Enum):
     REGENERATION_ROLL = 28
     TAKE_ROOT_ROLL = 29
     SHADOWING_ROLL = 30
+    BRIBE_ROLL = 31
 
 
 class OutcomeType(Enum):
@@ -211,9 +212,12 @@ class OutcomeType(Enum):
     JUMP_UP = 153
     FAILED_JUMP_UP = 154
     DECAYING = 155
-    SUCCESSFUL_HYPNOTIC_GAZE = 156
-    FAILED_HYPNOTIC_GAZE = 157 
-    
+    BRIBE_USED = 156
+    SUCCESSFUL_BRIBE = 157
+    FAILED_BRIBE = 158
+    SUCCESSFUL_HYPNOTIC_GAZE = 159
+    FAILED_HYPNOTIC_GAZE = 160 
+    ACTION_SELECT_DIE = 1000
 
 
 class PlayerActionType(Enum):
@@ -339,8 +343,9 @@ class ActionType(Enum):
     FOLLOW_UP = 55
     LEAP = 56
     STAB = 57
-    HYPNOTIC_GAZE = 58
-
+    USE_BRIBE = 58
+    DONT_USE_BRIBE = 59
+    HYPNOTIC_GAZE = 60
 
 class WeatherType(Enum):
     SWELTERING_HEAT = 1

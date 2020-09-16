@@ -175,6 +175,7 @@ class Armor(Procedure):
         self.armor_rolled = False
         self.foul = foul
         self.inflictor = inflictor
+        self.ejected = False
 
     def step(self, action):
 
@@ -216,19 +217,15 @@ class Armor(Procedure):
                 armor_broken = True
 
         # EJECTION?
-        ejected = False
-        if self.foul:
-            if roll.same():
-                if not self.inflictor.has_skill(Skill.SNEAKY_GIT) or armor_broken:
-                    self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.inflictor))
-                    Turnover(self.game)
-                    Ejection(self.game, self.inflictor)
-                    ejected = True
+        if self.foul and roll.same():
+            # Sneaky git
+            if not self.inflictor.has_skill(Skill.SNEAKY_GIT) or armor_broken:
+                self.ejected = True
 
         # Break armor - roll injury
         if armor_broken:
             Injury(self.game, self.player, self.inflictor, foul=self.foul,
-                   mighty_blow_used=mighty_blow_used, dirty_player_used=dirty_player_used, ejected=ejected)
+                   mighty_blow_used=mighty_blow_used, dirty_player_used=dirty_player_used)
             self.game.report(Outcome(OutcomeType.ARMOR_BROKEN, player=self.player, opp_player=self.inflictor,
                                      rolls=[roll]))
         else:
@@ -236,6 +233,10 @@ class Armor(Procedure):
                                      rolls=[roll]))
 
         return True
+
+    def end(self):
+        if self.ejected:
+            Ejection(self.game, self.inflictor)
 
 
 class Stab(Procedure):
@@ -467,6 +468,11 @@ class Block(Procedure):
 
         # Remove secondary clocks
         assert self.selected_die is not None
+
+        BBDie.FixedRolls.append(self.selected_die)
+        die = BBDie(None)
+        self.game.report(Outcome(OutcomeType.ACTION_SELECT_DIE, team=self.favor, rolls=[DiceRoll([die])]))
+
         self.game.remove_secondary_clocks()
 
         # Dice result
@@ -923,12 +929,41 @@ class Ejection(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
+        self.awaiting_bribe = False
+
+    def start(self):
+        self.awaiting_bribe = self.player.team.state.bribes > 0
 
     def step(self, action):
+        # Check if already ejected
+        if self.player.state.ejected:
+            return True
+        if self.awaiting_bribe:
+            if action.action_type == ActionType.USE_BRIBE:
+                self.player.team.state.bribes -= 1
+                self.game.report(Outcome(OutcomeType.BRIBE_USED, team=self.player.team, player=self.player))
+                die = D6(self.game.rnd)
+                roll = DiceRoll([die], roll_type=RollType.BRIBE_ROLL)
+                roll.target = 2
+                if roll.is_d6_success():
+                    self.game.report(Outcome(OutcomeType.SUCCESSFUL_BRIBE, team=self.player.team, player=self.player, rolls=[roll]))
+                    return True
+                else:
+                    self.game.report(Outcome(OutcomeType.FAILED_BRIBE, team=self.player.team, player=self.player, rolls=[roll]))
+                    # Allow team to use another bribe
+                    self.awaiting_bribe = self.player.team.state.bribes > 0
+                    if self.awaiting_bribe:
+                        return False
+        # Eject player
+        self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
         self.game.pitch_to_dungeon(self.player)
+        Turnover(self.game)
         return True
 
     def available_actions(self):
+        if self.awaiting_bribe:
+            return [ActionChoice(ActionType.USE_BRIBE, team=self.player.team),
+                    ActionChoice(ActionType.DONT_USE_BRIBE, team=self.player.team)]
         return []
 
 
@@ -1024,8 +1059,7 @@ class Half(Procedure):
 
 class Injury(Procedure):
 
-    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False,
-                 ejected=False, in_crowd=False):
+    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False, in_crowd=False):
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
@@ -1033,7 +1067,7 @@ class Injury(Procedure):
         self.foul = foul
         self.mighty_blow_used = mighty_blow_used
         self.dirty_player_used = dirty_player_used
-        self.ejected = ejected
+        self.ejected = False
         self.in_crowd = in_crowd
 
     def step(self, action):
@@ -1057,12 +1091,8 @@ class Injury(Procedure):
                 self.foul else 0
 
         # EJECTION
-        if self.foul and not self.ejected:
-            if roll.same():
-                if not self.inflictor.has_skill(Skill.SNEAKY_GIT):
-                    self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.inflictor))
-                    Turnover(self.game)
-                    Ejection(self.game, self.inflictor)
+        if self.foul and roll.same() and not self.inflictor.has_skill(Skill.SNEAKY_GIT):
+            self.ejected = True
 
         # CASUALTY
         roll.modifiers = stunty + mighty_blow + dirty_player + niggling
@@ -1092,6 +1122,10 @@ class Injury(Procedure):
                 self.player.state.stunned = True
 
         return True
+
+    def end(self):
+        if self.ejected:
+            Ejection(self.game, self.inflictor)
 
     def available_actions(self):
         return []
@@ -3069,9 +3103,15 @@ class Setup(Procedure):
 
         if action.action_type == ActionType.PLACE_PLAYER:
             if action.position is None:
-                self.game.pitch_to_reserves(action.player)
+                if action.player.position is not None:
+                    self.game.pitch_to_reserves(action.player)
+                else:
+                    print("Ignoring PLACE_PLAYER action: Already in reserves")
             elif action.player.position is None:
-                self.game.reserves_to_pitch(action.player, action.position)
+                if action.position is not None:
+                    self.game.reserves_to_pitch(action.player, action.position)
+                else:
+                    print("Ignoring PLACE_PLAYER action: Already in reserves")
             else:
                 player_at = self.game.get_player_at(action.position)
                 if player_at is not None:
@@ -3092,7 +3132,7 @@ class Setup(Procedure):
             ActionChoice(ActionType.PLACE_PLAYER, team=self.team,
                          players=self.game.get_players_on_pitch(
                              self.team) if self.reorganize else self.game.get_players_on_pitch(
-                             self.team) +self.game.get_reserves(self.team),
+                             self.team) + self.game.get_reserves(self.team),
                          positions=positions),
             ActionChoice(ActionType.END_SETUP, team=self.team)
         ]

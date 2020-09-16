@@ -27,6 +27,8 @@ class ProcBot(Agent):
             return self.coin_toss_kick_receive(game)
         if isinstance(proc, Setup):
             return self.setup(game)
+        if isinstance(proc, Ejection):
+            return self.use_bribe(game)
         if isinstance(proc, Reroll):
             if proc.can_use_pro:
                 return self.use_pro(game)
@@ -86,6 +88,9 @@ class ProcBot(Agent):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def reroll(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def use_bribe(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def place_ball(self, game):

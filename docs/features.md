@@ -126,7 +126,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Secret Weapon     | NO          | NO        |
 | Shadowing         | YES         | NO        |
 | Side Step         | YES         | NO        |
-| Sneaky Git        | NO          | NO        |
+| Sneaky Git        | YES         | NO        |
 | Sprint            | YES         | NO        |
 | Stab              | YES         | NO        |
 | Stakes            | YES         | NO        |

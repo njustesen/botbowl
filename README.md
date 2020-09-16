@@ -1,6 +1,6 @@
 # FFAI: Fantasy Football AI
-FFAI is a python package that includes a framework for playing and developing bots for digital fantasy-football board-games.
-For an in-depth description of the framework, challenge of applying AI to fantasy football, and some preliminaray results see our paper: [A New Board Game Challenge and Competition for AI](https://njustesen.files.wordpress.com/2019/07/justesen2019blood.pdf).
+FFAI is a python package that includes a framework for playing and developing bots for digital fantasy-football board games.
+For an in-depth description of the framework, challenge of applying AI to fantasy football, and some preliminaray results see our paper: [Blood Bowl: The Next Board Game Challenge for AI](https://njustesen.github.io/njustesen/publications/justesen2018blood.pdf).
 
 ![FFAI](docs/img/ffai.png?raw=true "FFAI")
 
@@ -37,7 +37,7 @@ Or download the examples folder and run:
 ```
 python examples/server_example.py
 ```
-Go to: http://127.0.0.1:5000/
+Go to: http://127.0.0.1:1234/
 
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
