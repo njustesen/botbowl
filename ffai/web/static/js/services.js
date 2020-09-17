@@ -479,6 +479,10 @@ appServices.factory('IconService', function() {
                 'Ghoul': 'ughoul',
                 'Wight': 'uwight',
                 'Mummy': 'umummy'
+            },
+            'Vampire': {
+                'Vampire': 'vampire',
+                'Thrall': 'vthrall'
             }
         },
 

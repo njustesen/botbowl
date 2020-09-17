@@ -13,6 +13,7 @@ from ffai.core.model import *
 from ffai.core.table import *
 import time
 
+
 class Procedure:
 
     def __init__(self, game, context=None):
@@ -2640,15 +2641,15 @@ class PlayerAction(Procedure):
             
             hypno_positions = self.game.get_hypno_targets(self.player)
             
-            if len(hypno_positions)>0: 
-                modifier    = self.game.get_hypno_modifier(self.player)
-                target      = Rules.agility_table[self.player.get_ag()]
-                agi_roll    = min(6, max(2, target - modifier))
-                agi_rolls = [agi_roll]*len(hypno_positions)
+            if len(hypno_positions) > 0:
+                modifier = self.game.get_hypno_modifier(self.player)
+                target = Rules.agility_table[self.player.get_ag()]
+                agi_roll = min(6, max(2, target - modifier))
+                agi_rolls = [[agi_roll]] * len(hypno_positions)
 
                 actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, 
                                             skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, 
-                                            agi_rolls=agi_rolls ))
+                                            agi_rolls=agi_rolls))
         
         if self.dump_off:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))

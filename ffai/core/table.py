@@ -347,6 +347,7 @@ class ActionType(Enum):
     DONT_USE_BRIBE = 59
     HYPNOTIC_GAZE = 60
 
+
 class WeatherType(Enum):
     SWELTERING_HEAT = 1
     VERY_SUNNY = 2
