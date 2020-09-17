@@ -163,6 +163,7 @@ class PlayerState:
         self.injuries_gained = []
         self.wild_animal = False
         self.taken_root = False
+        self.blood_lust_active = False 
         self.used_skills = set()
         self.squares_moved = []
 
@@ -182,7 +183,8 @@ class PlayerState:
             'injuries_gained': [injury.name for injury in self.injuries_gained],
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
-            'taken_root': self.taken_root
+            'taken_root': self.taken_root, 
+            'blood_lust_active': blood_lust_active 
         }
 
     def reset(self):
@@ -195,6 +197,7 @@ class PlayerState:
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
+        self.blood_lust_active = False 
         self.used_skills.clear()
         self.squares_moved.clear()
 

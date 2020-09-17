@@ -3863,3 +3863,19 @@ class Loner(Procedure):
             # no re-roll
             self.result = False
             return True
+
+class FeedBloodLust(Procedure): 
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player 
+    
+    def start(self): 
+        self.victim_pos = self.game.get_adjacent_blood_lust_victims(self.player)
+        
+    def step(self, action): 
+        pass 
+        
+    def available_actions(self): 
+        return ActionChoice(ActionType.SELECT_PLAYER, positions=)
+        
+        

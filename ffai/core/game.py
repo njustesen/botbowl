@@ -2072,3 +2072,13 @@ class Game:
         :return: the tile type at the given position.
         """
         return self.arena.board[position.y][position.x]
+
+    def get_adjacent_blood_lust_victims(self, player): 
+        """
+        :param player: a player on the board.
+        :return: return positions of adjecent players that can be bitten
+                 because of a failed blood lust roll. 
+        """
+        assert False #Skill not implemented yet. 
+        return [p.position for p in self.get_adjacent_teammates(player, skill=Skill.BLOODLUST_VICTIM)]
+        
