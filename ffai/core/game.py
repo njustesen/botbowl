@@ -2081,12 +2081,8 @@ class Game:
         
         if not player.has_skill(Skill.HYPNOTIC_GAZE): return  []
         
-        hypno_positions = [] 
-        for opponent in self.get_adjacent_opponents(player, down=False):
-            if opponent.has_tackle_zone(): 
-                hypno_positions.append(opponent.position)
-                
-        return hypno_positions
+        return [o.position for o in self.get_adjacent_opponents(player, down=False) \
+                    if o.has_tackle_zone() ]
                 
     def get_hypno_modifier(self, player): 
         """
