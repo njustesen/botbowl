@@ -2081,4 +2081,24 @@ class Game:
         """
         assert False #Skill not implemented yet. 
         return [p.position for p in self.get_adjacent_teammates(player, skill=Skill.BLOODLUST_VICTIM)]
+
+    def get_hypno_targets(self, player): 
+        """
+        :param player: player on the board. 
+        :return: available targets for given player to hypnotize if player has Hypnotic Gaze skill 
+        """
+        
+        if not player.has_skill(Skill.HYPNOTIC_GAZE): return  []
+        
+        return [o.position for o in self.get_adjacent_opponents(player, down=False) \
+                    if o.has_tackle_zone() ]
+                
+    def get_hypno_modifier(self, player): 
+        """
+        :param player: player on the board with hypnotic gaze skill. 
+        :return:  modifier for player to hypnotize target. 
+        """
+        return 1 - self.num_tackle_zones_in(player) 
+        
+
         
