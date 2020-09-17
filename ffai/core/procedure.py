@@ -2641,9 +2641,9 @@ class PlayerAction(Procedure):
             hypno_positions = self.game.get_hypno_targets(self.player)
             
             if len(hypno_positions)>0: 
-                modifier    = self.game.get_hypno_modifier(self.player)
-                target      = Rules.agility_table[self.player.get_ag()]
-                agi_roll    = min(6, max(2, target - modifier))
+                modifier = self.game.get_hypno_modifier(self.player)
+                target = Rules.agility_table[self.player.get_ag()]
+                agi_roll = min(6, max(2, target - modifier))
                 agi_rolls = [agi_roll]*len(hypno_positions)
 
                 actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, 
