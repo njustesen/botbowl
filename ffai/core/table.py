@@ -215,6 +215,8 @@ class OutcomeType(Enum):
     BRIBE_USED = 156
     SUCCESSFUL_BRIBE = 157
     FAILED_BRIBE = 158
+    SUCCESSFUL_HYPNOTIC_GAZE = 159
+    FAILED_HYPNOTIC_GAZE = 160 
     ACTION_SELECT_DIE = 1000
 
 
@@ -343,6 +345,7 @@ class ActionType(Enum):
     STAB = 57
     USE_BRIBE = 58
     DONT_USE_BRIBE = 59
+    HYPNOTIC_GAZE = 60
 
 
 class WeatherType(Enum):

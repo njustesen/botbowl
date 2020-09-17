@@ -549,6 +549,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("STAB");
                             $scope.special_agi_rolls["STAB"] = action.agi_rolls;
                             $scope.special_positions["STAB"] = action.positions;
+                        } else if (action.action_type === "HYPNOTIC_GAZE"){
+                            $scope.special_actions.push("HYPNOTIC_GAZE");
+                            $scope.special_agi_rolls["HYPNOTIC_GAZE"] = action.agi_rolls;
+                            $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -1784,11 +1788,16 @@ appServices.factory('GameLogService', function() {
             "SUCCESSFUL_TAKE_ROOT": "<player> passed a <b>take root</b> roll.",
             "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll.",
             "STAND_UP": "<player> stood up.",
+            "FAILED_STAND_UP": "<player> failed to stand up",
+            "FAILED_JUMP_UP": "<player> failed to jump up", 
             "FAILED_STAND_UP": "<player> failed to stand up.",
             "FAILED_JUMP_UP": "<player> failed to jump up.",
             "ACTION_SELECT_DIE": "",
             "SUCCESSFUL_BRIBE": "<team> used a bribe <b>successfully.",
             "FAILED_BRIBE": "<team> used a bribe <b>unsuccessfully.",
+            "SUCCESSFUL_HYPNOTIC_GAZE": "<player> successfully <b>hypnotized</b> <opp_player>", 
+            "FAILED_HYPNOTIC_GAZE": "<player> failed to <b>hypnotize</b> <opp_player>"
+          
         },
         log_timouts: {
             'GAME_STARTED': 100,
@@ -1934,7 +1943,9 @@ appServices.factory('GameLogService', function() {
             "FAILED_TAKE_ROOT": 1000,
             "STAND_UP": 10,
             "FAILED_STAND_UP": 1000,
-            "FAILED_JUMP_UP": 1000
+            "FAILED_JUMP_UP": 1000, 
+            "SUCCESSFUL_HYPNOTIC_GAZE": 100, 
+            "FAILED_HYPNOTIC_GAZE": 1000  
         }
 
 
@@ -2022,6 +2033,10 @@ appServices.factory('IconService', function() {
                 'Ghoul': 'ughoul',
                 'Wight': 'uwight',
                 'Mummy': 'umummy'
+            },
+            'Vampire': {
+                'Vampire': 'vampire',
+                'Thrall': 'vthrall'
             }
         },
 
