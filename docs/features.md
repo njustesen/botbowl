@@ -114,7 +114,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Nerves of Steel**| YES         | YES       |
 | No Hands          | YES         | NO        |
 | Nurgle's Rot      | NO          | NO        |
-| Pass              | YES         | NO        |
+| **Pass**          | YES         | YES       |
 | Pass Block        | NO          | NO        |
 | Piling On         | NO          | NO        |
 | Prehensile Tail   | YES         | NO        |
