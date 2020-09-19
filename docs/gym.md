@@ -202,6 +202,8 @@ Actions consists of 31 action types. Some action types, denoted by `<position>` 
 34. ActionType.SETUP_FORMATION_LINE
 35. ActionType.SETUP_FORMATION_SPREAD
 36. ActionType.SETUP_FORMATION_ZONE
+37. ActionType.USE_BRIBE
+38. ActionType.DONT_USE_BRIBE
 
 ### Observation: 'procedure'
 The 'procedure' part of the observation contains a one-hot vector with 16 values representing which procedures the game is in:
