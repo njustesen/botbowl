@@ -56,7 +56,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Savage Orc        |                         |                                    | NO            |
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Bombardier, Secret Weapon  | NO        |
 | **Undead**        |                         |                                    | YES
-| Vampire           | Vampire                 | Blood Lust, Hypnotic Gaze                          | YES
+| **Vampire**       |                         |                                    | YES
 | **Wood Elf**      |                         |                                    | YES              |
 | Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
 | Slann             |                         |                                    | NO              |         
@@ -74,7 +74,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Ball & Chain      | PARTIALLY   | NO        |
 | **Big Hand**      | YES         | YES       |
 | **Block**         | YES         | YES       |
-| Blood Lust        | NO          | NO        |
+| **Blood Lust**    | YES         | YES       |
 | Bombardier        | NO          | NO        |
 | **Bone-head**     | YES         | YES       |
 | **Break Tackle**  | YES         | YES       |
@@ -99,7 +99,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Guard             | YES         | NO        |
 | Hail Mary Pass    | YES         | NO        |
 | Horns             | YES         | NO        |
-| Hypnotic Gaze     | NO          | NO        |
+| **Hypnotic Gaze** | YES         | YES       |
 | Juggernaut        | YES         | NO        |
 | Jump Up           | YES         | NO        |
 | Kick              | NO          | NO        |
