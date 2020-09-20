@@ -2079,7 +2079,7 @@ class Game:
         :return: return positions of adjecent players that can be bitten
                  because of a failed blood lust roll. 
         """
-        return [p.position for p in self.get_adjacent_teammates(player) if p.role == "Thrall"]
+        return [p.position for p in self.get_adjacent_teammates(player) if not p.has_skill(Skill.BLOOD_LUST) ]
 
     def get_hypno_targets(self, player): 
         """
