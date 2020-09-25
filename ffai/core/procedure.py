@@ -955,10 +955,19 @@ class Ejection(Procedure):
                     self.awaiting_bribe = self.player.team.state.bribes > 0
                     if self.awaiting_bribe:
                         return False
-        # Eject player
-        self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
-        self.game.pitch_to_dungeon(self.player)
+
+        # Turnover
         Turnover(self.game)
+
+        # Drop ball
+        ball = self.game.get_ball_at(self.player.position)
+        if ball is not None:
+            Bounce(self.game, ball)
+
+        # Eject player
+        self.game.pitch_to_dungeon(self.player)
+        self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
+
         return True
 
     def available_actions(self):
