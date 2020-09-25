@@ -640,7 +640,7 @@ class Bounce(Procedure):
 
 class Casualty(Procedure):
 
-    def __init__(self, game, player, roll, inflictor=None, decay=False):
+    def __init__(self, game, player, roll, inflictor=None, decay=False, blood_lust=False):
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
@@ -651,6 +651,7 @@ class Casualty(Procedure):
         self.effect = None
         self.decay = decay
         self.regeneration = None
+        self.blood_lust = blood_lust 
 
     def step(self, action):
 
@@ -663,7 +664,12 @@ class Casualty(Procedure):
 
         if self.roll is None:
             self.roll = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
-            result = self.roll.get_sum()
+            
+            if self.blood_lust: 
+                result = 38
+            else: 
+                result = self.roll.get_sum()
+            
             n = min(61, max(38, result))
             self.casualty = CasualtyType(n)
             self.effect = Rules.casualty_effect[self.casualty]
@@ -1069,7 +1075,7 @@ class Half(Procedure):
 
 class Injury(Procedure):
 
-    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False, in_crowd=False):
+    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False, in_crowd=False, blood_lust=False):   
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
@@ -1079,6 +1085,7 @@ class Injury(Procedure):
         self.dirty_player_used = dirty_player_used
         self.ejected = False
         self.in_crowd = in_crowd
+        self.blood_lust = blood_lust 
 
     def step(self, action):
 
@@ -1109,7 +1116,7 @@ class Injury(Procedure):
         if roll.get_result() >= 10:
             roll.modifiers = stunty + mighty_blow + dirty_player
             self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[roll]))
-            Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY))
+            Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY), blood_lust=self.blood_lust)
             return True
 
         # KOD
@@ -1557,7 +1564,7 @@ class KickoffTable(Procedure):
 class KnockDown(Procedure):
 
     def __init__(self, game, player, armor_roll=True, injury_roll=True, modifiers=0, inflictor=None,
-                 in_crowd=False, modifiers_opp=0, turnover=False):
+                 in_crowd=False, modifiers_opp=0, turnover=False, blood_lust=False):
         super().__init__(game)
         self.player = player
         self.armor_roll = armor_roll
@@ -1567,6 +1574,7 @@ class KnockDown(Procedure):
         self.inflictor = inflictor
         self.in_crowd = in_crowd
         self.turnover = turnover
+        self.blood_lust = blood_lust 
 
     def step(self, action):
 
@@ -1591,7 +1599,7 @@ class KnockDown(Procedure):
         # If armor roll should be made. Injury is also nested in armor.
         if self.injury_roll and not self.armor_roll:
             Injury(self.game, self.player, inflictor=self.inflictor if not self.in_crowd else None,
-                   in_crowd=self.in_crowd)
+                   in_crowd=self.in_crowd, blood_lust=self.blood_lust)
         elif self.armor_roll:
             Armor(self.game, self.player, modifiers=self.modifiers, inflictor=self.inflictor)
 
@@ -2044,8 +2052,17 @@ class Handoff(Procedure):
         self.player = player
         self.pos_to = pos_to
         self.catcher = catcher
-
+        self.eat_thrall = None 
+        
+        
     def step(self, action):
+        if self.player.state.blood_lust and self.eat_thrall is None : 
+            self.eat_thrall = EatThrall(self.game, self.player)
+            return False 
+        
+        if self.eat_thrall is not None and self.eat_thrall.failed: 
+            return True 
+        
         self.ball.move_to(self.pos_to)
         TurnoverIfPossessionLost(self.game, self.ball)
         self.ball.move_to(self.catcher.position)
@@ -2068,6 +2085,7 @@ class PassAction(Procedure):
         self.interception_tried = False
         self.dump_off = dump_off
         self.catcher = None
+        self.eat_thrall = None 
 
     def start(self):
         if self.dump_off:
@@ -2075,7 +2093,14 @@ class PassAction(Procedure):
         self.catcher = self.game.get_catcher(self.position)
 
     def step(self, action):
-
+        if self.passer.state.blood_lust and self.eat_thrall is None : 
+            self.eat_thrall = EatThrall(self.game, self.passer)
+            return False 
+        
+        if self.eat_thrall is not None and self.eat_thrall.failed: 
+            return True 
+        
+        
         # Otherwise roll if player hasn't rolled
         if self.roll is None:
 
@@ -2268,11 +2293,17 @@ class EndPlayerTurn(Procedure):
         self.player = player
 
     def step(self, action):
+        
+        if self.player.state.blood_lust: 
+            EatThrall(self.game, self.player)
+            return False
+        
         self.player.state.used = True
         self.player.state.moves = 0
         self.game.report(Outcome(OutcomeType.END_PLAYER_TURN, player=self.player))
         self.game.state.active_player = None
         self.player.state.squares_moved.clear()
+        
         return True
 
 
@@ -3243,8 +3274,23 @@ class Touchdown(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-
+        self.handle_bloodlust = False 
+        self.eat_thrall = None 
+        
+    def start(self): 
+        self.handle_bloodlust = self.player == self.game.get_active_player() and self.player.state.blood_lust 
+        
+        
     def step(self, action):
+        if self.handle_bloodlust: 
+                
+            if self.eat_thrall is None: 
+                self.eat_thrall = EatThrall(self.game, self.player)
+                return None 
+            
+            if self.eat_thrall.failed: 
+                return True 
+        
         self.game.report(Outcome(OutcomeType.TOUCHDOWN, team=self.player.team, player=self.player))
         self.player.team.state.score += 1
         self.game.state.kicking_this_drive = self.player.team
@@ -3348,6 +3394,8 @@ class Turn(Procedure):
             WildAnimal(self.game, player, player_action)
         if player.has_skill(Skill.TAKE_ROOT) and not player.state.taken_root:
             TakeRoot(self.game, player, player_action)
+        if player.has_skill(Skill.BLOOD_LUST):
+            BloodLust(self.game, player, player_action) 
 
     def step(self, action):
         # Update state
@@ -3651,6 +3699,24 @@ class TakeRoot(Negatrait):
     def remove_fail_state(self):
         pass  # taken_root is only reset upon end of drive
 
+class BloodLust(Negatrait):
+    def __init__(self, game, player, player_action):
+        super().__init__(game, player, player_action, ends_turn=False)
+        self.roll_type = RollType.BLOOD_LUST_ROLL
+        self.skill = Skill.BLOOD_LUST
+        self.success_outcome = OutcomeType.SUCCESSFUL_BLOOD_LUST
+        self.fail_outcome = OutcomeType.FAILED_BLOOD_LUST
+        
+    def get_target(self):
+        return 2
+
+    def apply_fail_state(self):
+        #set_trace() 
+        self.player.state.blood_lust = True
+
+    def remove_fail_state(self):
+        pass  # blood lust is removed by EatThrall-procedure 
+        
 
 class Reroll(Procedure):
 
@@ -3908,6 +3974,48 @@ class Loner(Procedure):
             self.result = False
             return True
 
+class EatThrall(Procedure): 
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player 
+        self.victim = None 
+        self.failed = None 
+        
+    def start(self): 
+        self.victim_pos = self.game.get_adjacent_blood_lust_victims(self.player)
+        
+    def step(self, action): 
+        if len(self.victim_pos)==0: 
+            Turnover(self.game)
+            
+            ball = self.game.get_ball_at(self.player.position)
+            if ball is not None: 
+                Bounce(self.game, ball)
+            
+            self.game.pitch_to_reserves(self.player)
+            self.game.report(Outcome(OutcomeType.EJECTED_BY_BLOOD_LUST, player=self.player))
+            
+            self.failed = True 
+            
+        else: 
+            self.victim = self.game.get_player_at(action.position)  
+            #set_trace() 
+            self.game.report(Outcome(OutcomeType.EATEN_DURING_BLOOD_LUST, player=self.victim))
+            KnockDown(self.game, self.victim, armor_roll=False, injury_roll=True)
+            self.failed = False 
+            
+        return True 
+        
+    def end(self): 
+        self.player.state.blood_lust = False 
+        
+        
+    def available_actions(self): 
+        if len(self.victim_pos)>0: 
+            return [ActionChoice(ActionType.SELECT_PLAYER, positions=self.victim_pos, team=self.player.team)] 
+        else: 
+            return [] 
+        
 class HypnoticGaze(Procedure): 
     def __init__(self, game, player, target_player): 
         super().__init__(game)
@@ -3945,4 +4053,3 @@ class HypnoticGaze(Procedure):
         
         return True 
 
-        
