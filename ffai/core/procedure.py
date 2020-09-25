@@ -957,8 +957,15 @@ class Ejection(Procedure):
                         return False
         # Eject player
         self.game.report(Outcome(OutcomeType.PLAYER_EJECTED, player=self.player))
-        self.game.pitch_to_dungeon(self.player)
         Turnover(self.game)
+        
+        ball = self.game.get_ball_at(self.player.position)
+        if ball is not None: 
+            self.game.pitch_to_dungeon(self.player)
+            Bounce(self.game, ball)
+        else: 
+            self.game.pitch_to_dungeon(self.player)
+        
         return True
 
     def available_actions(self):

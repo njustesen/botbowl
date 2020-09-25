@@ -420,3 +420,39 @@ def test_foul_success_stunned_ejected_armor_dont_bribe():
     assert game.has_report_of_type(OutcomeType.PLAYER_EJECTED)
     assert fouler not in game.get_players_on_pitch(team)
     assert fouler.state.ejected
+
+    
+def test_foul_fail_ejected_ball_carrier():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    other_team = game.get_opp_team(team)
+    game.clear_board()
+    fouler = team.players[2]
+    defender = other_team.players[2]
+    game.put(fouler, Square(5, 5))
+    game.get_ball().move_to( Square(5, 5) ) 
+    game.get_ball().is_carried = True 
+    
+    game.put(defender, Square(6, 5))
+    defender.state.up = False
+
+    # Armor
+    target = defender.get_av() + 1
+    D6.fix_result(6)
+    D6.fix_result(6)
+    D6.fix_result(5)
+    D6.fix_result(6)
+    
+
+    game.step(Action(ActionType.START_FOUL, player=fouler))
+    assert game.get_ball().position == Square(5, 5)
+    assert game.has_report_of_type(OutcomeType.FOUL_ACTION_STARTED)
+    game.step(Action(ActionType.FOUL, position=defender.position))
+    assert game.has_report_of_type(OutcomeType.FOUL)
+    assert not game.has_report_of_type(OutcomeType.ARMOR_NOT_BROKEN)
+    assert game.has_report_of_type(OutcomeType.PLAYER_EJECTED)
+    assert fouler not in game.get_players_on_pitch(team)
+    assert fouler.state.ejected    
+    
+    assert game.has_report_of_type(OutcomeType.BALL_BOUNCED)
+    assert game.get_ball().position !=   Square(5, 5)
