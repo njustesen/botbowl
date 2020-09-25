@@ -163,6 +163,7 @@ class PlayerState:
         self.injuries_gained = []
         self.wild_animal = False
         self.taken_root = False
+        self.blood_lust = False 
         self.used_skills = set()
         self.squares_moved = []
 
@@ -182,7 +183,8 @@ class PlayerState:
             'injuries_gained': [injury.name for injury in self.injuries_gained],
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
-            'taken_root': self.taken_root
+            'taken_root': self.taken_root, 
+            'blood_lust': self.blood_lust
         }
 
     def reset(self):
@@ -195,6 +197,7 @@ class PlayerState:
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
+        self.blood_lust = False 
         self.used_skills.clear()
         self.squares_moved.clear()
 
@@ -1012,7 +1015,7 @@ class Outcome:
             'outcome_type': self.outcome_type.name,
             'pos': self.position.to_json() if self.position is not None else None,
             'player_id': self.player.player_id if self.player is not None else None,
-            'opp_player': self.opp_player.player_id if self.opp_player is not None else None,
+            'opp_player_id': self.opp_player.player_id if self.opp_player is not None else None,
             'rolls': rolls,
             'team_id': self.team.team_id if self.team is not None else None,
             'n': self.n if self.n is not None else None,

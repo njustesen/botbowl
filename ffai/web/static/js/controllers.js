@@ -262,6 +262,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     line = line.replace("<player>", "<span class='label label-" + (team.team_id === $scope.game.state.home_team.team_id ? ("primary'>" + player.nr + ". " + player.name) : ("danger'>" + player.nr + ". " + player.name)) + "</span> " );
                     line = line.replace("<players>", "<span class='label label-" + (team.team_id === $scope.game.state.home_team.team_id ? ("primary'>" + player.nr + ". " + player.name) : ("danger'>" + player.nr + ". " + player.name + "'s")) + "</span> " );
                 }
+                if (report.opp_player_id != null){
+                    let player = $scope.getPlayer(report.opp_player_id);
+                    let team = $scope.teamOfPlayer(player);
+                    line = line.replace("<opp_player>", "<span class='label label-" + (team.team_id === $scope.game.state.home_team.team_id ? ("primary'>" + player.nr + ". " + player.name) : ("danger'>" + player.nr + ". " + player.name)) + "</span> " );
+                }
                 return line;
             }
             return null;
