@@ -2052,11 +2052,10 @@ class Handoff(Procedure):
         self.player = player
         self.pos_to = pos_to
         self.catcher = catcher
-        self.eat_thrall = None 
-        
+        self.eat_thrall = None
         
     def step(self, action):
-        if self.player.state.blood_lust and self.eat_thrall is None : 
+        if self.player.state.blood_lust and self.eat_thrall is None:
             self.eat_thrall = EatThrall(self.game, self.player)
             return False 
         
@@ -3279,8 +3278,7 @@ class Touchdown(Procedure):
         
     def start(self): 
         self.handle_bloodlust = self.player == self.game.get_active_player() and self.player.state.blood_lust 
-        
-        
+
     def step(self, action):
         if self.handle_bloodlust: 
                 
@@ -3699,6 +3697,29 @@ class TakeRoot(Negatrait):
     def remove_fail_state(self):
         pass  # taken_root is only reset upon end of drive
 
+
+class BloodLustBlockOrMove(Procedure):
+
+    def __init__(self, game, player, player_action):
+        super().__init__(game)
+        self.player = player
+        self.player_action = player_action
+
+    def step(self, action):
+        if action.action_type == ActionType.START_BLOCK:
+            return True
+        # Cancel block action
+        self.game.state.stack.remove(self.player_action)
+        # Start move action
+        PlayerAction(self.game, self.player, ActionType.START_MOVE, turn=self.game.get_current_turn_proc())
+        self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
+        return True
+
+    def available_actions(self):
+        return [ActionChoice(ActionType.START_BLOCK, self.player.team, players=[self.player]),
+                ActionChoice(ActionType.START_MOVE, self.player.team, players=[self.player])]
+
+
 class BloodLust(Negatrait):
     def __init__(self, game, player, player_action):
         super().__init__(game, player, player_action, ends_turn=False)
@@ -3711,8 +3732,10 @@ class BloodLust(Negatrait):
         return 2
 
     def apply_fail_state(self):
-        #set_trace() 
+        #set_trace()
         self.player.state.blood_lust = True
+        if self.player_action.player_action_type == PlayerActionType.BLOCK:
+            BloodLustBlockOrMove(self.game, self.player, self.player_action)
 
     def remove_fail_state(self):
         pass  # blood lust is removed by EatThrall-procedure 
@@ -3974,6 +3997,7 @@ class Loner(Procedure):
             self.result = False
             return True
 
+
 class EatThrall(Procedure): 
     def __init__(self, game, player):
         super().__init__(game)
@@ -4000,22 +4024,22 @@ class EatThrall(Procedure):
         else: 
             self.victim = self.game.get_player_at(action.position)  
             #set_trace() 
-            self.game.report(Outcome(OutcomeType.EATEN_DURING_BLOOD_LUST, player=self.victim))
+            self.game.report(Outcome(OutcomeType.EATEN_DURING_BLOOD_LUST, player=self.victim, opp_player=self.player))
             KnockDown(self.game, self.victim, armor_roll=False, injury_roll=True)
             self.failed = False 
             
         return True 
         
     def end(self): 
-        self.player.state.blood_lust = False 
-        
+        self.player.state.blood_lust = False
         
     def available_actions(self): 
         if len(self.victim_pos)>0: 
             return [ActionChoice(ActionType.SELECT_PLAYER, positions=self.victim_pos, team=self.player.team)] 
         else: 
             return [] 
-        
+
+
 class HypnoticGaze(Procedure): 
     def __init__(self, game, player, target_player): 
         super().__init__(game)

@@ -1015,7 +1015,7 @@ class Outcome:
             'outcome_type': self.outcome_type.name,
             'pos': self.position.to_json() if self.position is not None else None,
             'player_id': self.player.player_id if self.player is not None else None,
-            'opp_player': self.opp_player.player_id if self.opp_player is not None else None,
+            'opp_player_id': self.opp_player.player_id if self.opp_player is not None else None,
             'rolls': rolls,
             'team_id': self.team.team_id if self.team is not None else None,
             'n': self.n if self.n is not None else None,

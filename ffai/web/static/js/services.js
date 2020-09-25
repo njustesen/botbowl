@@ -242,8 +242,11 @@ appServices.factory('GameLogService', function() {
             "SUCCESSFUL_BRIBE": "<team> used a bribe <b>successfully.",
             "FAILED_BRIBE": "<team> used a bribe <b>unsuccessfully.",
             "SUCCESSFUL_HYPNOTIC_GAZE": "<player> successfully <b>hypnotized</b> <opp_player>", 
-            "FAILED_HYPNOTIC_GAZE": "<player> failed to <b>hypnotize</b> <opp_player>"
-          
+            "FAILED_HYPNOTIC_GAZE": "<player> failed to <b>hypnotize</b> <opp_player>",
+            "FAILED_BLOOD_LUST": "<player> has <b>Blood Lust</b>.",
+            "SUCCESSFUL_BLOOD_LUST": "<player> does not have Blood Lust.",
+            "EJECTED_BY_BLOOD_LUST": "<player> <b>leaves the game</b> to feed on a spectator.",
+            "EATEN_DURING_BLOOD_LUST": "<player> was bit by <opp_player>."
         },
         log_timouts: {
             'GAME_STARTED': 100,
@@ -391,7 +394,8 @@ appServices.factory('GameLogService', function() {
             "FAILED_STAND_UP": 1000,
             "FAILED_JUMP_UP": 1000, 
             "SUCCESSFUL_HYPNOTIC_GAZE": 100, 
-            "FAILED_HYPNOTIC_GAZE": 1000  
+            "FAILED_HYPNOTIC_GAZE": 1000,
+            "FAILED_BLOOD_LUST": 100
         }
 
 
