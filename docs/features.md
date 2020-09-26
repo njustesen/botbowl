@@ -39,7 +39,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Dark Elf**      |                         |                                    | YES           |
 | Dwarf Slayer      |                         |                                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, No Hands, Always Hungry, Throw Team-mate, Swoop, Fan Favorite | SOME?      |
+| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, Always Hungry, Throw Team-mate, Swoop, Fan Favorite | SOME?      |
 | Halfling          | Halfling, Treeman       | Right stuff, Throw Team-Mate, Timmm-ber! | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
