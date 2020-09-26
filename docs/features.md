@@ -15,7 +15,7 @@ a test for a skill.
 | **Online play**    | YES         | N/A         |
 | **OpenAI Gym**     | YES         | YES         |
 | **Headless**       | YES         | YES         |
-| **AI Competition** | PARTIALLY   | NO          |
+| **AI Competition** | Yes         | NO          |
 
 ## Integrations
 
