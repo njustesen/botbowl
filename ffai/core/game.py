@@ -1003,7 +1003,7 @@ class Game:
                 modifiers -= 1
         return modifiers
 
-    def get_pass_modifiers(self, passer, pass_distance):
+    def get_pass_modifiers(self, passer, pass_distance, throw_team_mate=False):
         """
         :param passer:
         :param pass_distance: the PassDistance to the target.
@@ -1035,6 +1035,9 @@ class Game:
             if opp_player.has_skill(Skill.DISTURBING_PRESENCE) and opp_player.position and opp_player.position.distance(passer.position) <= 3:
                 modifiers -= 1
 
+        if throw_team_mate: 
+            modifiers -= 1 
+            
         return modifiers
 
     def get_leap_modifiers(self, player):
@@ -1861,15 +1864,15 @@ class Game:
                     n_assists_for += 1
         return (n_assists_for, n_assist_against)
 
-    def get_pass_distances(self, passer, dump_off=False):
+    def get_pass_distances(self, passer, dump_off=False, throw_team_mate=False):
         """
         :param passer:
         :param weather:
         :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to.
         """
-        return self.get_pass_distances_at(passer, passer.position, dump_off=dump_off)
+        return self.get_pass_distances_at(passer, passer.position, dump_off=dump_off, throw_team_mate=throw_team_mate)
 
-    def get_pass_distances_at(self, passer, position, dump_off=False):
+    def get_pass_distances_at(self, passer, position, dump_off=False, throw_team_mate=False):
         """
         :param passer:
         :param weather:
@@ -1879,6 +1882,9 @@ class Game:
         distances = []
         if dump_off:
             distances_allowed = [PassDistance.QUICK_PASS]
+        elif throw_team_mate: 
+            distances_allowed = [PassDistance.QUICK_PASS,
+                                 PassDistance.SHORT_PASS]
         else:
             distances_allowed = [PassDistance.QUICK_PASS,
                                  PassDistance.SHORT_PASS,
@@ -2100,4 +2106,12 @@ class Game:
         return 1 - self.num_tackle_zones_in(player) 
         
 
+    def get_throwable_teammates(self, player): 
+        """
+        :param player: player on the board with throw teammate skill. 
+        :return:  adjacent positions with teammates with skill Right stuff 
+        """
+        if not player.has_skill(Skill.THROW_TEAM_MATE): return  []
+        
+        return [p.position for p in self.get_adjacent_teammates(player, down=False, skill=Skill.RIGHT_STUFF)]
         
