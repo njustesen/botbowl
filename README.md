@@ -45,12 +45,12 @@ Pre training with lectures used six of eight processes exclusively for lecture t
 
 The second phase of training used two processes for lectures and six for normal games against the AlmostRandomBot. I ended the phase when the policy seemed to converge at three touchdowns per game and ~100% win rate . See Figure 1. 
 
-![FFAI](figure1.png?raw=true "")
+
 Figure 1 - results from the second phase of training shows a rapid increase in performance against the AlmostRandomBot. 
 
 This final training phase was self play. Again two processes were used for lectures and six for normal self play games. The self play agent was switched once at approximately 1.5 million step.. I decided to end this phase at 3 million training steps when I didn’t see significant progress. See Figure 2. 
 
-![FFAI](figure2.png?raw=true "")
+
 Figure 2 - Self play results from the final training phase. Very noisy and any progress is difficult to see. 
 
 ## Discussion on training
@@ -65,11 +65,10 @@ Gotebot did not show any sign of understanding risk management or ability to ant
 
 To address this I propose the following solution. At each action that can result in multiple outcomes the reward takes the probabilities of the different outcomes into account: 
 
-![FFAI](equation1.png?raw=true "")
+R = p(outcome #1) Routcome #1 + p(outcome #2) Routcome #2+ ... 
 
 One of the outcomes is chosen for continued play as usual. The reward of the other outcome(s) is calculated in a dream. Since the reward of an action is the accumulated reward of all future states the dream needs to take several steps. 
 
-![FFAI](figure3.png?raw=true "")
 - Figure 3 - 
 
 To decrease the computational load of this strategy, the actions that are branched can be limited to those that cause turnovers. There are certainly more trade offs to experiment with to optimize training performance. 
