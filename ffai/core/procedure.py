@@ -2085,6 +2085,7 @@ class PassAction(Procedure):
         self.dump_off = dump_off
         self.catcher = None
         self.eat_thrall = None 
+        self.safe_throw_used = False 
 
     def start(self):
         if self.dump_off:
@@ -2142,7 +2143,8 @@ class PassAction(Procedure):
             elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
                 # Inaccurate pass - Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
-                self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
+                self.safe_throw_used = True 
+                
             else:
                 # Inaccurate pass
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
@@ -2158,6 +2160,7 @@ class PassAction(Procedure):
             self.reroll = None
             self.roll = None
             self.fumble = False
+            self.safe_throw_used = False 
             return False
 
         if self.fumble:
@@ -2169,9 +2172,13 @@ class PassAction(Procedure):
         if not self.dump_off:
             TurnoverIfPossessionLost(self.game, self.ball)
 
+        if self.safe_throw_used: 
+            return True 
+            
         self.ball.move_to(self.position)
         Scatter(self.game, self.ball, is_pass=True)
         return True
+
 
 
 class Pickup(Procedure):

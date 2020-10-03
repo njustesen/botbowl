@@ -218,3 +218,33 @@ def test_pass_roll_inaccurate(pass_skill):
         assert not game.has_report_of_type(OutcomeType.ACCURATE_PASS)
         assert not game.has_report_of_type(OutcomeType.FUMBLE)
         assert not game.has_report_of_type(OutcomeType.SKILL_USED)
+        
+def test_pass_safe_throw(): 
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    game.state.weather = WeatherType.NICE
+    game.state.teams[0].state.rerolls = 0
+    
+    passer = team.players[0]
+    passer.role.skills = [Skill.SAFE_THROW]
+    passer.role.ag = 3
+    game.put(passer, Square(2, 2))
+    game.get_ball().move_to(passer.position)
+    game.get_ball().is_carried = True
+    
+    catcher = team.players[1]
+    catcher_position = Square(passer.position.x + 12, passer.position.y + 0)
+    game.put(catcher, catcher_position)
+    
+    game.set_available_actions()
+    game.state.reports.clear() 
+
+    D6.fix_result(2)  # Fumble pass
+    
+    game.step(Action(ActionType.START_PASS, player=passer))
+    game.step(Action(ActionType.PASS, position=catcher_position ))
+    
+    assert game.has_report_of_type(OutcomeType.SKILL_USED)
+    assert not game.has_report_of_type(OutcomeType.FUMBLE)
+    assert game.get_ball_carrier() == passer 
