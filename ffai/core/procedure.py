@@ -2505,6 +2505,15 @@ class PlayerAction(Procedure):
             target_opponent = self.game.get_player_at(action.position)
             HypnoticGaze(self.game, self.player, target_opponent)
             return True 
+        
+        # Throw Team-mate 
+        elif action.action_type == ActionType.SELECT_PLAYER:
+            EndPlayerTurn(self.game, self.player)
+            self.turn.pass_available = False
+            team_mate = self.game.get_player_at(action.position)
+            ThrowTeamMate(self.game, self.player, team_mate)
+            return True 
+            
             
     def available_actions(self):
 
@@ -2673,6 +2682,15 @@ class PlayerAction(Procedure):
             if len(positions) > 0:
                 actions.append(ActionChoice(ActionType.PASS, team=self.player.team,
                                             positions=positions, agi_rolls=agi_rolls))
+        
+        # Throw teammate action
+        if self.player_action_type == PlayerActionType.PASS and self.player.has_skill(Skill.THROW_TEAM_MATE) \ 
+                and not self.game.has_ball(self.player):
+            throwable_teammate_pos = self.game.get_throwable_teammates(self.player)
+            
+            if len(throwable_teammate_pos): 
+                actions.append(ActionChoice(ActionType.SELECT_PLAYER, team=self.player.team, 
+                                            skill=Skill.THROW_TEAM_MATE, positions=throwable_teammate_pos))
         
         # Hypnotic gaze action 
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and  self.player.state.up and \
@@ -4077,3 +4095,152 @@ class HypnoticGaze(Procedure):
         
         return True 
 
+class ThrowTeamMate(Procedure): 
+    def __init__(self, game, passer, team_mate, position, pass_distance): 
+        super().__init__(game)
+        self.passer = passer 
+        self.team_mate = team_mate
+        self.position = position
+        self.pass_distance = pass_distance 
+        
+        self.always_hungry = None 
+        self.roll = None 
+        self.reroll = None 
+        
+    def step(self, action): 
+        if self.passer.has_skill(Skill.ALWAYS_HUNGRY): 
+            if self.self.always_hungry is None: 
+                self.always_hungry = AlwaysHungry(self.passer, self.team_mate)
+                return False 
+            
+            if self.self.always_hungry.failed: 
+                return True 
+        
+        if self.roll is None: 
+            
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            #self.roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, throw_team_mate=True )
+            result = self.roll.get_sum()
+            mod_result = result + self.roll.modifiers
+
+            if result == 1 or (mod_result <= 1 and not self.passer.has_skill(Skill.SAFE_THROW)):
+                # Fumble
+                self.fumble = True
+                self.game.report(Outcome(OutcomeType.TEAM_MATE_FUMBLED, player=self.passer, rolls=[self.roll]))
+            
+            elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
+                # Safe Throw
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
+                
+            else: 
+                # Success! 
+                self.game.report(Outcome(OutcomeType.TEAM_MATE_THROWN, player=self.passer, skill=Skill.SAFE_THROW))
+                
+                # Scatter TeamMate 
+                return True 
+                
+        
+            # Check if re-roll available
+            self.reroll = Reroll(self.game, self.passer, context=self)
+            return False
+            
+        # If re-roll used
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.reroll = None
+            self.roll = None
+            self.fumble = False
+            return False
+
+        if self.fumble:
+            
+            # RightStuffLanding 
+            RightStuffLanding(self.game, self.team_mate)
+            
+            return True
+
+        # Safe throw got us here. Do nothing. 
+        pass 
+        return True
+        
+    def available_actions(self): 
+        # return all passable squares
+        positions, distances = self.game.get_pass_distances(self.player, throw_team_mate = True)
+        agi_rolls = []
+        cache = {}
+        for i in range(len(distances)):
+            distance = distances[i]
+            position = positions[i]
+            if distance not in cache:
+                modifiers = self.game.get_pass_modifiers(self.player, distance, throw_team_mate = True)
+                #target = Rules.agility_table[self.player.get_ag()]
+                target = 2  
+                cache[distance] = min(6, max(2, target - modifiers))
+            rolls = [cache[distance]]
+            agi_rolls.append(rolls)
+        
+        if len(positions) > 0:
+            return [ActionChoice(ActionType.PASS, team=self.player.team,
+                                        positions=positions, agi_rolls=agi_rolls)] 
+    
+class RightStuffLanding(Procedure): 
+    def __init__(self, game, player): 
+        super().__init__(game) 
+        self.player = player
+        self.roll = None 
+        self.reroll = None 
+    
+        self.has_ball = None 
+        self.player_state_used = None 
+        
+        self.knockdown_handled = False  
+
+    
+    def start(self): 
+        self.has_ball = self.game.has_ball(self.player)
+        self.player_state_used = self.player.state.used
+    
+    def step(self, action): 
+        if self.roll is None: 
+            
+            # Roll
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.modifiers = -self.game.num_tackle_zones_at(self.player, self.player.position)
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_SUCCESS, player=self.player, rolls = [self.roll])
+                return True 
+            else: 
+                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_FAILURE, player=self.player, rolls = [self.roll])
+            
+            self.reroll = Reroll(self.game, self.passer, context=self)
+        
+        # If re-roll used
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.roll = None 
+            self.reroll = None 
+            return False 
+        
+        #Handle Knock down and potential turnover  
+        if not self.knockdown_handled: 
+            self.knockdown_handled = True 
+            KnockDown(self.game, self.player)
+            return False 
+        
+        if self.has_ball: 
+            # The bounce is handled in KnockDown-proc 
+            Turnover(self.game) 
+            return True 
+        
+        if not self.player_state_used and not self.player.state.stunned and self.player.position is not None: 
+            # If no injury from the kncokdown and wasn't used before, player shall remain not used. 
+            # this logic is needed because KnockDown proc sets player state to used. 
+            self.player.state.used = False 
+        
+        return True 
