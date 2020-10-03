@@ -685,7 +685,7 @@ class Casualty(Procedure):
                         n=self.effect.name,
                         rolls=[self.roll]))
 
-            if self.player.team.state.apothecaries > 1:
+            if self.player.team.state.apothecaries > 0:
                 Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
                            casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
                 return True
