@@ -2514,7 +2514,6 @@ class PlayerAction(Procedure):
             ThrowTeamMate(self.game, self.player, team_mate)
             return True 
             
-            
     def available_actions(self):
 
         if self.player.state.used:
@@ -2684,8 +2683,8 @@ class PlayerAction(Procedure):
                                             positions=positions, agi_rolls=agi_rolls))
         
         # Throw teammate action
-        if self.player_action_type == PlayerActionType.PASS and self.player.has_skill(Skill.THROW_TEAM_MATE) \ 
-                and not self.game.has_ball(self.player):
+        if self.player_action_type == PlayerActionType.PASS and self.player.has_skill(Skill.THROW_TEAM_MATE) and \
+                not self.game.has_ball(self.player):
             throwable_teammate_pos = self.game.get_throwable_teammates(self.player)
             
             if len(throwable_teammate_pos): 
@@ -4096,12 +4095,11 @@ class HypnoticGaze(Procedure):
         return True 
 
 class ThrowTeamMate(Procedure): 
-    def __init__(self, game, passer, team_mate, position, pass_distance): 
+    def __init__(self, game, passer, team_mate): 
         super().__init__(game)
         self.passer = passer 
         self.team_mate = team_mate
-        self.position = position
-        self.pass_distance = pass_distance 
+        self.pass_distance = None
         
         self.always_hungry = None 
         self.roll = None 
@@ -4109,39 +4107,34 @@ class ThrowTeamMate(Procedure):
         
     def step(self, action): 
         if self.passer.has_skill(Skill.ALWAYS_HUNGRY): 
-            if self.self.always_hungry is None: 
+            if self.always_hungry is None: 
                 self.always_hungry = AlwaysHungry(self.passer, self.team_mate)
                 return False 
             
-            if self.self.always_hungry.failed: 
+            if self.always_hungry.failed: 
                 return True 
         
         if self.roll is None: 
-            
-            # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            #self.roll.target = Rules.agility_table[self.passer.get_ag()]
+            self.pass_distance = self.game.get_pass_distance(self.passer.position, action.position)
             self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, throw_team_mate=True )
             result = self.roll.get_sum()
             mod_result = result + self.roll.modifiers
-
+            
+            #Fumble 
             if result == 1 or (mod_result <= 1 and not self.passer.has_skill(Skill.SAFE_THROW)):
-                # Fumble
                 self.fumble = True
                 self.game.report(Outcome(OutcomeType.TEAM_MATE_FUMBLED, player=self.passer, rolls=[self.roll]))
             
+            # Safe Throw
             elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
-                # Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
-                
+            
             else: 
-                # Success! 
                 self.game.report(Outcome(OutcomeType.TEAM_MATE_THROWN, player=self.passer, skill=Skill.SAFE_THROW))
-                
-                # Scatter TeamMate 
+                ScatterTeamMate(self.game, self.team_mate, action.position)
                 return True 
-                
-        
+            
             # Check if re-roll available
             self.reroll = Reroll(self.game, self.passer, context=self)
             return False
@@ -4168,14 +4161,14 @@ class ThrowTeamMate(Procedure):
         
     def available_actions(self): 
         # return all passable squares
-        positions, distances = self.game.get_pass_distances(self.player, throw_team_mate = True)
+        positions, distances = self.game.get_pass_distances(self.passer, throw_team_mate = True)
         agi_rolls = []
         cache = {}
         for i in range(len(distances)):
             distance = distances[i]
             position = positions[i]
             if distance not in cache:
-                modifiers = self.game.get_pass_modifiers(self.player, distance, throw_team_mate = True)
+                modifiers = self.game.get_pass_modifiers(self.passer, distance, throw_team_mate = True)
                 #target = Rules.agility_table[self.player.get_ag()]
                 target = 2  
                 cache[distance] = min(6, max(2, target - modifiers))
@@ -4183,64 +4176,156 @@ class ThrowTeamMate(Procedure):
             agi_rolls.append(rolls)
         
         if len(positions) > 0:
-            return [ActionChoice(ActionType.PASS, team=self.player.team,
+            return [ActionChoice(ActionType.PASS, team=self.passer.team,
                                         positions=positions, agi_rolls=agi_rolls)] 
     
+class ScatterTeamMate(Procedure): 
+    def __init__(self, game, player, position): 
+        super().__init__(game)
+        self.player = player
+        self.position = position 
+        self.scatters_left = 3 
+        self.nbr_of_hit_players = 0 
+        
+    def step(self, action): 
+        
+        n = 3 
+        rolls = [] 
+        while n>0: 
+            n-=1
+
+            # Roll
+            roll_scatter = DiceRoll([D8(self.game.rnd)], roll_type=RollType.SCATTER_ROLL) 
+            rolls.append(roll_scatter)
+            
+            x, y = (0,0)
+            if roll_scatter.get_sum() in [1, 4, 6]:
+                x = -1
+            if roll_scatter.get_sum() in [3, 5, 8]:
+                x = 1
+            if roll_scatter.get_sum() in [1, 2, 3]:
+                y = -1
+            if roll_scatter.get_sum() in [6, 7, 8]:
+                y = 1
+            
+            # Move position 
+            self.position.x += x 
+            self.position.y += y 
+            
+            # In the crowd? 
+            if self.game.is_out_of_bounds(self.position):
+                
+                self.game.move(self.player, self.position)
+                
+                #Handle ball 
+                if self.game.has_ball(self.player): 
+                    ThrowIn(self.game, self.ball, Square(self.position.x-x, self.position.y-y))
+                    self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
+                                         position=self.position))
+                
+                KnockDown(self.game, self.player, in_crowd=True, armor_roll=False)
+                
+                self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=rolls)) 
+                self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_OUT_OF_BOUNDS))
+                
+                return True
+
+            # Passes are scattered three times
+            if n>0:
+                continue
+
+            # On player? 
+            player_occupying_square = self.game.get_catcher(self.position)
+            if player_occupying_square is not None:
+                #More scatter 
+                n+=1 
+                
+                self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_HIT_PLAYER, position=self.position,
+                                         player=player_occupying_square, rolls=[roll_scatter]))
+                
+                if self.nbr_of_hit_players == 0:
+                    if self.game.state.current_team == player_occupying_square.team: 
+                        Turnover(self.game)
+                    KnockDown(self.game, player_occupying_square)
+                    
+                    
+                self.nbr_of_hit_players += 1
+        
+        
+        self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=rolls)) 
+        self.game.move(self.player, self.position) 
+        
+        RightStuffLanding(self.game, self.player, roll_for_landing = self.nbr_of_hit_players==0 )
+        
+        return True
+
+    
 class RightStuffLanding(Procedure): 
-    def __init__(self, game, player): 
+
+    def __init__(self, game, player, roll_for_landing=True): 
         super().__init__(game) 
         self.player = player
         self.roll = None 
         self.reroll = None 
-    
+        self.roll_for_landing = roll_for_landing 
         self.has_ball = None 
         self.player_state_used = None 
-        
         self.knockdown_handled = False  
-
     
     def start(self): 
         self.has_ball = self.game.has_ball(self.player)
-        self.player_state_used = self.player.state.used
+        self.player_state_used = (self.player.state.used == True)
     
     def step(self, action): 
-        if self.roll is None: 
+        if self.roll_for_landing and self.roll is None: 
             
-            # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = -self.game.num_tackle_zones_at(self.player, self.player.position)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             
             if self.roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_SUCCESS, player=self.player, rolls = [self.roll])
+                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_SUCCESS, player=self.player, rolls = [self.roll]))
                 return True 
             else: 
-                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_FAILURE, player=self.player, rolls = [self.roll])
+                self.game.report(Outcome(OutcomeType.RIGHT_STUFF_LANDING_FAILURE, player=self.player, rolls = [self.roll]))
             
-            self.reroll = Reroll(self.game, self.passer, context=self)
+            self.reroll = Reroll(self.game, self.player, context=self)
         
-        # If re-roll used
-        assert self.reroll is not None
+        
+        if self.roll_for_landing: 
+            
+            # If re-roll used
+            assert self.reroll is not None
 
-        if self.reroll.use_reroll:
-            self.roll = None 
-            self.reroll = None 
-            return False 
-        
-        #Handle Knock down and potential turnover  
+            if self.reroll.use_reroll:
+                self.roll = None 
+                self.reroll = None 
+                return False 
+            
         if not self.knockdown_handled: 
             self.knockdown_handled = True 
             KnockDown(self.game, self.player)
             return False 
         
+        # If no injury from the knockdown and wasn't used before, player shall remain not used. 
+        # this logic is needed because KnockDown proc sets player state to used. 
+        if not self.player_state_used and not self.player.state.stunned and self.player.position is not None: 
+            self.player.state.used = False 
+        
         if self.has_ball: 
             # The bounce is handled in KnockDown-proc 
             Turnover(self.game) 
-            return True 
         
-        if not self.player_state_used and not self.player.state.stunned and self.player.position is not None: 
-            # If no injury from the kncokdown and wasn't used before, player shall remain not used. 
-            # this logic is needed because KnockDown proc sets player state to used. 
-            self.player.state.used = False 
+        return True 
+
+class AlwaysHungry(Procedure):  # NOT IMPLEMENTED YET!! 
+    def __init__(self, player, team_mate): 
+        self.player = player 
+        self.team_mate = team_mate 
+        self.eat_roll = None 
+        self.escape_roll = None 
+        self.reroll = None 
+        self.failed = False 
         
+    def step(self, action): 
         return True 
