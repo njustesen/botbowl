@@ -4186,17 +4186,22 @@ class ScatterTeamMate(Procedure):
         self.position = position 
         self.scatters_left = 3 
         self.nbr_of_hit_players = 0 
+        self.turnover = False 
+        self.landing_handled = False  
+            
+        
+    def start(self):
+        self.scatters_left = 3 
+        self.rolls = []
         
     def step(self, action): 
         
-        n = 3 
-        rolls = [] 
-        while n>0: 
-            n-=1
+        while self.scatters_left>0: 
+            self.scatters_left-=1
 
             # Roll
             roll_scatter = DiceRoll([D8(self.game.rnd)], roll_type=RollType.SCATTER_ROLL) 
-            rolls.append(roll_scatter)
+            self.rolls.append(roll_scatter)
             
             x, y = (0,0)
             if roll_scatter.get_sum() in [1, 4, 6]:
@@ -4225,37 +4230,45 @@ class ScatterTeamMate(Procedure):
                 
                 KnockDown(self.game, self.player, in_crowd=True, armor_roll=False)
                 
-                self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=rolls)) 
+                self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=self.rolls)) 
                 self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_OUT_OF_BOUNDS))
                 
                 return True
 
             # Passes are scattered three times
-            if n>0:
+            if self.scatters_left>0:
                 continue
 
             # On player? 
-            player_occupying_square = self.game.get_catcher(self.position)
+            player_occupying_square = self.game.get_player_at(self.position)
             if player_occupying_square is not None:
                 #More scatter 
-                n+=1 
+                self.scatters_left+=1 
                 
                 self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_HIT_PLAYER, position=self.position,
-                                         player=player_occupying_square, rolls=[roll_scatter]))
+                                         player=player_occupying_square))
                 
                 if self.nbr_of_hit_players == 0:
                     if self.game.state.current_team == player_occupying_square.team: 
-                        Turnover(self.game)
+                        self.turnover = True 
+                        
+                    self.nbr_of_hit_players += 1
                     KnockDown(self.game, player_occupying_square)
-                    
+                    return False 
                     
                 self.nbr_of_hit_players += 1
+                
         
+        if not self.landing_handled: 
+            self.landing_handled = True 
+            
+            self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=self.rolls)) 
+            self.game.move(self.player, self.position) 
+            RightStuffLanding(self.game, self.player, roll_for_landing = self.nbr_of_hit_players==0 )
+            return False 
         
-        self.game.report(Outcome(OutcomeType.THROWN_TEAM_MATE_SCATTER, rolls=rolls)) 
-        self.game.move(self.player, self.position) 
-        
-        RightStuffLanding(self.game, self.player, roll_for_landing = self.nbr_of_hit_players==0 )
+        if self.turnover: 
+            Turnover(self.game)
         
         return True
 
