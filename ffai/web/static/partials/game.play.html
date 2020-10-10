@@ -5,6 +5,9 @@
                 <li>
                     <a class="nav-link" href="#"><span class="glyphicon glyphicon-list"></span> Games</a>
                 </li>
+		<li>
+		    <a class="nav-link" ng-click="pauseResumeClocks()" style="cursor: pointer;"><span class="glyphicon glyphicon-pause"></span> Pause</a>
+		</li>
                 <li class="dropdown">
                     <a class="dropdown-toggle" data-toggle="dropdown">View <span class="caret"></span></a>
                     <ul class="dropdown-menu">
@@ -14,13 +17,11 @@
                     </ul>
                 <li>
             </ul>
-            <!--
             <ul class="nav navbar-nav navbar-right">
                 <li>
                     <a class="nav-link" ng-click="modalVisible=true" style="cursor: pointer;"><span class="glyphicon glyphicon-floppy-{{ saved ? 'saved' : 'disk' }}"></span> Save</a>
                 </li>
             </ul>
-            -->
         </div>
     </div>
 </nav>
@@ -38,7 +39,7 @@
             </button>
           </div>
           <div class="modal-body">
-              <p>This will save the game one the server. Please, specify a name.</p>
+              <p>This will save the game on the server. Please, specify a name.</p>
               <div class="form-group">
                 <label for="filename">Name</label>
                 <input type="text" ng-model="saveName" class="form-control {{ modalError ? 'has-error' : '' }}" id="filename" placeholder="Enter a name">

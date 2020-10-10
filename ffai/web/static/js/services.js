@@ -13,6 +13,10 @@ appServices.factory('GameService', function($http) {
             return $http.post(options.api.base_url + '/games/' + id + '/act', {'action': action});
         },
 
+        pause: function(id) {
+            return $http.post(options.api.base_url + '/games/' + id + '/pause');
+        },
+
         delete: function(id) {
             return $http.delete(options.api.base_url + '/games/' + id + "/delete");
         },

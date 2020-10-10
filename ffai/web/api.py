@@ -60,6 +60,12 @@ def save_game(game_id, name, team_id):
     host.save_game(game_id, name, team_id)
 
 
+def pause_resume_game(game_id):
+    game = host.get_game(game_id) 
+    if game is not None and game.actor is not None and game.actor.human:
+        game.pause_resume_clocks() 
+
+
 def get_game(game_id):
     game = host.get_game(game_id)
     if game is not None and game.actor is not None and game.actor.human:
