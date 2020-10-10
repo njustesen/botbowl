@@ -640,7 +640,7 @@ class Bounce(Procedure):
 
 class Casualty(Procedure):
 
-    def __init__(self, game, player, roll, inflictor=None, decay=False, blood_lust=False):
+    def __init__(self, game, player, roll, inflictor=None, decay=False, blood_lust=False, eat_teammate=False):
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
@@ -652,6 +652,7 @@ class Casualty(Procedure):
         self.decay = decay
         self.regeneration = None
         self.blood_lust = blood_lust 
+        self.eat_teammate = eat_teammate 
 
     def step(self, action):
 
@@ -667,27 +668,35 @@ class Casualty(Procedure):
             
             if self.blood_lust: 
                 result = 38
+            elif self.eat_teammate: 
+                result = 61
             else: 
                 result = self.roll.get_sum()
             
             n = min(61, max(38, result))
             self.casualty = CasualtyType(n)
             self.effect = Rules.casualty_effect[self.casualty]
+            
+            if self.blood_lust or self.eat_teammate:
+                self.game.report(
+                    Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
+                            n=self.effect.name))
+            else: 
+                self.game.report(
+                    Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
+                            n=self.effect.name,
+                            rolls=[self.roll]))
 
-            self.game.report(
-                Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
-                        n=self.effect.name,
-                        rolls=[self.roll]))
-
-            if self.player.team.state.apothecaries > 1:
-                Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
-                           casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
-                return True
-            else:
-                # Regeneration
-                if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
-                    self.regeneration = Regeneration(self.game, self.player)
-                    return False
+            if not self.eat_teammate: 
+                if self.player.team.state.apothecaries > 0:
+                    Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
+                               casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
+                    return True
+                else:
+                    # Regeneration
+                    if self.player.has_skill(Skill.REGENERATION) and not self.regeneration and not eat_teammate:
+                        self.regeneration = Regeneration(self.game, self.player)
+                        return False
 
         # Apply casualty
         self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
@@ -4105,10 +4114,17 @@ class ThrowTeamMate(Procedure):
         self.roll = None 
         self.reroll = None 
         
+        self.action = None 
+        
     def step(self, action): 
+        #set_trace() 
+        
+        if self.action is None: 
+            self.action = action 
+        
         if self.passer.has_skill(Skill.ALWAYS_HUNGRY): 
             if self.always_hungry is None: 
-                self.always_hungry = AlwaysHungry(self.passer, self.team_mate)
+                self.always_hungry = AlwaysHungry(self.game, self.passer, self.team_mate)
                 return False 
             
             if self.always_hungry.failed: 
@@ -4116,7 +4132,7 @@ class ThrowTeamMate(Procedure):
         
         if self.roll is None: 
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
-            self.pass_distance = self.game.get_pass_distance(self.passer.position, action.position)
+            self.pass_distance = self.game.get_pass_distance(self.passer.position, self.action.position)
             self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, throw_team_mate=True )
             result = self.roll.get_sum()
             mod_result = result + self.roll.modifiers
@@ -4130,9 +4146,9 @@ class ThrowTeamMate(Procedure):
             elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
             
-            else: 
+            else: # success 
                 self.game.report(Outcome(OutcomeType.TEAM_MATE_THROWN, player=self.passer, skill=Skill.SAFE_THROW))
-                ScatterTeamMate(self.game, self.team_mate, action.position)
+                ScatterTeamMate(self.game, self.team_mate, self.action.position)
                 return True 
             
             # Check if re-roll available
@@ -4156,11 +4172,13 @@ class ThrowTeamMate(Procedure):
             return True
 
         # Safe throw got us here. Do nothing. 
-        pass 
         return True
         
     def available_actions(self): 
         # return all passable squares
+        if self.action is not None: 
+            return []
+        
         positions, distances = self.game.get_pass_distances(self.passer, throw_team_mate = True)
         agi_rolls = []
         cache = {}
@@ -4271,8 +4289,7 @@ class ScatterTeamMate(Procedure):
             Turnover(self.game)
         
         return True
-
-    
+   
 class RightStuffLanding(Procedure): 
 
     def __init__(self, game, player, roll_for_landing=True): 
@@ -4331,14 +4348,76 @@ class RightStuffLanding(Procedure):
         
         return True 
 
-class AlwaysHungry(Procedure):  # NOT IMPLEMENTED YET!! 
-    def __init__(self, player, team_mate): 
+class AlwaysHungry(Procedure):  
+    def __init__(self, game, player, team_mate): 
+        super().__init__(game)
         self.player = player 
         self.team_mate = team_mate 
-        self.eat_roll = None 
-        self.escape_roll = None 
+        self.roll = None 
         self.reroll = None 
-        self.failed = False 
+        self.failed = False   
         
     def step(self, action): 
+        if self.roll is None: 
+            
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.target = 2
+            
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.ALWAYS_HUNGRY_SUCCESS, player=self.player, rolls = [self.roll]))
+                # self.failed = False  
+                #set_trace() 
+                return True 
+            else: 
+                self.game.report(Outcome(OutcomeType.ALWAYS_HUNGRY_FAILURE, player=self.player, rolls = [self.roll]))
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False 
+        
+        assert self.reroll is not None
+        
+        if self.reroll.use_reroll: 
+            self.reroll = None 
+            self.roll = None 
+            return False 
+        
+        self.failed = True 
+        set_trace() 
+        EscapeFromBeingEaten(self.game, self.player, self.team_mate)
         return True 
+    
+    
+class EscapeFromBeingEaten(Procedure):  
+    def __init__(self, game, player, eater): 
+        super().__init__(game) 
+        self.player = player  
+        self.eater = eater 
+        self.roll = None  
+        self.reroll = None 
+        
+    def step(self, action): 
+        if self.roll is None: 
+            
+            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll.target = 2
+            
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.ESCAPED_BEING_EATEN, player=self.player, rolls = [self.roll]))
+                RightStuffLanding(self.game, self.player)
+                return True 
+            else: 
+                self.game.report(Outcome(OutcomeType.EATEN_BY_TEAM_MATE, player=self.player, rolls = [self.roll]))
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False 
+
+        assert self.reroll is not None
+        
+        if self.reroll.use_reroll: 
+            self.reroll = None 
+            self.roll = None 
+            return False 
+    
+        Turnover(self.game)
+        Casualty(self.game, self.player, roll=None, inflictor = self.eater, eat_teammate=False)
+        
+        return True 
+        
