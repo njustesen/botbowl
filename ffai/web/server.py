@@ -60,6 +60,12 @@ def save():
         raise Exception("Cannot save this game")
 
 
+@app.route('/games/<game_id>/pause', methods=['POST'])
+def pause(game_id):   
+    api.pause_resume_game(game_id)
+    return json.dumps("Game clocks succesfully turned on/off")
+
+
 @app.route('/games/', methods=['GET'])
 def get_all_games():
     games = api.get_games()

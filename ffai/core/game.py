@@ -187,9 +187,6 @@ class Game:
                     self.action = action
                     break
 
-        if not clock.is_running():
-            clock.resume()
-
     def _end_game(self):
         '''
         End the game
@@ -472,6 +469,16 @@ class Game:
         for clock in self.state.clocks:
             if clock.is_running():
                 clock.pause()
+  
+    def pause_resume_clocks(self):
+        '''
+        Pauses all running clocks and resumes all paused clocks.
+        '''       
+        for clock in self.state.clocks:
+            if clock.is_running():
+                clock.pause()
+            else:
+                clock.resume()
 
     def add_secondary_clock(self, team):
         '''

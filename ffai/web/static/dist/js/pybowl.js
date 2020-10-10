@@ -930,6 +930,15 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
         };
 
+        $scope.pauseResumeClocks = function pauseResumeClocks(){
+            // do pause 
+            GameService.pause($scope.game.game_id).success(function(data){
+              console.log("Clocks paused button clicked");
+            });
+            // do a refresh of the game data
+            $scope.reload();
+        };
+
         $scope.checkForReload = function checkForReload(time){
             if ($scope.available_positions.length === 0 && !$scope.game.state.game_over){
                 setTimeout(function(){
@@ -1570,6 +1579,10 @@ appServices.factory('GameService', function($http) {
 
         act: function(id, action) {
             return $http.post(options.api.base_url + '/games/' + id + '/act', {'action': action});
+        },
+
+        pause: function(id) {
+            return $http.post(options.api.base_url + '/games/' + id + '/pause');
         },
 
         delete: function(id) {
