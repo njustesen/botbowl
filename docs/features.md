@@ -39,8 +39,8 @@ A race is supported if all positions can be used and all their starting skills a
 | **Dark Elf**      |                         |                                    | YES           |
 | Dwarf Slayer      |                         |                                    | NO            |
 | **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Right stuff, Bombadier, Secret Weapon, Chainsaw, Ball & Chain, Always Hungry, Throw Team-mate, Swoop, Fan Favorite | SOME?      |
-| Halfling          | Halfling, Treeman       | Right stuff, Throw Team-Mate, Timmm-ber! | YES     |
+| Goblin            | Goblin, Troll, Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Bombadier, Secret Weapon, Chainsaw, Ball & Chain, Swoop, Fan Favorite | SOME?      |
+| Halfling          | Treeman                 | Timmm-ber!                         | YES     |
 | **High Elf**      |                         |                                    | YES              |
 | **Human**         |                         |                                    | YES           |
 | Human Nobility    |                         |                                    | NO            |
@@ -51,16 +51,16 @@ A race is supported if all positions can be used and all their starting skills a
 | **Norse**         |                         |                                    | YES        |
 | **Nurgle***      |                         |                                    | NO            |
 | **Orc**           |                         |                                    | YES           |
-| Ogre              | Snotling, Ogre          | Right Stuff, Titchy, Throw Team-Mate | YES           |
+| Ogre              | Snotling                | Titchy,                            | YES           |
 | **Skaven**        |                         |                                    | YES           |
 | Savage Orc        |                         |                                    | NO            |
 | Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Bombardier, Secret Weapon  | NO        |
 | **Undead**        |                         |                                    | YES
 | **Vampire**       |                         |                                    | YES
 | **Wood Elf**      |                         |                                    | YES              |
-| Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, Right Stuff, Always Hungry | MAYBE?
+| Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity, | MAYBE?
 | Slann             |                         |                                    | NO              |         
-| Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Right Stuff, Animosity, Always Hungry, Throw Team-Mate | MAYBE?              |         
+| Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Animosity| MAYBE?              |         
 
 * Nurgle's Rot needs to be implemented in the post-game sequence
 
@@ -69,7 +69,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Skill             | Implemented | Has Test(s) |
 |-------------------|-------------|-----------|
 | **Accurate**      | YES         | YES       |
-| Always Hungry     | NO          | NO        |
+| **Always Hungry** | YES         | YES       |
 | Animosity         | NO          | NO        |
 | Ball & Chain      | PARTIALLY   | NO        |
 | **Big Hand**      | YES         | YES       |
@@ -121,7 +121,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Pro               | YES         | NO        |
 | **Really Stupid** | YES         | YES       |
 | **Regeneration**  | YES         | YES       |
-| Right Stuff       | NO          | NO        |
+| **Right Stuff**   | YES         | YES       |
 | **Safe Throw**    | YES         | YES       |
 | Secret Weapon     | NO          | NO        |
 | Shadowing         | YES         | NO        |
@@ -141,7 +141,7 @@ A race is supported if all positions can be used and all their starting skills a
 | **Take Root**     | YES         | YES       |
 | Tentacles         | YES         | NO        |
 | Thick Skull       | YES         | NO        |
-| Throw Team-Mate   | NO          | NO        |
+| **Throw Team-Mate** | YES       | YES       |
 | Timmm-ber!        | NO          | NO        |
 | Titchy            | PARTIALLY   | NO        |
 | Two Heads         | YES         | NO        |
