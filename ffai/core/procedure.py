@@ -2835,7 +2835,8 @@ class Push(Procedure):
         self.squares = None
         self.selector = game.get_active_player()
         self.crowd = False
-
+        self.strip_ball_condition = self.pusher.has_skill(Skill.STRIP_BALL) and not self.player.has_skill(Skill.SURE_HANDS) and not self.knock_down and not self.chain and self.game.has_ball(self.player) 
+        
     def step(self, action):
 
         # When proceeding pushes are over, move player(s)
@@ -2849,11 +2850,16 @@ class Push(Procedure):
 
             # Ball
             if self.game.has_ball(self.player):
-                if self.game.is_touchdown(self.player):
-                    Touchdown(self.game, self.player)
-                elif self.game.is_out_of_bounds(self.player.position):
+                if self.game.is_out_of_bounds(self.player.position):
                     ball = self.game.get_ball_at(self.player.position)
                     ThrowIn(self.game, ball, position=self.follow_to)
+                elif self.strip_ball_condition: 
+                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.pusher, skill=Skill.STRIP_BALL))
+                    self.game.report(Outcome(OutcomeType.FUMBLE, player=self.player, opp_player=self.pusher))
+                    Bounce(self.game, self.game.get_ball_at(self.player.position) )
+                elif self.game.is_touchdown(self.player):
+                    Touchdown(self.game, self.player)
+                    
             elif self.game.get_ball_at(self.push_to) is not None:
                 Bounce(self.game, self.game.get_ball_at(self.push_to))
 
@@ -2872,6 +2878,10 @@ class Push(Procedure):
             self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.TAKE_ROOT))
             if self.knock_down:
                 KnockDown(self.game, self.player, in_crowd=False, armor_roll=True)
+            elif self.strip_ball_condition: 
+                self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.pusher, skill=Skill.STRIP_BALL))
+                self.game.report(Outcome(OutcomeType.FUMBLE, player=self.player, opp_player=self.pusher))
+                Bounce(self.game, self.game.get_ball_at(self.player.position) )
             return True
 
         # Use stand firm
@@ -2880,6 +2890,10 @@ class Push(Procedure):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.player, skill=Skill.STAND_FIRM))
                 if self.knock_down:
                     KnockDown(self.game, self.player, in_crowd=False, armor_roll=True)
+                elif self.strip_ball_condition: 
+                    self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.pusher, skill=Skill.STRIP_BALL))
+                    self.game.report(Outcome(OutcomeType.FUMBLE, player=self.player, opp_player=self.pusher))
+                    Bounce(self.game, self.game.get_ball_at(self.player.position) )
                 return True
             else:
                 self.waiting_stand_firm = False
