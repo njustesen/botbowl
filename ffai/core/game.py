@@ -2100,4 +2100,13 @@ class Game:
         return 1 - self.num_tackle_zones_in(player) 
         
 
+    def get_stand_up_modifier(self, player): 
+        """
+        :param player: player on the board with MA < 3. 
+        :return:  modifier for player to stand up. 
+        """
         
+        if player.has_skill(Skill.TIMBER): 
+            return min(2, len( [p for p in self.get_adjacent_teammates(player, down=False) if self.num_tackle_zones_in(p)==0 ] ) ) 
+        else: 
+            return 0 

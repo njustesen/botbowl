@@ -2235,7 +2235,8 @@ class StandUp(Procedure):
 
     def step(self, action):
         if self.roll_required and self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)], target=4, roll_type=RollType.STAND_UP_ROLL)
+            modifier = self.game.get_stand_up_modifier(self.player)
+            self.roll = DiceRoll([D6(self.game.rnd)], target=4, modifiers=modifier, roll_type=RollType.STAND_UP_ROLL)
             if self.roll.is_d6_success():
                 self.player.state.up = True
                 self.game.report(Outcome(OutcomeType.STAND_UP, rolls=[self.roll], player=self.player))
@@ -2524,7 +2525,7 @@ class PlayerAction(Procedure):
             if not self.player.state.up:
                 moves = 0 if self.player.has_skill(Skill.JUMP_UP) else 3
                 if self.player.get_ma() < moves:
-                    agi_rolls.append([4])
+                    agi_rolls.append([4-self.game.get_stand_up_modifier(self.player)])
                 else:
                     agi_rolls.append([])
                 actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))

@@ -450,6 +450,7 @@ class Skill(Enum):
     FAN_FAVOURITE = 76
     SWIFT_REACTION = 77
     PRO = 78
+    TIMBER = 79
 
 
 class PassDistance(Enum):
