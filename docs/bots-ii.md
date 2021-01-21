@@ -252,7 +252,7 @@ for player in self.my_team.players:
         open_players.append(player)
 
 for player in open_players:
-    if player.has_skill(Skill.CATCH) and player != ball_carrier:
+    if player.has_skill(Skill.SUCCESSFUL_CATCH) and player != ball_carrier:
         if game.get_distance_to_endzone(player) > player.num_moves_left():
             continue
         paths = pf.get_all_paths(game, ball_carrier)

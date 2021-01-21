@@ -301,8 +301,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "cursor: url(static/img/icons/actions/block.gif), auto";
             } else if (square.available && square.action_type === "FOUL"){
                 return "cursor: url(static/img/icons/actions/foul.gif), auto";
-            } else if (square.available && (square.action_type === "PASS" || square.action_type === "PASS")){
+            } else if (square.available && square.action_type === "PASS"){
                 return "cursor: url(static/img/icons/actions/pass.gif), auto";
+            } else if (square.available && square.action_type === "THROW_TEAM_MATE"){
+                return "cursor: url(static/img/icons/actions/throw-team-mate.gif), auto";
+            } else if (square.available && square.action_type === "HYPNOTIC_GAZE"){
+                return "cursor: url(static/img/icons/actions/gaze.gif), auto";
+            } else if (square.available && square.action_type === "THROW_BOMB"){
+                return "cursor: url(static/img/icons/actions/bomb.gif), auto";
             }
             return "";
         };
@@ -348,6 +354,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 } else if (a.action_type === "START_BLITZ" && action === "blitz"){
                     $scope.pickActionType(a);
                 } else if (a.action_type === "START_FOUL" && action === "foul"){
+                    $scope.pickActionType(a);
+                } else if (a.action_type === "START_THROW_BOMB" && action === "throw_bomb"){
                     $scope.pickActionType(a);
                 }
             }
@@ -461,7 +469,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_players = [];
             $scope.available_interception_players = [];
             $scope.available_interception_rolls = [];
-            $scope.special_action = [];
+            $scope.special_actions = [];
             $scope.special_agi_rolls = {};
             $scope.special_positions = {};
             $scope.available_select_rolls = [];
@@ -506,6 +514,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("HYPNOTIC_GAZE");
                             $scope.special_agi_rolls["HYPNOTIC_GAZE"] = action.agi_rolls;
                             $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
+                        } else if (action.action_type === "THROW_TEAM_MATE"){
+                            $scope.special_actions.push("THROW_TEAM_MATE");
+                            $scope.special_agi_rolls["THROW_TEAM_MATE"] = action.agi_rolls;
+                            $scope.special_positions["THROW_TEAM_MATE"] = action.positions;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -598,15 +610,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Pass squares
             if ($scope.available_pass_positions.length > 0) {
-                let ballPos = $scope.game.state.pitch.balls[0].position;
-                let passer = $scope.local_state.board[ballPos.y][ballPos.x].player;
+                let passer = $scope.getPlayer($scope.game.state.active_player_id);
                         let passerTeam = $scope.teamOfPlayer(passer);
                 for (let i in $scope.available_pass_positions) {
                     let position = $scope.available_pass_positions[i];
                     let player = $scope.local_state.board[position.y][position.x].player;
-                    if (player !== null) {
-                        let catcherTeam = $scope.teamOfPlayer(player);
-                        if (catcherTeam.team_id === passerTeam.team_id && player.state.up) {
+                    // Only show square if player of interest of if throw team-mate
+                    if ($scope.game.active_other_player_id !== null || (player !== null && $scope.teamOfPlayer(player).team_id === passerTeam.team_id && player.state.up)) {
+                    if ($scope.game.active_other_player_id !== null || (player !== null && $scope.teamOfPlayer(player).team_id === passerTeam.team_id && player.state.up)) {
                             $scope.local_state.board[position.y][position.x].available = true;
                             $scope.local_state.board[position.y][position.x].action_type = "PASS";
                             if ($scope.available_pass_rolls.length > i) {

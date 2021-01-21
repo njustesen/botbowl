@@ -309,6 +309,7 @@ class Game:
         :return: True if game requires action or game is over, False if not
         """
 
+        """
         # Clear done procs
         while not self.state.stack.is_empty() and self.state.stack.peek().done:
             self.state.stack.pop()
@@ -318,6 +319,7 @@ class Game:
             # This should probably not happen?
             self._end_game()
             return False
+        """
 
         # Get proc
         proc = self.state.stack.peek()
@@ -409,8 +411,8 @@ class Game:
 
         # End player turn if only action available
         if len(self.state.available_actions) == 1 and self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:
-            self._one_step(Action(ActionType.END_PLAYER_TURN))
-            return False  # We can continue without user input
+            return self._one_step(Action(ActionType.END_PLAYER_TURN))
+            # return False  # We can continue without user input
 
         return True  # Game needs user input
     
@@ -925,14 +927,38 @@ class Game:
         player.state.ejected = True
         player.state.up = True
 
+    def lift(self, player):
+        """
+        Lifts player from the board. Call put_down(player) to set player down again.
+        """
+        assert not player.state.in_air
+        player.state.in_air = True
+        self.state.pitch.board[player.position.y][player.position.x] = None
+
+    def put_down(self, player):
+        """
+        Puts a player down on the board on the square it was hovering.
+        """
+        assert player.state.in_air
+        player.state.in_air = False
+        self.put(player, player.position)
+
     def put(self, piece, position):
         """
-        Put a piece on the board.
+        Put a piece on or above a square.
         :param piece: Ball or player
-        :param position:
+        :param position: square to put the player on or above
         """
         piece.position = Square(position.x, position.y)
-        self.state.pitch.board[position.y][position.x] = piece
+        if type(piece) is Player:
+            if not piece.state.in_air:
+                self.state.pitch.board[position.y][position.x] = piece
+        elif type(piece) is Ball:
+            self.state.pitch.balls.append(piece)
+        elif type(piece) is Bomb:
+            self.state.pitch.bomb = piece
+        else:
+            raise Exception("Unknown piece type")
 
     def remove(self, piece):
         """
@@ -940,25 +966,42 @@ class Game:
         :param piece:
         """
         assert piece.position is not None
-        self.state.pitch.board[piece.position.y][piece.position.x] = None
-        piece.position = None
+        if type(piece) is Player:
+            if not piece.state.in_air:
+                self.state.pitch.board[piece.position.y][piece.position.x] = None
+            piece.position = None
+        elif type(piece) is Ball:
+            self.state.pitch.balls.remove(piece)
+        elif type(piece) is Bomb:
+            self.state.pitch.bomb = None
 
-    def move(self, player, position):
+    def move(self, piece, position):
         """
-        Move a player already on the board on the board. If the piece is a ball carrier, the ball is moved as well.
-        :param player:
+        Move a pirece already on the board. If the piece is a ball carrier, the ball is moved as well.
+        :param piece:
         :param position:
         :return:
         """
-        if self.state.pitch.board[position.y][position.x] == player:
-            return
-        assert player.position is not None
-        assert self.state.pitch.board[position.y][position.x] is None
-        for ball in self.state.pitch.balls:
-            if ball.position == player.position and ball.is_carried:
-                ball.move_to(position)
-        self.remove(player)
-        self.put(player, position)
+        assert piece.position is not None
+        if type(piece) is Player:
+            if self.state.pitch.board[position.y][position.x] == piece:
+                return
+            for ball in self.state.pitch.balls:
+                if ball.position == piece.position and ball.is_carried:
+                    ball.move_to(position)
+            self.remove(piece)
+            self.put(piece, position)
+        elif piece.is_catchable():
+            piece.move_to(position)
+
+    def shove(self, piece, x, y):
+        """
+        Shove a push x number of step in the horizontal direction and y number of steps in the vertical direction.
+        :param piece
+        :param x
+        :param y
+        """
+        self.move(piece, Square(piece.position.x + x, piece.position.y + y))
 
     def swap(self, piece_a, piece_b):
         """
@@ -968,13 +1011,25 @@ class Game:
         :return:
         """
         assert piece_a.position is not None
-        assert piece_b.position is not None
+        assert piece_b.player_a is not None
         pos_a = Square(piece_a.position.x, piece_a.position.y)
         pos_b = Square(piece_b.position.x, piece_b.position.y)
         piece_a.position = pos_b
         piece_b.position = pos_a
-        self.state.pitch.board[pos_a.y][pos_a.x] = piece_b
-        self.state.pitch.board[pos_b.y][pos_b.x] = piece_a
+        if type(piece_b) is Player:
+            ball = self.get_ball_at(pos_b)
+            if ball is not None:
+                self.move(ball, pos_a)
+            self.state.pitch.board[pos_a.y][pos_a.x] = piece_b
+        elif type(piece_b) is Catchable:
+            piece_b.move_to(pos_a)
+        if type(piece_a) is Player:
+            ball = self.get_ball_at(pos_a)
+            if ball is not None:
+                self.move(ball, pos_b)
+            self.state.pitch.board[pos_b.y][pos_b.x] = piece_a
+        elif type(piece_b) is Catchable:
+            piece_a.move_to(pos_b)
 
     def get_catch_modifiers(self, catcher, accurate=False, interception=False, handoff=False):
         """
@@ -1003,9 +1058,10 @@ class Game:
                 modifiers -= 1
         return modifiers
 
-    def get_pass_modifiers(self, passer, pass_distance):
+    def get_pass_modifiers(self, passer, piece, pass_distance):
         """
         :param passer:
+        :param piece: piece to pass.
         :param pass_distance: the PassDistance to the target.
         :return: the modifier to be added to the pass roll.
         """
@@ -1021,6 +1077,9 @@ class Game:
 
         if passer.has_skill(Skill.ACCURATE):
             modifiers += 1
+
+        if type(piece) == Player:
+            modifiers -= 1
 
         if passer.has_skill(Skill.STRONG_ARM):
             if pass_distance == PassDistance.SHORT_PASS or pass_distance == PassDistance.LONG_PASS or \
@@ -1316,8 +1375,11 @@ class Game:
                 if proc.catcher is not None:
                     return proc.catcher.player_id
             if isinstance(proc, Push):
-                if proc.catcher is not None:
+                if proc.player is not None:
                     return proc.player.player_id
+            if isinstance(proc, PlayerAction):
+                if proc.thrown_teammate is not None:
+                    return proc.thrown_teammate.player_id
         return None
 
     def replace_home_agent(self, agent):
@@ -1366,13 +1428,33 @@ class Game:
 
     def get_ball_at(self, position, in_air=False):
         """
-        Assumes there is only one ball on the square
+        Assumes there is only one ball on the square.
         :param position:
         :param in_air:
         :return: Ball or None
         """
         balls_at = self.get_balls_at(position, in_air)
         return balls_at[0] if balls_at else None
+
+    def get_bomb(self):
+        """
+        Returns a bomb or None.
+        :return: Bomb or None
+        """
+        return self.state.pitch.bomb
+
+    def remove_bomb(self):
+        """
+        Removes the bombe from the pitch.
+        """
+        self.state.pitch.bomb = None
+
+    def put_bomb(self, bomb):
+        """
+        Adds a bomb to the pitch.
+        """
+        assert self.state.pitch.bomb is None
+        self.state.pitch.bomb = bomb
 
     def get_ball_positions(self):
         """
@@ -1743,19 +1825,20 @@ class Game:
             p += (1.0-p)*p
         return p
 
-    def get_pass_prob(self, player, position, allow_pickup_reroll=True, allow_team_reroll=False):
+    def get_pass_prob(self, player, piece, position, allow_pickup_reroll=True, allow_team_reroll=False):
         """
-        :param player:
+        :param player: passer
+        :param piece: piece to pass
         :param position: the position of the ball
         :param allow_pickup_reroll:
         :param allow_team_reroll:
         :return: the probability of a successful catch for player.
         """
-        ag_roll = Rules.agility_table[player.get_ag()] - self.get_pickup_modifiers(player, position=position)
+        ag_roll = Rules.agility_table[player.get_ag()] - self.get_pass_modifiers(player, piece, position)
         ag_roll = max(2, min(6, ag_roll))
         successful_outcomes = 6-(ag_roll-1)
         p = successful_outcomes / 6.0
-        if allow_pickup_reroll and player.has_skill(Skill.SURE_HANDS):
+        if allow_pickup_reroll and player.has_skill(Skill.Pass):
             p += (1.0-p)*p
         elif allow_team_reroll and self.can_use_reroll(player.team):
             p += (1.0-p)*p
@@ -1861,15 +1944,15 @@ class Game:
                     n_assists_for += 1
         return (n_assists_for, n_assist_against)
 
-    def get_pass_distances(self, passer, dump_off=False):
+    def get_pass_distances(self, passer, piece, dump_off=False):
         """
         :param passer:
         :param weather:
         :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to.
         """
-        return self.get_pass_distances_at(passer, passer.position, dump_off=dump_off)
+        return self.get_pass_distances_at(passer, piece, passer.position, dump_off=dump_off)
 
-    def get_pass_distances_at(self, passer, position, dump_off=False):
+    def get_pass_distances_at(self, passer, piece, position, dump_off=False):
         """
         :param passer:
         :param weather:
@@ -1879,6 +1962,8 @@ class Game:
         distances = []
         if dump_off:
             distances_allowed = [PassDistance.QUICK_PASS]
+        elif type(piece) == Player:
+            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
         else:
             distances_allowed = [PassDistance.QUICK_PASS,
                                  PassDistance.SHORT_PASS,
@@ -2087,17 +2172,20 @@ class Game:
         :return: available targets for given player to hypnotize if player has Hypnotic Gaze skill 
         """
         
-        if not player.has_skill(Skill.HYPNOTIC_GAZE): return  []
-        
-        return [o.position for o in self.get_adjacent_opponents(player, down=False) \
-                    if o.has_tackle_zone() ]
-                
+        if not player.has_skill(Skill.HYPNOTIC_GAZE):
+            return []
+
+        return [o.position for o in self.get_adjacent_opponents(player, down=False) if o.has_tackle_zone()]
+
     def get_hypno_modifier(self, player): 
         """
         :param player: player on the board with hypnotic gaze skill. 
         :return:  modifier for player to hypnotize target. 
         """
         return 1 - self.num_tackle_zones_in(player) 
-        
 
-        
+    def get_landing_modifiers(self, player):
+        """
+        :param player: Player attempting to land.
+        """
+        return self.num_tackle_zones_in(player)

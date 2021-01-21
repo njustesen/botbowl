@@ -63,7 +63,9 @@ class RollType(Enum):
     TAKE_ROOT_ROLL = 29
     SHADOWING_ROLL = 30
     BRIBE_ROLL = 31
-    BLOOD_LUST_ROLL = 32 
+    BLOOD_LUST_ROLL = 32
+    BOMB_ROLL = 33
+    LAND_ROLL = 34
 
 
 class OutcomeType(Enum):
@@ -109,7 +111,7 @@ class OutcomeType(Enum):
     BADLY_HURT = 44
     INTERCEPTION = 46
     BALL_CAUGHT = 47
-    BALL_DROPPED = 48
+    FAILED_CATCH = 48
     FAILED_DODGE = 49
     SUCCESSFUL_DODGE = 50
     FAILED_GFI = 51
@@ -141,13 +143,11 @@ class OutcomeType(Enum):
     ACCURATE_PASS = 80
     INACCURATE_PASS = 81
     FUMBLE = 82
-    FAILED_CATCH = 83
     HOME_RECEIVE = 84
     AWAY_RECEIVE = 85
     TAILS_WON = 86
     TAILS_LOSS = 87
     TOUCHBACK = 88
-    BALL_ON_GROUND = 89
     GAME_STARTED = 90
     BALL_SCATTER = 91
     SPECTATORS = 92
@@ -165,7 +165,7 @@ class OutcomeType(Enum):
     TURN_START = 105
     PLAYER_READY = 106
     PLAYER_NOT_READY = 107
-    CATCH = 108
+    SUCCESSFUL_CATCH = 108
     SKILL_USED = 109
     STAND_UP = 110
     FAILED_STAND_UP = 111
@@ -222,7 +222,28 @@ class OutcomeType(Enum):
     FAILED_BLOOD_LUST = 162
     EJECTED_BY_BLOOD_LUST = 163
     EATEN_DURING_BLOOD_LUST = 164
-    
+    BOMB_HIT = 165
+    BOMB_EXPLODED = 166
+    SUCCESSFUL_LAND = 167
+    FAILED_LAND = 168
+    PLAYER_BOUNCED = 168
+    BOMB_OUT_OF_BOUNDS = 169
+    PLAYER_OUT_OF_BOUNDS = 170
+    BALL_BOUNCE_PLAYER = 172
+    PLAYER_BOUNCE_PLAYER = 173
+    BOMB_ON_GROUND = 173
+    BALL_BOUNCE_GROUND = 174
+    PLAYER_BOUNCE_GROUND = 176
+    FAILED_CATCH_BOMB = 177
+    SUCCESSFUL_CATCH_BOMB = 178
+    WILL_CATCH_BOMB = 179
+    WONT_CATCH_BOMB = 180
+    SUCCESSFUL_ESCAPE_BEING_EATEN = 181
+    FAILED_ESCAPE_BEING_EATEN = 182
+    SUCCESSFUL_ALWAYS_HUNGRY = 183
+    FAILED_ALWAYS_HUNGRY = 184
+    PLAYER_SCATTER = 185
+    BOMB_SCATTER = 186
     ACTION_SELECT_DIE = 1000
 
 
@@ -233,6 +254,7 @@ class PlayerActionType(Enum):
     PASS = 4
     HANDOFF = 5
     FOUL = 6
+    THROW_BOMB = 7
 
 
 class PhysicalState(Enum):
@@ -352,6 +374,11 @@ class ActionType(Enum):
     USE_BRIBE = 58
     DONT_USE_BRIBE = 59
     HYPNOTIC_GAZE = 60
+    START_THROW_BOMB = 61
+    THROW_BOMB = 62
+    CATCH_BOMB = 63
+    DONT_CATCH_BOMB = 63
+    THROW_TEAM_MATE = 64
 
 
 class WeatherType(Enum):
@@ -513,3 +540,6 @@ class Rules:
 
     miss_next_game = [CasualtyEffect.MNG, CasualtyEffect.AG, CasualtyEffect.AV, CasualtyEffect.MA, CasualtyEffect.ST,
                       CasualtyEffect.NIGGLING]
+
+    immovable_action_types = [PlayerActionType.BLOCK, PlayerActionType.THROW_BOMB]
+    pass_player_actions = [PlayerActionType.PASS, PlayerActionType.THROW_BOMB]

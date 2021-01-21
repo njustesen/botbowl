@@ -57,7 +57,7 @@ def test_interception_safe_throw_success():
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
-    assert game.has_report_of_type(OutcomeType.CATCH)
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_CATCH)
     assert game.get_ball_carrier() == catcher
 
 
@@ -146,7 +146,7 @@ def test_interception_fail():
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert not game.has_report_of_type(OutcomeType.INTERCEPTION)
-    assert game.has_report_of_type(OutcomeType.CATCH)
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_CATCH)
     assert game.get_ball_carrier() == catcher
 
 

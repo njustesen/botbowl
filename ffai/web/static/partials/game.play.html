@@ -337,7 +337,7 @@
                          ng-repeat="n in [] | range:row.length-2" ng-click="square(local_state.board[$parent.$index+1][$index+1])"
                          ng-mouseover="squareHover(local_state.board[$parent.$index+1][$index+1])"
                          style="{{ getCursor(local_state.board[$parent.$index+1][$index+1]) }}">
-                        <div class="player-action-bar" ng-if="(team_id === undefined || team_id === local_state.current_team_id) && playerStartAction($index+1, $parent.$index+1, '')">
+                        <div class="player-action-bar {{ playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'throw_bomb') ? 'bomb' : '' }}" ng-if="(team_id === undefined || team_id === local_state.current_team_id) && playerStartAction($index+1, $parent.$index+1, '')">
                             <span class="action-dot {{ playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'move') ? 'active' : 'transparent'}}">
                                 <div ng-click="clickAction($event, 'move')">
                                     <img src="static/img/icons/actions/move.gif">
@@ -366,6 +366,11 @@
                             <span class="action-dot {{ playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'foul') ? 'active' : 'transparent'}}">
                                 <div ng-click="clickAction($event, 'foul')">
                                     <img src="static/img/icons/actions/foul.gif">
+                                </div>
+                            </span>
+                            <span ng-if="playerStartAction($parent.$index+1, $parent.$parent.$index+1, 'throw_bomb')" class="action-dot active">
+                                <div ng-click="clickAction($event, 'throw_bomb')">
+                                    <img src="static/img/icons/actions/bomb.gif">
                                 </div>
                             </span>
                         </div>
@@ -399,8 +404,8 @@
                             <img src="static/img/iconssmall/{{ local_state.board[$parent.$parent.$index+1][$index+1].player_icon }}" class="{{ local_state.board[$parent.$parent.$index+1][$index+1].big_guy ? 'bigguy' : '' }} {{ local_state.board[$parent.$parent.$index+1][$index+1].player.state.used ? 'transparent' : ''  }}" />
                         </div>
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].ball != null">
-                            <img ng-if="local_state.board[$parent.$index+1][$index+1].ball.in_air" src="static/img/ball/sball_30x30.png" />
-                            <img ng-if="!local_state.board[$parent.$index+1][$index+1].ball.in_air" src="static/img/ball/sball_30x30.png" />
+                            <img ng-if="local_state.board[$parent.$index+1][$index+1].ball.is_carried" src="static/img/icons/decorations/hold_ball.png" />
+                            <img ng-if="!local_state.board[$parent.$index+1][$index+1].ball.is_carried" src="static/img/ball/sball_30x30.png" />
                         </div>
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].roll">
                             <img src="static/img/icons/game/dice_small.png" class="transparent dice" />
@@ -417,8 +422,8 @@
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.bone_headed" src="static/img/player_status/bonehead.gif" />
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.really_stupid" src="static/img/player_status/reallystupid.gif" />
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.wild_animal" src="static/img/player_status/wildanimal.gif" />
-                            <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.taken_root" src="static/img/player_status/takenroot.gif" />
-                            <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.hypnotized" src="static/img/player_status/hypnotized.gif" />
+                            <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.taken_root" src="static/img/icons/decorations/rooted.png" />
+                            <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.hypnotized" src="static/img/icons/decorations/hypnotized.png" />
                         </div>
                         <div class="stateicon align-middle text-center">
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].player.stunned" src="static/img/player_status/stunned.gif" />

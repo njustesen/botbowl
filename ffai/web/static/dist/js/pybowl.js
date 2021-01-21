@@ -353,8 +353,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "cursor: url(static/img/icons/actions/block.gif), auto";
             } else if (square.available && square.action_type === "FOUL"){
                 return "cursor: url(static/img/icons/actions/foul.gif), auto";
-            } else if (square.available && (square.action_type === "PASS" || square.action_type === "PASS")){
+            } else if (square.available && square.action_type === "PASS"){
                 return "cursor: url(static/img/icons/actions/pass.gif), auto";
+            } else if (square.available && square.action_type === "THROW_TEAM_MATE"){
+                return "cursor: url(static/img/icons/actions/throw-team-mate.gif), auto";
+            } else if (square.available && square.action_type === "HYPNOTIC_GAZE"){
+                return "cursor: url(static/img/icons/actions/gaze.gif), auto";
+            } else if (square.available && square.action_type === "THROW_BOMB"){
+                return "cursor: url(static/img/icons/actions/bomb.gif), auto";
             }
             return "";
         };
@@ -400,6 +406,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 } else if (a.action_type === "START_BLITZ" && action === "blitz"){
                     $scope.pickActionType(a);
                 } else if (a.action_type === "START_FOUL" && action === "foul"){
+                    $scope.pickActionType(a);
+                } else if (a.action_type === "START_THROW_BOMB" && action === "throw_bomb"){
                     $scope.pickActionType(a);
                 }
             }
@@ -513,7 +521,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_players = [];
             $scope.available_interception_players = [];
             $scope.available_interception_rolls = [];
-            $scope.special_action = [];
+            $scope.special_actions = [];
             $scope.special_agi_rolls = {};
             $scope.special_positions = {};
             $scope.available_select_rolls = [];
@@ -558,6 +566,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("HYPNOTIC_GAZE");
                             $scope.special_agi_rolls["HYPNOTIC_GAZE"] = action.agi_rolls;
                             $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
+                        } else if (action.action_type === "THROW_TEAM_MATE"){
+                            $scope.special_actions.push("THROW_TEAM_MATE");
+                            $scope.special_agi_rolls["THROW_TEAM_MATE"] = action.agi_rolls;
+                            $scope.special_positions["THROW_TEAM_MATE"] = action.positions;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -650,15 +662,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Pass squares
             if ($scope.available_pass_positions.length > 0) {
-                let ballPos = $scope.game.state.pitch.balls[0].position;
-                let passer = $scope.local_state.board[ballPos.y][ballPos.x].player;
+                let passer = $scope.getPlayer($scope.game.state.active_player_id);
                         let passerTeam = $scope.teamOfPlayer(passer);
                 for (let i in $scope.available_pass_positions) {
                     let position = $scope.available_pass_positions[i];
                     let player = $scope.local_state.board[position.y][position.x].player;
-                    if (player !== null) {
-                        let catcherTeam = $scope.teamOfPlayer(player);
-                        if (catcherTeam.team_id === passerTeam.team_id && player.state.up) {
+                    // Only show square if player of interest of if throw team-mate
+                    if ($scope.game.active_other_player_id !== null || (player !== null && $scope.teamOfPlayer(player).team_id === passerTeam.team_id && player.state.up)) {
+                    if ($scope.game.active_other_player_id !== null || (player !== null && $scope.teamOfPlayer(player).team_id === passerTeam.team_id && player.state.up)) {
                             $scope.local_state.board[position.y][position.x].available = true;
                             $scope.local_state.board[position.y][position.x].action_type = "PASS";
                             if ($scope.available_pass_rolls.length > i) {
@@ -1756,6 +1767,8 @@ appServices.factory('GameLogService', function() {
             'FAILED_CATCH': "<player> failed to catch the ball.",
             "CATCH": "<player> <b>caught</b> the ball.",
             'BALL_SCATTER': "The ball scattered.",
+            'BOMB_SCATTER': "The bomb scattered.",
+            'PLAYER_SCATTER': "<player> scattered.",
             "BALL_BOUNCED": "The ball bounced.",
             "GENTLE_GUST_OUT_OF_BOUNDS": "A gentle gust makes the ball scatter out of bounds.",
             "GENTLE_GUST_OPP_pitch": "A gentle gust makes the ball scatter into the opponents half.",
@@ -1805,7 +1818,29 @@ appServices.factory('GameLogService', function() {
             "FAILED_BLOOD_LUST": "<player> has <b>Blood Lust</b>.",
             "SUCCESSFUL_BLOOD_LUST": "<player> does not have Blood Lust.",
             "EJECTED_BY_BLOOD_LUST": "<player> <b>leaves the game</b> to feed on a spectator.",
-            "EATEN_DURING_BLOOD_LUST": "<player> was bit by <opp_player>."
+            "EATEN_DURING_BLOOD_LUST": "<player> was bit by <opp_player>.",
+            "BOMB_HIT": "Bomb hit <player>.",
+            "BOMB_EXPLODED": "Bomb exploded.",
+            "SUCCESSFUL_LAND": "<player> landed successfully",
+            "FAILED_LAND": "<player> failed to land.",
+            "PLAYER_BOUNCED": "<player> bounced.",
+            "BOMB_OUT_OF_BOUNDS": "Bomb landed out of bounds.",
+            "PLAYER_OUT_OF_BOUNDS": "<player> landed out of bounds.",
+            "BALL_BOUNCE_PLAYER": "Ball bounced away from <player>.",
+            "PLAYER_BOUNCE_PLAYER": "<player> bounced on <opp_player>.",
+            "BOMB_ON_GROUND": "Bomb landed on the ground.",
+            "BALL_BOUNCE_GROUND": "Ball bounced.",
+            "PLAYER_BOUNCE_GROUND": "<player> bounced",
+            "FAILED_CATCH": "<player> failed to catch the bomb.",
+            "SUCCESSFUL_CATCH": "<player> caught the ball.",
+            "FAILED_CATCH": "<player> failed to catch the ball.",
+            "SUCCESSFUL_CATCH_BOMB": "<player> caught the bomb.",
+            "WILL_CATCH_BOMB": "<player> will attempt to catch the bomb.",
+            "WONT_CATCH_BOMB": "<player> will <b>not</b> attempt to catch the bomb.",
+            "SUCCESSFUL_ESCAPE_BEING_EATEN": "<player> escapes being eaten by <opp_player>.",
+            "FAILED_ESCAPE_BEING_EATEN": "<player> failed escaping <opp_player>.",
+            "SUCCESSFUL_ALWAYS_HUNGRY": "<player> is not hungry.",
+            "FAILED_ALWAYS_HUNGRY": "<player> is hungry."
         },
         log_timouts: {
             'GAME_STARTED': 100,
@@ -1817,11 +1852,6 @@ appServices.factory('GameLogService', function() {
             'TAILS_LOSS': 1000,
             'HOME_RECEIVE': 1000,
             'AWAY_RECEIVE': 1000,
-            //'WEATHER_SWELTERING_HEAT': "<b>Sweltering Heat:</b> It’s so hot and humid that some players collapse from heat exhaustion. Roll a D6 for each player on the pitch at the end of a drive. On a roll of 1 the player collapses and may not be set up for the next kick-off.",
-            //'WEATHER_VERY_SUNNY': "<b>Very Sunny:</b> A glorious day, but the blinding sunshine causes a -1 modifier on all passing rolls.",
-            //'WEATHER_NICE': "<b>Nice weather:</b> Perfect Blood Bowl weather.",
-            //'WEATHER_POURING_RAIN': "<b>Pouring Rain:</b> It’s raining, making the ball slippery and difficult to hold. A -1 modifier applies to all catch, intercept, or pick-up rolls.",
-            //'WEATHER_BLIZZARD': "<b>Blizzard:</b> It’s cold and snowing! The ice on the pitch means that any player attempting to move an extra square (GFI) will slip and be Knocked Down on a roll of 1-3, while the snow means that only quick or short passes can be attempted.",
             'WEATHER_SWELTERING_HEAT': 1000,
             'WEATHER_VERY_SUNNY': 1000,
             'WEATHER_NICE': 1000,
@@ -1832,17 +1862,6 @@ appServices.factory('GameLogService', function() {
             'ILLEGAL_SETUP_WINGS': 100,
             'BALL_PLACED': 100,
             'TOUCHBACK_BALL_PLACED': 100,
-            //'KICKOFF_GET_THE_REF': "<b>Get the Ref:</b> The fans exact gruesome revenge on the referee for some of the dubious decisions he has made, either during this match or in the past. His replacement is so intimidated that he can be more easily persuaded to look the other way. Each team receives 1 additional Bribe to use during this game. A Bribe allows you to attempt to ignore one call by the referee for a player who has committed a foul to be sent off, or a player armed with a secret weapon to be banned from the match. Roll a D6: on a roll of 3-6 the bribe is effective (preventing a turnover if the player was ejected for fouling), but on a roll of 1 the bribe is wasted and the call still stands! Each bribe may be used once per match.",
-            //'KICKOFF_RIOT': "<b>Riot:</b> The trash talk between two opposing players explodes and rapidly degenerates, involving the rest of the players. If the receiving team’s turn marker is on turn 7 for the half, both teams move their turn marker back one space as the referee resets the clock back to before the fight started. If the receiving team has not yet taken a turn this half the referee lets the clock run on during the fight and both teams’ turn markers are moved forward one space. Otherwise roll a D6. On a 1-3, both teams’ turn markers are moved forward one space. On a 4-6, both team’s turn markers are moved back one space.",
-            //'KICKOFF_PERFECT_DEFENSE': "<b>Perfect Defence:</b> The kicking team’s coach may reorganize his players – in other words he can set them up again into another legal defence. The receiving team must remain in the set-up chosen by their coach.",
-            //'KICKOFF_HIGH_KICK': "<b>High Kick:</b> The ball is kicked very high, allowing a player on the receiving team time to move into the perfect position to catch it. Any one player on the receiving team who is not in an opposing player’s tackle zone may be moved into the square where the ball will land no matter what their MA may be, as long as the square is unoccupied.",
-            //'KICKOFF_CHEERING_FANS': "<b>Cheering Fans:</b> Each coach rolls a D3 and adds their team’s FAME (see page 18) and the number of cheerleaders on their team to the score. The team with the highest score is inspired by their fans' cheering and gets an extra re-roll this half. If both teams have the same score, then both teams get a re-roll.",
-            //'KICKOFF_CHANGING_WHEATHER': "<b>Changing Weather:</b> Make a new roll on the Weather table (see page 20). Apply the new Weather roll. If the new Weather roll was a ‘Nice’ result, then a gentle gust of wind makes the ball scatter one extra square in a random direction before landing.",
-            //'KICKOFF_BRILLIANT_COACHING': "<b>Brilliant Coaching:</b> Each coach rolls a D3 and adds their FAME (see page 18) and the number of assistant coaches on their team to the score. The team with the highest total gets an extra team re-roll this half thanks to the brilliant instruction provided by the coaching staff. In case of a tie both teams get an extra team re-roll.",
-            //'KICKOFF_QUICK_SNAP': "<b>Quick Snap!</b> The offence start their drive a fraction before the defence is ready, catching the kicking team flat-footed. All of the players on the receiving team are allowed to move one square. This is a free move and may be made into any adjacent empty square, ignoring tackle zones. It may be used to enter the opposing half of the pitch.",
-            //'KICKOFF_BLITZ': "<b>Blitz!</b> The defence start their drive a fraction before the offence is ready, catching the receiving team flat-footed. The kicking team receives a free ‘bonus’ turn: however, players that are in an enemy tackle zone at the beginning of this free turn may not perform an Action. The kicking team may use team re-rolls during a Blitz. If any player suffers a turnover then the bonus turn ends immediately.",
-            //'KICKOFF_THROW_A_ROCK': "<b>Throw a Rock:</b> An enraged fan hurls a large rock at one of the players on the opposing team. Each coach rolls a D6 and adds their FAME (see page 18) to the roll. The fans of the team that rolls higher are the ones that threw the rock. In the case of a tie a rock is thrown at each team! Decide randomly which player in the other team was hit (only players on the pitch are eligible) and roll for the effects of the injury straight away. No Armour roll is required.",
-            //'KICKOFF_PITCH_INVASION': "<B>Pitch Invasion:</b> Both coaches roll a D6 for each opposing player on the pitch and add their FAME (see page 18) to the roll. If a roll is 6 or more after modification then the player is Stunned (players with the Ball & Chain skill are KO'd). A roll of 1 before adding FAME will always have no effect.",
             'KICKOFF_GET_THE_REF': 1000,
             'KICKOFF_RIOT': 1000,
             'KICKOFF_PERFECT_DEFENSE': 1000,
@@ -1954,10 +1973,28 @@ appServices.factory('GameLogService', function() {
             "FAILED_JUMP_UP": 1000, 
             "SUCCESSFUL_HYPNOTIC_GAZE": 100, 
             "FAILED_HYPNOTIC_GAZE": 1000,
-            "FAILED_BLOOD_LUST": 100
+            "FAILED_BLOOD_LUST": 100,
+            "BOMB_HIT": 500,
+            "BOMB_EXPLODED": 1000,
+            "SUCCESSFUL_LAND": 500,
+            "FAILED_LAND": 1000,
+            "PLAYER_BOUNCED": 100,
+            "BOMB_OUT_OF_BOUNDS": 500,
+            "PLAYER_OUT_OF_BOUNDS": 500,
+            "BALL_BOUNCE_PLAYER": 100,
+            "PLAYER_BOUNCE_PLAYER": 100,
+            "BOMB_ON_GROUND": 500,
+            "BALL_BOUNCE_GROUND": 100,
+            "PLAYER_BOUNCE_GROUND": 100,
+            "FAILED_CATCH_BOMB": 1000,
+            "SUCCESSFUL_CATCH_BOMB": 500,
+            "WILL_CATCH_BOMB": 100,
+            "WONT_CATCH_BOMB": 1000,
+            "SUCCESSFUL_ESCAPE_BEING_EATEN": 500,
+            "FAILED_ESCAPE_BEING_EATEN": 1000,
+            "SUCCESSFUL_ALWAYS_HUNGRY": 500,
+            "FAILED_ALWAYS_HUNGRY": 1000
         }
-
-
     };
 });
 

@@ -99,7 +99,7 @@ def test_catch_team_reroll():
     assert game.has_report_of_type(OutcomeType.FAILED_CATCH)
     game.step(Action(ActionType.USE_REROLL))
     assert game.has_report_of_type(OutcomeType.REROLL_USED)
-    assert game.has_report_of_type(OutcomeType.CATCH)
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_CATCH)
 
 
 def test_catch_skill_reroll():
@@ -122,7 +122,7 @@ def test_catch_skill_reroll():
     game.step(Action(ActionType.PASS, position=catcher.position))
     assert game.has_report_of_type(OutcomeType.FAILED_CATCH)
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
-    assert game.has_report_of_type(OutcomeType.CATCH)
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_CATCH)
 
 
 def test_diving_catch():
