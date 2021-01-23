@@ -37,8 +37,7 @@ def test_pass_distances_and_modifiers(data):
     game.put(catcher, catcher_position)
     pass_distance = game.get_pass_distance(passer.position, catcher_position)
     assert pass_distance == asserted_pass_range
-    ball = game.get_ball()
-    pass_mods = game.get_pass_modifiers(passer, ball, pass_distance)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
     if pass_distance == PassDistance.QUICK_PASS:
         assert pass_mods == 1
     elif pass_distance == PassDistance.SHORT_PASS:
@@ -49,7 +48,7 @@ def test_pass_distances_and_modifiers(data):
         assert pass_mods == -2
     # Weather
     game.state.weather = WeatherType.VERY_SUNNY
-    pass_mods = game.get_pass_modifiers(passer, ball, pass_distance)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
     if pass_distance == PassDistance.QUICK_PASS:
         assert pass_mods == 1 - 1
     elif pass_distance == PassDistance.SHORT_PASS:
@@ -62,7 +61,7 @@ def test_pass_distances_and_modifiers(data):
     # Tackle zone modifier
     opp_player = game.get_opp_team(team).players[0]
     game.put(opp_player, Square(1, 2))
-    pass_mods = game.get_pass_modifiers(passer, ball, pass_distance)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
     if pass_distance == PassDistance.QUICK_PASS:
         assert pass_mods == 0
     elif pass_distance == PassDistance.SHORT_PASS:
@@ -86,9 +85,9 @@ def test_accurate_pass():
     catcher_position = Square(passer.position.x + 7, passer.position.y + 0)
     game.put(catcher, catcher_position)
     pass_distance = game.get_pass_distance(passer.position, catcher.position)
-    pass_mods = game.get_pass_modifiers(passer, game.get_ball(), pass_distance)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
     passer.role.skills = [Skill.ACCURATE]
-    accurate_pass_mods = game.get_pass_modifiers(passer, game.get_ball(), pass_distance)
+    accurate_pass_mods = game.get_pass_modifiers(passer, pass_distance)
     assert pass_mods + 1 == accurate_pass_mods
 
 
@@ -100,12 +99,11 @@ def test_strong_arm():
     passer.role.ag = 3
     game.put(passer, Square(1, 1))
     game.state.weather = WeatherType.NICE
-    ball = game.get_ball()
     for pass_distance in [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB, PassDistance.HAIL_MARY]:
         passer.role.skills = []
-        pass_mods = game.get_pass_modifiers(passer, ball, pass_distance)
+        pass_mods = game.get_pass_modifiers(passer, pass_distance)
         passer.role.skills = [Skill.STRONG_ARM]
-        strong_arm_mods = game.get_pass_modifiers(passer, ball, pass_distance)
+        strong_arm_mods = game.get_pass_modifiers(passer, pass_distance)
         if pass_distance in [PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]:
             assert pass_mods + 1 == strong_arm_mods
         else:
@@ -130,10 +128,9 @@ def test_pass_nerves_of_steel():
     catcher_position = Square(passer.position.x + 7, passer.position.y + 0)
     game.put(catcher, catcher_position)
     pass_distance = game.get_pass_distance(passer.position, catcher.position)
-    pass_mods = game.get_pass_modifiers(passer, game.get_ball(), pass_distance)
+    pass_mods = game.get_pass_modifiers(passer, pass_distance)
     passer.role.skills = [Skill.NERVES_OF_STEEL]
-    ball = game.get_ball()
-    nos_pass_mods = game.get_pass_modifiers(passer, game.get_ball(), pass_distance)
+    nos_pass_mods = game.get_pass_modifiers(passer, pass_distance)
     # nos removes the 1 TZ impact
     assert pass_mods + 1 == nos_pass_mods
 

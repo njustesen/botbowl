@@ -1058,11 +1058,11 @@ class Game:
                 modifiers -= 1
         return modifiers
 
-    def get_pass_modifiers(self, passer, piece, pass_distance):
+    def get_pass_modifiers(self, passer, pass_distance, ttm=False):
         """
         :param passer:
-        :param piece: piece to pass.
         :param pass_distance: the PassDistance to the target.
+        :param ttm: Throwing a team-mate?
         :return: the modifier to be added to the pass roll.
         """
         modifiers = Rules.pass_modifiers[pass_distance]
@@ -1078,7 +1078,7 @@ class Game:
         if passer.has_skill(Skill.ACCURATE):
             modifiers += 1
 
-        if type(piece) == Player:
+        if ttm:
             modifiers -= 1
 
         if passer.has_skill(Skill.STRONG_ARM):

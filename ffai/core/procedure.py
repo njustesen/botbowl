@@ -2186,7 +2186,8 @@ class PassAction(Procedure):
         self.interception_tried = False
         self.dump_off = dump_off
         self.catcher = game.get_player_at(position)
-        self.eat_thrall = None 
+        self.eat_thrall = None
+        self.ttm = type(piece) == Player
 
     def start(self):
         if self.dump_off:
@@ -2219,7 +2220,7 @@ class PassAction(Procedure):
             # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             self.roll.target = Rules.agility_table[self.passer.get_ag()]
-            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.piece, self.pass_distance)
+            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, ttm=self.ttm)
             result = self.roll.get_sum()
             mod_result = result + self.roll.modifiers
 
@@ -2901,7 +2902,7 @@ class PlayerAction(Procedure):
                 distance = distances[i]
                 position = positions[i]
                 if distance not in cache:
-                    modifiers = self.game.get_pass_modifiers(self.player, piece, distance)
+                    modifiers = self.game.get_pass_modifiers(self.player, distance, ttm=self.thrown_teammate is not None)
                     target = Rules.agility_table[self.player.get_ag()]
                     cache[distance] = min(6, max(2, target - modifiers))
                 rolls = [cache[distance]]
