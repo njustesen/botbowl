@@ -378,7 +378,8 @@ class ActionType(Enum):
     THROW_BOMB = 62
     CATCH_BOMB = 63
     DONT_CATCH_BOMB = 63
-    THROW_TEAM_MATE = 64
+    PICKUP_TEAM_MATE = 64
+    THROW_TEAM_MATE = 65
 
 
 class WeatherType(Enum):

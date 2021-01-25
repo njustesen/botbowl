@@ -2687,7 +2687,7 @@ class PlayerAction(Procedure):
                     self.game.get_player_at(action.position))
             return True
 
-        elif action.action_type == ActionType.THROW_TEAM_MATE and self.thrown_teammate is None:
+        elif action.action_type == ActionType.PICKUP_TEAM_MATE and self.thrown_teammate is None:
 
             # Pickup team mate
             self.thrown_teammate = self.game.get_player_at(action.position)
@@ -2696,32 +2696,36 @@ class PlayerAction(Procedure):
                 AlwaysHungry(self.game, self.player, self.thrown_teammate)
             return False
 
-        elif action.action_type == ActionType.PASS or action.action_type == ActionType.THROW_BOMB:
+        elif action.action_type == ActionType.PASS:
 
-            # Check distance
             pass_distance = self.game.get_pass_distance(self.player.position, action.position)
             if not self.dump_off:
-                EndPlayerTurn(self.game, self.player)
-
-            # What to throw?
-            if self.thrown_teammate is not None:
-                piece = self.thrown_teammate
-            elif action.action_type == ActionType.THROW_BOMB:
-                piece = self.game.get_bomb()
-                if piece is None:
-                    piece = Bomb(self.player.position, is_carried=True)
-                    self.game.put_bomb(piece)
-            else:
-                piece = self.game.get_ball_at(self.player.position)
-
-            # Pass action
-            PassAction(self.game, self.player, piece, action.position, pass_distance, dump_off=self.dump_off)
-            if action.action_type == ActionType.PASS:
                 self.turn.pass_available = False
+                EndPlayerTurn(self.game, self.player)
+            piece = self.game.get_ball_at(self.player.position)
+            PassAction(self.game, self.player, piece, action.position, pass_distance, dump_off=self.dump_off)
+            return True
 
+        elif action.action_type == ActionType.THROW_BOMB:
+
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
+            EndPlayerTurn(self.game, self.player)
+            bomb = self.game.get_bomb()
+            if bomb is None:
+                bomb = Bomb(self.player.position, is_carried=True)
+                self.game.put_bomb(bomb)
+            PassAction(self.game, self.player, bomb, action.position, pass_distance)
+            return True
+
+        elif action.action_type == ActionType.THROW_TEAM_MATE:
+
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
+            EndPlayerTurn(self.game, self.player)
+            PassAction(self.game, self.player, self.thrown_teammate, action.position, pass_distance)
             return True
 
         elif action.action_type == ActionType.HYPNOTIC_GAZE:
+
             EndPlayerTurn(self.game, self.player)
             target_opponent = self.game.get_player_at(action.position)
             HypnoticGaze(self.game, self.player, target_opponent)
@@ -2730,216 +2734,60 @@ class PlayerAction(Procedure):
     def available_actions(self):
 
         if self.player.state.used:
-            return []
+            return []  # TODO: Is this needed?
 
         actions = []
 
         # Move actions
         if self.player_action_type not in Rules.immovable_action_types and not self.dump_off and self.thrown_teammate is None:
-            move_positions = []
-            agi_rolls = []
-            move_needed = 1 if not self.player.state.up else 1
-            gfi = self.player.state.moves + move_needed > self.player.get_ma()
-            sprints = 3 if self.player.has_skill(Skill.SPRINT) else 2
-            gfi_roll = 3 if self.game.state.weather == WeatherType.BLIZZARD else 2
-            if not self.player.state.up:
-                moves = 0 if self.player.has_skill(Skill.JUMP_UP) else 3
-                if self.player.get_ma() < moves:
-                    agi_rolls.append([4])
-                else:
-                    agi_rolls.append([])
-                actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))
-            elif (not self.turn.quick_snap
-                  and not self.player.state.taken_root
-                  and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
-                    or (self.turn.quick_snap and self.player.state.moves == 0):
-                # Regular movement
-                for square in self.game.get_adjacent_squares(self.player.position, occupied=False):
-                    ball_at = self.game.get_ball_at(square)
-                    move_positions.append(square)
-                    rolls = []
-                    if not self.turn.quick_snap:
-                        if gfi:
-                            rolls.append(gfi_roll)
-                        if self.game.num_tackle_zones_in(self.player) > 0:
-                            modifiers = self.game.get_dodge_modifiers(self.player, square)
-                            target = Rules.agility_table[self.player.get_ag()]
-                            rolls.append(min(6, max(2, target - modifiers)))
-                        if ball_at is not None and ball_at.on_ground:
-                            target = Rules.agility_table[self.player.get_ag()]
-                            modifiers = self.game.get_pickup_modifiers(self.player, square)
-                            rolls.append(min(6, max(2, target - modifiers)))
-                    agi_rolls.append(rolls)
-                if len(move_positions) > 0:
-                    actions.append(ActionChoice(ActionType.MOVE, team=self.player.team,
-                                                positions=move_positions, agi_rolls=agi_rolls))
-                # Leap
-                if self.player.can_use_skill(Skill.LEAP) and not self.turn.quick_snap:
-                    leap_agi_rolls = []
-                    leap_positions = []
-                    modifiers = 0 if self.player.has_skill(Skill.VERY_LONG_LEGS) else 0
-                    target = Rules.agility_table[self.player.get_ag()]
-                    leap_roll = min(6, max(2, target - modifiers))
-                    for square in self.game.get_adjacent_squares(self.player.position, occupied=False, distance=2):
-                        distance = self.player.position.distance(square)
-                        if self.player.state.moves + distance <= self.player.get_ma() + sprints:
-                            rolls = []
-                            leap_positions.append(square)
-                            gfis = max(0, (self.player.state.moves + distance) - self.player.get_ma())
-                            for gfi in range(gfis):
-                                rolls.append(gfi_roll)
-                            rolls.append(leap_roll)
-                            ball_at = self.game.get_ball_at(square)
-                            if ball_at is not None and ball_at.on_ground:
-                                modifiers = self.game.get_pickup_modifiers(self.player, square)
-                                rolls.append(min(6, max(2, target - modifiers)))
-                            leap_agi_rolls.append(rolls)
-                    if len(leap_positions) > 0:
-                        actions.append(ActionChoice(ActionType.LEAP, team=self.player.team,
-                                                positions=leap_positions, agi_rolls=leap_agi_rolls))
+            move_actions = self.game.get_move_actions(self.player)
+            actions.extend(move_actions)
 
         # Block actions
         if self.player_action_type == PlayerActionType.BLOCK or \
                 (self.player_action_type == PlayerActionType.BLITZ and not self.blitz_block):
-
-            can_block = self.player.state.up
-
-            # Check movement left if blitz,
-            gfi = False
-            if self.player_action_type == PlayerActionType.BLITZ:
-                move_needed = 1
-                gfi_allowed = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed:
-                    can_block = False
-                gfi = self.player.state.moves + move_needed > self.player.get_ma()
-
-            # Find adjacent enemies to block
-            if can_block:
-                block_positions = []
-                block_rolls = []
-                stab_rolls = []
-                for player_to in self.game.get_adjacent_opponents(self.player, down=False):
-                    block_positions.append(player_to.position)
-                    dice = self.game.num_block_dice(attacker=self.player, defender=player_to,
-                                                       blitz=self.player_action_type == PlayerActionType.BLITZ,
-                                                       dauntless_success=False)
-                    block_rolls.append(dice)
-                    if self.player.has_skill(Skill.STAB):
-                        roll = player_to.get_av() + 1
-                        if self.player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
-                            roll += 1
-                        stab_rolls.append(roll)
-                if len(block_positions) > 0:
-                    agi_rolls = [([2] if gfi else []) for _ in block_positions]
-                    actions.append(ActionChoice(ActionType.BLOCK, team=self.player.team,
-                                                positions=block_positions, block_rolls=block_rolls,
-                                                agi_rolls=agi_rolls))
-                if self.player.has_skill(Skill.STAB):
-                    stab_agi_rolls = [([2, stab_rolls[i]] if gfi else [stab_rolls[i]]) for i in range(len(block_positions))]
-                    agi_rolls = [([2] if gfi else []) for _ in block_positions] + stab_agi_rolls
-                    actions.append(ActionChoice(ActionType.STAB, team=self.player.team,
-                                                positions=block_positions,
-                                                agi_rolls=agi_rolls))
+            block_actions = self.game.get_block_actions(self.player, blitz=self.player_action_type==PlayerActionType.BLITZ)
+            actions.extend(block_actions)
 
         # Foul actions
         if self.player_action_type == PlayerActionType.FOUL:
-            foul_positions = []
-            foul_rolls = []
-            for player_to in self.game.get_adjacent_opponents(self.player, standing=False, down=True):
-                foul_positions.append(player_to.position)
-                armor = player_to.get_av()
-                assists_from = self.game.get_assisting_players(self.player, player_to, foul=True)
-                assists_to = self.game.get_assisting_players(player_to, self.player, foul=True)
-                foul_rolls.append(min(0, armor + 1 - len(assists_from) + len(assists_to)))
-
-            if len(foul_positions) > 0:
-                actions.append(ActionChoice(ActionType.FOUL, team=self.player.team,
-                                            positions=foul_positions, block_rolls=foul_rolls))
+            foul_actions = self.game.get_foul_actions(self.player)
+            actions.extend(foul_actions)
 
         # Handoff actions
         if self.player_action_type == PlayerActionType.HANDOFF and self.game.has_ball(self.player):
-            hand_off_positions = []
-            agi_rolls = []
-            for player_to in self.game.get_adjacent_teammates(self.player):
-                if player_to.can_catch():
-                    hand_off_positions.append(player_to.position)
-                    modifiers = self.game.get_catch_modifiers(self.player, player_to.position)
-                    target = Rules.agility_table[self.player.get_ag()]
-                    agi_rolls.append([min(6, max(2, target - modifiers))])
+            handoff_actions = self.game.get_handoff_actions(self.player)
+            actions.extend(handoff_actions)
 
-            if len(hand_off_positions) > 0:
-                actions.append(ActionChoice(ActionType.HANDOFF, team=self.player.team,
-                                            positions=hand_off_positions, agi_rolls=agi_rolls))
-
-        # Throw-team Mate
-        if self.player.has_skill(Skill.THROW_TEAM_MATE) and self.player_action_type == PlayerActionType.PASS and self.thrown_teammate is None and self.player.state.up:
-            teammates = self.game.get_adjacent_teammates(self.player, down=False, skill=Skill.RIGHT_STUFF)
-            if teammates:
-                positions = [teammate.position for teammate in teammates]
-                rolls = [2] if self.player.has_skill(Skill.ALWAYS_HUNGRY) else []
-                agi_rolls = [rolls for _ in teammates]
-                actions.append(ActionChoice(ActionType.THROW_TEAM_MATE, team=self.player.team,
-                                            positions=positions, agi_rolls=agi_rolls))
-            return actions
-
-        # Pass actions
-        piece = None
-        if self.player_action_type == PlayerActionType.THROW_BOMB:
-            piece = Bomb(self.player.position)  # Fake bomb
-        elif self.player_action_type == PlayerActionType.PASS:
-            if self.thrown_teammate is not None:
-                piece = self.thrown_teammate
-            else:
-                ball_at = self.game.get_ball_at(self.player.position)
-                if ball_at is not None:
-                    piece = ball_at
-
-        if piece:
-            positions, distances = self.game.get_pass_distances(self.player, piece, dump_off=self.dump_off)
-            agi_rolls = []
-            cache = {}
-            for i in range(len(distances)):
-                distance = distances[i]
-                position = positions[i]
-                if distance not in cache:
-                    modifiers = self.game.get_pass_modifiers(self.player, distance, ttm=self.thrown_teammate is not None)
-                    target = Rules.agility_table[self.player.get_ag()]
-                    cache[distance] = min(6, max(2, target - modifiers))
-                rolls = [cache[distance]]
-                player_to = self.game.get_player_at(position)
-                if player_to is not None and type(piece) != Player and (player_to.team == self.player.team or type(piece) == Bomb) and player_to.can_catch():
-                    catch_target = Rules.agility_table[player_to.get_ag()]
-                    catch_modifiers = self.game.get_catch_modifiers(player_to, accurate=True)
-                    rolls.append(min(6, max(2, catch_target - catch_modifiers)))
-                agi_rolls.append(rolls)
-            if len(positions) > 0:
-                action_type = None
-                if self.player_action_type == PlayerActionType.PASS:
-                    action_type = ActionType.PASS
-                elif self.player_action_type == PlayerActionType.THROW_BOMB:
-                    action_type = ActionType.THROW_BOMB
-                actions.append(ActionChoice(action_type, team=self.player.team,
-                                            positions=positions, agi_rolls=agi_rolls))
+        if self.player_action_type == PlayerActionType.PASS:
+            # Pickup team-mate
+            if self.player.has_skill(Skill.THROW_TEAM_MATE) and self.player_action_type == PlayerActionType.PASS and self.player.state.up:
+                if self.thrown_teammate is None:
+                    ptm_actions = self.game.get_pickup_teammate_actions(self.player)
+                    actions.extend(ptm_actions)
+                else:
+                    ttm_actions = self.game.get_pickup_teammate_actions(self.player)
+                    actions.extend(ttm_actions)
+            # Pass ball/team-mate/bomb
+            piece = None
+            if self.player_action_type == PlayerActionType.THROW_BOMB:
+                piece = Bomb(self.player.position)  # Fake bomb
+            elif self.player_action_type == PlayerActionType.PASS:
+                if self.thrown_teammate is not None:
+                    piece = self.thrown_teammate
+                else:
+                    ball_at = self.game.get_ball_at(self.player.position)
+                    if ball_at is not None:
+                        piece = ball_at
+            pass_actions = self.game.get_pass_actions(self.player, piece, dump_off=self.dump_off)
+            actions.extend(pass_actions)
         
-        # Hypnotic gaze action 
-        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player.state.up and \
-                self.player_action_type == PlayerActionType.MOVE: 
-            
-            hypno_positions = self.game.get_hypno_targets(self.player)
-            
-            if len(hypno_positions) > 0:
-                modifier = self.game.get_hypno_modifier(self.player)
-                target = Rules.agility_table[self.player.get_ag()]
-                agi_roll = min(6, max(2, target - modifier))
-                agi_rolls = [[agi_roll]] * len(hypno_positions)
-
-                actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, 
-                                            skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, 
-                                            agi_rolls=agi_rolls))
+        # Hypnotic gaze action
+        if self.player_action_type == PlayerActionType.MOVE:
+            hypno_actions = self.game.get_hypnotic_gaze_actions(self.player)
+            actions.extend(hypno_actions)
         
-        if self.dump_off:
-            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))
-        else:
+        if not self.dump_off:
             actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
         return actions
 
