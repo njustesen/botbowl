@@ -1388,9 +1388,9 @@ class Game:
             if isinstance(proc, Push):
                 if proc.player is not None:
                     return proc.player.player_id
-            if isinstance(proc, PlayerAction):
-                if proc.thrown_teammate is not None:
-                    return proc.thrown_teammate.player_id
+            if isinstance(proc, PassAction):
+                if proc.picked_up_teammate is not None:
+                    return proc.picked_up_teammate.player_id
         return None
 
     def replace_home_agent(self, agent):
@@ -2314,7 +2314,7 @@ class Game:
             positions = [teammate.position for teammate in teammates]
             rolls = [2] if player.has_skill(Skill.ALWAYS_HUNGRY) else []
             agi_rolls = [rolls for _ in teammates]
-            actions.append(ActionChoice(ActionType.THROW_TEAM_MATE, team=player.team,
+            actions.append(ActionChoice(ActionType.PICKUP_TEAM_MATE, team=player.team,
                                         positions=positions, agi_rolls=agi_rolls))
         return actions
 
@@ -2394,6 +2394,8 @@ class Game:
             if len(positions) > 0:
                 if bomb:
                     action_type = ActionType.THROW_BOMB
+                elif ttm:
+                    action_type = ActionType.THROW_TEAM_MATE
                 else:
                     action_type = ActionType.PASS
                 actions.append(ActionChoice(action_type, team=player.team,

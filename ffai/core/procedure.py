@@ -655,7 +655,7 @@ class Bounce(Procedure):
         if type(self.piece) is Ball:
             self.game.report(Outcome(OutcomeType.BALL_BOUNCE_GROUND, position=self.piece.position))
         elif type(self.piece) is Player:
-            self.game.report(Outcome(OutcomeType.PLAYER_BOUNCE_GROUND, position=self.piece.position))
+            self.game.report(Outcome(OutcomeType.PLAYER_BOUNCE_GROUND, player=self.piece, position=self.piece.position))
             Land(self.game, self.piece)
         return True
 
@@ -2681,25 +2681,22 @@ class PassAction(MoveAction):
         return super().step(action)
 
     def available_actions(self):
-        actions = super().available_actions()
+        actions = []
+        if not self.picked_up_teammate:
+            actions.extend(super().available_actions())
 
-        # Pickup team-mate
         if self.player.has_skill(Skill.THROW_TEAM_MATE) and self.player.state.up:
             if self.picked_up_teammate is None:
+                # Pickup team-mate
                 ptm_actions = self.game.get_pickup_teammate_actions(self.player)
                 actions.extend(ptm_actions)
             else:
-                ttm_actions = self.game.get_pickup_teammate_actions(self.player)
-                actions.extend(ttm_actions)
-
-        # Throw team-mate actions
-        if self.picked_up_teammate is not None:
-            piece = self.picked_up_teammate
-            pass_actions = self.game.get_pass_actions(self.player, piece, dump_off=self.dump_off)
-            actions.extend(pass_actions)
+                # Throw team-mate actions
+                pass_actions = self.game.get_pass_actions(self.player, self.picked_up_teammate)
+                actions.extend(pass_actions)
 
         # Pass actions
-        elif self.game.has_ball(self.player):
+        if self.game.has_ball(self.player):
             piece = self.game.get_ball_at(self.player.position)
             pass_actions = self.game.get_pass_actions(self.player, piece, dump_off=self.dump_off)
             actions.extend(pass_actions)

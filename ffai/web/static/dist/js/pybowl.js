@@ -355,6 +355,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "cursor: url(static/img/icons/actions/foul.gif), auto";
             } else if (square.available && square.action_type === "PASS"){
                 return "cursor: url(static/img/icons/actions/pass.gif), auto";
+            } else if (square.available && square.action_type === "PICKUP_TEAM_MATE"){
+                return "cursor: url(static/img/icons/actions/pickup-team-mate.gif), auto";
             } else if (square.available && square.action_type === "THROW_TEAM_MATE"){
                 return "cursor: url(static/img/icons/actions/throw-team-mate.gif), auto";
             } else if (square.available && square.action_type === "HYPNOTIC_GAZE"){
@@ -566,10 +568,15 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("HYPNOTIC_GAZE");
                             $scope.special_agi_rolls["HYPNOTIC_GAZE"] = action.agi_rolls;
                             $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
+                        } else if (action.action_type === "PICKUP_TEAM_MATE"){
+                            $scope.special_actions.push("PICKUP_TEAM_MATE");
+                            $scope.special_agi_rolls["PICKUP_TEAM_MATE"] = action.agi_rolls;
+                            $scope.special_positions["PICKUP_TEAM_MATE"] = action.positions;
                         } else if (action.action_type === "THROW_TEAM_MATE"){
                             $scope.special_actions.push("THROW_TEAM_MATE");
                             $scope.special_agi_rolls["THROW_TEAM_MATE"] = action.agi_rolls;
                             $scope.special_positions["THROW_TEAM_MATE"] = action.positions;
+                            $scope.special_action_selected = action;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
@@ -1763,7 +1770,7 @@ appServices.factory('GameLogService', function() {
             'PUSHED': "<player> was pushed.",
             'ACCURATE_PASS': "<player> threw an <b>accurate</b> pass.",
             'INACCURATE_PASS': "<player> threw an <b>inaccurate</b> pass.",
-            'FUMBLE': "<player> <b>fumbled</b> the ball</b>.",
+            'FUMBLE': "<player> <b>fumbles</b>.",
             'FAILED_CATCH': "<player> failed to catch the ball.",
             "CATCH": "<player> <b>caught</b> the ball.",
             'BALL_SCATTER': "The ball scattered.",
@@ -1806,11 +1813,11 @@ appServices.factory('GameLogService', function() {
             "SUCCESSFUL_TAKE_ROOT": "<player> passed a <b>take root</b> roll.",
             "FAILED_TAKE_ROOT": "<player> failed a <b>take root</b> roll.",
             "STAND_UP": "<player> stood up.",
-            "FAILED_STAND_UP": "<player> failed to stand up",
-            "FAILED_JUMP_UP": "<player> failed to jump up", 
             "FAILED_STAND_UP": "<player> failed to stand up.",
             "FAILED_JUMP_UP": "<player> failed to jump up.",
-            "ACTION_SELECT_DIE": "",
+            "FAILED_STAND_UP": "<player> failed to stand up.",
+            "FAILED_JUMP_UP": "<player> failed to jump up.",
+            "ACTION_SELECT_DIE": "<team> selects block die.",
             "SUCCESSFUL_BRIBE": "<team> used a bribe <b>successfully.",
             "FAILED_BRIBE": "<team> used a bribe <b>unsuccessfully.",
             "SUCCESSFUL_HYPNOTIC_GAZE": "<player> successfully <b>hypnotized</b> <opp_player>", 
@@ -1821,7 +1828,7 @@ appServices.factory('GameLogService', function() {
             "EATEN_DURING_BLOOD_LUST": "<player> was bit by <opp_player>.",
             "BOMB_HIT": "Bomb hit <player>.",
             "BOMB_EXPLODED": "Bomb exploded.",
-            "SUCCESSFUL_LAND": "<player> landed successfully",
+            "SUCCESSFUL_LAND": "<player> landed successfully.",
             "FAILED_LAND": "<player> failed to land.",
             "PLAYER_BOUNCED": "<player> bounced.",
             "BOMB_OUT_OF_BOUNDS": "Bomb landed out of bounds.",
@@ -1830,7 +1837,7 @@ appServices.factory('GameLogService', function() {
             "PLAYER_BOUNCE_PLAYER": "<player> bounced on <opp_player>.",
             "BOMB_ON_GROUND": "Bomb landed on the ground.",
             "BALL_BOUNCE_GROUND": "Ball bounced.",
-            "PLAYER_BOUNCE_GROUND": "<player> bounced",
+            "PLAYER_BOUNCE_GROUND": "<player> bounced.",
             "FAILED_CATCH": "<player> failed to catch the bomb.",
             "SUCCESSFUL_CATCH": "<player> caught the ball.",
             "FAILED_CATCH": "<player> failed to catch the ball.",

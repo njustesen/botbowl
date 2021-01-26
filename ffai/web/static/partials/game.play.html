@@ -404,7 +404,7 @@
                             <img src="static/img/iconssmall/{{ local_state.board[$parent.$parent.$index+1][$index+1].player_icon }}" class="{{ local_state.board[$parent.$parent.$index+1][$index+1].big_guy ? 'bigguy' : '' }} {{ local_state.board[$parent.$parent.$index+1][$index+1].player.state.used ? 'transparent' : ''  }}" />
                         </div>
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].ball != null">
-                            <img ng-if="local_state.board[$parent.$index+1][$index+1].ball.is_carried" src="static/img/icons/decorations/hold_ball.png" />
+                            <img ng-if="local_state.board[$parent.$index+1][$index+1].ball.is_carried" src="static/img/icons/decorations/holdball.png" />
                             <img ng-if="!local_state.board[$parent.$index+1][$index+1].ball.is_carried" src="static/img/ball/sball_30x30.png" />
                         </div>
                         <div class="ballicon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].roll">

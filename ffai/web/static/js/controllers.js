@@ -303,6 +303,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "cursor: url(static/img/icons/actions/foul.gif), auto";
             } else if (square.available && square.action_type === "PASS"){
                 return "cursor: url(static/img/icons/actions/pass.gif), auto";
+            } else if (square.available && square.action_type === "PICKUP_TEAM_MATE"){
+                return "cursor: url(static/img/icons/actions/pickup-team-mate.gif), auto";
             } else if (square.available && square.action_type === "THROW_TEAM_MATE"){
                 return "cursor: url(static/img/icons/actions/throw-team-mate.gif), auto";
             } else if (square.available && square.action_type === "HYPNOTIC_GAZE"){
@@ -514,10 +516,15 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.special_actions.push("HYPNOTIC_GAZE");
                             $scope.special_agi_rolls["HYPNOTIC_GAZE"] = action.agi_rolls;
                             $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
+                        } else if (action.action_type === "PICKUP_TEAM_MATE"){
+                            $scope.special_actions.push("PICKUP_TEAM_MATE");
+                            $scope.special_agi_rolls["PICKUP_TEAM_MATE"] = action.agi_rolls;
+                            $scope.special_positions["PICKUP_TEAM_MATE"] = action.positions;
                         } else if (action.action_type === "THROW_TEAM_MATE"){
                             $scope.special_actions.push("THROW_TEAM_MATE");
                             $scope.special_agi_rolls["THROW_TEAM_MATE"] = action.agi_rolls;
                             $scope.special_positions["THROW_TEAM_MATE"] = action.positions;
+                            $scope.special_action_selected = action;
                         } else {
                             $scope.available_select_positions = action.positions;
                         }
