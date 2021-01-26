@@ -612,7 +612,7 @@ class D3(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 3:
             D3.FixedRolls.append(value)
         else:
@@ -639,7 +639,7 @@ class D6(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 6:
             D6.FixedRolls.append(value)
         else:
@@ -666,7 +666,7 @@ class D8(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 8:
             D8.FixedRolls.append(value)
         else:
@@ -693,7 +693,7 @@ class BBDie(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if type(value) == BBDieResult:
             BBDie.FixedRolls.append(value)
         else:

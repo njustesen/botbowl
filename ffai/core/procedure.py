@@ -2557,7 +2557,7 @@ class MoveAction(Procedure):
 
     def start(self):
         if self.is_move_action:
-            self.game.report(Outcome(OutcomeType.HANDOFF_ACTION_STARTED, player=self.player))
+            self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
             self.game.state.player_action_type = PlayerActionType.MOVE
 
     def step(self, action):
@@ -2628,7 +2628,7 @@ class HandOffAction(MoveAction):
         self.game.state.player_action_type = PlayerActionType.HANDOFF
 
     def step(self, action):
-        if type(action) is ActionType.HANDOFF:
+        if action.action_type is ActionType.HANDOFF:
             EndPlayerTurn(self.game, self.player)
             Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
                     self.game.get_player_at(action.position))
@@ -2810,7 +2810,7 @@ class BlitzAction(MoveAction):
 
     def start(self):
         self.game.blitz_available = False
-        self.game.report(Outcome(OutcomeType.FOUL_ACTION_STARTED, player=self.player))
+        self.game.report(Outcome(OutcomeType.BLITZ_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.BLITZ
 
     def step(self, action):
@@ -3575,12 +3575,10 @@ class Turn(Procedure):
 
         # Start blitz action
         if action.action_type == ActionType.START_BLITZ:
-            self.blitz_available = False
             BlitzAction(self.game, action.player)
 
         # Start foul action
         if action.action_type == ActionType.START_FOUL:
-            self.foul_available = False
             FoulAction(self.game, action.player)
 
         # Start block action
@@ -3589,7 +3587,6 @@ class Turn(Procedure):
 
         # Start pass action
         if action.action_type == ActionType.START_PASS:
-            self.pass_available = False
             PassAction(self.game, action.player)
 
         # Start handoff action
@@ -3605,11 +3602,11 @@ class Turn(Procedure):
         if action.player.has_skill(Skill.REALLY_STUPID):
             ReallyStupid(self.game, action.player)
         if action.player.has_skill(Skill.WILD_ANIMAL):
-            WildAnimal(self.game, action.player)
+            WildAnimal(self.game, action.player, is_block_or_blitz=action.action_type == ActionType.START_BLOCK or action.action_type == ActionType.START_BLITZ)
         if action.player.has_skill(Skill.TAKE_ROOT) and not action.player.state.taken_root:
             TakeRoot(self.game, action.player)
         if action.player.has_skill(Skill.BLOOD_LUST):
-            BloodLust(self.game, action.player)
+            BloodLust(self.game, action.player, is_block=action.action_type == ActionType.START_BLOCK)
 
         return False
 
@@ -3805,9 +3802,9 @@ class ReallyStupid(Negatrait):
 
 
 class WildAnimal(Negatrait):
-    def __init__(self, game, player=True, block_or_blitz=False):
+    def __init__(self, game, player=True, is_block_or_blitz=False):
         super().__init__(game, player)
-        self.block_or_blitz = block_or_blitz
+        self.is_block_or_blitz = is_block_or_blitz
         self.roll_type = RollType.WILD_ANIMAL_ROLL
         self.skill = Skill.WILD_ANIMAL
         self.success_outcome = OutcomeType.SUCCESSFUL_WILD_ANIMAL
@@ -3815,7 +3812,7 @@ class WildAnimal(Negatrait):
 
     def get_target(self):
         target = 4
-        if self.block_or_blitz:
+        if self.is_block_or_blitz:
             target = 2
         return target
 
@@ -3881,7 +3878,7 @@ class BloodLust(Negatrait):
         #set_trace()
         self.player.state.blood_lust = True
         if self.is_block:
-            BloodLustBlockOrMove(self.game, self.player, self.player_action)
+            BloodLustBlockOrMove(self.game, self.player)
 
     def remove_fail_state(self):
         pass  # blood lust is removed by EatThrall-procedure 

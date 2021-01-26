@@ -14,10 +14,10 @@ def test_spectators(dice_roll):
     game = get_game_fans()
     proc = Fans(game)
     proc.start()
-    D6.fix_result(dice_roll[0])
-    D6.fix_result(dice_roll[1])
-    D6.fix_result(dice_roll[0])
-    D6.fix_result(dice_roll[1])
+    D6.fix(dice_roll[0])
+    D6.fix(dice_roll[1])
+    D6.fix(dice_roll[0])
+    D6.fix(dice_roll[1])
     proc.step(None)
     assert game.has_report_of_type(OutcomeType.TEAM_SPECTATORS)
     for report in game.state.reports:
@@ -36,11 +36,11 @@ def test_fame(dice_roll):
     proc = Fans(game)
     proc.start()
     # Home
-    D6.fix_result(dice_roll[0])
-    D6.fix_result(dice_roll[0])
+    D6.fix(dice_roll[0])
+    D6.fix(dice_roll[0])
     # Away
-    D6.fix_result(dice_roll[1])
-    D6.fix_result(dice_roll[1])
+    D6.fix(dice_roll[1])
+    D6.fix(dice_roll[1])
     proc.step(None)
     ff_home = game.state.home_team.fan_factor
     ff_away = game.state.away_team.fan_factor

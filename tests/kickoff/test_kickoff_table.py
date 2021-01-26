@@ -5,9 +5,9 @@ from tests.util import *
 
 def test_get_the_ref():
     game = get_game_kickoff()
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(1)
-    D6.fix_result(1)
+    D6.fix(1)  # Scatter
+    D6.fix(1)
+    D6.fix(1)
     home_bribes = game.state.home_team.state.bribes
     away_bribes = game.state.away_team.state.bribes
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
@@ -25,11 +25,11 @@ def test_riot():
             game = get_game_kickoff()
             game.state.home_team.state.turn = i
             game.state.away_team.state.turn = i
-            D6.fix_result(1)  # Scatter
-            D6.fix_result(1)
-            D6.fix_result(2)
+            D6.fix(1)  # Scatter
+            D6.fix(1)
+            D6.fix(2)
             if 0 < i < 7:
-                D6.fix_result(roll)  # Riot roll
+                D6.fix(roll)  # Riot roll
             game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
             if i == 7:
                 assert game.state.home_team.state.turn == i - 1
@@ -48,9 +48,9 @@ def test_riot():
 
 def test_perfect_defence():
     game = get_game_kickoff()
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(2)
-    D6.fix_result(2)
+    D6.fix(1)  # Scatter
+    D6.fix(2)
+    D6.fix(2)
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     proc = game.get_procedure()
     assert game.has_report_of_type(OutcomeType.KICKOFF_PERFECT_DEFENSE)
@@ -86,10 +86,10 @@ def get_empty_square_without_adjacent_players(game, x=None, y=None):
 
 def test_high_kick():
     game = get_game_kickoff()
-    D6.fix_result(1)  # Scatter
-    D8.fix_result(6)  # Scatter
-    D6.fix_result(3)
-    D6.fix_result(2)
+    D6.fix(1)  # Scatter
+    D8.fix(6)  # Scatter
+    D6.fix(3)
+    D6.fix(2)
     ball_placed_at = get_empty_square_without_adjacent_players(game, y=6)
     assert ball_placed_at is not None
     game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
@@ -114,17 +114,17 @@ def test_high_kick():
             else:
                 assert player not in action_choice.players
     if catcher is not None:
-        D6.fix_result(6)  # Catch
+        D6.fix(6)  # Catch
         game.step(Action(ActionType.SELECT_PLAYER, player=catcher))
         assert game.has_ball(catcher)
 
 
 def test_high_kick_touchback():
     game = get_game_kickoff()
-    D6.fix_result(6)  # Scatter
-    D8.fix_result(2)  # Scatter
-    D6.fix_result(3)
-    D6.fix_result(2)
+    D6.fix(6)  # Scatter
+    D8.fix(2)  # Scatter
+    D6.fix(3)
+    D6.fix(2)
     ball_placed_at = get_empty_square_without_adjacent_players(game, y=1)
     assert ball_placed_at is not None
     game.step(Action(ActionType.PLACE_BALL, position=ball_placed_at))
@@ -138,9 +138,9 @@ def test_high_kick_touchback():
 
 def test_blitz_movement():
     game = get_game_kickoff()
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(1)  # Scatter
+    D6.fix(5)
+    D6.fix(5)
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_BLITZ)
     actor = game.actor
@@ -162,9 +162,9 @@ def test_blitz_movement():
 
 def test_quick_snap():
     game = get_game_kickoff()
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(4)
-    D6.fix_result(5)  # Quick snap
+    D6.fix(1)  # Scatter
+    D6.fix(4)
+    D6.fix(5)  # Quick snap
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_QUICK_SNAP)
     actor = game.actor
@@ -199,15 +199,15 @@ def test_cheering_fans_brilliant_coaching_equal_fame_and_roll(kickoff_event):
     game.state.away_team.ass_coaches = 0
     home_rr = game.state.home_team.state.rerolls
     away_rr = game.state.away_team.state.rerolls
-    D6.fix_result(1)  # Scatter
+    D6.fix(1)  # Scatter
     if kickoff_event == OutcomeType.KICKOFF_CHEERING_FANS:
-        D6.fix_result(3)
-        D6.fix_result(3)  # Cheering fans
+        D6.fix(3)
+        D6.fix(3)  # Cheering fans
     else:
-        D6.fix_result(4)
-        D6.fix_result(4)  # Brilliant coaching
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
+        D6.fix(4)
+        D6.fix(4)  # Brilliant coaching
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
@@ -225,15 +225,15 @@ def test_cheering_fans_brilliant_coaching_equal_roll(kickoff_event):
     game.state.away_team.ass_coaches = 0
     home_rr = game.state.home_team.state.rerolls
     away_rr = game.state.away_team.state.rerolls
-    D6.fix_result(1)  # Scatter
+    D6.fix(1)  # Scatter
     if kickoff_event == OutcomeType.KICKOFF_CHEERING_FANS:
-        D6.fix_result(3)
-        D6.fix_result(3)  # Cheering fans
+        D6.fix(3)
+        D6.fix(3)  # Cheering fans
     else:
-        D6.fix_result(4)
-        D6.fix_result(4)  # Brilliant coaching
-    D3.fix_result(2)  # home team roll
-    D3.fix_result(1)  # away team roll
+        D6.fix(4)
+        D6.fix(4)  # Brilliant coaching
+    D3.fix(2)  # home team roll
+    D3.fix(1)  # away team roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
@@ -251,15 +251,15 @@ def test_cheering_fans_brilliant_coaching_unequal_roll(kickoff_event):
     game.state.away_team.ass_coaches = 0
     home_rr = game.state.home_team.state.rerolls
     away_rr = game.state.away_team.state.rerolls
-    D6.fix_result(1)  # Scatter
+    D6.fix(1)  # Scatter
     if kickoff_event == OutcomeType.KICKOFF_CHEERING_FANS:
-        D6.fix_result(3)
-        D6.fix_result(3)  # Cheering fans
+        D6.fix(3)
+        D6.fix(3)  # Cheering fans
     else:
-        D6.fix_result(4)
-        D6.fix_result(4)  # Brilliant coaching
-    D3.fix_result(3)  # home team roll
-    D3.fix_result(1)  # away team roll
+        D6.fix(4)
+        D6.fix(4)  # Brilliant coaching
+    D3.fix(3)  # home team roll
+    D3.fix(1)  # away team roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
@@ -277,15 +277,15 @@ def test_cheering_fans_brilliant_coaching_cheerleaders_ass_coaches_equal(kickoff
     game.state.away_team.ass_coaches = 0
     home_rr = game.state.home_team.state.rerolls
     away_rr = game.state.away_team.state.rerolls
-    D6.fix_result(1)  # Scatter
+    D6.fix(1)  # Scatter
     if kickoff_event == OutcomeType.KICKOFF_CHEERING_FANS:
-        D6.fix_result(3)
-        D6.fix_result(3)  # Cheering fans
+        D6.fix(3)
+        D6.fix(3)  # Cheering fans
     else:
-        D6.fix_result(4)
-        D6.fix_result(4)  # Brilliant coaching
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
+        D6.fix(4)
+        D6.fix(4)  # Brilliant coaching
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
@@ -303,15 +303,15 @@ def test_cheering_fans_brilliant_coaching_ten_fame(kickoff_event):
     game.state.away_team.ass_coaches = 0
     home_rr = game.state.home_team.state.rerolls
     away_rr = game.state.away_team.state.rerolls
-    D6.fix_result(1)  # Scatter
+    D6.fix(1)  # Scatter
     if kickoff_event == OutcomeType.KICKOFF_CHEERING_FANS:
-        D6.fix_result(3)
-        D6.fix_result(3)  # Cheering fans
+        D6.fix(3)
+        D6.fix(3)  # Cheering fans
     else:
-        D6.fix_result(4)
-        D6.fix_result(4)  # Brilliant coaching
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(3)  # away team roll
+        D6.fix(4)
+        D6.fix(4)  # Brilliant coaching
+    D3.fix(1)  # home team roll
+    D3.fix(3)  # away team roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(kickoff_event)
     assert game.state.home_team.state.rerolls == home_rr + 1
@@ -323,11 +323,11 @@ weather_dice_rolls = [[1, 1], [1, 2], [2, 2], [5, 5], [5, 6], [6, 6]]
 def test_changing_weather(dice_roll):
     game = get_game_kickoff()
     game.state.weather = WeatherType.NICE
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(3)
-    D6.fix_result(4)  # Changing weather
-    D6.fix_result(dice_roll[0])  # Weather roll
-    D6.fix_result(dice_roll[1])  # Weather roll
+    D6.fix(1)  # Scatter
+    D6.fix(3)
+    D6.fix(4)  # Changing weather
+    D6.fix(dice_roll[0])  # Weather roll
+    D6.fix(dice_roll[1])  # Weather roll
     pos = game.state.available_actions[0].positions[0]
     if pos.x <= 13:
         pos.x = 6
@@ -355,15 +355,15 @@ def test_throw_a_rock_same_stunned():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
@@ -377,16 +377,16 @@ def test_throw_a_rock_same_knocked_out():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
     # Random player not determined by dice roll - should it?
-    D6.fix_result(4)  # Injury roll
-    D6.fix_result(4)  # Injury roll
-    D6.fix_result(4)  # Injury roll
-    D6.fix_result(4)  # Injury roll
+    D6.fix(4)  # Injury roll
+    D6.fix(4)  # Injury roll
+    D6.fix(4)  # Injury roll
+    D6.fix(4)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10
@@ -402,20 +402,20 @@ def test_throw_a_rock_same_cas():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
     # Random player not determined by dice roll - should it?
-    D6.fix_result(5)  # Injury roll
-    D6.fix_result(5)  # Injury roll
-    D6.fix_result(1)  # Badly hurt
-    D8.fix_result(1)  # Badly hurt
-    D6.fix_result(5)  # Injury roll
-    D6.fix_result(5)  # Injury roll
-    D6.fix_result(1)  # Badly hurt
-    D8.fix_result(1)  # Badly hurt
+    D6.fix(5)  # Injury roll
+    D6.fix(5)  # Injury roll
+    D6.fix(1)  # Badly hurt
+    D8.fix(1)  # Badly hurt
+    D6.fix(5)  # Injury roll
+    D6.fix(5)  # Injury roll
+    D6.fix(1)  # Badly hurt
+    D8.fix(1)  # Badly hurt
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10
@@ -431,15 +431,15 @@ def test_throw_a_rock_home_stunned():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(2)  # home team roll
-    D3.fix_result(1)  # away team roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(2)  # home team roll
+    D3.fix(1)  # away team roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
@@ -453,15 +453,15 @@ def test_throw_a_rock_away_stunned():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(2)  # away team roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(2)  # away team roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
@@ -475,15 +475,15 @@ def test_throw_a_rock_home_fame_stunned():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
@@ -497,15 +497,15 @@ def test_throw_a_rock_away_fame_stunned():
     game.state.away_team.state.fame = 1
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(5)  # Throw a rock
-    D6.fix_result(6)  # Throw a rock
-    D3.fix_result(1)  # home team roll
-    D3.fix_result(1)  # away team roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
-    D6.fix_result(1)  # Injury roll
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Throw a rock
+    D6.fix(6)  # Throw a rock
+    D3.fix(1)  # home team roll
+    D3.fix(1)  # away team roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
+    D6.fix(1)  # Injury roll
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
@@ -519,13 +519,13 @@ def test_pitch_invasion_no_fame():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(6)  # Pitch invasion
-    D6.fix_result(6)  # Pitch invasion
+    D6.fix(1)  # Scatter
+    D6.fix(6)  # Pitch invasion
+    D6.fix(6)  # Pitch invasion
     for team in game.state.teams:
         i = 1
         for player in game.get_players_on_pitch(team):
-            D6.fix_result(i)
+            D6.fix(i)
             if i < 6:
                 i += 1
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
@@ -549,13 +549,13 @@ def test_pitch_invasion_home_fame():
     game.state.away_team.state.fame = 0
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(6)  # Pitch invasion
-    D6.fix_result(6)  # Pitch invasion
+    D6.fix(1)  # Scatter
+    D6.fix(6)  # Pitch invasion
+    D6.fix(6)  # Pitch invasion
     for team in game.state.teams:
         i = 1
         for player in game.get_players_on_pitch(team):
-            D6.fix_result(i)
+            D6.fix(i)
             if i < 6:
                 i += 1
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
@@ -579,13 +579,13 @@ def test_pitch_invasion_away_fame():
     game.state.away_team.state.fame = 1
     assert len(game.get_players_on_pitch(game.state.home_team)) == 11
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(6)  # Pitch invasion
-    D6.fix_result(6)  # Pitch invasion
+    D6.fix(1)  # Scatter
+    D6.fix(6)  # Pitch invasion
+    D6.fix(6)  # Pitch invasion
     for team in game.state.teams:
         i = 1
         for player in game.get_players_on_pitch(team):
-            D6.fix_result(i)
+            D6.fix(i)
             if i < 6:
                 i += 1
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
@@ -611,12 +611,12 @@ def test_pitch_invasion_ball_and_chain():
     assert len(game.get_players_on_pitch(game.state.away_team)) == 11
     game.get_players_on_pitch(game.state.home_team)[0].extra_skills.append(Skill.BALL_AND_CHAIN)
     game.get_players_on_pitch(game.state.away_team)[0].extra_skills.append(Skill.BALL_AND_CHAIN)
-    D6.fix_result(1)  # Scatter
-    D6.fix_result(6)  # Pitch invasion
-    D6.fix_result(6)  # Pitch invasion
+    D6.fix(1)  # Scatter
+    D6.fix(6)  # Pitch invasion
+    D6.fix(6)  # Pitch invasion
     for team in game.state.teams:
         for player in game.get_players_on_pitch(team):
-            D6.fix_result(6)
+            D6.fix(6)
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert len(game.get_players_on_pitch(game.state.home_team)) == 10
     assert len(game.get_players_on_pitch(game.state.away_team)) == 10

@@ -45,20 +45,20 @@ class ProcBot(Agent):
             return self.blitz(game)
         if isinstance(proc, Turn):
             return self.turn(game)
-        if isinstance(proc, MoveAction):
-            return self.move_action(game)
+        if isinstance(proc, Action):
+            return self.player_action(game)
         if isinstance(proc, BlockAction):
-            return self.block_action(game)
+            return self.player_action(game)
         if isinstance(proc, PassAction):
-            return self.pass_action(game)
+            return self.player_action(game)
         if isinstance(proc, HandOffAction):
-            return self.handoff_action(game)
+            return self.player_action(game)
         if isinstance(proc, BlitzAction):
-            return self.blitz_action(game)
+            return self.player_action(game)
         if isinstance(proc, FoulAction):
-            return self.foul_action(game)
+            return self.player_action(game)
         if isinstance(proc, ThrowBombAction):
-            return self.throw_bomb_action(game)
+            return self.player_action(game)
         if isinstance(proc, Block):
             if proc.waiting_juggernaut:
                 return self.use_juggernaut(game)

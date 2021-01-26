@@ -156,8 +156,8 @@ def test_pass_roll_fumble(pass_skill):
     game.set_available_actions()
     game.state.reports.clear() 
     
-    D6.fix_result(1)  # Fumble pass
-    D6.fix_result(6)  # Successful pass after skill re-roll
+    D6.fix(1)  # Fumble pass
+    D6.fix(6)  # Successful pass after skill re-roll
     
     if pass_skill: 
         assert passer.can_use_skill(Skill.PASS)
@@ -198,8 +198,8 @@ def test_pass_roll_inaccurate(pass_skill):
     game.set_available_actions()
     game.state.reports.clear() 
     
-    D6.fix_result(2)  # Inaccurate pass
-    D6.fix_result(6)  # Successful pass after skill re-roll
+    D6.fix(2)  # Inaccurate pass
+    D6.fix(6)  # Successful pass after skill re-roll
     
     if pass_skill: 
         assert passer.can_use_skill(Skill.PASS)

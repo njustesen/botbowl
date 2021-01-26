@@ -12,18 +12,18 @@ def test_casualty():
     defender_pos = Square(defender.position.x, defender.position.y)
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the casualty roll #1 (Gouged Eye / MNG)
-    D6.fix_result(4)
-    D8.fix_result(3)
+    D6.fix(4)
+    D8.fix(3)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -48,19 +48,19 @@ def test_casualty_regeneration_success():
     defender.extra_skills.append(Skill.REGENERATION)
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # add a value for casualty effect
-    D6.fix_result(3)
+    D6.fix(3)
     # fix the regeneration roll
-    D6.fix_result(4)
+    D6.fix(4)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -84,19 +84,19 @@ def test_casualty_regeneration_fail():
     defender.extra_skills.append(Skill.REGENERATION)
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # add a value for casualty effect
-    D6.fix_result(4)
+    D6.fix(4)
     # fix the regeneration roll
-    D6.fix_result(3)
+    D6.fix(3)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -120,21 +120,21 @@ def test_casualty_with_decay():
     defender.extra_skills.append(Skill.DECAY)
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the casualty roll #1 (Gouged Eye / MNG)
-    D6.fix_result(4)
-    D8.fix_result(3)
+    D6.fix(4)
+    D8.fix(3)
     # fix the casualty roll #2 (BH / none)
-    D6.fix_result(3)
-    D8.fix_result(1)
+    D6.fix(3)
+    D8.fix(1)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -159,21 +159,21 @@ def test_casualty_with_decay_mng_twice_is_just_one():
     defender.extra_skills.append(Skill.DECAY)
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the casualty roll #1 (Gouged Eye / MNG)
-    D6.fix_result(4)
-    D8.fix_result(3)
+    D6.fix(4)
+    D8.fix(3)
     # fix the casualty roll #2 (BH / none)
-    D6.fix_result(4)
-    D8.fix_result(4)
+    D6.fix(4)
+    D8.fix(4)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -199,19 +199,19 @@ def test_casualty_regeneration_success():
 
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # add a value for casualty effect
-    D6.fix_result(3)
+    D6.fix(3)
     # fix the regeneration roll
-    D6.fix_result(4)
+    D6.fix(4)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -237,21 +237,21 @@ def test_casualty_regeneration_failure():
 
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
     D6.FixedRolls.clear()
     # fix the armour roll
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # fix the injury roll to casualty
-    D6.fix_result(5)
-    D6.fix_result(5)
+    D6.fix(5)
+    D6.fix(5)
     # add a value for casualty effect - BH
-    D6.fix_result(3)
+    D6.fix(3)
     # fix the regeneration roll
-    D6.fix_result(2)
+    D6.fix(2)
     # add a value for casualty effect #2 - DEAD
-    D6.fix_result(6)
+    D6.fix(6)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))

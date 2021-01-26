@@ -539,7 +539,7 @@ class MyScriptedBot(ProcBot):
     def blitz(self, game):
         return Action(ActionType.END_TURN)
 
-    def _player_action(self, game):
+    def player_action(self, game):
         # Execute planned actions if any
         if len(self.actions) > 0:
             action = self._get_next_action()
@@ -554,27 +554,6 @@ class MyScriptedBot(ProcBot):
                 #print(f"Scoring with {ball_carrier.role.name}, p={td_path.prob}")
                 return
         return Action(ActionType.END_PLAYER_TURN)
-
-    def move_action(self, game):
-        self._player_action(game)
-
-    def block_action(self, game):
-        self._player_action(game)
-
-    def blitz_action(self, game):
-        self._player_action(game)
-
-    def foul_action(self, game):
-        self._player_action(game)
-
-    def handoff_action(self, game):
-        self._player_action(game)
-
-    def pass_action(self, game):
-        self._player_action(game)
-
-    def throw_bomb_action(self, game):
-        self._player_action(game)
 
     def block(self, game):
         """

@@ -20,7 +20,7 @@ def test_leap_one_square_success():
     from_pos = Square(player.position.x, player.position.y)
     to_pos = Square(from_pos.x + 1, from_pos.y)
 
-    D6.fix_result(4)
+    D6.fix(4)
     game.step(Action(ActionType.LEAP, player=player, position=to_pos))
 
     assert player.position == to_pos
@@ -45,7 +45,7 @@ def test_leap_two_squares_success():
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
-    D6.fix_result(4)
+    D6.fix(4)
     game.step(Action(ActionType.LEAP, player=player, position=to))
 
     assert player.position == to
@@ -70,7 +70,7 @@ def test_leap_two_squares_fail():
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
-    D6.fix_result(3)
+    D6.fix(3)
     game.step(Action(ActionType.LEAP, player=player, position=to))
     game.step(Action(ActionType.DONT_USE_REROLL))
 
@@ -96,7 +96,7 @@ def test_leap_very_long_legs_success():
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
 
-    D6.fix_result(3)
+    D6.fix(3)
     game.step(Action(ActionType.LEAP, player=player, position=to))
 
     assert player.position == to
@@ -120,7 +120,7 @@ def test_leap_tackle_zone():
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
-    D6.fix_result(4)
+    D6.fix(4)
     game.step(Action(ActionType.LEAP, player=player, position=to))
 
     assert player.position == to
@@ -141,12 +141,12 @@ def test_two_leaps():
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
     to = Square(player.position.x + 2, player.position.y)
-    D6.fix_result(4)
+    D6.fix(4)
     game.step(Action(ActionType.LEAP, player=player, position=to))
     assert player.position == to
     assert player.state.moves == 2
     to = Square(player.position.x + 2, player.position.y)
-    D6.fix_result(4)
+    D6.fix(4)
     game.step(Action(ActionType.LEAP, player=player, position=to))
     assert player.position != to  # Leap did not happen
     assert player.state.moves == 2  # Leap did not happen

@@ -59,8 +59,8 @@ def test_pickup_sure_hands(sure_hands):
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
-    D6.fix_result(1) # Failed pickup
-    D6.fix_result(6)  # Successful pickup
+    D6.fix(1) # Failed pickup
+    D6.fix(6)  # Successful pickup
     game.step(Action(ActionType.MOVE, position=Square(2, 2)))
     if sure_hands:
         assert game.has_report_of_type(OutcomeType.FAILED_PICKUP)

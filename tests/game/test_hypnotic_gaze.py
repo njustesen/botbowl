@@ -25,12 +25,12 @@ def test_hypnotize(success, reroll):
     D6.FixedRolls.clear()
     
     if reroll: 
-        D6.fix_result(1)  
+        D6.fix(1)
         
     if success: 
-        D6.fix_result(6) 
+        D6.fix(6)
     else: 
-        D6.fix_result(1) 
+        D6.fix(1)
         
         
     game.step(Action(ActionType.START_MOVE, player=player))

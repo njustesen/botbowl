@@ -90,9 +90,9 @@ def test_catch_team_reroll():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.put(catcher, Square(10, 1))
-    D6.fix_result(6)  # Second catch roll
-    D6.fix_result(1)  # First catch roll
-    D6.fix_result(6)  # Pass roll
+    D6.fix(6)  # Second catch roll
+    D6.fix(1)  # First catch roll
+    D6.fix(6)  # Pass roll
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     game.step(Action(ActionType.PASS, position=catcher.position))
@@ -114,9 +114,9 @@ def test_catch_skill_reroll():
     game.get_ball().move_to(passer.position)
     game.get_ball().is_carried = True
     game.put(catcher, Square(10, 1))
-    D6.fix_result(6)  # Second catch roll
-    D6.fix_result(1)  # First catch roll
-    D6.fix_result(6)  # Pass roll
+    D6.fix(6)  # Second catch roll
+    D6.fix(1)  # First catch roll
+    D6.fix(6)  # Pass roll
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
     game.step(Action(ActionType.PASS, position=catcher.position))
@@ -143,8 +143,8 @@ def test_diving_catch():
     pass_position = Square(passer.position.x + 3, passer.position.y + 0)
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(6)  # Catch
-    D6.fix_result(6)  # Pass
+    D6.fix(6)  # Catch
+    D6.fix(6)  # Pass
     game.step(Action(ActionType.PASS, position=pass_position))
     game.has_report_of_type(OutcomeType.SKILL_USED)
     assert game.get_ball_carrier() == catcher

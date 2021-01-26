@@ -14,8 +14,8 @@ def test_weather_table(dice_roll):
     game = get_game_weather_table()
     proc = WeatherTable(game)
     proc.start()
-    D6.fix_result(dice_roll[0])
-    D6.fix_result(dice_roll[1])
+    D6.fix(dice_roll[0])
+    D6.fix(dice_roll[1])
     proc.step(None)
     if np.sum(dice_roll) == 2:
         assert game.state.weather == WeatherType.SWELTERING_HEAT

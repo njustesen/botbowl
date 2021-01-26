@@ -22,7 +22,7 @@ def test_interception_success():
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(6)  # Interception
+    D6.fix(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
@@ -49,10 +49,10 @@ def test_interception_safe_throw_success():
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(6)  # Interception
-    D6.fix_result(4)  # Safe throw agility roll
-    D6.fix_result(6)  # Pass
-    D6.fix_result(6)  # Catch
+    D6.fix(6)  # Interception
+    D6.fix(4)  # Safe throw agility roll
+    D6.fix(6)  # Pass
+    D6.fix(6)  # Catch
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
@@ -81,9 +81,9 @@ def test_interception_safe_throw_fail():
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(6)  # Interception
-    D6.fix_result(3)  # Safe throw agility roll
-    D6.fix_result(3)  # Safe throw agility re-roll
+    D6.fix(6)  # Interception
+    D6.fix(3)  # Safe throw agility roll
+    D6.fix(3)  # Safe throw agility re-roll
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     game.step(Action(ActionType.USE_REROLL))
@@ -112,7 +112,7 @@ def test_interception_safe_throw_very_long_legs_fail():
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(6)  # Interception
+    D6.fix(6)  # Interception
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert game.has_report_of_type(OutcomeType.INTERCEPTION)
@@ -140,9 +140,9 @@ def test_interception_fail():
     game.state.weather = WeatherType.NICE
     game.set_available_actions()
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix_result(1)  # Interception
-    D6.fix_result(6)  # Pass
-    D6.fix_result(6)  # Catch
+    D6.fix(1)  # Interception
+    D6.fix(6)  # Pass
+    D6.fix(6)  # Catch
     game.step(Action(ActionType.PASS, position=catcher.position))
     game.step(Action(ActionType.SELECT_PLAYER, player=interceptor))
     assert not game.has_report_of_type(OutcomeType.INTERCEPTION)
