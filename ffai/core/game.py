@@ -309,18 +309,6 @@ class Game:
         :return: True if game requires action or game is over, False if not
         """
 
-        """
-        # Clear done procs
-        while not self.state.stack.is_empty() and self.state.stack.peek().done:
-            self.state.stack.pop()
-
-        # Is game over
-        if self.state.stack.is_empty():
-            # This should probably not happen?
-            self._end_game()
-            return False
-        """
-
         # Get proc
         proc = self.state.stack.peek()
 
@@ -521,7 +509,7 @@ class Game:
 
     def get_agent_team(self, agent):
         """
-        :param team:
+        :param agent: The agent controlling the team
         :return: The team controlled by the specified agent.
         """
         if agent is None:
@@ -806,6 +794,14 @@ class Game:
         if turn is not None:
             return turn.blitz_available
 
+    def use_blitz_action(self):
+        """
+        Uses this turn's blitz action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.blitz_available = False
+
     def is_pass_available(self):
         """
         :return: True if the current team can make a pass this turn.
@@ -813,6 +809,14 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.pass_available
+
+    def use_pass_action(self):
+        """
+        Use this turn's pass action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.pass_available = True
 
     def is_handoff_available(self):
         """
@@ -822,6 +826,14 @@ class Game:
         if turn is not None:
             return turn.handoff_available
 
+    def use_handoff_action(self):
+        """
+        Uses this turn's handoff action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.handoff_available = False
+
     def is_foul_available(self):
         """
         :return: True if the current team can make a foul this turn.
@@ -829,6 +841,14 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.foul_available
+
+    def use_foul_action(self):
+        """
+        Uses this turn's foul action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.foul_available = False
 
     def is_blitz(self):
         """
@@ -907,10 +927,6 @@ class Game:
         """
         Moves player from the pitch to the CAS section in the dugout and applies the casualty and effect to the player.
         :param player:
-        :param casualty:
-        :param effect:
-        :param apothecary_used: If True and effect == CasualtyEffect.NONE, player is moved to the reserves.
-        :return:
         """
         self.remove(player)
         player.state.up = True
@@ -1287,14 +1303,9 @@ class Game:
     def get_player_action_type(self):
         """
         :param player:
-        :return: the player ActionType if there is any on the stack.
+        :return: the player PlayerActionType if there is any on the stack.
         """
-        if self.state.game_over:
-            return None
-        proc = self.state.stack.peek()
-        if isinstance(proc, PlayerAction):
-            return proc.player_action_type
-        return None
+        return self.state.player_action_type
 
     def remove_recursive_refs(self):
         """
@@ -1368,7 +1379,7 @@ class Game:
             if isinstance(proc, Block):
                 if proc.defender is not None:
                     return proc.defender.player_id
-            if isinstance(proc, PassAction):
+            if isinstance(proc, PassAttempt):
                 if proc.catcher is not None:
                     return proc.catcher.player_id
             if isinstance(proc, Handoff):
@@ -2308,47 +2319,53 @@ class Game:
         return actions
 
     def get_block_actions(self, player, blitz=False):
-        actions = []
 
-        can_block = player.state.up
+        move_needed = 1 if blitz else 0
+        jump_up_rolls = []
+        if not player.state.up:
+            if not player.has_skill(Skill.JUMP_UP):
+                if blitz:
+                    move_needed += 3
+                else:
+                    return []
+            else:
+                jump_up_rolls.append(min(6, Rules.agility_table[player.get_ag()] + 2))
+
+        actions = []
 
         # Check movement left if blitz,
         gfi = False
         if blitz:
-            move_needed = 1
             gfi_allowed = 3 if player.has_skill(Skill.SPRINT) else 2
             if player.state.moves + move_needed > player.get_ma() + gfi_allowed:
-                can_block = False
+                return actions
             gfi = player.state.moves + move_needed > player.get_ma()
 
         # Find adjacent enemies to block
-        if can_block:
-            block_positions = []
-            block_rolls = []
-            stab_rolls = []
-            for player_to in self.get_adjacent_opponents(player, down=False):
-                block_positions.append(player_to.position)
-                dice = self.num_block_dice(attacker=player, defender=player_to,
-                                                blitz=blitz,
-                                                dauntless_success=False)
-                block_rolls.append(dice)
-                if player.has_skill(Skill.STAB):
-                    roll = player_to.get_av() + 1
-                    if player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic',
-                                                                                       'Undead', 'Vampire']:
-                        roll += 1
-                    stab_rolls.append(roll)
-            if len(block_positions) > 0:
-                agi_rolls = [([2] if gfi else []) for _ in block_positions]
-                actions.append(ActionChoice(ActionType.BLOCK, team=player.team,
-                                            positions=block_positions, block_rolls=block_rolls,
-                                            agi_rolls=agi_rolls))
+        block_positions = []
+        block_rolls = []
+        stab_rolls = []
+        for player_to in self.get_adjacent_opponents(player, down=False):
+            block_positions.append(player_to.position)
+            dice = self.num_block_dice(attacker=player, defender=player_to,
+                                       blitz=blitz,
+                                       dauntless_success=False)
+            block_rolls.append(dice)
             if player.has_skill(Skill.STAB):
-                stab_agi_rolls = [([2, stab_rolls[i]] if gfi else [stab_rolls[i]]) for i in range(len(block_positions))]
-                agi_rolls = [([2] if gfi else []) for _ in block_positions] + stab_agi_rolls
-                actions.append(ActionChoice(ActionType.STAB, team=player.team,
-                                            positions=block_positions,
-                                            agi_rolls=agi_rolls))
+                roll = player_to.get_av() + 1
+                if player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic',
+                                                                              'Undead', 'Vampire']:
+                    roll += 1
+                stab_rolls.append(roll)
+        if len(block_positions) > 0:
+            rolls = [(jump_up_rolls + [2] if gfi else []) for _ in block_positions]
+            actions.append(ActionChoice(ActionType.BLOCK, team=player.team,
+                                        positions=block_positions,
+                                        block_rolls=block_rolls,
+                                        agi_rolls=rolls))
+            if player.has_skill(Skill.STAB):
+                rolls = [roll + stab_rolls[i] for i, roll in enumerate(rolls)]
+                actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, agi_rolls=rolls))
 
         return actions
 
@@ -2401,3 +2418,12 @@ class Game:
                                             skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions,
                                             agi_rolls=agi_rolls))
         return actions
+
+    def purge_stack_until(self, proc_class, inclusive=False):
+        x = 0 if inclusive else -1
+        for i in reversed(range(self.state.stack.size())):
+            x += 1
+            if isinstance(self.state.stack.items[i], proc_class):
+                break
+        for i in range(x):
+            self.state.stack.pop()

@@ -17,15 +17,16 @@ def test_leap_one_square_success():
 
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
-    to = Square(player.position.x + 1, player.position.y)
+    from_pos = Square(player.position.x, player.position.y)
+    to_pos = Square(from_pos.x + 1, from_pos.y)
 
     D6.fix_result(4)
-    game.step(Action(ActionType.LEAP, player=player, position=to))
+    game.step(Action(ActionType.LEAP, player=player, position=to_pos))
 
-    assert player.position == to
+    assert player.position == to_pos
     assert player.state.up
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LEAP)
-    assert player.state.moves == 2
+    assert player.state.moves == from_pos.distance(to_pos) == 1
 
 
 def test_leap_two_squares_success():

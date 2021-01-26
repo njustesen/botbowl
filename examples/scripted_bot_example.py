@@ -108,7 +108,7 @@ class MyScriptedBot(ProcBot):
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Pickup:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.PassAction:
+        if type(context) == ffai.PassAttempt:
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Catch:
             return Action(ActionType.USE_REROLL)
@@ -533,14 +533,13 @@ class MyScriptedBot(ProcBot):
                         block_p_fumble_opp = p_fumble_opp
         return block_attacker, block_defender, block_p_self_up, block_p_opp_down, block_p_fumble_self, block_p_fumble_opp
 
-
     def quick_snap(self, game):
         return Action(ActionType.END_TURN)
 
     def blitz(self, game):
         return Action(ActionType.END_TURN)
 
-    def player_action(self, game):
+    def _player_action(self, game):
         # Execute planned actions if any
         if len(self.actions) > 0:
             action = self._get_next_action()
@@ -555,6 +554,27 @@ class MyScriptedBot(ProcBot):
                 #print(f"Scoring with {ball_carrier.role.name}, p={td_path.prob}")
                 return
         return Action(ActionType.END_PLAYER_TURN)
+
+    def move_action(self, game):
+        self._player_action(game)
+
+    def block_action(self, game):
+        self._player_action(game)
+
+    def blitz_action(self, game):
+        self._player_action(game)
+
+    def foul_action(self, game):
+        self._player_action(game)
+
+    def handoff_action(self, game):
+        self._player_action(game)
+
+    def pass_action(self, game):
+        self._player_action(game)
+
+    def throw_bomb_action(self, game):
+        self._player_action(game)
 
     def block(self, game):
         """

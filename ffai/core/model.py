@@ -378,6 +378,7 @@ class GameState:
         self.available_actions = []
         self.clocks = []
         self.rerolled_procs = set()
+        self.player_action_type = None
 
     def to_json(self, ignore_reports=False):
         return {
@@ -400,7 +401,8 @@ class GameState:
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'clocks': [clock.to_json() for clock in self.clocks]
+            'clocks': [clock.to_json() for clock in self.clocks],
+            'player_action_type': self.player_action_type.name if self.player_action_type is not None else None
         }
 
 
@@ -870,7 +872,7 @@ class Player(Piece):
             return ma
 
     def get_av(self):
-        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
+        av = self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
         av = max(self.role.av - 2, av)
         av = max(1, av)
         av = min(10, av)
