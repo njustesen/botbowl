@@ -336,7 +336,7 @@ class Game:
                             print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
                         else:
                             print(f"Action not allowed {action}")
-                    return True  # Game needs user input
+                    return True  # Game needs valid user input
 
         # Run proc
         if self.config.debug_mode:

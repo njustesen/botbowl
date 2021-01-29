@@ -2293,10 +2293,12 @@ class PassAttempt(Procedure):
         return True
 
     def _fumble(self):
-        if not self.dump_off:
-            Turnover(self.game)
-        if type(self.piece) is Ball or type(self.piece) is Player:
+        if type(self.piece) is Ball:
+            if not self.dump_off:
+                Turnover(self.game)
             Bounce(self.game, self.piece)
+        elif type(self.piece) is Player:
+            self.game.put_down(self.piece)
         elif type(self.piece) is Bomb:
             Explode(self.game, self.piece)
 
