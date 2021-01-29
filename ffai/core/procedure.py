@@ -1631,7 +1631,7 @@ class KnockDown(Procedure):
 
         # Knock down player
         self.player.place_prone()
-        if self.player.team == self.game.state.current_team:
+        if self.player == self.game.get_active_player():
             self.player.state.used = True
 
         self.game.report(Outcome(OutcomeType.KNOCKED_DOWN, player=self.player, opp_player=self.inflictor))
@@ -2175,7 +2175,7 @@ class Land(Procedure):
             return False
 
         # Failed landing
-        KnockDown(self.game, self.player)
+        KnockDown(self.game, self.player, turnover=False)
         return True
 
 
