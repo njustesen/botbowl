@@ -784,7 +784,7 @@ class Game:
         :param player:
         :return: True if player is in the opponent's endzone with the ball.
         """
-        return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team)
+        return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team) and self.has_ball(player)
 
     def is_blitz_available(self):
         """

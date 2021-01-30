@@ -3188,7 +3188,7 @@ class Scatter(Procedure):
                             self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
                                                      position=self.piece.position))
                         elif type(self.piece) is Player:
-                            KnockDown(self.game, self.piece, in_crowd=True)
+                            KnockDown(self.game, self.piece, in_crowd=True, armor_roll=False)
                             self.game.report(Outcome(OutcomeType.PLAYER_OUT_OF_BOUNDS, player=self.piece, rolls=rolls))
                         elif type(self.piece) is Bomb:
                             self.game.report(Outcome(OutcomeType.BOMB_OUT_OF_BOUNDS, rolls=rolls))
@@ -3207,11 +3207,19 @@ class Scatter(Procedure):
                         self.game.report(Outcome(OutcomeType.PLAYER_SCATTER, player=self.piece, rolls=rolls))
 
                     # On player -> Catch
-                    player = self.game.get_catcher(self.piece.position)
-                    if player is not None:
+                    player_at = self.game.get_player_at(self.piece.position)
+                    catcher = self.game.get_catcher(self.piece.position)
+
+                    if type(self.piece) is Player and player_at is not None:
+                        self.game.report(Outcome(OutcomeType.PLAYER_HIT_PLAYER, position=self.piece.position,
+                                                 player=player_at, rolls=[roll_scatter]))
+                        Bounce(self.game, self.piece)
+                        KnockDown(self.game, player=player_at, inflictor=self.piece)
+                        return True
+                    if catcher is not None and self.piece.is_catchable():
                         Catch(self.game, player, self.piece)
                         self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.piece.position,
-                                                 player=player, rolls=[roll_scatter]))
+                                                 player=catcher, rolls=[roll_scatter]))
                         return True
 
         if self.kick:
@@ -3224,12 +3232,7 @@ class Scatter(Procedure):
                 self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, position=self.piece.position,
                                          rolls=[roll_scatter, roll_distance]))
         elif type(self.piece) is Player:
-            player_at = self.game.get_player_at(self.piece.position)
-            if player_at is not None:
-                Bounce(self.game, self.piece)
-                KnockDown(self.game, player=player_at, inflictor=self.piece)
-            else:
-                Land(self.game, player=self.piece)
+            Land(self.game, player=self.piece)
         elif type(self.piece) is Bomb:
             Explode(self.game, self.piece)
         else:
