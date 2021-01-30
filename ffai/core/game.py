@@ -816,7 +816,7 @@ class Game:
         """
         turn = self.current_turn()
         if turn is not None:
-            turn.pass_available = True
+            turn.pass_available = False
 
     def is_handoff_available(self):
         """

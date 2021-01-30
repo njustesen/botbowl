@@ -2815,9 +2815,10 @@ class BlitzAction(MoveAction):
     def __init__(self, game, player):
         super().__init__(game, player)
         self.player = player
+        self.block_used = False
 
     def start(self):
-        self.game.blitz_available = False
+        self.game.use_blitz_action()
         self.game.report(Outcome(OutcomeType.BLITZ_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.BLITZ
 
@@ -2827,6 +2828,7 @@ class BlitzAction(MoveAction):
             return True
 
         if action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
+            self.block_used = True
             defender = self.game.get_player_at(action.position)
             move_needed = 1
             if not self.player.state.up:
@@ -2852,7 +2854,7 @@ class BlitzAction(MoveAction):
 
     def available_actions(self):
         move_actions = super().available_actions()
-        block_actions = self.game.get_block_actions(self.player, blitz=True)
+        block_actions = self.game.get_block_actions(self.player, blitz=True) if not self.block_used else []
         return move_actions + block_actions
 
 
