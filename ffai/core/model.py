@@ -150,6 +150,7 @@ class PlayerState:
 
     def __init__(self):
         self.up = True
+        self.in_air = False
         self.used = False
         self.spp_earned = 0
         self.moves = 0
@@ -170,6 +171,7 @@ class PlayerState:
     def to_json(self):
         return {
             'up': self.up,
+            'in_air': self.in_air,
             'used': self.used,
             'stunned': self.stunned,
             'knocked_out': self.knocked_out,
@@ -190,6 +192,7 @@ class PlayerState:
     def reset(self):
         self.up = True
         self.used = False
+        self.in_air = False
         self.stunned = False
         self.bone_headed = False
         self.wild_animal = False
@@ -197,7 +200,8 @@ class PlayerState:
         self.hypnotized = False
         self.really_stupid = False
         self.heated = False
-        self.blood_lust = False 
+        self.blood_lust = False
+        self.picked_up = False
         self.used_skills.clear()
         self.squares_moved.clear()
 
@@ -374,6 +378,7 @@ class GameState:
         self.available_actions = []
         self.clocks = []
         self.rerolled_procs = set()
+        self.player_action_type = None
 
     def to_json(self, ignore_reports=False):
         return {
@@ -396,7 +401,8 @@ class GameState:
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'clocks': [clock.to_json() for clock in self.clocks]
+            'clocks': [clock.to_json() for clock in self.clocks],
+            'player_action_type': self.player_action_type.name if self.player_action_type is not None else None
         }
 
 
@@ -406,6 +412,7 @@ class Pitch:
 
     def __init__(self, width, height):
         self.balls = []
+        self.bomb = None
         self.board = []
         self.squares = []
         for y in range(height):
@@ -426,7 +433,8 @@ class Pitch:
             board.append(row)
         return {
             'board': board,
-            'balls': [ball.to_json() for ball in self.balls]
+            'balls': [ball.to_json() for ball in self.balls],
+            'bomb': self.bomb.to_json() if self.bomb else None
         }
 
 
@@ -604,7 +612,7 @@ class D3(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 3:
             D3.FixedRolls.append(value)
         else:
@@ -631,7 +639,7 @@ class D6(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 6:
             D6.FixedRolls.append(value)
         else:
@@ -658,7 +666,7 @@ class D8(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if 1 <= value <= 8:
             D8.FixedRolls.append(value)
         else:
@@ -685,7 +693,7 @@ class BBDie(Die):
     FixedRolls = []
 
     @staticmethod
-    def fix_result(value):
+    def fix(value):
         if type(value) == BBDieResult:
             BBDie.FixedRolls.append(value)
         else:
@@ -756,8 +764,11 @@ class Piece:
     def __init__(self, position=None):
         self.position = position
 
+    def is_catchable(self):
+        return False
 
-class Ball(Piece):
+
+class Catchable(Piece):
 
     def __init__(self, position, on_ground=True, is_carried=False):
         super().__init__(position)
@@ -777,6 +788,21 @@ class Ball(Piece):
             'on_ground': self.on_ground,
             'is_carried': self.is_carried
         }
+
+    def is_catchable(self):
+        return True
+
+
+class Ball(Catchable):
+
+    def __init__(self, position, on_ground=True, is_carried=False):
+        super().__init__(position, on_ground, is_carried)
+
+
+class Bomb(Catchable):
+
+    def __init__(self, position, on_ground=True, is_carried=False):
+        super().__init__(position, on_ground, is_carried)
 
 
 class Player(Piece):
@@ -846,7 +872,7 @@ class Player(Piece):
             return ma
 
     def get_av(self):
-        av =  self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
+        av = self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
         av = max(self.role.av - 2, av)
         av = max(1, av)
         av = min(10, av)

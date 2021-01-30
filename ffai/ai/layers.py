@@ -183,7 +183,7 @@ class TargetPlayerLayer(FeatureLayer):
             if isinstance(proc, Block):
                 target = proc.defender
                 break
-            if isinstance(proc, PassAction):
+            if isinstance(proc, PassAttempt):
                 target = proc.catcher
                 break
             if isinstance(proc, Handoff):

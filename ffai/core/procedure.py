@@ -149,7 +149,7 @@ class Apothecary(Procedure):
 
                 # Decay
                 if self.decay:
-                    Casualty(self.game, self.player, self.inflictor)
+                    Casualty(self.game, self.player)
 
         return True
 
@@ -335,6 +335,11 @@ class Block(Procedure):
 
     def step(self, action):
 
+        # Jump up
+        if not self.attacker.state.up:
+            JumpUpToBlock(self.game, self.attacker)
+            return False
+
         # GfI
         if self.gfi:
             self.gfi = False
@@ -355,7 +360,7 @@ class Block(Procedure):
         # Dump-off
         if self.waiting_dump_off:
             if action.action_type == ActionType.USE_SKILL:
-                PlayerAction(self.game, self.defender, PlayerActionType.PASS, self.game.get_current_turn_proc(), dump_off=True)
+                PassAction(self.game, self.defender, dump_off=True)
             self.waiting_dump_off = False
             return False
 
@@ -534,6 +539,8 @@ class Block(Procedure):
         return True
 
     def available_actions(self):
+        if not self.attacker.state.up:
+            return []
         if self.waiting_dump_off:
             return [
                 ActionChoice(ActionType.USE_SKILL, skill=Skill.DUMP_OFF, players=[self.defender],
@@ -581,15 +588,16 @@ class Block(Procedure):
 
 class Bounce(Procedure):
 
-    def __init__(self, game, ball, kick=False):
+    def __init__(self, game, piece, kick=False):
         super().__init__(game)
-        self.ball = ball
+        self.piece = piece
         self.kick = kick
 
     def step(self, action):
 
         # Loose control
-        self.ball.is_carried = False
+        if self.piece.is_catchable():
+            self.piece.is_carried = False
 
         # Roll
         roll_scatter = DiceRoll([D8(self.game.rnd)], roll_type=RollType.BOUNCE_ROLL)
@@ -607,31 +615,48 @@ class Bounce(Procedure):
         if result in [6, 7, 8]:
             y = 1
 
-        self.ball.move(x, y)
-        self.game.report(Outcome(OutcomeType.BALL_BOUNCED, position=self.ball.position, rolls=[roll_scatter]))
+        self.game.shove(self.piece, x, y)
+        if type(self.piece) is Ball:
+            self.game.report(Outcome(OutcomeType.BALL_BOUNCED, position=self.piece.position, rolls=[roll_scatter]))
+        elif type(self.piece) is Player:
+            self.game.report(Outcome(OutcomeType.PLAYER_BOUNCED, position=self.piece.position, rolls=[roll_scatter]))
 
         if self.kick:
             # Touchback
-            if not self.game.is_team_side(self.ball.position, self.game.get_receiving_team()):
-                Touchback(self.game, self.ball)
+            if not self.game.is_team_side(self.piece.position, self.game.get_receiving_team()):
+                Touchback(self.game, self.piece)
                 self.game.report(Outcome(OutcomeType.TOUCHBACK, team=self.game.get_receiving_team(),
                                          rolls=[roll_scatter]))
                 return True
         else:
             # Out of bounds
-            if self.game.is_out_of_bounds(self.ball.position):
-                ThrowIn(self.game, self.ball, Square(self.ball.position.x - x, self.ball.position.y - y))
-                self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS))
+            if self.game.is_out_of_bounds(self.piece.position):
+                if type(self.piece) is Ball:
+                    ThrowIn(self.game, self.piece, Square(self.piece.position.x - x, self.piece.position.y - y))
+                    self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS))
+                elif type(self.piece) is Player:
+                    KnockDown(self.game, self.piece, in_crowd=True)
+                    self.game.report(Outcome(OutcomeType.PLAYER_OUT_OF_BOUNDS, player=self.piece))
                 return True
 
         # On player -> Catch
-        player_at = self.game.get_player_at(self.ball.position)
+        player_at = self.game.get_player_at(self.piece.position)
         if player_at is not None:
-            Catch(self.game, player_at, self.ball)
-            self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position, player=player_at))
+            if self.piece.is_catchable():
+                Catch(self.game, player_at, self.piece)
+            if type(self.piece) is Ball:
+                self.game.report(Outcome(OutcomeType.BALL_BOUNCE_PLAYER, position=self.piece.position, player=player_at))
+            elif type(self.piece) is Player:
+                self.game.report(Outcome(OutcomeType.PLAYER_BOUNCE_PLAYER, position=self.piece.position, player=player_at))
+                Bounce(self.game, self.piece)
             return True
 
-        self.game.report(Outcome(OutcomeType.BALL_ON_GROUND, position=self.ball.position))
+        # On empty square
+        if type(self.piece) is Ball:
+            self.game.report(Outcome(OutcomeType.BALL_BOUNCE_GROUND, position=self.piece.position))
+        elif type(self.piece) is Player:
+            self.game.report(Outcome(OutcomeType.PLAYER_BOUNCE_GROUND, player=self.piece, position=self.piece.position))
+            Land(self.game, self.piece)
         return True
 
     def available_actions(self):
@@ -640,18 +665,18 @@ class Bounce(Procedure):
 
 class Casualty(Procedure):
 
-    def __init__(self, game, player, roll, inflictor=None, decay=False, blood_lust=False):
+    def __init__(self, game, player, inflictor=None, decay=False, blood_lust=False, always_hungry=False):
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
         self.waiting_apothecary = False
-        self.injury_roll = roll  # Not sure why this is here
         self.roll = None
         self.casualty = None
         self.effect = None
         self.decay = decay
         self.regeneration = None
-        self.blood_lust = blood_lust 
+        self.blood_lust = blood_lust
+        self.always_hungry = always_hungry
 
     def step(self, action):
 
@@ -664,11 +689,14 @@ class Casualty(Procedure):
 
         if self.roll is None:
             self.roll = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
-            
+            cas_rolls = None
             if self.blood_lust: 
                 result = 38
-            else: 
+            elif self.always_hungry:
+                result = 61
+            else:
                 result = self.roll.get_sum()
+                cas_rolls = [self.roll]
             
             n = min(61, max(38, result))
             self.casualty = CasualtyType(n)
@@ -677,17 +705,18 @@ class Casualty(Procedure):
             self.game.report(
                 Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, team=self.player.team,
                         n=self.effect.name,
-                        rolls=[self.roll]))
+                        rolls=cas_rolls))
 
-            if self.player.team.state.apothecaries > 1:
-                Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
-                           casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
-                return True
-            else:
-                # Regeneration
-                if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
-                    self.regeneration = Regeneration(self.game, self.player)
-                    return False
+            if not self.always_hungry:
+                if self.player.team.state.apothecaries > 1:
+                    Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
+                               casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
+                    return True
+                else:
+                    # Regeneration
+                    if self.player.has_skill(Skill.REGENERATION) and not self.regeneration:
+                        self.regeneration = Regeneration(self.game, self.player)
+                        return False
 
         # Apply casualty
         self.game.apply_casualty(self.player, self.inflictor, self.casualty, self.effect, self.roll)
@@ -695,27 +724,25 @@ class Casualty(Procedure):
         # Decay
         if self.decay:
             self.game.report(Outcome(OutcomeType.DECAYING, player=self.player))
-            Casualty(self.game, self.player, self.inflictor)
+            Casualty(self.game, self.player)
 
         return True
-
-    def available_actions(self):
-        return []
 
 
 class Catch(Procedure):
 
-    def __init__(self, game, player, ball, accurate=False, handoff=False, kick=False, passer=None):
+    def __init__(self, game, player, piece, accurate=False, handoff=False, kick=False, passer=None):
         super().__init__(game)
         self.player = player
-        self.ball = ball
+        self.piece = piece
         self.accurate = accurate
         self.handoff = handoff
         self.roll = None
         self.reroll = None
         self.kick = kick
         self.passer = passer
-        self.diving = player.position != ball.position
+        self.diving = player.position != piece.position
+        self.bomb_choice = None
 
     def start(self):
         if self.diving:
@@ -723,13 +750,27 @@ class Catch(Procedure):
 
     def step(self, action):
 
+        # You can decide not to catch a bomb
+        if type(self.piece) is Bomb and self.bomb_choice is None:
+            if action.action_type == ActionType.CATCH_BOMB:
+                self.bomb_choice = True
+                self.game.report(Outcome(OutcomeType.WILL_CATCH_BOMB, player=self.player))
+            else:
+                Explode(self.game, self.piece)
+                self.game.report(Outcome(OutcomeType.WONT_CATCH_BOMB, player=self.player))
+                return
+
         # Otherwise roll if player hasn't rolled
         if self.roll is None:
 
             # Can player even catch ball?
-            if self.player.has_skill(Skill.NO_HANDS) or not self.player.can_catch():
-                Bounce(self.game, self.ball)
-                self.game.report(Outcome(OutcomeType.BALL_DROPPED, player=self.player))
+            if not self.player.can_catch():
+                if type(self.piece) is Ball:
+                    Bounce(self.game, self.piece)
+                    self.game.report(Outcome(OutcomeType.FAILED_CATCH, player=self.player))
+                elif type(self.piece) is Bomb:
+                    Explode(self.game, self.piece)
+                    self.game.report(Outcome(OutcomeType.FAILED_CATCH_BOMB, player=self.player))
                 return True
 
             # Roll
@@ -737,10 +778,14 @@ class Catch(Procedure):
             self.roll.modifiers = self.game.get_catch_modifiers(self.player, accurate=self.accurate, handoff=self.handoff)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             if self.roll.is_d6_success():
-                self.game.report(Outcome(OutcomeType.CATCH, player=self.player, rolls=[self.roll]))
+                if type(self.piece) is Ball:
+                    self.game.report(Outcome(OutcomeType.SUCCESSFUL_CATCH, player=self.player, rolls=[self.roll]))
+                elif type(self.piece) is Bomb:
+                    self.game.report(Outcome(OutcomeType.SUCCESSFUL_CATCH_BOMB, player=self.player, rolls=[self.roll]))
+                    ThrowBombAction(self.game, self.player)
                 if self.diving:
-                    self.ball.move_to(self.player.position)
-                self.ball.is_carried = True
+                    self.game.move(self.piece, self.player.position)
+                self.piece.is_carried = True
                 if self.game.is_touchdown(self.player):
                     Touchdown(self.game, self.player)
                 return True
@@ -760,10 +805,15 @@ class Catch(Procedure):
         else:
             # If diving tackle was used - bounce from player's square
             if self.diving:
-                self.ball.move_to(self.player.position)
-            Bounce(self.game, self.ball, kick=self.kick)
+                self.game.move(self.piece, self.player.position)
+            Bounce(self.game, self.piece, kick=self.kick)
 
         return True
+
+    def available_actions(self):
+        if type(self.piece) is Bomb and self.bomb_choice is None:
+            return [ActionChoice(ActionType.CATCH_BOMB, team=self.player.team), ActionChoice(ActionType.DONT_CATCH_BOMB, team=self.player.team)]
+        return []
 
 
 class Intercept(Procedure):
@@ -1075,7 +1125,7 @@ class Half(Procedure):
 
 class Injury(Procedure):
 
-    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False, in_crowd=False, blood_lust=False):   
+    def __init__(self, game, player, inflictor=None, foul=False, mighty_blow_used=False, dirty_player_used=False, in_crowd=False, blood_lust=False):
         super().__init__(game)
         self.player = player
         self.inflictor = inflictor
@@ -1085,7 +1135,7 @@ class Injury(Procedure):
         self.dirty_player_used = dirty_player_used
         self.ejected = False
         self.in_crowd = in_crowd
-        self.blood_lust = blood_lust 
+        self.blood_lust = blood_lust
 
     def step(self, action):
 
@@ -1116,7 +1166,8 @@ class Injury(Procedure):
         if roll.get_result() >= 10:
             roll.modifiers = stunty + mighty_blow + dirty_player
             self.game.report(Outcome(OutcomeType.CASUALTY, player=self.player, opp_player=self.inflictor, rolls=[roll]))
-            Casualty(self.game, self.player, roll, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY), blood_lust=self.blood_lust)
+            Casualty(self.game, self.player, inflictor=self.inflictor, decay=self.player.has_skill(Skill.DECAY),
+                     blood_lust=self.blood_lust)
             return True
 
         # KOD
@@ -1574,13 +1625,13 @@ class KnockDown(Procedure):
         self.inflictor = inflictor
         self.in_crowd = in_crowd
         self.turnover = turnover
-        self.blood_lust = blood_lust 
+        self.blood_lust = blood_lust
 
     def step(self, action):
 
         # Knock down player
         self.player.place_prone()
-        if self.player.team == self.game.state.current_team:
+        if self.player == self.game.get_active_player():
             self.player.state.used = True
 
         self.game.report(Outcome(OutcomeType.KNOCKED_DOWN, player=self.player, opp_player=self.inflictor))
@@ -2070,82 +2121,166 @@ class Handoff(Procedure):
         return True
 
 
-class PassAction(Procedure):
+class Explode(Procedure):
 
-    def __init__(self, game, ball, passer, catcher, position, pass_distance, dump_off=False):
+    def __init__(self, game, bomb):
         super().__init__(game)
-        self.ball = ball
+        self.bomb = bomb
+        self.player = self.game.get_player_at(bomb.position)
+
+    def step(self, action):
+        self.game.report(Outcome(OutcomeType.BOMB_EXPLODED, position=self.bomb.position, player=self.player))
+        if self.player:
+            self.game.report(Outcome(OutcomeType.BOMB_HIT, position=self.bomb.position, player=self.player))
+            KnockDown(self.game, self.player)
+        position = self.bomb.position
+        self.game.remove(self.bomb)
+        for player in self.game.get_adjacent_players(position):
+            die = D6(self.game.rnd)
+            roll = DiceRoll(die, RollType.BOMB_ROLL, target=4)
+            if roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.BOMB_HIT, position=self.bomb.position, player=self.player, rolls=[roll]))
+                KnockDown(self.game, player)
+        return True
+
+
+class Land(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.roll = None
+        self.reroll = None
+
+    def start(self):
+        self.game.put_down(self.player)
+
+    def step(self, action):
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)], RollType.LAND_ROLL)
+            self.roll.target = Rules.agility_table[self.player.get_ag()]
+            self.roll.modifiers = self.game.get_landing_modifiers(self.player)
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_LAND, position=self.player.position, player=self.player, rolls=[self.roll]))
+                if self.game.is_touchdown(self.player):
+                    Touchdown(self.game, self.player)
+                return True
+            else:
+                self.game.report(Outcome(OutcomeType.FAILED_LAND, position=self.player.position, player=self.player, rolls=[self.roll]))
+                self.reroll = Reroll(self.game, self.player, context=self)
+                return False
+
+        # If re-roll used
+        if self.reroll.use_reroll:
+            self.reroll = None
+            self.roll = None
+            return False
+
+        # Failed landing
+        KnockDown(self.game, self.player, turnover=False)
+        return True
+
+
+class PassAttempt(Procedure):
+
+    def __init__(self, game, passer, piece, position, pass_distance, dump_off=False):
+        super().__init__(game)
+        self.piece = piece
         self.passer = passer
         self.position = position
         self.pass_distance = pass_distance
         self.roll = None
-        self.reroll = False
+        self.reroll = None
         self.fumble = False
         self.interception_tried = False
         self.dump_off = dump_off
-        self.catcher = None
-        self.eat_thrall = None 
+        self.catcher = game.get_player_at(position)
+        self.eat_thrall = None
+        self.ttm = type(piece) == Player
+        self.turnover = False
 
     def start(self):
         if self.dump_off:
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.DUMP_OFF, player=self.passer))
         self.catcher = self.game.get_catcher(self.position)
 
+    def end(self):
+        if self.turnover:
+            Turnover(self.game)
+
     def step(self, action):
-        if self.passer.state.blood_lust and self.eat_thrall is None : 
+
+        if self.passer.state.blood_lust and self.eat_thrall is None:
             self.eat_thrall = EatThrall(self.game, self.passer)
             return False 
         
         if self.eat_thrall is not None and self.eat_thrall.failed: 
-            return True 
-        
+            return True
         
         # Otherwise roll if player hasn't rolled
         if self.roll is None:
 
-            self.ball.is_carried = False
+            if self.piece.is_catchable():
+                self.piece.is_carried = False
 
             # Check for interception
-            if not self.interception_tried:
+            if not self.interception_tried and self.piece.is_catchable():
                 interceptors = self.game.get_interceptors(self.passer.position, self.position, team=self.game.get_opp_team(self.passer.team))
                 if len(interceptors) > 0:
-                    Interception(self.game, interceptors[0].team, self.ball, interceptors, self.passer)
+                    Interception(self.game, interceptors[0].team, self.piece, interceptors, self.passer)
                     self.interception_tried = True
                     return False
-
-            self.ball.move_to(self.passer.position)
 
             # Roll
             self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
             self.roll.target = Rules.agility_table[self.passer.get_ag()]
-            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance)
+            self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, ttm=self.ttm)
             result = self.roll.get_sum()
             mod_result = result + self.roll.modifiers
 
             if result == 6 or (result != 1 and mod_result >= self.roll.target):
+                # Treat as inaccurate if throw team-mate
+                if type(self.piece) is Player:
+                    self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
+                    self._inaccurate_pass()
+                    return True
                 # Accurate pass
                 self.game.report(Outcome(OutcomeType.ACCURATE_PASS, player=self.passer, rolls=[self.roll]))
-                self.ball.move_to(self.position)
-                if not self.dump_off:
-                    TurnoverIfPossessionLost(self.game, self.ball)
-
-                if self.catcher is not None:
-                    Catch(self.game, self.catcher, self.ball, accurate=True)
-                else:
-                    Bounce(self.game, self.ball)
+                self.game.move(self.piece, self.position)
+                if type(self.piece) is Ball and not self.dump_off:
+                    TurnoverIfPossessionLost(self.game, self.piece)
+                if self.piece.is_catchable() and self.catcher is not None:
+                    Catch(self.game, self.catcher, self.piece, accurate=True)
+                elif type(self.piece) is Ball:
+                    Bounce(self.game, self.piece)
+                elif type(self.piece) is Bomb:
+                    Explode(self.game, self.piece)
+                elif type(self.piece) is Player:
+                    if self.catcher is not None:
+                        Bounce(self.game, self.piece)
+                        KnockDown(self.game, self.catcher, self.piece)
+                    else:
+                        Land(self.game, self.piece)
                 return True
 
-            if result == 1 or (mod_result <= 1 and not self.passer.has_skill(Skill.SAFE_THROW)):
+            safe_throw = self.passer.has_skill(Skill.SAFE_THROW) and type(self.piece) == Ball
+
+            if result == 1 or (mod_result <= 1 and not safe_throw):
                 # Fumble
                 self.fumble = True
                 self.game.report(Outcome(OutcomeType.FUMBLE, player=self.passer, rolls=[self.roll]))
-            elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
+            elif mod_result <= 1 and safe_throw:
                 # Inaccurate pass - Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
             else:
                 # Inaccurate pass
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
+
+            # Treat as inaccurate pass as a success if throw team-mate
+            if not self.fumble and type(self.piece) is Player:
+                self._inaccurate_pass()
+                return True
 
             # Check if re-roll available
             self.reroll = Reroll(self.game, self.passer, context=self)
@@ -2161,17 +2296,26 @@ class PassAction(Procedure):
             return False
 
         if self.fumble:
+            self._fumble()
+        else:
+            self._inaccurate_pass()
+        return True
+
+    def _fumble(self):
+        if type(self.piece) is Ball:
             if not self.dump_off:
                 Turnover(self.game)
-            Bounce(self.game, self.ball)
-            return True
+            Bounce(self.game, self.piece)
+        elif type(self.piece) is Player:
+            Land(self.game, self.piece)
+        elif type(self.piece) is Bomb:
+            Explode(self.game, self.piece)
 
-        if not self.dump_off:
-            TurnoverIfPossessionLost(self.game, self.ball)
-
-        self.ball.move_to(self.position)
-        Scatter(self.game, self.ball, is_pass=True)
-        return True
+    def _inaccurate_pass(self):
+        if type(self.piece) is Ball and not self.dump_off:
+            TurnoverIfPossessionLost(self.game, self.piece)
+        self.game.move(self.piece, self.position)
+        Scatter(self.game, self.piece, is_pass=True)
 
 
 class Pickup(Procedure):
@@ -2224,7 +2368,7 @@ class StandUp(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-        self.roll_required = False
+        self.sroll_required = False
         self.moves_required = 3
         self.reroll = None
         self.roll = None
@@ -2296,13 +2440,14 @@ class EndPlayerTurn(Procedure):
         if self.player.state.blood_lust: 
             EatThrall(self.game, self.player)
             return False
-        
+
+        self.game.purge_stack_until(Turn, inclusive=False)
         self.player.state.used = True
         self.player.state.moves = 0
         self.game.report(Outcome(OutcomeType.END_PLAYER_TURN, player=self.player))
         self.game.state.active_player = None
         self.player.state.squares_moved.clear()
-        
+        self.game.state.player_action_type = None
         return True
 
 
@@ -2325,8 +2470,7 @@ class JumpUpToBlock(Procedure):
                 self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player, rolls=[self.roll]))
                 return True
             else:
-                self.game.report(
-                    Outcome(OutcomeType.FAILED_JUMP_UP, player=self.player, rolls=[self.roll]))
+                self.game.report(Outcome(OutcomeType.FAILED_JUMP_UP, player=self.player, rolls=[self.roll]))
                 self.reroll = Reroll(self.game, self.player, self)
                 return False
 
@@ -2341,34 +2485,93 @@ class JumpUpToBlock(Procedure):
         return True
 
 
-class PlayerAction(Procedure):
+class EscapeBeingEaten(Procedure):
 
-    def __init__(self, game, player, player_action_type, turn, dump_off=False):
+    def __init__(self, game, hungry_player, delicious_player):
         super().__init__(game)
-        self.player = player
-        self.player_action_type = player_action_type
-        self.blitz_block = False
-        self.turn = turn
-        self.dump_off = dump_off
-
-    def start(self):
-        if self.dump_off:
-            self.game.add_secondary_clock(self.player.team)
+        self.hungry_player = hungry_player
+        self.delicious_player = delicious_player
+        self.roll = None
+        self.reroll = None
 
     def step(self, action):
 
-        if self.player.state.used:
-            return True
-
-        if self.player_action_type == PlayerActionType.BLOCK and not self.player.state.up:
-            assert self.player.has_skill(Skill.JUMP_UP)
-            JumpUpToBlock(self.game, self.player)
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll.target = 2
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_ESCAPE_BEING_EATEN, player=self.hungry_player,
+                                         opp_player=self.delicious_player, rolls=[self.roll]))
+                Land(self.game, self.delicious_player)
+                return True
+            self.game.report(Outcome(OutcomeType.FAILED_ESCAPE_BEING_EATEN, player=self.hungry_player,
+                                     opp_player=self.delicious_player, rolls=[self.roll]))
+            self.game.report(Outcome(OutcomeType.EATEN_DURING_ALWAYS_HUNGRY, player=self.delicious_player, opp_player=self.hungry_player))
+            self.reroll = Reroll(self.game, self.delicious_player, self)
             return False
 
-        if self.dump_off:
-            self.game.remove_secondary_clocks()
-            if action.action_type == ActionType.DONT_USE_SKILL:
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+        else:
+            EndPlayerTurn(self.game, self.hungry_player)
+            ball = self.game.get_ball_at(self.delicious_player.position)
+            if ball is not None:
+                TurnoverIfPossessionLost(self.game, ball)
+                Bounce(self.game, ball)
+            Casualty(self.game, player=self.delicious_player, inflictor=self.hungry_player, always_hungry=True)
+        return True
+
+
+class AlwaysHungry(Procedure):
+
+    def __init__(self, game, hungry_player, delicious_player):
+        super().__init__(game)
+        self.hungry_player = hungry_player
+        self.delicious_player = delicious_player
+        self.roll = None
+        self.reroll = None
+
+    def step(self, action):
+
+        if self.roll is None:
+            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll.target = 2
+            if self.roll.is_d6_success():
+                self.game.report(Outcome(OutcomeType.SUCCESSFUL_ALWAYS_HUNGRY, player=self.hungry_player,
+                                         opp_player=self.delicious_player, rolls=[self.roll]))
                 return True
+            self.game.report(Outcome(OutcomeType.FAILED_ALWAYS_HUNGRY, player=self.hungry_player,
+                                     opp_player=self.delicious_player, rolls=[self.roll]))
+            self.reroll = Reroll(self.game, self.hungry_player, self)
+            return False
+
+        assert self.reroll is not None
+
+        if self.reroll.use_reroll:
+            self.roll = None
+            self.reroll = None
+            return False
+        else:
+            EndPlayerTurn(self.game, self.hungry_player)
+            EscapeBeingEaten(self.game, self.hungry_player, self.delicious_player)
+        return True
+
+
+class MoveAction(Procedure):
+
+    def __init__(self, game, player, is_move_action=True):
+        super().__init__(game)
+        self.player = player
+        self.is_move_action = is_move_action
+
+    def start(self):
+        if self.is_move_action:
+            self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
+            self.game.state.player_action_type = PlayerActionType.MOVE
+
+    def step(self, action):
 
         if len(self.player.state.squares_moved) == 0:
             self.player.state.squares_moved.append(self.player.position)
@@ -2378,6 +2581,7 @@ class PlayerAction(Procedure):
             return True
 
         if action.action_type == ActionType.STAND_UP:
+
             moves = 3
             if self.player.has_skill(Skill.JUMP_UP):
                 moves = 0
@@ -2386,315 +2590,272 @@ class PlayerAction(Procedure):
             self.player.state.moves += min(self.player.get_ma(), moves)
             for i in range(moves):
                 self.player.state.squares_moved.append(self.player.position)
-
             return False
-
-        # Action attributes
-        player_to = self.game.get_player_at(action.position)
 
         if action.action_type == ActionType.LEAP:
 
-            # Distance to position
             distance = self.player.position.distance(action.position)
-            assert 1 <= distance <= 2
-
-            # Check GFI
             gfis = (self.player.state.moves + distance) - self.player.get_ma() if self.player.state.moves + distance > self.player.get_ma() else 0
-
-            # Add proc
             Leap(self.game, self.player, action.position, gfis)
             self.player.state.squares_moved.append(action.position)
-
-            self.player.state.moves += 2
-
+            self.player.state.moves += distance
             return False
 
-        elif action.action_type == ActionType.MOVE:
+        if action.action_type == ActionType.MOVE:
 
-            # Check GFI
             gfi = self.player.state.moves + 1 > self.player.get_ma()
-
-            # Check dodge
-            dodge = False
-            if not self.turn.quick_snap:
-                if self.player.has_skill(Skill.BALL_AND_CHAIN):
-                    # Ball and chain -> Auto-dodge
-                    dodge = True
-                    gfi = False
-                else:
-                    tackle_zones_from = self.game.num_tackle_zones_in(self.player)
-                    dodge = tackle_zones_from > 0
-
-            # Add proc
+            dodge = self.game.num_tackle_zones_in(self.player) > 0
+            if self.game.is_quick_snap() or self.player.has_skill(Skill.BALL_AND_CHAIN):
+                dodge = False
             Move(self.game, self.player, action.position, gfi, dodge)
             self.player.state.squares_moved.append(action.position)
-
             self.player.state.moves += 1
-
             return False
 
-        elif action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
+        if action.action_type == ActionType.HYPNOTIC_GAZE and self.is_move_action:
 
-            self.blitz_block = self.player_action_type == PlayerActionType.BLITZ
+            EndPlayerTurn(self.game, self.player)
+            target_opponent = self.game.get_player_at(action.position)
+            HypnoticGaze(self.game, self.player, target_opponent)
+            return True
 
-            # Check GFI
-            gfi = False
-            gfi_frenzy = False
-            frenzy_allowed = True
-            if self.player_action_type == PlayerActionType.BLITZ:
-                move_needed = 3 if not self.player.state.up else 1
-                gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                gfi = self.player.state.moves + move_needed > self.player.get_ma()
-                gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
-                frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
-                self.player.state.moves += move_needed
-                if not self.player.state.up:
-                    for i in range(move_needed-1):
-                        self.player.state.squares_moved.append(self.player.position)
-                self.player.state.up = True
+    def available_actions(self):
+        actions = self.game.get_move_actions(self.player)
+        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
+            hypno_actions = self.game.get_hypnotic_gaze_actions(self.player)
+            actions.extend(hypno_actions)
+        actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+        return actions
 
-            # End turn after block - if not a blitz action
-            if self.player_action_type == PlayerActionType.BLOCK:
+
+class HandOffAction(MoveAction):
+
+    def __init__(self, game, player):
+        super().__init__(game, player, is_move_action=False)
+
+    def start(self):
+        self.game.use_handoff_action()
+        self.game.report(Outcome(OutcomeType.HANDOFF_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.HANDOFF
+
+    def step(self, action):
+        if action.action_type is ActionType.HANDOFF:
+            EndPlayerTurn(self.game, self.player)
+            Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
+                    self.game.get_player_at(action.position))
+            return True
+        return super().step(action)
+
+    def available_actions(self):
+        actions = super().available_actions()
+        if self.game.has_ball(self.player):
+            actions.extend(self.game.get_handoff_actions(self.player))
+        return actions
+
+
+class PassAction(MoveAction):
+
+    def __init__(self, game, player, dump_off=False):
+        super().__init__(game, player, is_move_action=False)
+        self.dump_off = dump_off
+        self.picked_up_teammate = None
+
+    def start(self):
+        self.game.use_pass_action()
+        self.game.report(Outcome(OutcomeType.PASS_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.PASS
+
+    def step(self, action):
+
+        if action.action_type is ActionType.PASS:
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
+            if not self.dump_off:
+                self.game.use_pass_action()
                 EndPlayerTurn(self.game, self.player)
+            piece = self.game.get_ball_at(self.player.position)
+            PassAttempt(self.game, self.player, piece, action.position, pass_distance, dump_off=self.dump_off)
+            return True
+
+        if action.action_type == ActionType.PICKUP_TEAM_MATE:
+            self.picked_up_teammate = self.game.get_player_at(action.position)
+            self.game.lift(self.picked_up_teammate)
+            if self.player.has_skill(Skill.ALWAYS_HUNGRY):
+                AlwaysHungry(self.game, self.player, self.picked_up_teammate)
+            return False
+
+        if action.action_type == ActionType.THROW_TEAM_MATE:
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
+            EndPlayerTurn(self.game, self.player)
+            PassAttempt(self.game, self.player, self.picked_up_teammate, action.position, pass_distance)
+            return True
+
+        return super().step(action)
+
+    def available_actions(self):
+        actions = []
+        if not self.picked_up_teammate:
+            actions.extend(super().available_actions())
+
+        if self.player.has_skill(Skill.THROW_TEAM_MATE) and self.player.state.up:
+            if self.picked_up_teammate is None:
+                # Pickup team-mate
+                ptm_actions = self.game.get_pickup_teammate_actions(self.player)
+                actions.extend(ptm_actions)
+            else:
+                # Throw team-mate actions
+                pass_actions = self.game.get_pass_actions(self.player, self.picked_up_teammate)
+                actions.extend(pass_actions)
+
+        # Pass actions
+        if self.game.has_ball(self.player):
+            piece = self.game.get_ball_at(self.player.position)
+            pass_actions = self.game.get_pass_actions(self.player, piece, dump_off=self.dump_off)
+            actions.extend(pass_actions)
+
+        return actions
+
+
+class ThrowBombAction(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+        self.game.put_bomb(Bomb(self.player.position))
+
+    def start(self):
+        self.game.report(Outcome(OutcomeType.THROW_BOMB_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.THROW_BOMB
+
+    def step(self, action):
+        if action.action_type == ActionType.THROW_BOMB:
+            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
+            EndPlayerTurn(self.game, self.player)
+            PassAttempt(self.game, self.player, self.game.get_bomb(), action.position, pass_distance)
+            return True
+        EndPlayerTurn(self.game, self.player)
+        return True
+
+    def end(self):
+        if self.game.get_bomb() is not None:
+            self.game.remove_bomb()
+
+    def available_actions(self):
+        actions = self.game.get_pass_actions(self.player, self.game.get_bomb())
+        actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+        return actions
+
+
+class FoulAction(MoveAction):
+
+    def __init__(self, game, player):
+        super().__init__(game, player)
+
+    def start(self):
+        self.game.use_foul_action()
+        self.game.report(Outcome(OutcomeType.FOUL_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.FOUL
+
+    def step(self, action):
+        if action.action_type == ActionType.FOUL:
+            player_to = self.game.get_player_at(action.position)
+            EndPlayerTurn(self.game, self.player)
+            Foul(self.game, self.player, player_to)
+            return True
+        return super().step(action)
+
+    def available_actions(self):
+        move_actions = super().available_actions()
+        foul_actions = self.game.get_foul_actions(self.player)
+        return move_actions + foul_actions
+
+
+class BlockAction(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.player = player
+
+    def start(self):
+        self.game.report(Outcome(OutcomeType.BLOCK_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.BLOCK
+
+    def step(self, action):
+
+        if action.action_type == ActionType.END_PLAYER_TURN:
+            EndPlayerTurn(self.game, self.player)
+            return True
+
+        defender = self.game.get_player_at(action.position)
+
+        EndPlayerTurn(self.game, self.player)
+
+        # Stab
+        if action.action_type == ActionType.STAB:
+            Stab(self.game, self.player, defender)
+            return True
+
+        # Frenzy block
+        if self.player.has_skill(Skill.FRENZY):
+            # TODO: Second block can also be a stab
+            Block(self.game, self.player, defender, frenzy_block=True)
+
+        # Regular block
+        Block(self.game, self.player, defender)
+
+        return True
+
+    def available_actions(self):
+        actions = self.game.get_block_actions(self.player, blitz=False)
+        actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+        return actions
+
+
+class BlitzAction(MoveAction):
+
+    def __init__(self, game, player):
+        super().__init__(game, player)
+        self.player = player
+        self.block_used = False
+
+    def start(self):
+        self.game.use_blitz_action()
+        self.game.report(Outcome(OutcomeType.BLITZ_ACTION_STARTED, player=self.player))
+        self.game.state.player_action_type = PlayerActionType.BLITZ
+
+    def step(self, action):
+        if action.action_type == ActionType.END_PLAYER_TURN:
+            EndPlayerTurn(self.game, self.player)
+            return True
+
+        if action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
+            self.block_used = True
+            defender = self.game.get_player_at(action.position)
+            move_needed = 1
+            if not self.player.state.up:
+                move_needed += 3 if self.player.has_skill(Skill.JUMP_UP) else 0
+            gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
+            gfi = self.player.state.moves + move_needed > self.player.get_ma()
+            gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
+            frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
+            self.player.state.moves += move_needed
 
             if action.action_type == ActionType.BLOCK:
                 # Frenzy second block
                 if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
-                    # Second block cannot be a stab - should it?
-                    Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi_frenzy, frenzy_block=True)
+                    # TODO: Option to block or stab: add second block inside block?
+                    Block(self.game, self.player, defender, blitz=True, gfi=gfi_frenzy, frenzy_block=True)
 
                 # Regular block
-                Block(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
+                Block(self.game, self.player, defender, blitz=True, gfi=gfi)
             elif action.action_type == ActionType.STAB:
-                Stab(self.game, self.player, player_to, blitz=self.blitz_block, gfi=gfi)
+                Stab(self.game, self.player, defender, blitz=True, gfi=gfi)
 
-            if self.player_action_type == PlayerActionType.BLOCK:
-                return True
+        super().step(action)
 
-            return False
-
-        elif action.action_type == ActionType.FOUL:
-
-            EndPlayerTurn(self.game, self.player)
-            Foul(self.game, self.player, player_to)
-
-            return True
-
-        elif action.action_type == ActionType.HANDOFF:
-
-            EndPlayerTurn(self.game, self.player)
-            Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
-                    self.game.get_player_at(action.position))
-
-            return True
-
-        elif action.action_type == ActionType.PASS:
-
-            # Check distance
-            pass_distance = self.game.get_pass_distance(self.player.position, action.position)
-            if not self.dump_off:
-                EndPlayerTurn(self.game, self.player)
-            PassAction(self.game, self.game.get_ball_at(self.player.position), self.player, player_to, action.position,
-                       pass_distance, dump_off=self.dump_off)
-            self.turn.pass_available = False
-
-            return True
-            
-        elif action.action_type == ActionType.HYPNOTIC_GAZE:
-            EndPlayerTurn(self.game, self.player)
-            target_opponent = self.game.get_player_at(action.position)
-            HypnoticGaze(self.game, self.player, target_opponent)
-            return True 
-            
     def available_actions(self):
-
-        if self.player.state.used:
-            return []
-
-        actions = []
-
-        # Move actions
-        if self.player_action_type != PlayerActionType.BLOCK and not self.dump_off:
-            move_positions = []
-            agi_rolls = []
-            move_needed = 1 if not self.player.state.up else 1
-            gfi = self.player.state.moves + move_needed > self.player.get_ma()
-            sprints = 3 if self.player.has_skill(Skill.SPRINT) else 2
-            gfi_roll = 3 if self.game.state.weather == WeatherType.BLIZZARD else 2
-            if not self.player.state.up:
-                moves = 0 if self.player.has_skill(Skill.JUMP_UP) else 3
-                if self.player.get_ma() < moves:
-                    agi_rolls.append([4])
-                else:
-                    agi_rolls.append([])
-                actions.append(ActionChoice(ActionType.STAND_UP, team=self.player.team, agi_rolls=agi_rolls))
-            elif (not self.turn.quick_snap
-                  and not self.player.state.taken_root
-                  and self.player.state.moves + move_needed <= self.player.get_ma() + sprints) \
-                    or (self.turn.quick_snap and self.player.state.moves == 0):
-                # Regular movement
-                for square in self.game.get_adjacent_squares(self.player.position, occupied=False):
-                    ball_at = self.game.get_ball_at(square)
-                    move_positions.append(square)
-                    rolls = []
-                    if not self.turn.quick_snap:
-                        if gfi:
-                            rolls.append(gfi_roll)
-                        if self.game.num_tackle_zones_in(self.player) > 0:
-                            modifiers = self.game.get_dodge_modifiers(self.player, square)
-                            target = Rules.agility_table[self.player.get_ag()]
-                            rolls.append(min(6, max(2, target - modifiers)))
-                        if ball_at is not None and ball_at.on_ground:
-                            target = Rules.agility_table[self.player.get_ag()]
-                            modifiers = self.game.get_pickup_modifiers(self.player, square)
-                            rolls.append(min(6, max(2, target - modifiers)))
-                    agi_rolls.append(rolls)
-                if len(move_positions) > 0:
-                    actions.append(ActionChoice(ActionType.MOVE, team=self.player.team,
-                                                positions=move_positions, agi_rolls=agi_rolls))
-                # Leap
-                if self.player.can_use_skill(Skill.LEAP) and not self.turn.quick_snap:
-                    leap_agi_rolls = []
-                    leap_positions = []
-                    modifiers = 0 if self.player.has_skill(Skill.VERY_LONG_LEGS) else 0
-                    target = Rules.agility_table[self.player.get_ag()]
-                    leap_roll = min(6, max(2, target - modifiers))
-                    for square in self.game.get_adjacent_squares(self.player.position, occupied=False, distance=2):
-                        distance = self.player.position.distance(square)
-                        if self.player.state.moves + distance <= self.player.get_ma() + sprints:
-                            rolls = []
-                            leap_positions.append(square)
-                            gfis = max(0, (self.player.state.moves + distance) - self.player.get_ma())
-                            for gfi in range(gfis):
-                                rolls.append(gfi_roll)
-                            rolls.append(leap_roll)
-                            ball_at = self.game.get_ball_at(square)
-                            if ball_at is not None and ball_at.on_ground:
-                                modifiers = self.game.get_pickup_modifiers(self.player, square)
-                                rolls.append(min(6, max(2, target - modifiers)))
-                            leap_agi_rolls.append(rolls)
-                    if len(leap_positions) > 0:
-                        actions.append(ActionChoice(ActionType.LEAP, team=self.player.team,
-                                                positions=leap_positions, agi_rolls=leap_agi_rolls))
-
-        # Block actions
-        if self.player_action_type == PlayerActionType.BLOCK or \
-                (self.player_action_type == PlayerActionType.BLITZ and not self.blitz_block):
-
-            can_block = self.player.state.up
-
-            # Check movement left if blitz,
-            gfi = False
-            if self.player_action_type == PlayerActionType.BLITZ:
-                move_needed = 1
-                gfi_allowed = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                if self.player.state.moves + move_needed > self.player.get_ma() + gfi_allowed:
-                    can_block = False
-                gfi = self.player.state.moves + move_needed > self.player.get_ma()
-
-            # Find adjacent enemies to block
-            if can_block:
-                block_positions = []
-                block_rolls = []
-                stab_rolls = []
-                for player_to in self.game.get_adjacent_opponents(self.player, down=False):
-                    block_positions.append(player_to.position)
-                    dice = self.game.num_block_dice(attacker=self.player, defender=player_to,
-                                                       blitz=self.player_action_type == PlayerActionType.BLITZ,
-                                                       dauntless_success=False)
-                    block_rolls.append(dice)
-                    if self.player.has_skill(Skill.STAB):
-                        roll = player_to.get_av() + 1
-                        if self.player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
-                            roll += 1
-                        stab_rolls.append(roll)
-                if len(block_positions) > 0:
-                    agi_rolls = [([2] if gfi else []) for _ in block_positions]
-                    actions.append(ActionChoice(ActionType.BLOCK, team=self.player.team,
-                                                positions=block_positions, block_rolls=block_rolls,
-                                                agi_rolls=agi_rolls))
-                if self.player.has_skill(Skill.STAB):
-                    stab_agi_rolls = [([2, stab_rolls[i]] if gfi else [stab_rolls[i]]) for i in range(len(block_positions))]
-                    agi_rolls = [([2] if gfi else []) for _ in block_positions] + stab_agi_rolls
-                    actions.append(ActionChoice(ActionType.STAB, team=self.player.team,
-                                                positions=block_positions,
-                                                agi_rolls=agi_rolls))
-
-        # Foul actions
-        if self.player_action_type == PlayerActionType.FOUL:
-            foul_positions = []
-            foul_rolls = []
-            for player_to in self.game.get_adjacent_opponents(self.player, standing=False, down=True):
-                foul_positions.append(player_to.position)
-                armor = player_to.get_av()
-                assists_from = self.game.get_assisting_players(self.player, player_to, foul=True)
-                assists_to = self.game.get_assisting_players(player_to, self.player, foul=True)
-                foul_rolls.append(min(0, armor + 1 - len(assists_from) + len(assists_to)))
-
-            if len(foul_positions) > 0:
-                actions.append(ActionChoice(ActionType.FOUL, team=self.player.team,
-                                            positions=foul_positions, block_rolls=foul_rolls))
-
-        # Handoff actions
-        if self.player_action_type == PlayerActionType.HANDOFF and self.game.has_ball(self.player):
-            hand_off_positions = []
-            agi_rolls = []
-            for player_to in self.game.get_adjacent_teammates(self.player):
-                if player_to.can_catch():
-                    hand_off_positions.append(player_to.position)
-                    modifiers = self.game.get_catch_modifiers(self.player, player_to.position)
-                    target = Rules.agility_table[self.player.get_ag()]
-                    agi_rolls.append([min(6, max(2, target - modifiers))])
-
-            if len(hand_off_positions) > 0:
-                actions.append(ActionChoice(ActionType.HANDOFF, team=self.player.team,
-                                            positions=hand_off_positions, agi_rolls=agi_rolls))
-
-        # Pass actions
-        if self.player_action_type == PlayerActionType.PASS and self.game.has_ball(self.player):
-            positions, distances = self.game.get_pass_distances(self.player, dump_off=self.dump_off)
-            agi_rolls = []
-            cache = {}
-            for i in range(len(distances)):
-                distance = distances[i]
-                position = positions[i]
-                if distance not in cache:
-                    modifiers = self.game.get_pass_modifiers(self.player, distance)
-                    target = Rules.agility_table[self.player.get_ag()]
-                    cache[distance] = min(6, max(2, target - modifiers))
-                rolls = [cache[distance]]
-                player_to = self.game.get_player_at(position)
-                if player_to is not None and player_to.team == self.player.team \
-                        and player_to.can_catch():
-                    catch_target = Rules.agility_table[player_to.get_ag()]
-                    catch_modifiers = self.game.get_catch_modifiers(player_to, accurate=True)
-                    rolls.append(min(6, max(2, catch_target - catch_modifiers)))
-                agi_rolls.append(rolls)
-            if len(positions) > 0:
-                actions.append(ActionChoice(ActionType.PASS, team=self.player.team,
-                                            positions=positions, agi_rolls=agi_rolls))
-        
-        # Hypnotic gaze action 
-        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and  self.player.state.up and \
-                self.player_action_type == PlayerActionType.MOVE: 
-            
-            hypno_positions = self.game.get_hypno_targets(self.player)
-            
-            if len(hypno_positions) > 0:
-                modifier = self.game.get_hypno_modifier(self.player)
-                target = Rules.agility_table[self.player.get_ag()]
-                agi_roll = min(6, max(2, target - modifier))
-                agi_rolls = [[agi_roll]] * len(hypno_positions)
-
-                actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=self.player.team, 
-                                            skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions, 
-                                            agi_rolls=agi_rolls))
-        
-        if self.dump_off:
-            actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=self.player.team, skill=Skill.DUMP_OFF))
-        else:
-            actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
-        return actions
+        move_actions = super().available_actions()
+        block_actions = self.game.get_block_actions(self.player, blitz=True) if not self.block_used else []
+        return move_actions + block_actions
 
 
 class StartGame(Procedure):
@@ -2955,9 +3116,9 @@ class Push(Procedure):
 
 class Scatter(Procedure):
 
-    def __init__(self, game, ball, kick=False, is_pass=False, gentle_gust=False):
+    def __init__(self, game, piece, kick=False, is_pass=False, gentle_gust=False):
         super().__init__(game)
-        self.ball = ball
+        self.piece = piece
         self.kick = kick
         self.is_pass = is_pass
         self.gentle_gust = gentle_gust
@@ -2965,7 +3126,7 @@ class Scatter(Procedure):
     def step(self, action):
 
         # Don't scatter if ball is out
-        if self.game.is_out_of_bounds(self.ball.position):
+        if self.game.is_out_of_bounds(self.piece.position):
             return True
 
         n = 3 if self.is_pass else 1
@@ -2999,68 +3160,92 @@ class Scatter(Procedure):
 
             for i in range(distance):
                 # Move ball on square
-                self.ball.move(x, y)
+                self.game.shove(self.piece, x, y)
 
                 if self.kick and i == 0 and not self.gentle_gust:
                     self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
 
                 # Check out of bounds
                 if self.kick:
-                    if self.game.is_out_of_bounds(self.ball.position):
+                    if self.game.is_out_of_bounds(self.piece.position):
                         if self.gentle_gust:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OUT_OF_BOUNDS, position=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OUT_OF_BOUNDS, position=self.piece.position,
                                                      rolls=rolls))
                         else:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.KICK_OUT_OF_BOUNDS, position=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.KICK_OUT_OF_BOUNDS, position=self.piece.position,
                                                      rolls=rolls))
                         return True
-                    elif self.game.is_team_side(self.ball.position, self.game.get_kicking_team()):
+                    elif self.game.is_team_side(self.piece.position, self.game.get_kicking_team()):
                         if self.gentle_gust:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OPP_HALF, position=self.ball.position,
+                            self.game.report(Outcome(OutcomeType.GENTLE_GUST_OPP_HALF, position=self.piece.position,
                                                      rolls=rolls))
                         else:
                             # Touchback will be enforced after kick-off table when ball lands
-                            self.game.report(Outcome(OutcomeType.KICK_OPP_HALF, position=self.ball.position, rolls=rolls))
+                            self.game.report(Outcome(OutcomeType.KICK_OPP_HALF, position=self.piece.position, rolls=rolls))
                         return True
                 else:
                     # Throw in
-                    if self.game.is_out_of_bounds(self.ball.position):
-                        ThrowIn(self.game, self.ball, Square(self.ball.position.x-x, self.ball.position.y-y))
-                        self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
-                        self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
-                                                 position=self.ball.position))
+                    if self.game.is_out_of_bounds(self.piece.position):
+                        if type(self.piece) is Ball:
+                            ThrowIn(self.game, self.piece, Square(self.piece.position.x-x, self.piece.position.y-y))
+                            self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
+                            self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
+                                                     position=self.piece.position))
+                        elif type(self.piece) is Player:
+                            KnockDown(self.game, self.piece, in_crowd=True, armor_roll=False)
+                            self.game.report(Outcome(OutcomeType.PLAYER_OUT_OF_BOUNDS, player=self.piece, rolls=rolls))
+                        elif type(self.piece) is Bomb:
+                            self.game.report(Outcome(OutcomeType.BOMB_OUT_OF_BOUNDS, rolls=rolls))
+                            self.game.remove_bomb()
                         return True
 
                     # Passes are scattered three times
                     if self.is_pass and s < n-1:
                         continue
 
-                    self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
+                    if type(self.piece) is Ball:
+                        self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
+                    elif type(self.piece) is Bomb:
+                        self.game.report(Outcome(OutcomeType.BOMB_SCATTER, rolls=rolls))
+                    elif type(self.piece) is Player:
+                        self.game.report(Outcome(OutcomeType.PLAYER_SCATTER, player=self.piece, rolls=rolls))
 
                     # On player -> Catch
-                    player = self.game.get_catcher(self.ball.position)
-                    if player is not None:
-                        Catch(self.game, player, self.ball)
-                        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.ball.position,
-                                                 player=player, rolls=[roll_scatter]))
+                    player_at = self.game.get_player_at(self.piece.position)
+                    catcher = self.game.get_catcher(self.piece.position)
+
+                    if type(self.piece) is Player and player_at is not None:
+                        self.game.report(Outcome(OutcomeType.PLAYER_HIT_PLAYER, position=self.piece.position,
+                                                 player=player_at, rolls=[roll_scatter]))
+                        Bounce(self.game, self.piece)
+                        KnockDown(self.game, player=player_at, inflictor=self.piece)
+                        if self.piece.team == player_at.team:
+                            self.game.get_proc(PassAttempt).turnover = True  # Will cause a turnover after pass attempt
+                        return True
+                    if catcher is not None and self.piece.is_catchable():
+                        Catch(self.game, catcher, self.piece)
+                        self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.piece.position,
+                                                 player=catcher, rolls=[roll_scatter]))
                         return True
 
         if self.kick:
             if self.gentle_gust:
                 # Wait for ball to land
-                self.game.report(Outcome(OutcomeType.GENTLE_GUST_IN_BOUNDS, position=self.ball.position,
+                self.game.report(Outcome(OutcomeType.GENTLE_GUST_IN_BOUNDS, position=self.piece.position,
                                          rolls=[roll_scatter]))
             else:
                 # Wait for ball to land
-                self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, position=self.ball.position,
+                self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, position=self.piece.position,
                                          rolls=[roll_scatter, roll_distance]))
+        elif type(self.piece) is Player:
+            Land(self.game, player=self.piece)
+        elif type(self.piece) is Bomb:
+            Explode(self.game, self.piece)
         else:
-            # Bounce ball
-            Bounce(self.game, self.ball)
-
+            Bounce(self.game, self.piece)
         return True
 
 
@@ -3324,13 +3509,7 @@ class EndTurn(Procedure):
     def step(self, action):
 
         # Remove all procs in the current turn - including the current turn proc.
-        x = 0
-        for i in reversed(range(self.game.state.stack.size())):
-            x += 1
-            if isinstance(self.game.state.stack.items[i], Turn):
-                break
-        for i in range(x):
-            self.game.state.stack.pop()
+        self.game.purge_stack_until(Turn, inclusive=True)
 
         # Reset turn
         if self.game.state.current_team is not None:
@@ -3355,7 +3534,8 @@ class EndTurn(Procedure):
 
         self.game.state.current_team = None
         self.game.remove_clocks()
-        self.rerolled_procs = set()
+        self.game.state.rerolled_procs = set()
+        self.game.state.player_action_type = None
         return True
 
 
@@ -3372,42 +3552,20 @@ class Turn(Procedure):
         self.pass_available = not quick_snap
         self.handoff_available = not quick_snap
         self.foul_available = not quick_snap
-        self.stunned_turned = False
 
     def start(self):
         self.game.state.current_team = self.team
         self.game.add_primary_clock(self.team)
-
-    def start_player_action(self, outcome_type, player_action_type, player):
-
-        # Start action
-        self.game.state.active_player = player
-        player_action = PlayerAction(self.game, player, player_action_type, turn=self)
-        self.game.report(Outcome(outcome_type, player=player))
-        if player.has_skill(Skill.BONE_HEAD):
-            Bonehead(self.game, player, player_action)
-        if player.has_skill(Skill.REALLY_STUPID):
-            ReallyStupid(self.game, player, player_action)
-        if player.has_skill(Skill.WILD_ANIMAL):
-            WildAnimal(self.game, player, player_action)
-        if player.has_skill(Skill.TAKE_ROOT) and not player.state.taken_root:
-            TakeRoot(self.game, player, player_action)
-        if player.has_skill(Skill.BLOOD_LUST):
-            BloodLust(self.game, player, player_action) 
+        if self.blitz:
+            self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))
+        elif self.quick_snap:
+            self.game.report(Outcome(OutcomeType.QUICK_SNAP_START, team=self.team))
+        else:
+            self.game.report(Outcome(OutcomeType.TURN_START, team=self.team, n=self.turn))
+            self.team.state.turn = self.turn
+            TurnStunned(self.game, self.team)
 
     def step(self, action):
-        # Update state
-        if not self.stunned_turned:
-            self.stunned_turned = True
-            if self.blitz:
-                self.game.report(Outcome(OutcomeType.BLITZ_START, team=self.team))
-            elif self.quick_snap:
-                self.game.report(Outcome(OutcomeType.QUICK_SNAP_START, team=self.team))
-            else:
-                self.game.report(Outcome(OutcomeType.TURN_START, team=self.team, n=self.turn))
-                self.team.state.turn = self.turn
-                TurnStunned(self.game, self.team)
-            return False
 
         # Handle End Turn action
         if action.action_type == ActionType.END_TURN:
@@ -3422,61 +3580,59 @@ class Turn(Procedure):
             
             return True
 
-        if action.player.state.hypnotized and action.action_type in [ActionType.START_MOVE, 
-                                                                     ActionType.START_BLITZ, 
-                                                                     ActionType.START_FOUL, 
-                                                                     ActionType.START_PASS, 
-                                                                     ActionType.START_HANDOFF, 
-                                                                     ActionType.START_BLOCK]: 
-            action.player.state.hypnotized = False 
-            
-            
-            
-            
+        action.player.state.hypnotized = False
+
+        self.game.state.active_player = action.player
             
         # Start movement action
         if action.action_type == ActionType.START_MOVE:
-            self.start_player_action(OutcomeType.MOVE_ACTION_STARTED, PlayerActionType.MOVE, action.player)
-            return False
+            MoveAction(self.game, action.player)
 
         # Start blitz action
         if action.action_type == ActionType.START_BLITZ:
-            self.blitz_available = False
-            self.start_player_action(OutcomeType.BLITZ_ACTION_STARTED, PlayerActionType.BLITZ, action.player)
-            return False
+            BlitzAction(self.game, action.player)
 
         # Start foul action
         if action.action_type == ActionType.START_FOUL:
-            self.foul_available = False
-            self.start_player_action(OutcomeType.FOUL_ACTION_STARTED, PlayerActionType.FOUL, action.player)
-            return False
+            FoulAction(self.game, action.player)
 
         # Start block action
         if action.action_type == ActionType.START_BLOCK:
-            self.start_player_action(OutcomeType.BLOCK_ACTION_STARTED, PlayerActionType.BLOCK, action.player)
-            return False
+            BlockAction(self.game, action.player)
 
         # Start pass action
         if action.action_type == ActionType.START_PASS:
-            self.pass_available = False
-            self.start_player_action(OutcomeType.PASS_ACTION_STARTED, PlayerActionType.PASS, action.player)
-            return False
+            PassAction(self.game, action.player)
 
         # Start handoff action
         if action.action_type == ActionType.START_HANDOFF:
-            self.handoff_available = False
-            self.start_player_action(OutcomeType.HANDOFF_ACTION_STARTED, PlayerActionType.HANDOFF, action.player)
-            return False
+            HandOffAction(self.game, action.player)
+
+        # Start handoff action
+        if action.action_type == ActionType.START_THROW_BOMB:
+            ThrowBombAction(self.game, action.player)
+
+        if action.player.has_skill(Skill.BONE_HEAD):
+            Bonehead(self.game, action.player)
+        if action.player.has_skill(Skill.REALLY_STUPID):
+            ReallyStupid(self.game, action.player)
+        if action.player.has_skill(Skill.WILD_ANIMAL):
+            WildAnimal(self.game, action.player, is_block_or_blitz=action.action_type == ActionType.START_BLOCK or action.action_type == ActionType.START_BLITZ)
+        if action.player.has_skill(Skill.TAKE_ROOT) and not action.player.state.taken_root:
+            TakeRoot(self.game, action.player)
+        if action.player.has_skill(Skill.BLOOD_LUST):
+            BloodLust(self.game, action.player, is_block=action.action_type == ActionType.START_BLOCK)
+
+        return False
 
     def available_actions(self):
-        if not self.stunned_turned:
-            return []
         move_players = []
         block_players = []
         blitz_players = []
         pass_players = []
         handoff_players = []
         foul_players = []
+        bomb_players = []
         for player in self.game.get_players_on_pitch(self.team):
             if self.blitz:
                 if self.game.num_tackle_zones_in(player) > 0:
@@ -3498,6 +3654,8 @@ class Turn(Procedure):
                 if not self.quick_snap and not self.blitz and (player.state.up or player.has_skill(Skill.JUMP_UP)):
                     if self.game.get_adjacent_opponents(player, down=False):
                         block_players.append(player)
+                if player.state.up and player.has_skill(Skill.BOMBARDIER):
+                    bomb_players.append(player)
 
         actions = []
         if len(move_players) > 0:
@@ -3512,6 +3670,8 @@ class Turn(Procedure):
             actions.append(ActionChoice(ActionType.START_HANDOFF, team=self.team, players=handoff_players))
         if len(foul_players) > 0:
             actions.append(ActionChoice(ActionType.START_FOUL, team=self.team, players=foul_players))
+        if len(bomb_players) > 0:
+            actions.append(ActionChoice(ActionType.START_THROW_BOMB, team=self.team, players=bomb_players))
         actions.append(ActionChoice(ActionType.END_TURN, team=self.team))
 
         return actions
@@ -3546,14 +3706,13 @@ class WeatherTable(Procedure):
 
 
 class Negatrait(Procedure, metaclass=ABCMeta):
-    def __init__(self, game, player, player_action, ends_turn=True):
+    def __init__(self, game, player, ends_turn=True):
         super().__init__(game)
         self.player = player
         self.waiting_reroll = False
         self.reroll_used = False
         self.rolled = False
         self.roll = None
-        self.player_action = player_action
         self.reroll = None
 
         self.roll_type = None
@@ -3613,13 +3772,11 @@ class Negatrait(Procedure, metaclass=ABCMeta):
     def end_turn(self):
         # mark player turn as over
         EndPlayerTurn(self.game, self.player)
-        # don't let the intended action happen
-        self.player_action.done = True
 
 
 class Bonehead(Negatrait):
-    def __init__(self, game, player, player_action):
-        super().__init__(game, player, player_action)
+    def __init__(self, game, player=True):
+        super().__init__(game, player)
         self.roll_type = RollType.BONE_HEAD_ROLL
         self.skill = Skill.BONE_HEAD
         self.success_outcome = OutcomeType.SUCCESSFUL_BONE_HEAD
@@ -3636,8 +3793,8 @@ class Bonehead(Negatrait):
 
 
 class ReallyStupid(Negatrait):
-    def __init__(self, game, player, player_action):
-        super().__init__(game, player, player_action)
+    def __init__(self, game, player=True):
+        super().__init__(game, player)
         self.roll_type = RollType.REALLY_STUPID_ROLL
         self.skill = Skill.REALLY_STUPID
         self.success_outcome = OutcomeType.SUCCESSFUL_REALLY_STUPID
@@ -3660,8 +3817,9 @@ class ReallyStupid(Negatrait):
 
 
 class WildAnimal(Negatrait):
-    def __init__(self, game, player, player_action):
-        super().__init__(game, player, player_action)
+    def __init__(self, game, player=True, is_block_or_blitz=False):
+        super().__init__(game, player)
+        self.is_block_or_blitz = is_block_or_blitz
         self.roll_type = RollType.WILD_ANIMAL_ROLL
         self.skill = Skill.WILD_ANIMAL
         self.success_outcome = OutcomeType.SUCCESSFUL_WILD_ANIMAL
@@ -3669,7 +3827,7 @@ class WildAnimal(Negatrait):
 
     def get_target(self):
         target = 4
-        if self.player_action.player_action_type is PlayerActionType.BLITZ or self.player_action.player_action_type is PlayerActionType.BLOCK:
+        if self.is_block_or_blitz:
             target = 2
         return target
 
@@ -3681,8 +3839,8 @@ class WildAnimal(Negatrait):
 
 
 class TakeRoot(Negatrait):
-    def __init__(self, game, player, player_action):
-        super().__init__(game, player, player_action, ends_turn=False)
+    def __init__(self, game, player=True):
+        super().__init__(game, player, ends_turn=False)
         self.roll_type = RollType.TAKE_ROOT_ROLL
         self.skill = Skill.TAKE_ROOT
         self.success_outcome = OutcomeType.SUCCESSFUL_TAKE_ROOT
@@ -3700,18 +3858,17 @@ class TakeRoot(Negatrait):
 
 class BloodLustBlockOrMove(Procedure):
 
-    def __init__(self, game, player, player_action):
+    def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-        self.player_action = player_action
 
     def step(self, action):
         if action.action_type == ActionType.START_BLOCK:
             return True
         # Cancel block action
-        self.game.state.stack.remove(self.player_action)
+        self.game.purge_stack_until(Turn, inclusive=False)
         # Start move action
-        PlayerAction(self.game, self.player, ActionType.START_MOVE, turn=self.game.get_current_turn_proc())
+        MoveAction(self.game, self.player)
         self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
         return True
 
@@ -3721,8 +3878,9 @@ class BloodLustBlockOrMove(Procedure):
 
 
 class BloodLust(Negatrait):
-    def __init__(self, game, player, player_action):
-        super().__init__(game, player, player_action, ends_turn=False)
+    def __init__(self, game, player=True, is_block=False):
+        super().__init__(game, player, ends_turn=False)
+        self.is_block = is_block
         self.roll_type = RollType.BLOOD_LUST_ROLL
         self.skill = Skill.BLOOD_LUST
         self.success_outcome = OutcomeType.SUCCESSFUL_BLOOD_LUST
@@ -3734,8 +3892,8 @@ class BloodLust(Negatrait):
     def apply_fail_state(self):
         #set_trace()
         self.player.state.blood_lust = True
-        if self.player_action.player_action_type == PlayerActionType.BLOCK:
-            BloodLustBlockOrMove(self.game, self.player, self.player_action)
+        if self.is_block:
+            BloodLustBlockOrMove(self.game, self.player)
 
     def remove_fail_state(self):
         pass  # blood lust is removed by EatThrall-procedure 
@@ -3784,7 +3942,7 @@ class Reroll(Procedure):
                 self.player.use_skill(Skill.DODGE)
                 self.use_reroll = True
                 self.skill = Skill.DODGE
-        if type(self.context) == PassAction and self.player.can_use_skill(Skill.PASS):
+        if type(self.context) == PassAttempt and self.player.can_use_skill(Skill.PASS):
             self.use_reroll = True
             self.skill = Skill.PASS
         if type(self.context) == Intercept:
@@ -4065,8 +4223,7 @@ class HypnoticGaze(Procedure):
             
             self.game.report(Outcome(OutcomeType.FAILED_HYPNOTIC_GAZE, player=self.player, rolls=[self.roll]))
             self.reroll = Reroll(self.game, self.player, self)
-            return False 
-        
+            return False
         
         assert self.reroll is not None 
         

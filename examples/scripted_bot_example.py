@@ -108,7 +108,7 @@ class MyScriptedBot(ProcBot):
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Pickup:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.PassAction:
+        if type(context) == ffai.PassAttempt:
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Catch:
             return Action(ActionType.USE_REROLL)
@@ -532,7 +532,6 @@ class MyScriptedBot(ProcBot):
                         block_p_fumble_self = p_fumble_self
                         block_p_fumble_opp = p_fumble_opp
         return block_attacker, block_defender, block_p_self_up, block_p_opp_down, block_p_fumble_self, block_p_fumble_opp
-
 
     def quick_snap(self, game):
         return Action(ActionType.END_TURN)

@@ -45,7 +45,19 @@ class ProcBot(Agent):
             return self.blitz(game)
         if isinstance(proc, Turn):
             return self.turn(game)
-        if isinstance(proc, PlayerAction):
+        if isinstance(proc, Action):
+            return self.player_action(game)
+        if isinstance(proc, BlockAction):
+            return self.player_action(game)
+        if isinstance(proc, PassAction):
+            return self.player_action(game)
+        if isinstance(proc, HandOffAction):
+            return self.player_action(game)
+        if isinstance(proc, BlitzAction):
+            return self.player_action(game)
+        if isinstance(proc, FoulAction):
+            return self.player_action(game)
+        if isinstance(proc, ThrowBombAction):
             return self.player_action(game)
         if isinstance(proc, Block):
             if proc.waiting_juggernaut:
@@ -126,7 +138,25 @@ class ProcBot(Agent):
     def apothecary(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
+    def move_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def block_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def blitz_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def handoff_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
     def pass_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def foul_action(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def throw_bomb_action(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
     def catch(self, game):
