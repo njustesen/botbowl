@@ -1973,7 +1973,7 @@ class Game:
         distances = []
         if dump_off:
             distances_allowed = [PassDistance.QUICK_PASS]
-        elif type(piece) == Player:
+        elif type(piece) == Player or self.state.weather == WeatherType.BLIZZARD:
             distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
         else:
             distances_allowed = [PassDistance.QUICK_PASS,
@@ -1982,8 +1982,6 @@ class Game:
                                  PassDistance.LONG_BOMB,
                                  PassDistance.HAIL_MARY] if Skill.HAIL_MARY_PASS in passer.get_skills() \
                 else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
-        if self.state.weather == WeatherType.BLIZZARD:
-            distances_allowed = [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS]
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
                 to_position = Square(x, y)
@@ -2429,3 +2427,9 @@ class Game:
                 break
         for i in range(x):
             self.state.stack.pop()
+
+    def get_proc(self, proc_type):
+        for proc in self.state.stack.items:
+            if type(proc) == proc_type:
+                return proc
+        return None

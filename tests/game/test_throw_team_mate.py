@@ -2,7 +2,10 @@ from tests.util import *
 import pytest
 
 
-def test_failed_pickup():
+# Follows https://www.thenaf.net/wp-content/uploads/2018/02/TTM-flowchart-v3.jpg
+
+
+def test_failed_pickup_teammate():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
     game.clear_board()
@@ -18,6 +21,7 @@ def test_failed_pickup():
     game.put(right_stuff, right_stuff_position)
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix(1)  # Cause fumble
+    D6.fix(6)  # Land
     game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
     assert right_stuff.state.in_air
     game.step(Action(ActionType.THROW_TEAM_MATE, player=passer, position=Square(5, 5)))
@@ -28,6 +32,8 @@ def test_failed_pickup():
     assert not right_stuff.state.used
     assert right_stuff.position == right_stuff_position
     assert right_stuff.state.up
+    assert not right_stuff.state.in_air
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LAND)
 
 
 def test_successfull_land():
@@ -212,7 +218,7 @@ def test_successful_landing_crowd():
     assert passer.state.used
 
 
-def test_successful_landing_on_opp_player():
+def test_successful_landing_on_opp_players():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
     game.clear_board()
@@ -229,8 +235,57 @@ def test_successful_landing_on_opp_player():
     right_stuff.extra_skills = [Skill.RIGHT_STUFF]
     game.put(right_stuff, right_stuff_square)
     opp_team = game.get_opp_team(team)
-    opp_player = opp_team.players[0]
-    game.put(opp_player, Square(9, 8))
+    opp_player_a = opp_team.players[0]
+    opp_player_b = opp_team.players[1]
+    game.put(opp_player_a, Square(9, 8))
+    game.put(opp_player_b, Square(10, 8))
+    game.step(Action(ActionType.START_PASS, player=passer))
+    D6.fix(6)  # Accurate pass
+    D8.fix(4)  # Backward scatter
+    D8.fix(5)  # Forward scatter
+    D8.fix(5)  # Forward scatter
+    D6.fix(6)  # Armor
+    D6.fix(6)  # Armor
+    D6.fix(4)  # injury
+    D6.fix(5)  # injury
+    D8.fix(5)  # Forward scatter
+    D6.fix(6)  # Armor (in case)
+    D6.fix(6)  # Armor (in case)
+    D6.fix(6)  # Injury (in case)
+    D6.fix(6)  # Injury (in case)
+    D6.fix(6)  # Land
+    game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
+    assert right_stuff.state.in_air
+    game.step(Action(ActionType.THROW_TEAM_MATE, player=passer, position=target_square))
+    assert game.has_report_of_type(OutcomeType.INACCURATE_PASS)  # Always inaccurate
+    assert game.has_report_of_type(OutcomeType.PLAYER_HIT_PLAYER)
+    assert game.has_report_of_type(OutcomeType.KNOCKED_OUT)
+    assert opp_player_a.position is None
+    assert opp_player_a in game.get_dugout(opp_team).reserves
+    assert opp_player_b.position is not None
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LAND)
+    assert right_stuff.state.up
+    assert passer.state.used
+
+
+def test_successful_landing_on_own_player():
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.skills = []
+    passer.role.ag = 2
+    passer.extra_skills = [Skill.THROW_TEAM_MATE]
+    passer_square = Square(5, 5)
+    right_stuff_square = Square(4, 4)
+    target_square = Square(8, 8)
+    game.put(passer, passer_square)
+    right_stuff = team.players[1]
+    right_stuff.role.skills = []
+    right_stuff.extra_skills = [Skill.RIGHT_STUFF]
+    game.put(right_stuff, right_stuff_square)
+    player = team.players[3]
+    game.put(player, Square(9, 8))
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix(6)  # Accurate pass
     D8.fix(4)  # Backward scatter
@@ -248,11 +303,38 @@ def test_successful_landing_on_opp_player():
     assert game.has_report_of_type(OutcomeType.INACCURATE_PASS)  # Always inaccurate
     assert game.has_report_of_type(OutcomeType.PLAYER_HIT_PLAYER)
     assert game.has_report_of_type(OutcomeType.KNOCKED_OUT)
-    assert opp_player.position is None
-    assert opp_player in game.get_dugout(opp_team).reserves
+    assert game.has_report_of_type(OutcomeType.TURNOVER)
+    assert player.position is None
+    assert player in game.get_dugout(team).reserves
+    assert right_stuff.position is not None
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LAND)
     assert right_stuff.state.up
-    assert passer.state.used
 
 
-# TODO: double bounce, Always hungry, TTM modifiers
+
+def test_ttm_distances_and_modifiers():
+    game = get_game_turn()
+    game.clear_board()
+    team = game.get_agent_team(game.actor)
+    passer = team.players[0]
+    passer.role.skills = [Skill.THROW_TEAM_MATE]
+    game.put(passer, Square(2,2,))
+    quick_mod = game.get_pass_modifiers(passer, PassDistance.QUICK_PASS, ttm=True)
+    short_mod = game.get_pass_modifiers(passer, PassDistance.SHORT_PASS, ttm=True)
+    assert quick_mod == 0
+    assert short_mod == -1
+
+
+def test_ttm_distance():
+    game = get_game_turn()
+    game.clear_board()
+    team = game.get_agent_team(game.actor)
+    passer = team.players[0]
+    passer.role.skills = [Skill.THROW_TEAM_MATE]
+    game.put(passer, Square(2, 2))
+    right_stuff = team.players[1]
+    right_stuff.role.skills = [Skill.RIGHT_STUFF]
+    game.put(right_stuff, Square(3, 2))
+    squares, distances = game.get_pass_distances(passer, right_stuff)
+    for distance in distances:
+        assert distance == PassDistance.QUICK_PASS or distance == PassDistance.SHORT_PASS

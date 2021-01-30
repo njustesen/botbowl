@@ -2197,11 +2197,16 @@ class PassAttempt(Procedure):
         self.catcher = game.get_player_at(position)
         self.eat_thrall = None
         self.ttm = type(piece) == Player
+        self.turnover = False
 
     def start(self):
         if self.dump_off:
             self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.DUMP_OFF, player=self.passer))
         self.catcher = self.game.get_catcher(self.position)
+
+    def end(self):
+        if self.turnover:
+            Turnover(self.game)
 
     def step(self, action):
 
@@ -2302,7 +2307,7 @@ class PassAttempt(Procedure):
                 Turnover(self.game)
             Bounce(self.game, self.piece)
         elif type(self.piece) is Player:
-            self.game.put_down(self.piece)
+            Land(self.game, self.piece)
         elif type(self.piece) is Bomb:
             Explode(self.game, self.piece)
 
@@ -2497,7 +2502,7 @@ class EscapeBeingEaten(Procedure):
             if self.roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_ESCAPE_BEING_EATEN, player=self.hungry_player,
                                          opp_player=self.delicious_player, rolls=[self.roll]))
-                self.delicious_player.state.in_air = False
+                Land(self.game, self.delicious_player)
                 return True
             self.game.report(Outcome(OutcomeType.FAILED_ESCAPE_BEING_EATEN, player=self.hungry_player,
                                      opp_player=self.delicious_player, rolls=[self.roll]))
@@ -3215,9 +3220,11 @@ class Scatter(Procedure):
                                                  player=player_at, rolls=[roll_scatter]))
                         Bounce(self.game, self.piece)
                         KnockDown(self.game, player=player_at, inflictor=self.piece)
+                        if self.piece.team == player_at.team:
+                            self.game.get_proc(PassAttempt).turnover = True  # Will cause a turnover after pass attempt
                         return True
                     if catcher is not None and self.piece.is_catchable():
-                        Catch(self.game, player, self.piece)
+                        Catch(self.game, catcher, self.piece)
                         self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.piece.position,
                                                  player=catcher, rolls=[roll_scatter]))
                         return True
