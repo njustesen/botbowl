@@ -25,7 +25,7 @@ def test_pickup_teammate_no_right_stuff():
     D6.fix(6)  # Land
     game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
     assert not right_stuff.state.in_air
-    
+
 
 def test_failed_pickup_teammate():
     game = get_game_turn()

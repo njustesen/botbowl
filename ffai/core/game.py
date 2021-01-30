@@ -1350,11 +1350,12 @@ class Game:
         If the game is over, the team with most TDs win.
         """
         # If game timed out the current player lost
+        '''
         if self.home_agent == self.actor:
             return self.away_agent
         elif self.away_agent == self.actor:
             return self.home_agent
-        
+        '''
         # If the game is over the player with most TDs wins
         if self.state.game_over:
             return self.get_team_agent(self.get_winning_team())

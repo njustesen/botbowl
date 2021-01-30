@@ -64,7 +64,9 @@ if __name__ == "__main__":
             obs, reward, done, info = env.step(action)
             steps += 1
 
+            print(steps)
+
             # Render
-            env.render(feature_layers=True)
+            env.render(feature_layers=False)
 
     print(steps)
