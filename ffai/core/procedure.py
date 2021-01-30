@@ -2162,6 +2162,8 @@ class Land(Procedure):
             self.roll.modifiers = self.game.get_landing_modifiers(self.player)
             if self.roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_LAND, position=self.player.position, player=self.player, rolls=[self.roll]))
+                if self.game.is_touchdown(self.player):
+                    Touchdown(self.game, self.player)
                 return True
             else:
                 self.game.report(Outcome(OutcomeType.FAILED_LAND, position=self.player.position, player=self.player, rolls=[self.roll]))
@@ -2256,11 +2258,13 @@ class PassAttempt(Procedure):
                         Land(self.game, self.piece)
                 return True
 
-            if result == 1 or (mod_result <= 1 and not self.passer.has_skill(Skill.SAFE_THROW)):
+            safe_throw = self.passer.has_skill(Skill.SAFE_THROW) and type(self.piece) == Ball
+
+            if result == 1 or (mod_result <= 1 and not safe_throw):
                 # Fumble
                 self.fumble = True
                 self.game.report(Outcome(OutcomeType.FUMBLE, player=self.passer, rolls=[self.roll]))
-            elif mod_result <= 1 and self.passer.has_skill(Skill.SAFE_THROW):
+            elif mod_result <= 1 and safe_throw:
                 # Inaccurate pass - Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
