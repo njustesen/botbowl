@@ -17,14 +17,51 @@ class FeatureLayer:
     def name(self):
         raise NotImplementedError("Must be overridden by subclass")
 
+class MemoizedFeatureLayer(FeatureLayer):
+    def __init__(self): 
+        self.original_produce = self.produce 
+        self.produce = self.produce_memoized 
+        self.memory = {} 
+    
+    def produce(self, game):
+        raise NotImplementedError("Must be overridden by subclass")
+
+    def name(self):
+        raise NotImplementedError("Must be overridden by subclass")
+    
+    def calculate_key(self, game): 
+        raise NotImplementedError("Must be overridden by subclass")
+        
+    def produce_memoized(self, game): 
+        key = self.calculate_key(game)
+        if key in self.memory: 
+            return self.memory[key] 
+        else: 
+            layer = self.original_produce(game)
+            self.memory[key] = layer
+            return layer 
+        
+        
 
 class OccupiedLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
-        for y in range(len(game.state.pitch.board)):
-            for x in range(len(game.state.pitch.board[0])):
-                out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None else 0.0
+        
+        players = [] 
+        players.extend(game.state.home_team.players)
+        players.extend(game.state.away_team.players)
+        for p in players: 
+            if p.position is not None: 
+                x = p.position.x 
+                y = p.position.y 
+                out[y][x] = 1.0 
+        
+        
+        
+        # for y in range(len(game.state.pitch.board)):
+            # for x in range(len(game.state.pitch.board[0])):
+                # out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None else 0.0
         return out
 
     def name(self):
@@ -38,10 +75,16 @@ class OwnPlayerLayer(FeatureLayer):
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         if active_team is None:
             return out
-        for y in range(len(game.state.pitch.board)):
-            for x in range(len(game.state.pitch.board[0])):
-                out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
-                                   game.state.pitch.board[y][x].team == active_team is not None else 0.0
+        
+        for p in active_team.players: 
+            if p.position is not None: 
+                x = p.position.x 
+                y = p.position.y 
+                out[y][x] = 1.0 
+        #for y in range(len(game.state.pitch.board)):
+        #    for x in range(len(game.state.pitch.board[0])):
+        #        out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
+        #                           game.state.pitch.board[y][x].team == active_team is not None else 0.0
         return out
 
     def name(self):
@@ -55,10 +98,21 @@ class OppPlayerLayer(FeatureLayer):
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         if active_team is None:
             return out
-        for y in range(len(game.state.pitch.board)):
-            for x in range(len(game.state.pitch.board[0])):
-                out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
-                                   game.state.pitch.board[y][x].team != active_team is not None else 0.0
+        
+        if active_team == game.state.home_team: 
+            target_team = game.state.away_team 
+        else: 
+            target_team = game.state.home_team 
+        
+        for p in target_team.players: 
+            if p.position is not None: 
+                x = p.position.x 
+                y = p.position.y 
+                out[y][x] = 1.0 
+        # for y in range(len(game.state.pitch.board)):
+            # for x in range(len(game.state.pitch.board[0])):
+                # out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
+                                   # game.state.pitch.board[y][x].team != active_team is not None else 0.0
         return out
 
     def name(self):
@@ -395,7 +449,7 @@ class BallLayer(FeatureLayer):
         return "balls"
 
 
-class OwnHalfLayer(FeatureLayer):
+class OwnHalfLayer(MemoizedFeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -406,12 +460,17 @@ class OwnHalfLayer(FeatureLayer):
             for x in range(len(game.arena.board[0])):
                 out[y][x] = 1.0 if game.arena.board[y][x] in tiles else 0.0
         return out
-
+    
+    def calculate_key(self, game): 
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        home = active_team == game.state.home_team
+        return str(home)
+    
     def name(self):
         return "own half"
 
 
-class OwnTouchdownLayer(FeatureLayer):
+class OwnTouchdownLayer(MemoizedFeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -423,11 +482,16 @@ class OwnTouchdownLayer(FeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] == tile else 0.0
         return out
 
+    def calculate_key(self, game): 
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        home = active_team == game.state.home_team
+        return str(home)
+        
     def name(self):
         return "own touchdown"
 
 
-class OppTouchdownLayer(FeatureLayer):
+class OppTouchdownLayer(MemoizedFeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -439,6 +503,11 @@ class OppTouchdownLayer(FeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] == tile else 0.0
         return out
 
+    def calculate_key(self, game): 
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        home = active_team == game.state.home_team
+        return str(home)    
+        
     def name(self):
         return "opp touchdown"
 
