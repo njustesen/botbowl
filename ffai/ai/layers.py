@@ -11,58 +11,54 @@ from ffai.core.procedure import *
 
 class FeatureLayer:
 
-    def produce(self, game):
-        raise NotImplementedError("Must be overridden by subclass")
+    def __init__(self):
+        self.cache = {}
 
     def name(self):
         raise NotImplementedError("Must be overridden by subclass")
 
-class MemoizedFeatureLayer(FeatureLayer):
-    def __init__(self): 
-        self.original_produce = self.produce 
-        self.produce = self.produce_memoized 
-        self.memory = {} 
-    
-    def produce(self, game):
-        raise NotImplementedError("Must be overridden by subclass")
+    def get(self, game):
+        """
+        :return: a 2D 1-hot feature layer, possibly cached.
+        """
+        key = self.key(game)
+        if key is not None and key in self.cache:
+            return self.cache[key]
+        layer = self.produce(game)
+        if key is not None:
+            self.cache[key] = layer
+        return layer
 
-    def name(self):
-        raise NotImplementedError("Must be overridden by subclass")
-    
-    def calculate_key(self, game): 
-        raise NotImplementedError("Must be overridden by subclass")
+    def key(self, game):
+        """
+        Override this to use caching. Any state layer with a key other than None will be stored and reused.
+        :return: a unique key for each possible layer outcome.
+        """
+        return None
         
-    def produce_memoized(self, game): 
-        key = self.calculate_key(game)
-        if key in self.memory: 
-            return self.memory[key] 
-        else: 
-            layer = self.original_produce(game)
-            self.memory[key] = layer
-            return layer 
-        
+    def produce(self, game):
+        """
+        :param game:
+        :return: a newly generated 2D 1-hot feature layer.
+        """
+        raise NotImplementedError("Must be overridden by subclass")
         
 
 class OccupiedLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
-        
-        players = [] 
-        players.extend(game.state.home_team.players)
-        players.extend(game.state.away_team.players)
-        for p in players: 
-            if p.position is not None: 
-                x = p.position.x 
-                y = p.position.y 
+
+        for player in game.state.home_team.players + game.state.home_team.players:
+            if player.position is not None:
+                x = player.position.x
+                y = player.position.y
                 out[y][x] = 1.0 
-        
-        
-        
-        # for y in range(len(game.state.pitch.board)):
-            # for x in range(len(game.state.pitch.board[0])):
-                # out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None else 0.0
+
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "occupied"
@@ -80,12 +76,12 @@ class OwnPlayerLayer(FeatureLayer):
             if p.position is not None: 
                 x = p.position.x 
                 y = p.position.y 
-                out[y][x] = 1.0 
-        #for y in range(len(game.state.pitch.board)):
-        #    for x in range(len(game.state.pitch.board[0])):
-        #        out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
-        #                           game.state.pitch.board[y][x].team == active_team is not None else 0.0
+                out[y][x] = 1.0
+
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "own players"
@@ -108,12 +104,12 @@ class OppPlayerLayer(FeatureLayer):
             if p.position is not None: 
                 x = p.position.x 
                 y = p.position.y 
-                out[y][x] = 1.0 
-        # for y in range(len(game.state.pitch.board)):
-            # for x in range(len(game.state.pitch.board[0])):
-                # out[y][x] = 1.0 if game.state.pitch.board[y][x] is not None and \
-                                   # game.state.pitch.board[y][x].team != active_team is not None else 0.0
+                out[y][x] = 1.0
+
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "opp players"
@@ -133,6 +129,9 @@ class OwnTackleZoneLayer(FeatureLayer):
                         out[square.y][square.x] += 0.125
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "own tackle zones"
 
@@ -150,6 +149,9 @@ class OppTackleZoneLayer(FeatureLayer):
                     for square in game.get_adjacent_squares(player.position):
                         out[square.y][square.x] += 0.125
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "opp tackle zones"
@@ -170,6 +172,9 @@ class UsedLayer(FeatureLayer):
                 out[player.position.y][player.position.x] = 1.0 if player.state.used else 0.0
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "used players"
 
@@ -188,6 +193,9 @@ class UpLayer(FeatureLayer):
             if player.position is not None:
                 out[player.position.y][player.position.x] = 1.0 if player.state.up else 0.0
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "standing players"
@@ -208,6 +216,9 @@ class StunnedLayer(FeatureLayer):
                 out[player.position.y][player.position.x] = 1.0 if player.state.stunned else 0.0
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "stunned players"
 
@@ -222,6 +233,9 @@ class ActivePlayerLayer(FeatureLayer):
 
         out[game.state.active_player.position.y][game.state.active_player.position.x] = 1.0
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "active players"
@@ -250,6 +264,9 @@ class TargetPlayerLayer(FeatureLayer):
             out[target.position.y][target.position.x] = 1.0
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "target player"
 
@@ -257,6 +274,7 @@ class TargetPlayerLayer(FeatureLayer):
 class AvailablePositionLayer(FeatureLayer):
 
     def __init__(self, action_type):
+        super().__init__()
         self.action_type = action_type
 
     def produce(self, game):
@@ -273,6 +291,9 @@ class AvailablePositionLayer(FeatureLayer):
                         out[player.position.y][player.position.x] = 1.0
             break
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return f"{self.action_type.name.replace('_', ' ').lower()} positions"
@@ -296,6 +317,9 @@ class RollProbabilityLayer(FeatureLayer):
                         out[action_choice.positions[i].y][action_choice.positions[i].x] = chance
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "roll probabilities"
 
@@ -314,6 +338,9 @@ class BlockDiceLayer(FeatureLayer):
                         roll = (action_choice.block_rolls[i] + 3) / 6.0
                         out[action_choice.positions[i].y][action_choice.positions[i].x] = roll
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "block dice"
@@ -334,6 +361,9 @@ class MALayer(FeatureLayer):
                 out[player.position.y][player.position.x] = player.get_ma() * 0.1
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "movement allowence"
 
@@ -352,6 +382,9 @@ class STLayer(FeatureLayer):
             if player.position is not None:
                 out[player.position.y][player.position.x] = player.get_st() * 0.1
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "strength"
@@ -372,6 +405,9 @@ class AGLayer(FeatureLayer):
                 out[player.position.y][player.position.x] = player.get_ag() * 0.1
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "agility"
 
@@ -390,6 +426,9 @@ class AVLayer(FeatureLayer):
             if player.position is not None:
                 out[player.position.y][player.position.x] = player.get_av() * 0.1
         return out
+
+    def key(self, game):
+        return None
 
     def name(self):
         return "armor value"
@@ -413,11 +452,14 @@ class SkillLayer(FeatureLayer):
                 out[player.position.y][player.position.x] = 1 if player.has_skill(self.skill) else 0.0
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return self.skill.name.replace("_", " ").lower()
 
 
-class MovemenLeftLayer(FeatureLayer):
+class MovementLeftLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -432,6 +474,9 @@ class MovemenLeftLayer(FeatureLayer):
                 out[player.position.y][player.position.x] = (player.get_ma() - player.state.moves) * 0.1
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "movement left"
 
@@ -445,11 +490,14 @@ class BallLayer(FeatureLayer):
                 out[ball.position.y][ball.position.x] = 1.0
         return out
 
+    def key(self, game):
+        return None
+
     def name(self):
         return "balls"
 
 
-class OwnHalfLayer(MemoizedFeatureLayer):
+class OwnHalfLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -461,16 +509,16 @@ class OwnHalfLayer(MemoizedFeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] in tiles else 0.0
         return out
     
-    def calculate_key(self, game): 
+    def key(self, game):
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         home = active_team == game.state.home_team
         return str(home)
-    
+
     def name(self):
         return "own half"
 
 
-class OwnTouchdownLayer(MemoizedFeatureLayer):
+class OwnTouchdownLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -482,7 +530,7 @@ class OwnTouchdownLayer(MemoizedFeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] == tile else 0.0
         return out
 
-    def calculate_key(self, game): 
+    def key(self, game):
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         home = active_team == game.state.home_team
         return str(home)
@@ -491,7 +539,7 @@ class OwnTouchdownLayer(MemoizedFeatureLayer):
         return "own touchdown"
 
 
-class OppTouchdownLayer(MemoizedFeatureLayer):
+class OppTouchdownLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -503,7 +551,7 @@ class OppTouchdownLayer(MemoizedFeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] == tile else 0.0
         return out
 
-    def calculate_key(self, game): 
+    def key(self, game):
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         home = active_team == game.state.home_team
         return str(home)    
@@ -521,5 +569,24 @@ class CrowdLayer(FeatureLayer):
                 out[y][x] = 1.0 if game.arena.board[y][x] == Tile.CROWD else 0.0
         return out
 
+    def key(self, game):
+        return 0
+
     def name(self):
         return "opp crowd"
+
+
+class MovemenLeftLayer(FeatureLayer):
+
+    def produce(self, game):
+        out = np.zeros((game.arena.height, game.arena.width))
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        if active_team is None:
+            return out
+        for player in active_team.players + game.get_opp_team(active_team).players:
+            if player.position is not None:
+                out[player.position.y][player.position.x] = (player.get_ma() - player.state.moves) * 0.1
+        return out
+
+    def name(self):
+        return "movement left"

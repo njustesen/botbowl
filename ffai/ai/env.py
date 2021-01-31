@@ -303,7 +303,7 @@ class FFAIEnv(gym.Env):
             'available-action-types': {}
         }
         for layer in self.layers:
-            obs['board'][layer.name()] = layer.produce(game)
+            obs['board'][layer.name()] = layer.get(game)
 
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
         opp_team = game.get_opp_team(active_team) if active_team is not None else None
