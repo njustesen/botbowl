@@ -4,17 +4,14 @@ import gym
 import numpy as np
 import ffai
 
+import cProfile
+import io 
+import pstats 
+#from pstats import SortKey
 
-if __name__ == "__main__":
-
+def run_env(n, env_name="FFAI-11-v2"):  
     # Create environment
-    env = gym.make("FFAI-v2")
-
-    # Smaller variants
-    # env = gym.make("FFAI-7-v2")
-    # env = gym.make("FFAI-5-v2")
-    # env = gym.make("FFAI-3-v2")
-    # env = gym.make("FFAI-1-v2")
+    env = gym.make( env_name )
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
@@ -29,9 +26,9 @@ if __name__ == "__main__":
     # Create random state for action selection
     rnd = np.random.RandomState(seed)
 
-    # Play 10 games
+    # Play n games
     steps = 0
-    for i in range(100):
+    for i in range(n):
 
         # Reset environment
         obs = env.reset()
@@ -39,11 +36,6 @@ if __name__ == "__main__":
 
         # Take actions as long as game is not done
         while not done:
-
-            # Extract non-spatial features
-            state_arr = list(obs['state'].values())
-            board = list(obs['board'].values())
-            procedure = obs['procedures']
 
             # Sample random action type
             action_types = env.available_action_types()
@@ -64,9 +56,18 @@ if __name__ == "__main__":
             obs, reward, done, info = env.step(action)
             steps += 1
 
-            print(steps)
 
-            # Render
-            env.render(feature_layers=False)
-
-    print(steps)
+if __name__ == "__main__":
+    
+    pr = cProfile.Profile() 
+    
+    pr.enable()
+    run_env(10)
+    pr.disable()
+    
+    s = io.StringIO()
+    #sortby = pstats.SortKey.CUMULATIVE
+    ps = pstats.Stats(pr, stream=s).sort_stats("tottime")
+    ps.print_stats(50)
+    print(s.getvalue())
+    

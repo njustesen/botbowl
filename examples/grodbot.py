@@ -1118,7 +1118,7 @@ class GrodBot(Agent):
             action = self.follow_up(game)
         elif isinstance(proc, Apothecary):
             action = self.apothecary(game)
-        elif isinstance(proc, PassAction):
+        elif isinstance(proc, PassAttempt):
             action = self.pass_action(game)
         elif isinstance(proc, Catch):
             action = self.catch(game)

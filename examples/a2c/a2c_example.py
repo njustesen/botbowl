@@ -65,7 +65,7 @@ ensure_dir("plots/")
 # --- Reward function ---
 rewards_own = {
     OutcomeType.TOUCHDOWN: 1,
-    OutcomeType.CATCH: 0.1,
+    OutcomeType.SUCCESSFUL_CATCH: 0.1,
     OutcomeType.INTERCEPTION: 0.2,
     OutcomeType.SUCCESSFUL_PICKUP: 0.1,
     OutcomeType.FUMBLE: -0.1,
@@ -75,7 +75,7 @@ rewards_own = {
 }
 rewards_opp = {
     OutcomeType.TOUCHDOWN: -1,
-    OutcomeType.CATCH: -0.1,
+    OutcomeType.SUCCESSFUL_CATCH: -0.1,
     OutcomeType.INTERCEPTION: -0.2,
     OutcomeType.SUCCESSFUL_PICKUP: -0.1,
     OutcomeType.FUMBLE: 0.1,

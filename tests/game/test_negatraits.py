@@ -13,7 +13,7 @@ def test_negatrait_pass_allows_player_action(trait):
     player.extra_skills = [trait[0]]
 
     D6.FixedRolls.clear()
-    D6.fix_result(6)  # pass trait test
+    D6.fix(6)  # pass trait test
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -43,7 +43,7 @@ def test_negatrait_fail_ends_turn(trait):
     player.extra_skills = [trait[0]]
 
     D6.FixedRolls.clear()
-    D6.fix_result(1)  # fail trait test
+    D6.fix(1)  # fail trait test
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -66,7 +66,7 @@ def test_take_root_fail_does_not_end_block_action():
     attacker.extra_skills = [Skill.TAKE_ROOT]
 
     D6.FixedRolls.clear()
-    D6.fix_result(1)  # fail take root test
+    D6.fix(1)  # fail take root test
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
 
@@ -84,7 +84,7 @@ def test_take_root_ends_move_turn():
     player.extra_skills = [Skill.TAKE_ROOT]
 
     D6.FixedRolls.clear()
-    D6.fix_result(1)  # fail trait test
+    D6.fix(1)  # fail trait test
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -102,7 +102,7 @@ def test_take_root_fail_reduces_ma_and_prevents_movement():
     player.extra_skills = [Skill.TAKE_ROOT]
 
     D6.FixedRolls.clear()
-    D6.fix_result(1)  # fail trait test
+    D6.fix(1)  # fail trait test
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -129,7 +129,7 @@ def test_negatrait_success_resets_player_state(trait):
             player.state.really_stupid = True
 
         D6.FixedRolls.clear()
-        D6.fix_result(6)  # pass trait test
+        D6.fix(6)  # pass trait test
 
         game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -158,7 +158,7 @@ def test_really_stupid_fails_without_support(dice_value):
     assert len(adjacent) == 0
 
     D6.FixedRolls.clear()
-    D6.fix_result(dice_value)  # fail trait test
+    D6.fix(dice_value)  # fail trait test
 
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
@@ -189,7 +189,7 @@ def test_really_stupid_passes_with_support(dice_value):
     assert len(adjacent) == 1
 
     D6.FixedRolls.clear()
-    D6.fix_result(dice_value)  # pass trait test if supported
+    D6.fix(dice_value)  # pass trait test if supported
 
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
@@ -220,7 +220,7 @@ def test_really_stupid_fails_if_support_is_really_stupid(dice_value):
     assert len(adjacent) == 1
 
     D6.FixedRolls.clear()
-    D6.fix_result(dice_value)  # fail trait test if supported by really stupid player
+    D6.fix(dice_value)  # fail trait test if supported by really stupid player
 
     game.set_available_actions()
     game.step(Action(ActionType.START_MOVE, player=player))
@@ -243,7 +243,7 @@ def test_wild_animal_fails_without_block_or_blitz(action_type):
     player.extra_skills = [Skill.WILD_ANIMAL]
 
     D6.FixedRolls.clear()
-    D6.fix_result(2)  # fails without block/blitz
+    D6.fix(2)  # fails without block/blitz
 
     game.step(Action(action_type, player=player))
 
@@ -263,7 +263,7 @@ def test_wild_animal_passes_when_block_or_blitz(action_type):
     attacker.extra_skills = [Skill.WILD_ANIMAL]
 
     D6.FixedRolls.clear()
-    D6.fix_result(2)  # fails without block/blitz
+    D6.fix(2)  # fails without block/blitz
 
     game.step(Action(action_type, player=attacker))
 
@@ -283,7 +283,7 @@ def test_take_root_doesnt_trigger_if_rooted():
     player.state.taken_root = True
 
     D6.FixedRolls.clear()
-    D6.fix_result(2)  # pass take root if it happens
+    D6.fix(2)  # pass take root if it happens
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
@@ -395,7 +395,7 @@ def test_take_root_removed_on_knockdown():
     attacker.extra_skills = [Skill.BLOCK]
 
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.BOTH_DOWN)
+    BBDie.fix(BBDieResult.BOTH_DOWN)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -417,7 +417,7 @@ def test_taken_root_players_may_not_follow_up():
 
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.DEFENDER_DOWN)
+    BBDie.fix(BBDieResult.DEFENDER_DOWN)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -439,7 +439,7 @@ def test_taken_root_players_may_not_follow_up_push():
 
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.PUSH)
+    BBDie.fix(BBDieResult.PUSH)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))
@@ -462,8 +462,8 @@ def test_taken_root_players_may_not_be_pushed():
 
     # it's a 2 dice block
     BBDie.clear_fixes()
-    BBDie.fix_result(BBDieResult.PUSH)
-    BBDie.fix_result(BBDieResult.PUSH)
+    BBDie.fix(BBDieResult.PUSH)
+    BBDie.fix(BBDieResult.PUSH)
 
     game.step(Action(ActionType.START_BLOCK, player=attacker))
     game.step(Action(ActionType.BLOCK, position=defender.position))

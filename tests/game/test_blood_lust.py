@@ -17,11 +17,11 @@ def test_blood_lust_roll_success():
     game.state.teams[0].state.rerolls = 0
     game.state.teams[1].state.rerolls = 0
     
-    D6.fix_result(2)
+    D6.fix(2)
     
     game.step(Action(data[0], player=player))
     assert not player.state.blood_lust 
-    assert game.has_report_of_type(data[1] )
+    assert game.has_report_of_type(data[1])
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_BLOOD_LUST)
  
     assert not player.state.blood_lust 
@@ -53,7 +53,7 @@ def test_blood_lust_roll_fail_eject(data):
     game.state.teams[0].state.rerolls = 0
     game.state.teams[1].state.rerolls = 0
     
-    D6.fix_result(1)
+    D6.fix(1)
     
     game.step(Action(data[0], player=player))
     assert game.has_report_of_type(OutcomeType.FAILED_BLOOD_LUST)
@@ -92,9 +92,9 @@ def test_blood_lust_roll_fail_eat_thrall():
     assert not thrall.has_skill(Skill.BLOOD_LUST)
     
     
-    D6.fix_result(1) #fail bloodlust
-    D6.fix_result(1) #injury roll stun
-    D6.fix_result(1) #injury roll stun  
+    D6.fix(1) #fail bloodlust
+    D6.fix(1) #injury roll stun
+    D6.fix(1) #injury roll stun
     
     
     game.step(Action(data[0], player=player))
@@ -135,7 +135,7 @@ def test_blood_lust_fail_pass():
     game.get_ball().move_to( Square(5, 5) )
     game.get_ball().is_carried = True 
     
-    D6.fix_result(1) #fail bloodlust
+    D6.fix(1) #fail bloodlust
     
     
     game.step(Action(ActionType.START_PASS, player=player))
@@ -173,14 +173,14 @@ def test_blood_lust_fail_handoff():
     game.get_ball().move_to( Square(5, 5) )
     game.get_ball().is_carried = True 
     
-    D6.fix_result(1) #fail bloodlust
+    D6.fix(1) #fail bloodlust
     
     game.step(Action(ActionType.START_HANDOFF, player=player))
     assert game.has_report_of_type(OutcomeType.FAILED_BLOOD_LUST)
     assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_BLOOD_LUST)
     assert player.state.blood_lust 
     
-    game.step(Action(ActionType.HANDOFF, position = Square(4, 4) )) 
+    game.step(Action(ActionType.HANDOFF, position=Square(4, 4)))
     
     assert game.has_report_of_type(OutcomeType.EJECTED_BY_BLOOD_LUST)
     assert not game.has_report_of_type(OutcomeType.EATEN_DURING_BLOOD_LUST) 
@@ -205,7 +205,7 @@ def test_blood_lust_fail_touchdown():
     game.get_ball().move_to( Square(2, 2) )
     game.get_ball().is_carried = True 
     
-    D6.fix_result(1) #fail bloodlust
+    D6.fix(1) #fail bloodlust
     
     game.step(Action(ActionType.START_MOVE, player=player))
     assert game.has_report_of_type(OutcomeType.FAILED_BLOOD_LUST)

@@ -156,8 +156,8 @@ def test_pass_roll_fumble(pass_skill):
     game.set_available_actions()
     game.state.reports.clear() 
     
-    D6.fix_result(1)  # Fumble pass
-    D6.fix_result(6)  # Successful pass after skill re-roll
+    D6.fix(1)  # Fumble pass
+    D6.fix(6)  # Successful pass after skill re-roll
     
     if pass_skill: 
         assert passer.can_use_skill(Skill.PASS)
@@ -172,7 +172,7 @@ def test_pass_roll_fumble(pass_skill):
     else:
         assert game.has_report_of_type(OutcomeType.FUMBLE)
         assert game.has_report_of_type(OutcomeType.BALL_BOUNCED)
-        assert game.has_report_of_type(OutcomeType.BALL_ON_GROUND)
+        assert game.has_report_of_type(OutcomeType.BALL_BOUNCE_GROUND)
         assert not game.has_report_of_type(OutcomeType.ACCURATE_PASS)
         assert not game.has_report_of_type(OutcomeType.SKILL_USED)
         
@@ -198,8 +198,8 @@ def test_pass_roll_inaccurate(pass_skill):
     game.set_available_actions()
     game.state.reports.clear() 
     
-    D6.fix_result(2)  # Inaccurate pass
-    D6.fix_result(6)  # Successful pass after skill re-roll
+    D6.fix(2)  # Inaccurate pass
+    D6.fix(6)  # Successful pass after skill re-roll
     
     if pass_skill: 
         assert passer.can_use_skill(Skill.PASS)
