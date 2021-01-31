@@ -131,7 +131,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Stab              | YES         | NO        |
 | Stakes            | YES         | NO        |
 | Stand Firm        | YES         | NO        |
-| Strip Ball        | NO          | NO        |
+| **Strip Ball**    | YES         | YES       |
 | **Strong Arm**    | YES         | YES       |
 | Stunty            | YES         | NO        |
 | Sure Feet         | YES         | NO        |
@@ -142,7 +142,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Tentacles         | YES         | NO        |
 | Thick Skull       | YES         | NO        |
 | Throw Team-Mate   | NO          | NO        |
-| Timmm-ber!        | NO          | NO        |
+| **Timmm-ber!**    | YES         | YES       |
 | Titchy            | PARTIALLY   | NO        |
 | Two Heads         | YES         | NO        |
 | **Very Long Legs**| YES         | YES       |

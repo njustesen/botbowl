@@ -2232,7 +2232,8 @@ class Game:
         if not player.state.up:
             moves = 0 if player.has_skill(Skill.JUMP_UP) else 3
             if player.get_ma() < moves:
-                agi_rolls.append([4])
+                stand_up_roll = max(2, min(6, 4-self.get_stand_up_modifier(player)))
+                agi_rolls.append([stand_up_roll])
             else:
                 agi_rolls.append([])
             actions.append(ActionChoice(ActionType.STAND_UP, team=player.team, agi_rolls=agi_rolls))
@@ -2434,3 +2435,12 @@ class Game:
             if type(proc) == proc_type:
                 return proc
         return None
+
+    def get_stand_up_modifier(self, player): 
+        """
+        :param player: player on the board with MA < 3. 
+        :return:  modifier for player to stand up. 
+        """
+        if player.has_skill(Skill.TIMMMBER):
+            return len([p for p in self.get_adjacent_teammates(player, down=False) if self.num_tackle_zones_in(p) == 0])
+        return 0

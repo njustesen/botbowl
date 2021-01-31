@@ -180,7 +180,7 @@ def load_team(path, ruleset):
     for p in data['players']:
         role = ruleset.get_role(p['position'], team.race)
         player_id = str(uuid.uuid1())
-        player = Player(player_id=player_id, role=role, name=p['name'], nr=p['nr'], niggling_injuries=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'], team=team)
+        player = Player(player_id=player_id, role=role, name=p['name'], nr=p['nr'], team=team, niggling_injuries=p['niggling'], extra_ma=p['extra_ma'], extra_st=p['extra_st'], extra_ag=p['extra_ag'], extra_av=p['extra_av'], mng=p['mng'], spp=p['spp'])
         for s in p['extra_skills']:
             player.extra_skills.append(parse_enum(Skill, s))
         team.players.append(player)
