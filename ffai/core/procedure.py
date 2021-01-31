@@ -1656,9 +1656,6 @@ class KnockDown(Procedure):
 
         return True
 
-    def available_actions(self):
-        return []
-
 
 class KnockOut(Procedure):
 
@@ -2177,7 +2174,7 @@ class Land(Procedure):
             return False
 
         # Failed landing
-        KnockDown(self.game, self.player, turnover=False)
+        KnockDown(self.game, self.player, turnover=self.game.has_ball(self.player))
         return True
 
 
