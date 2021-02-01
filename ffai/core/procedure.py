@@ -708,7 +708,7 @@ class Casualty(Procedure):
                         rolls=cas_rolls))
 
             if not self.always_hungry:
-                if self.player.team.state.apothecaries > 1:
+                if self.player.team.state.apothecaries > 0:
                     Apothecary(self.game, self.player, roll=self.roll, outcome=OutcomeType.CASUALTY,
                                casualty=self.casualty, effect=self.effect, inflictor=self.inflictor)
                     return True
@@ -2197,6 +2197,7 @@ class PassAttempt(Procedure):
         self.eat_thrall = None
         self.ttm = type(piece) == Player
         self.turnover = False
+        self.safe_throw_used = False
 
     def start(self):
         if self.dump_off:
@@ -2271,7 +2272,7 @@ class PassAttempt(Procedure):
             elif mod_result <= 1 and safe_throw:
                 # Inaccurate pass - Safe Throw
                 self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW))
-                self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
+                self.safe_throw_used = True
             else:
                 # Inaccurate pass
                 self.game.report(Outcome(OutcomeType.INACCURATE_PASS, player=self.passer, rolls=[self.roll]))
@@ -2293,6 +2294,9 @@ class PassAttempt(Procedure):
             self.roll = None
             self.fumble = False
             return False
+
+        if self.safe_throw_used:
+            return True
 
         if self.fumble:
             self._fumble()
