@@ -2220,7 +2220,7 @@ class Game:
                                         positions=hand_off_positions, agi_rolls=agi_rolls))
         return actions
 
-    def get_move_actions(self, player):
+    def get_adjacent_move_actions(self, player):
         quick_snap = self.is_quick_snap()
         actions = []
         move_positions = []
@@ -2261,30 +2261,36 @@ class Game:
             if len(move_positions) > 0:
                 actions.append(ActionChoice(ActionType.MOVE, team=player.team,
                                             positions=move_positions, agi_rolls=agi_rolls))
-            # Leap
-            if player.can_use_skill(Skill.LEAP) and not quick_snap:
-                leap_agi_rolls = []
-                leap_positions = []
-                modifiers = 0 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
-                target = Rules.agility_table[player.get_ag()]
-                leap_roll = min(6, max(2, target - modifiers))
-                for square in self.get_adjacent_squares(player.position, occupied=False, distance=2):
-                    distance = player.position.distance(square)
-                    if player.state.moves + distance <= player.get_ma() + sprints:
-                        rolls = []
-                        leap_positions.append(square)
-                        gfis = max(0, (player.state.moves + distance) - player.get_ma())
-                        for gfi in range(gfis):
-                            rolls.append(gfi_roll)
-                        rolls.append(leap_roll)
-                        ball_at = self.get_ball_at(square)
-                        if ball_at is not None and ball_at.on_ground:
-                            modifiers = self.get_pickup_modifiers(player, square)
-                            rolls.append(min(6, max(2, target - modifiers)))
-                        leap_agi_rolls.append(rolls)
-                if len(leap_positions) > 0:
-                    actions.append(ActionChoice(ActionType.LEAP, team=player.team,
-                                                positions=leap_positions, agi_rolls=leap_agi_rolls))
+
+        return actions
+
+    def get_leap_actions(self, player):
+        actions = []
+        if player.can_use_skill(Skill.LEAP) and not self.is_quick_snap():
+            sprints = 3 if player.has_skill(Skill.SPRINT) else 2
+            gfi_roll = 3 if self.state.weather == WeatherType.BLIZZARD else 2
+            leap_agi_rolls = []
+            leap_positions = []
+            modifiers = 0 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
+            target = Rules.agility_table[player.get_ag()]
+            leap_roll = min(6, max(2, target - modifiers))
+            for square in self.get_adjacent_squares(player.position, occupied=False, distance=2):
+                distance = player.position.distance(square)
+                if player.state.moves + distance <= player.get_ma() + sprints:
+                    rolls = []
+                    leap_positions.append(square)
+                    gfis = max(0, (player.state.moves + distance) - player.get_ma())
+                    for gfi in range(gfis):
+                        rolls.append(gfi_roll)
+                    rolls.append(leap_roll)
+                    ball_at = self.get_ball_at(square)
+                    if ball_at is not None and ball_at.on_ground:
+                        modifiers = self.get_pickup_modifiers(player, square)
+                        rolls.append(min(6, max(2, target - modifiers)))
+                    leap_agi_rolls.append(rolls)
+            if len(leap_positions) > 0:
+                actions.append(ActionChoice(ActionType.LEAP, team=player.team,
+                                            positions=leap_positions, agi_rolls=leap_agi_rolls))
         return actions
 
     def get_foul_actions(self, player):

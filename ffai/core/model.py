@@ -440,7 +440,7 @@ class Pitch:
 
 class ActionChoice:
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, paths=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
@@ -450,6 +450,7 @@ class ActionChoice:
         self.disabled = disabled
         self.agi_rolls = [] if agi_rolls is None else agi_rolls
         self.skill = skill
+        self.paths = [] if paths is None else paths
 
     def to_json(self):
         return {

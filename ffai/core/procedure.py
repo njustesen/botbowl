@@ -9,6 +9,7 @@ before other procedures are run. Procedures can add other procedures to the stac
 """
 from abc import abstractmethod, ABCMeta
 
+from ffai.ai.pathfinding import get_all_paths
 from ffai.core.model import *
 from ffai.core.table import *
 import time
@@ -2567,6 +2568,8 @@ class MoveAction(Procedure):
         super().__init__(game)
         self.player = player
         self.is_move_action = is_move_action
+        self.paths = {}
+        self.steps = None
 
     def start(self):
         if self.is_move_action:
@@ -2574,6 +2577,10 @@ class MoveAction(Procedure):
             self.game.state.player_action_type = PlayerActionType.MOVE
 
     def step(self, action):
+
+        if action is None:
+            # Continue on path
+            action = Action(ActionType.MOVE, position=self.steps.pop(0))
 
         if len(self.player.state.squares_moved) == 0:
             self.player.state.squares_moved.append(self.player.position)
@@ -2605,6 +2612,13 @@ class MoveAction(Procedure):
 
         if action.action_type == ActionType.MOVE:
 
+            if self.steps is None and len(self.paths) > 0:
+                self.steps = self.paths[action.position].steps
+                return False
+
+            if self.steps is not None and len(self.steps) == 0:
+                self.steps = None
+
             gfi = self.player.state.moves + 1 > self.player.get_ma()
             dodge = self.game.num_tackle_zones_in(self.player) > 0
             if self.game.is_quick_snap() or self.player.has_skill(Skill.BALL_AND_CHAIN):
@@ -2622,10 +2636,18 @@ class MoveAction(Procedure):
             return True
 
     def available_actions(self):
-        actions = self.game.get_move_actions(self.player)
+        if self.steps is not None and len(self.steps) > 0:
+            return []
+        actions = []
+        # actions = self.game.get_adjacent_move_actions(self.player)
+        paths = get_all_paths(self.game, self.player)
+        if len(paths) > 0:
+            positions = [path.steps[-1] for path in paths]
+            actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths, rolls=[]))
+        self.paths = {path.steps[-1]: path for path in paths}
+        actions += self.game.get_leap_actions(self.player)
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
-            hypno_actions = self.game.get_hypnotic_gaze_actions(self.player)
-            actions.extend(hypno_actions)
+            actions += self.game.get_hypnotic_gaze_actions(self.player)
         actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
         return actions
 
