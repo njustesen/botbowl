@@ -3,6 +3,8 @@ import gym
 import ffai.ai
 from multiprocessing import Process, Pipe
 import numpy as np
+import multiprocessing
+import os
 
 envs = [
     "FFAI-1-v2",
@@ -40,38 +42,38 @@ def test_gym(env):
     assert steps > 10
 
 
+def worker(remote, parent_remote, env):
+    parent_remote.close()
+    seed = env.get_seed()
+    rnd = np.random.RandomState(seed)
+    steps = 0
+    obs = env.reset()
+    while True:
+        command = remote.recv()
+        if command == 'step':
+            action_types = env.available_action_types()
+            action_type = rnd.choice(action_types)
+            available_positions = env.available_positions(action_type)
+            pos = rnd.choice(available_positions) if len(available_positions) > 0 else None
+            action = {
+                'action-type': action_type,
+                'x': pos.x if pos is not None else None,
+                'y': pos.y if pos is not None else None
+            }
+            obs, reward, done, info = env.step(action)
+            steps += 1
+            if done:
+                obs = env.reset()
+            remote.send((obs, reward, done, info))
+        elif command == 'reset':
+            obs = env.reset()
+            done = False
+        elif command == 'close':
+            env.close()
+            break
+
 @pytest.mark.parametrize("env", envs)
 def test_multiple_gyms(env):
-
-    def worker(remote, parent_remote, env):
-        parent_remote.close()
-        seed = env.get_seed()
-        rnd = np.random.RandomState(seed)
-        steps = 0
-        obs = env.reset()
-        while True:
-            command = remote.recv()
-            if command == 'step':
-                action_types = env.available_action_types()
-                action_type = rnd.choice(action_types)
-                available_positions = env.available_positions(action_type)
-                pos = rnd.choice(available_positions) if len(available_positions) > 0 else None
-                action = {
-                    'action-type': action_type,
-                    'x': pos.x if pos is not None else None,
-                    'y': pos.y if pos is not None else None
-                }
-                obs, reward, done, info = env.step(action)
-                steps += 1
-                if done:
-                    obs = env.reset()
-                remote.send((obs, reward, done, info))
-            elif command == 'reset':
-                obs = env.reset()
-                done = False
-            elif command == 'close':
-                env.close()
-                break
 
     seed = 0
     nenvs = 2
