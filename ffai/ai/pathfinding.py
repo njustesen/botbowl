@@ -7,8 +7,8 @@ This module contains pathfinding functionalities for FFAI.
 """
 
 from typing import Optional, List
-from ffai.core.model import Square
-from ffai.core.table import Skill
+from ffai.core.model import Player, Square
+from ffai.core.table import Skill, WeatherType, Tile
 import copy
 
 
@@ -52,9 +52,6 @@ class Node:
             self.rr_used_prob: float = 0
         self.update_costs()
 
-    def p(self):
-        return self.costs[0]
-
     def update_costs(self):
         self.costs[0] = round(1-self.prob, 2)
         self.costs[1] = self.moves
@@ -85,6 +82,9 @@ class Node:
         self.dodge_used_prob += success_skill
         self.rr_used_prob += success_reroll
         self.costs[0] = round(1-self.prob, 2)
+
+    def p(self):
+        return 1-self.costs[0]
 
     def add_gfi_prob(self, p:float, sure_feet_skill=False, rr=False):
         can_use_sure_feet_p = 0 if not sure_feet_skill else 1 - self.sure_feet_used_prob
@@ -224,22 +224,22 @@ class Pathfinder:
 
     def _can_beat_best(self, node):
         if self.best is not None:
-            if node.p() < self.best.p():
+            if node.prob < self.best.prob:
                 return False
             if self.position is not None:
-                if node.p() == self.best.p() and node.moves + node.position.distance(self.position) + (
+                if node.prob == self.best.prob and node.moves + node.position.distance(self.position) + (
                 1 if self.blitz else 0) > self.best.moves:
                     return False
             elif self.target_player is not None:
-                if node.p() == self.best.p() and node.moves + node.position.distance(
+                if node.prob == self.best.prob and node.moves + node.position.distance(
                         self.target_player.position) - 1 + (1 if self.blitz else 0) > self.best.moves:
                     return False
             elif self.target_x is not None:
-                if node.p() == self.best.p() and node.moves + abs(
+                if node.prob == self.best.prob and node.moves + abs(
                         node.position.x - self.target_x) > self.best.moves:
                     return False
             else:
-                if node.p() == self.best.p() and node.moves + 1 > self.best.moves:
+                if node.prob == self.best.prob and node.moves + 1 > self.best.moves:
                     return False
         return True
 
@@ -362,6 +362,7 @@ class Pathfinder:
                 if self.all and \
                             self.blitz and \
                             self.game.get_adjacent_players(node.position, down=False, team=self.game.get_opp_team(self.player.team)) and \
+                            self.blitz and \
                             node.moves < self.max_moves:
                     self._add_blitz(node)
 
@@ -379,9 +380,9 @@ class Pathfinder:
                     # Check if path beats the best
                     if self.best is None:
                         self.best = node
-                    elif node.p() > self.best.p():
+                    elif node.prob > self.best.prob:
                         self.best = node
-                    elif node.p() == self.best.p() and node.moves < self.best.moves:
+                    elif node.prob == self.best.prob and node.moves < self.best.moves:
                         self.best = node
                 else:
 
@@ -512,12 +513,11 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
     :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
     a position that is adjacent to the other player and the probability of success.
     """
-    alter_state = from_position is not None and num_moves_used != 0
-    if alter_state:
+    if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
     finder = Pathfinder(game, player, allow_rr=allow_team_reroll, blitz=blitz, all=True)
     paths = finder.get_paths()
-    if alter_state:
+    if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
 
     return paths
