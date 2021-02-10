@@ -1108,7 +1108,7 @@ class GrodBot(Agent):
             action = self.blitz(game)
         elif isinstance(proc, Turn):
             action = self.turn(game)
-        elif isinstance(proc, PlayerAction):
+        elif type(proc) in [MoveAction, PassAction, BlockAction, BlitzAction, HandOffAction, FoulAction]:
             action = self.player_action(game)
         elif isinstance(proc, Block):
             action = self.block(game)
@@ -1120,8 +1120,6 @@ class GrodBot(Agent):
             action = self.apothecary(game)
         elif isinstance(proc, PassAttempt):
             action = self.pass_action(game)
-        elif isinstance(proc, Catch):
-            action = self.catch(game)
         elif isinstance(proc, Interception):
             action = self.interception(game)
         elif isinstance(proc, Reroll):
@@ -1715,11 +1713,12 @@ def potential_blitz_actions(game: Game, heat_map: FfHeatMap, player: Player, pat
 
 def potential_pass_actions(game: Game, heat_map: FfHeatMap, player: Player, paths: List[Path]) -> List[ActionSequence]:
     move_actions: List[ActionSequence] = []
+    ball = game.get_ball()
     for path in paths:
         path_steps = path.steps
         end_square: Square = game.get_square(path.steps[-1].x, path.steps[-1].y)
         # Need possible receving players
-        to_squares, distances = game.get_pass_distances_at(player, end_square)
+        to_squares, distances = game.get_pass_distances_at(player, ball, end_square)
         for to_square in to_squares:
             action_steps: List[Action] = []
             action_steps.append(Action(ActionType.START_PASS, player=player))
