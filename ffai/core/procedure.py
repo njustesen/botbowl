@@ -2643,7 +2643,7 @@ class MoveAction(Procedure):
         paths = get_all_paths_fast(self.game, self.player)
         if len(paths) > 0:
             positions = [path.steps[-1] for path in paths]
-            actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths, rolls=[]))
+            actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
         self.paths = {path.steps[-1]: path for path in paths}
         actions += self.game.get_leap_actions(self.player)
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
