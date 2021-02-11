@@ -1027,7 +1027,7 @@ class Game:
         :return:
         """
         assert piece_a.position is not None
-        assert piece_b.player_a is not None
+        assert piece_b.position is not None
         pos_a = Square(piece_a.position.x, piece_a.position.y)
         pos_b = Square(piece_b.position.x, piece_b.position.y)
         piece_a.position = pos_b
