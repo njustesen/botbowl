@@ -10,6 +10,9 @@ from typing import Optional, List
 from ffai.core.model import Player, Square
 from ffai.core.table import Skill, WeatherType, Tile
 import copy
+import numpy as np
+from queue import PriorityQueue
+from collections import namedtuple
 
 
 class Path:
@@ -520,4 +523,82 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
 
+    return paths
+
+
+FNode = namedtuple('FNode', 'position moves_left gfis_left euclidean_distance')
+FCoordinate = namedtuple('FCoordinate', 'x y')
+
+
+def get_all_paths_fast(game, player):
+
+    ma = player.get_ma() - player.state.moves
+    gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+
+    if ma + gfis <= 0:
+        return []
+
+    # Get all free paths
+    left = np.full((game.arena.height, game.arena.width), None)
+    prev = np.full((game.arena.height, game.arena.width), None)
+    tzones = np.zeros((game.arena.height, game.arena.width))
+    occupied = np.zeros((game.arena.height, game.arena.width))
+    for p in game.get_players_on_pitch():
+        occupied[p.position.y, p.position.x] = 1
+        if p.team != player.team and p.has_tackle_zone():
+            for square in game.get_adjacent_squares(p.position):
+                tzones[square.y][square.x] += 1
+
+    # Sets
+    open_set = PriorityQueue()
+
+    directions = [FCoordinate(-1, -1),
+                  FCoordinate(-1, 0),
+                  FCoordinate(-1, 1),
+                  FCoordinate(0, -1),
+                  FCoordinate(0, 1),
+                  FCoordinate(1, -1),
+                  FCoordinate(1, 0),
+                  FCoordinate(1, 1)]
+
+    def expand(node: FNode):
+        if tzones[node.position.y][node.position.x] > 0:
+            return
+        if node.moves_left <= 0:
+            return
+        for direction in directions:
+            to_pos = FCoordinate(node.position.x + direction.x, node.position.y + direction.y)
+            if occupied[to_pos.y][to_pos.x] > 0:
+                continue
+            if not (1 <= to_pos.x < game.arena.width - 1 and 1 <= to_pos.y < game.arena.height - 1):
+                continue
+            moves_left_next = max(0, node.moves_left - 1)
+            gfis_left_next = node.gfis_left if node.moves_left > 0 else max(0, node.gfis_left - 1)
+            total_moves_left = moves_left_next + gfis_left_next
+            if total_moves_left <= 0:
+                continue
+            best_total_moves_left = left[to_pos.y][to_pos.x]
+            if best_total_moves_left is not None and total_moves_left < best_total_moves_left:
+                continue
+            distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
+            next_node = FNode(to_pos, moves_left_next, gfis_left_next, distance)
+            open_set.put((distance, next_node))
+            prev[to_pos.y][to_pos.x] = node.position
+            left[to_pos.y][to_pos.x] = total_moves_left
+
+    open_set.put((0, FNode(player.position, ma, gfis, euclidean_distance=0)))
+    while not open_set.empty():
+        _, best_node = open_set.get()
+        expand(best_node)
+
+    paths = []
+    for y in range(game.arena.height):
+        for x in range(game.arena.width):
+            if prev[y][x] is not None:
+                steps = [Square(x, y)]
+                pos = prev[y][x]
+                while pos is not None:
+                    steps.append(Square(pos.x, pos.y))
+                    pos = prev[pos.y][pos.x]
+                paths.append(Path(list(reversed(steps))[1:], prob=1))
     return paths

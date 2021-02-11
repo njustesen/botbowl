@@ -47,6 +47,8 @@ class ProcBot(Agent):
             return self.turn(game)
         if isinstance(proc, Action):
             return self.player_action(game)
+        if isinstance(proc, MoveAction):
+            return self.player_action(game)
         if isinstance(proc, BlockAction):
             return self.player_action(game)
         if isinstance(proc, PassAction):

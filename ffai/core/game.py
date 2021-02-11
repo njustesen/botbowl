@@ -866,7 +866,7 @@ class Game:
         if turn is not None:
             return turn.quick_snap
 
-    def get_players_on_pitch(self, team, used=None, up=None):
+    def get_players_on_pitch(self, team=None, used=None, up=None):
         """
         :param team: The team of the players.
         :param used: If specified, filter by ther players used state.
@@ -877,7 +877,7 @@ class Game:
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
                 player = self.state.pitch.board[y][x]
-                if player is not None and player.team == team and (used is None or used == player.state.used) and (up is None or up == player.state.up):
+                if player is not None and (team is None or player.team == team) and (used is None or used == player.state.used) and (up is None or up == player.state.up):
                     players.append(player)
         return players
 
@@ -1027,7 +1027,7 @@ class Game:
         :return:
         """
         assert piece_a.position is not None
-        assert piece_b.player_a is not None
+        assert piece_b.position is not None
         pos_a = Square(piece_a.position.x, piece_a.position.y)
         pos_b = Square(piece_b.position.x, piece_b.position.y)
         piece_a.position = pos_b
