@@ -528,8 +528,19 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
     return paths
 
 
-FNode = namedtuple('FNode', 'parent position moves_left gfis_left euclidean_distance prob rolls')
-FCoordinate = namedtuple('FCoordinate', 'x y')
+class FNode:
+
+    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
+        self.parent = parent
+        self.position = position
+        self.moves_left = moves_left
+        self.gfis_left = gfis_left
+        self.euclidean_distance = euclidean_distance
+        self.prob = prob
+        self.rolls = rolls
+
+    def __lt__(self, other):
+        return self.euclidean_distance < other.euclidean_distance
 
 
 def get_all_paths_fast(game, player):
@@ -555,18 +566,18 @@ def get_all_paths_fast(game, player):
     open_set = PriorityQueue()
     risky_sets = {}
 
-    directions = [FCoordinate(-1, -1),
-                  FCoordinate(-1, 0),
-                  FCoordinate(-1, 1),
-                  FCoordinate(0, -1),
-                  FCoordinate(0, 1),
-                  FCoordinate(1, -1),
-                  FCoordinate(1, 0),
-                  FCoordinate(1, 1)]
+    directions = [Square(-1, -1),
+                  Square(-1, 0),
+                  Square(-1, 1),
+                  Square(0, -1),
+                  Square(0, 1),
+                  Square(1, -1),
+                  Square(1, 0),
+                  Square(1, 1)]
 
     def expand(node: FNode):
         for direction in directions:
-            to_pos = FCoordinate(node.position.x + direction.x, node.position.y + direction.y)
+            to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
             if occupied[to_pos.y][to_pos.x] > 0:
                 continue
             if not (1 <= to_pos.x < game.arena.width - 1 and 1 <= to_pos.y < game.arena.height - 1):
@@ -617,7 +628,7 @@ def get_all_paths_fast(game, player):
             if node is not None:
                 steps = []
                 while node is not None:
-                    steps.append(Square(node.position.x, node.position.y))
+                    steps.append(node.position)
                     node = node.parent
                 node = nodes[y][x]
                 steps = list(reversed(steps))[1:]
