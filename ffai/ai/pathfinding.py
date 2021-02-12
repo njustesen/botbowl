@@ -647,7 +647,6 @@ class Dijkstra:
             self._clear()
             self._prepare_nodes()
             self._expansion()
-            # print(len(self.risky_sets))
 
         self._clear()
 
@@ -691,7 +690,7 @@ class Dijkstra:
                 if best_before is not None and self._dominant(best_before, node) == best_before:
                     continue
                 existing_node = self.nodes[node.position.y][node.position.x]
-                if existing_node is None or self._best(existing_node, node) == existing_node:
+                if existing_node is None or self._best(existing_node, node) == node:
                     self.open_set.put((node.euclidean_distance, node))
                     self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
