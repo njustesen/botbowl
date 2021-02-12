@@ -462,7 +462,13 @@ class ActionChoice:
             "agi_rolls": self.agi_rolls,
             'player_ids': [player.player_id for player in self.players],
             "skill": self.skill.name if self.skill is not None else None,
-            "disabled": self.disabled
+            "disabled": self.disabled,
+            "paths": [
+                {
+                    "steps": [square.to_json() for square in path.steps],
+                    "rolls": path.rolls,
+                    "prob": path.prob
+                } for path in self.paths]
         }
 
 

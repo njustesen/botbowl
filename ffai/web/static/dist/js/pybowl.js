@@ -476,7 +476,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 player_icon: player_icon,
                 selected: false,
                 available: false,
+                path: null,
                 action_type: undefined,
+                on_path: false,
                 agi_rolls: [],
                 special_actions: [],
                 special_agi_rolls: [],
@@ -530,6 +532,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.main_action = null;
             $scope.blocked = false;
             $scope.special_action_selected = null;
+            $scope.available_paths = [];
             for (let idx in $scope.game.state.available_actions){
                 let action = $scope.game.state.available_actions[idx];
                 if (action.disabled){
@@ -539,6 +542,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     $scope.main_action = action;
                     // If an available player is selected
                     if (action.player_ids.length === 0 || ($scope.selectedPlayer() != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0) || action.player_ids.length === 1){
+                        if (action.action_type === "MOVE" && action.hasOwnProperty('paths')){
+                            $scope.available_paths = action.paths;
+                        } else {
+                            $scope.available_paths = [];
+                        }
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;
                             $scope.available_block_rolls = action.block_rolls;
@@ -700,7 +708,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Move squares
             for (let i in $scope.available_move_positions) {
+                let path = null;
+                if ($scope.available_paths.length > i){
+                    path = $scope.available_paths[i];
+                }
                 let pos = $scope.available_move_positions[i];
+                $scope.local_state.board[pos.y][pos.x].path = path;
                 $scope.local_state.board[pos.y][pos.x].available = true;
                 $scope.local_state.board[pos.y][pos.x].action_type = "MOVE";
                 if ($scope.available_dodge_rolls.length > i){
@@ -1146,6 +1159,24 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.hover_player = square.player;
             } else {
                 $scope.hover_player = null;
+            }
+            if (square.path !== null){
+                $scope.refreshPaths(square.path);
+            }
+        };
+
+        $scope.refreshPaths = function refreshPaths(path) {
+            for (let y = 0; y < $scope.game.state.pitch.board.length; y++) {
+                for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
+                    $scope.local_state.board[y][x].agi_rolls = [];
+                    $scope.local_state.board[y][x].on_path = false;
+                }
+            }
+            for (let i=0; i < path.steps.length; i++){
+                let x = path.steps[i].x;
+                let y = path.steps[i].y;
+                $scope.local_state.board[y][x].agi_rolls = path.rolls[i];
+                $scope.local_state.board[y][x].on_path = true;
             }
         };
 

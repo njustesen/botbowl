@@ -546,13 +546,12 @@ class FNode:
 class Dijkstra:
 
     # Improvements:
-    # Movement Bug
     # Hashsets instead of arrays
-    # rounded proba?
-    # No tuples in open set
     # profiler
     # Ball pickup
     # Quick snap
+    # Blitz moves
+    # Always allow direct move to neighbors - at least in UI
 
     DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
@@ -602,7 +601,7 @@ class Dijkstra:
                     continue
                 if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
                     continue
-            rolls = [r for r in node.rolls]
+            rolls = []
             p = node.prob
             if gfi:
                 rolls.append(2)
@@ -613,7 +612,7 @@ class Dijkstra:
                 zones_to = self.tzones[to_pos.y][to_pos.x]
                 agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to))
                 p = p * ((7 - agi_roll) / 6)
-                rolls.append(agi_roll)
+                rolls.append(int(agi_roll))
             best_before = self.locked_nodes[to_pos.y][to_pos.x]
             if best_before is not None and self._dominant(node, best_before) == best_before:
                 continue
@@ -706,13 +705,16 @@ class Dijkstra:
             for x in range(self.game.arena.width):
                 node = self.locked_nodes[y][x]
                 if node is not None:
+                    prob = node.prob
                     steps = [node.position]
+                    rolls = [node.rolls]
                     node = node.parent
                     while node is not None:
                         steps.append(node.position)
+                        rolls.append(node.rolls)
                         node = node.parent
-                    node = self.locked_nodes[y][x]
                     steps = list(reversed(steps))[1:]
-                    path = Path(steps, prob=node.prob, rolls=node.rolls)
+                    rolls = list(reversed(rolls))[1:]
+                    path = Path(steps, prob=prob, rolls=rolls)
                     paths.append(path)
         return paths

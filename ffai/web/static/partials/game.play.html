@@ -390,6 +390,9 @@
                         <div class="movedot" id="movedot-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" ng-if="local_state.board[$parent.$index+1][$index+1].number >= 0">
 
                         </div>
+                        <div class="pathdot" id="pathdot-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" ng-if="local_state.board[$parent.$index+1][$index+1].on_path">
+
+                        </div>
                         <!--
                         <svg style="position:absolute;top:-15;left:-15;height:200%;bottom:200%;z-index: -1" ng-if="local_state.board[$parent.$index+1][$index+1].number >= 0">
                             <line class="moveline" X="{{$parent.$index+1}}" Y="{{$parent.$parent.$index+1}}" id="moveline-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" x1="30" y1="30" x2="30" y2="30" />
