@@ -543,30 +543,9 @@ class FNode:
         return self.euclidean_distance < other.euclidean_distance
 
 
-def get_all_paths_fast(game, player):
+class Dijkstra:
 
-    ma = player.get_ma() - player.state.moves
-    gfis = 3 if player.has_skill(Skill.SPRINT) else 2
-
-    if ma + gfis <= 0:
-        return []
-
-    # Get all free paths
-    nodes = np.full((game.arena.height, game.arena.width), None)
-    tzones = np.zeros((game.arena.height, game.arena.width))
-    occupied = np.zeros((game.arena.height, game.arena.width))
-    for p in game.get_players_on_pitch():
-        occupied[p.position.y, p.position.x] = 1
-        if p.team != player.team and p.has_tackle_zone():
-            for square in game.get_adjacent_squares(p.position):
-                tzones[square.y][square.x] += 1
-
-    # Sets
-    current_prob = 1
-    open_set = PriorityQueue()
-    risky_sets = {}
-
-    directions = [Square(-1, -1),
+    DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
                   Square(-1, 1),
                   Square(0, -1),
@@ -575,12 +554,29 @@ def get_all_paths_fast(game, player):
                   Square(1, 0),
                   Square(1, 1)]
 
-    def expand(node: FNode):
-        for direction in directions:
+    def __init__(self, game, player):
+        self.game = game
+        self.player = player
+        self.ma = player.get_ma() - player.state.moves
+        self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+        self.nodes = np.full((game.arena.height, game.arena.width), None)
+        self.tzones = np.zeros((game.arena.height, game.arena.width))
+        self.occupied = np.zeros((game.arena.height, game.arena.width))
+        self.current_prob = 1
+        self.open_set = PriorityQueue()
+        self.risky_sets = {}
+        for p in game.get_players_on_pitch():
+            self.occupied[p.position.y, p.position.x] = 1
+            if p.team != player.team and p.has_tackle_zone():
+                for square in game.get_adjacent_squares(p.position):
+                    self.tzones[square.y][square.x] += 1
+
+    def _expand(self, node: FNode):
+        for direction in Dijkstra.DIRECTIONS:
             to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
-            if occupied[to_pos.y][to_pos.x] > 0:
+            if self.occupied[to_pos.y][to_pos.x] > 0:
                 continue
-            if not (1 <= to_pos.x < game.arena.width - 1 and 1 <= to_pos.y < game.arena.height - 1):
+            if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
                 continue
             moves_left_next = max(0, node.moves_left - 1)
             gfis_left_next = node.gfis_left if node.moves_left > 0 else max(0, node.gfis_left - 1)
@@ -588,7 +584,7 @@ def get_all_paths_fast(game, player):
             euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
             if total_moves_left <= 0:
                 continue
-            best_node = nodes[to_pos.y][to_pos.x]
+            best_node = self.nodes[to_pos.y][to_pos.x]
             if best_node is not None:
                 best_total_moves_left = best_node.moves_left + best_node.gfis_left
                 if total_moves_left < best_total_moves_left:
@@ -599,39 +595,51 @@ def get_all_paths_fast(game, player):
             p = node.prob
             if moves_left_next <= 0:
                 rolls.append(2)
-                p = p * (5/6)
-            zones_from = tzones[node.position.y][node.position.x]
+                p = p * (5 / 6)
+            zones_from = self.tzones[node.position.y][node.position.x]
             # TODO: Ball
             if zones_from > 0:
-                zones_to = tzones[to_pos.y][to_pos.x]
-                agi_roll = min(6, max(2, Rules.agility_table[player.get_ag()] + zones_to))
-                p = p * ((7-agi_roll) / 6)
+                zones_to = self.tzones[to_pos.y][to_pos.x]
+                agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to))
+                p = p * ((7 - agi_roll) / 6)
                 rolls.append(agi_roll)
             next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-            if p < current_prob:
-                if p not in risky_sets:
-                    risky_sets[p] = []
-                risky_sets[p].append((euclidean_distance, (node, next_node)))
+            if p < self.current_prob:
+                if p not in self.risky_sets:
+                    self.risky_sets[p] = []
+                self.risky_sets[p].append((euclidean_distance, (node, next_node)))
             else:
-                open_set.put((euclidean_distance, next_node))
-                nodes[to_pos.y][to_pos.x] = next_node
+                self.open_set.put((euclidean_distance, next_node))
+                self.nodes[to_pos.y][to_pos.x] = next_node
 
-    open_set.put((0, FNode(None, player.position, ma, gfis, euclidean_distance=0, prob=1, rolls=[])))
-    while not open_set.empty():
-        _, best_node = open_set.get()
-        expand(best_node)
+    def get_all_paths_fast(self):
 
-    paths = []
-    for y in range(game.arena.height):
-        for x in range(game.arena.width):
-            node = nodes[y][x]
-            if node is not None:
-                steps = []
-                while node is not None:
-                    steps.append(node.position)
-                    node = node.parent
-                node = nodes[y][x]
-                steps = list(reversed(steps))[1:]
-                path = Path(steps, prob=node.prob, rolls=node.rolls)
-                paths.append(path)
-    return paths
+        self.ma = self.player.get_ma() - self.player.state.moves
+        self.gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
+
+        if self.ma + self.gfis <= 0:
+            return []
+
+        self.open_set.put((0, FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])))
+        while not self.open_set.empty():
+            _, best_node = self.open_set.get()
+            self._expand(best_node)
+
+        paths = self._collect_paths()
+        return paths
+
+    def _collect_paths(self):
+        paths = []
+        for y in range(self.game.arena.height):
+            for x in range(self.game.arena.width):
+                node = self.nodes[y][x]
+                if node is not None:
+                    steps = []
+                    while node is not None:
+                        steps.append(node.position)
+                        node = node.parent
+                    node = self.nodes[y][x]
+                    steps = list(reversed(steps))[1:]
+                    path = Path(steps, prob=node.prob, rolls=node.rolls)
+                    paths.append(path)
+        return paths
