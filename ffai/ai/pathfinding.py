@@ -528,7 +528,7 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
     return paths
 
 
-FNode = namedtuple('FNode', 'position moves_left gfis_left euclidean_distance prob rolls')
+FNode = namedtuple('FNode', 'parent position moves_left gfis_left euclidean_distance prob rolls')
 FCoordinate = namedtuple('FCoordinate', 'x y')
 
 
@@ -542,7 +542,6 @@ def get_all_paths_fast(game, player):
 
     # Get all free paths
     nodes = np.full((game.arena.height, game.arena.width), None)
-    prev = np.full((game.arena.height, game.arena.width), None)
     tzones = np.zeros((game.arena.height, game.arena.width))
     occupied = np.zeros((game.arena.height, game.arena.width))
     for p in game.get_players_on_pitch():
@@ -597,17 +596,16 @@ def get_all_paths_fast(game, player):
                 agi_roll = min(6, max(2, Rules.agility_table[player.get_ag()] + zones_to))
                 p = p * ((7-agi_roll) / 6)
                 rolls.append(agi_roll)
-            next_node = FNode(to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+            next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
             if p < current_prob:
                 if p not in risky_sets:
                     risky_sets[p] = []
                 risky_sets[p].append((euclidean_distance, (node, next_node)))
             else:
                 open_set.put((euclidean_distance, next_node))
-                nodes[to_pos.y][to_pos.x] = node
-                prev[to_pos.y][to_pos.x] = node.position
+                nodes[to_pos.y][to_pos.x] = next_node
 
-    open_set.put((0, FNode(player.position, ma, gfis, euclidean_distance=0, prob=1, rolls=[])))
+    open_set.put((0, FNode(None, player.position, ma, gfis, euclidean_distance=0, prob=1, rolls=[])))
     while not open_set.empty():
         _, best_node = open_set.get()
         expand(best_node)
@@ -615,12 +613,12 @@ def get_all_paths_fast(game, player):
     paths = []
     for y in range(game.arena.height):
         for x in range(game.arena.width):
-            if prev[y][x] is not None:
-                steps = [Square(x, y)]
-                pos = prev[y][x]
-                while pos is not None:
-                    steps.append(Square(pos.x, pos.y))
-                    pos = prev[pos.y][pos.x]
+            node = nodes[y][x]
+            if node is not None:
+                steps = []
+                while node is not None:
+                    steps.append(Square(node.position.x, node.position.y))
+                    node = node.parent
                 node = nodes[y][x]
                 steps = list(reversed(steps))[1:]
                 path = Path(steps, prob=node.prob, rolls=node.rolls)
