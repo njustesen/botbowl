@@ -530,8 +530,8 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, came_from, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
-        self.came_from = came_from
+    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
+        self.parent = parent
         self.position = position
         self.moves_left = moves_left
         self.gfis_left = gfis_left
@@ -546,11 +546,13 @@ class FNode:
 class Dijkstra:
 
     # Improvements:
+    # Movement Bug
     # Hashsets instead of arrays
     # rounded proba?
     # No tuples in open set
     # profiler
     # Ball pickup
+    # Quick snap
 
     DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
@@ -568,8 +570,8 @@ class Dijkstra:
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
         self.nodes = np.full((game.arena.height, game.arena.width), None)
-        self.tzones = np.zeros((game.arena.height, game.arena.width))
-        self.occupied = np.zeros((game.arena.height, game.arena.width))
+        self.tzones = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
+        self.occupied = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
         self.current_prob = 1
         self.open_set = PriorityQueue()
         self.risky_sets = {}
@@ -580,18 +582,19 @@ class Dijkstra:
                     self.tzones[square.y][square.x] += 1
 
     def _expand(self, node: FNode):
+        if node.moves_left == 0 and node.gfis_left == 0:
+            return
         for direction in Dijkstra.DIRECTIONS:
             to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
             if self.occupied[to_pos.y][to_pos.x] > 0:
                 continue
             if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
                 continue
+            gfi = node.moves_left == 0
             moves_left_next = max(0, node.moves_left - 1)
-            gfis_left_next = node.gfis_left if node.moves_left > 0 else max(0, node.gfis_left - 1)
+            gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
             total_moves_left = moves_left_next + gfis_left_next
             euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
-            if total_moves_left <= 0:
-                continue
             best_node = self.nodes[to_pos.y][to_pos.x]
             if best_node is not None:
                 best_total_moves_left = best_node.moves_left + best_node.gfis_left
@@ -601,7 +604,7 @@ class Dijkstra:
                     continue
             rolls = [r for r in node.rolls]
             p = node.prob
-            if moves_left_next <= 0:
+            if gfi:
                 rolls.append(2)
                 p = p * (5 / 6)
             zones_from = self.tzones[node.position.y][node.position.x]
@@ -614,8 +617,8 @@ class Dijkstra:
             best_before = self.locked_nodes[to_pos.y][to_pos.x]
             if best_before is not None and self._dominant(node, best_before) == best_before:
                 continue
-            next_node = FNode(node.position, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-            rounded_p = round(p, 4)
+            next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+            rounded_p = round(p, 6)
             if rounded_p < self.current_prob:
                 if rounded_p not in self.risky_sets:
                     self.risky_sets[rounded_p] = []
@@ -626,22 +629,23 @@ class Dijkstra:
 
     def get_all_paths_fast(self):
 
-        self.ma = self.player.get_ma() - self.player.state.moves
-        self.gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
+        ma = self.player.get_ma() - self.player.state.moves
+        self.ma = max(0, ma)
+        gfis_used = 0 if ma >= 0 else -ma
+        self.gfis = 3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
 
         if self.ma + self.gfis <= 0:
             return []
 
         self.open_set.put((0, FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])))
         self._expansion()
-        if len(self.risky_sets) == 0:
-            self._clear()
-            return self._collect_paths()
 
         while len(self.risky_sets) > 0:
             self._clear()
             self._prepare_nodes()
             self._expansion()
+
+        self._clear()
 
         return self._collect_paths()
 
@@ -679,6 +683,9 @@ class Dijkstra:
             probs = sorted(self.risky_sets.keys())
             self.current_prob = probs[-1]
             for node in self.risky_sets[probs[-1]]:
+                best_before = self.locked_nodes[node.position.y][node.position.x]
+                if best_before is not None and self._dominant(best_before, node) == best_before:
+                    continue
                 self.open_set.put((node.euclidean_distance, node))
                 self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
@@ -695,9 +702,10 @@ class Dijkstra:
                 node = self.locked_nodes[y][x]
                 if node is not None:
                     steps = [node.position]
+                    node = node.parent
                     while node is not None:
-                        steps.append(node.came_from)
-                        node = self.locked_nodes[node.came_from.y][node.came_from.x]
+                        steps.append(node.position)
+                        node = node.parent
                     node = self.locked_nodes[y][x]
                     steps = list(reversed(steps))[1:]
                     path = Path(steps, prob=node.prob, rolls=node.rolls)
