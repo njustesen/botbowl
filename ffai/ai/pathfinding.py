@@ -620,12 +620,15 @@ class Dijkstra:
             next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
             rounded_p = round(p, 6)
             if rounded_p < self.current_prob:
-                if rounded_p not in self.risky_sets:
-                    self.risky_sets[rounded_p] = []
-                self.risky_sets[rounded_p].append(next_node)
+                self._add_risky_move(rounded_p, next_node)
             else:
                 self.open_set.put((euclidean_distance, next_node))
                 self.nodes[to_pos.y][to_pos.x] = next_node
+
+    def _add_risky_move(self, prob, node):
+        if prob not in self.risky_sets:
+            self.risky_sets[prob] = []
+        self.risky_sets[prob].append(node)
 
     def get_all_paths_fast(self):
 
@@ -644,6 +647,7 @@ class Dijkstra:
             self._clear()
             self._prepare_nodes()
             self._expansion()
+            # print(len(self.risky_sets))
 
         self._clear()
 
@@ -686,8 +690,10 @@ class Dijkstra:
                 best_before = self.locked_nodes[node.position.y][node.position.x]
                 if best_before is not None and self._dominant(best_before, node) == best_before:
                     continue
-                self.open_set.put((node.euclidean_distance, node))
-                self.nodes[node.position.y][node.position.x] = node
+                existing_node = self.nodes[node.position.y][node.position.x]
+                if existing_node is None or self._best(existing_node, node) == existing_node:
+                    self.open_set.put((node.euclidean_distance, node))
+                    self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
 
     def _expansion(self):
