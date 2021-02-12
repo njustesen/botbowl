@@ -530,8 +530,8 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
-        self.parent = parent
+    def __init__(self, came_from, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
+        self.came_from = came_from
         self.position = position
         self.moves_left = moves_left
         self.gfis_left = gfis_left
@@ -544,6 +544,13 @@ class FNode:
 
 
 class Dijkstra:
+
+    # Improvements:
+    # Hashsets instead of arrays
+    # rounded proba?
+    # No tuples in open set
+    # profiler
+    # Ball pickup
 
     DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
@@ -559,6 +566,7 @@ class Dijkstra:
         self.player = player
         self.ma = player.get_ma() - player.state.moves
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+        self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
         self.nodes = np.full((game.arena.height, game.arena.width), None)
         self.tzones = np.zeros((game.arena.height, game.arena.width))
         self.occupied = np.zeros((game.arena.height, game.arena.width))
@@ -603,11 +611,14 @@ class Dijkstra:
                 agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to))
                 p = p * ((7 - agi_roll) / 6)
                 rolls.append(agi_roll)
-            next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+            best_before = self.locked_nodes[to_pos.y][to_pos.x]
+            if best_before is not None and self._dominant(node, best_before) == best_before:
+                continue
+            next_node = FNode(node.position, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
             if p < self.current_prob:
                 if p not in self.risky_sets:
                     self.risky_sets[p] = []
-                self.risky_sets[p].append((euclidean_distance, (node, next_node)))
+                self.risky_sets[p].append(next_node)
             else:
                 self.open_set.put((euclidean_distance, next_node))
                 self.nodes[to_pos.y][to_pos.x] = next_node
@@ -621,24 +632,72 @@ class Dijkstra:
             return []
 
         self.open_set.put((0, FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])))
+        self._expansion()
+        if len(self.risky_sets) == 0:
+            self._clear()
+            return self._collect_paths()
+
+        while len(self.risky_sets) > 0:
+            self._clear()
+            self._prepare_nodes()
+            self._expansion()
+
+        return self._collect_paths()
+
+    def _best(self, a: FNode, b: FNode):
+        a_moves_left = a.moves_left + a.gfis_left
+        b_moves_left = b.moves_left + b.gfis_left
+        if a.prob > b.prob or (a.prob == b.prob and a_moves_left > b_moves_left) or (a.prob == b.prob and a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
+            return a
+        if b.prob > a.prob or (b.prob == a.prob and b_moves_left > a_moves_left) or (b.prob == a.prob and b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance):
+            return b
+        return None
+
+    def _dominant(self, a: FNode, b: FNode):
+        a_moves_left = a.moves_left + a.gfis_left
+        b_moves_left = b.moves_left + b.gfis_left
+        if a.prob > b.prob and a_moves_left > b_moves_left:
+            return a
+        if b.prob > a.prob and b_moves_left > a_moves_left:
+            return b
+        return None
+
+    def _clear(self):
+        for y in range(self.game.arena.height):
+            for x in range(self.game.arena.width):
+                node = self.nodes[y][x]
+                if node is not None:
+                    before = self.locked_nodes[y][x]
+                    if before is None or self._best(node, before) == node:
+                        self.locked_nodes[y][x] = node
+                    self.nodes[y][x] = None
+        self.open_set = PriorityQueue()
+
+    def _prepare_nodes(self):
+        if len(self.risky_sets) > 0:
+            probs = sorted(self.risky_sets.keys())
+            self.current_prob = probs[-1]
+            for node in self.risky_sets[self.current_prob]:
+                self.open_set.put((node.euclidean_distance, node))
+                self.nodes[node.position.y][node.position.x] = node
+            del self.risky_sets[self.current_prob]
+
+    def _expansion(self):
         while not self.open_set.empty():
             _, best_node = self.open_set.get()
             self._expand(best_node)
-
-        paths = self._collect_paths()
-        return paths
 
     def _collect_paths(self):
         paths = []
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
-                node = self.nodes[y][x]
+                node = self.locked_nodes[y][x]
                 if node is not None:
-                    steps = []
+                    steps = [node.position]
                     while node is not None:
-                        steps.append(node.position)
-                        node = node.parent
-                    node = self.nodes[y][x]
+                        steps.append(node.came_from)
+                        node = self.locked_nodes[node.came_from.y][node.came_from.x]
+                    node = self.locked_nodes[y][x]
                     steps = list(reversed(steps))[1:]
                     path = Path(steps, prob=node.prob, rolls=node.rolls)
                     paths.append(path)
