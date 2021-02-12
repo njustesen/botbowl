@@ -615,10 +615,11 @@ class Dijkstra:
             if best_before is not None and self._dominant(node, best_before) == best_before:
                 continue
             next_node = FNode(node.position, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-            if p < self.current_prob:
-                if p not in self.risky_sets:
-                    self.risky_sets[p] = []
-                self.risky_sets[p].append(next_node)
+            rounded_p = round(p, 4)
+            if rounded_p < self.current_prob:
+                if rounded_p not in self.risky_sets:
+                    self.risky_sets[rounded_p] = []
+                self.risky_sets[rounded_p].append(next_node)
             else:
                 self.open_set.put((euclidean_distance, next_node))
                 self.nodes[to_pos.y][to_pos.x] = next_node
@@ -656,9 +657,9 @@ class Dijkstra:
     def _dominant(self, a: FNode, b: FNode):
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
-        if a.prob > b.prob and a_moves_left > b_moves_left:
+        if a.prob > b.prob and (a_moves_left > b_moves_left or a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
             return a
-        if b.prob > a.prob and b_moves_left > a_moves_left:
+        if b.prob > a.prob and (b_moves_left > a_moves_left or b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance):
             return b
         return None
 
@@ -677,10 +678,10 @@ class Dijkstra:
         if len(self.risky_sets) > 0:
             probs = sorted(self.risky_sets.keys())
             self.current_prob = probs[-1]
-            for node in self.risky_sets[self.current_prob]:
+            for node in self.risky_sets[probs[-1]]:
                 self.open_set.put((node.euclidean_distance, node))
                 self.nodes[node.position.y][node.position.x] = node
-            del self.risky_sets[self.current_prob]
+            del self.risky_sets[probs[-1]]
 
     def _expansion(self):
         while not self.open_set.empty():
