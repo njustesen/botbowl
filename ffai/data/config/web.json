@@ -23,5 +23,9 @@
         "disqualification": 1000,
         "init": 10,
         "end": 10
+    },
+    "pathfinding": {
+        "enabled": true,
+        "directly_to_adjacent": true
     }
 }
