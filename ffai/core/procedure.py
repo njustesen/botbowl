@@ -2639,12 +2639,14 @@ class MoveAction(Procedure):
         if self.steps is not None and len(self.steps) > 0:
             return []
         actions = []
-        # actions = self.game.get_adjacent_move_actions(self.player)
-        paths = Dijkstra(self.game, self.player).get_all_paths_fast()
-        if len(paths) > 0:
-            positions = [path.steps[-1] for path in paths]
-            actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
-        self.paths = {path.steps[-1]: path for path in paths}
+        if self.game.is_quick_snap():
+            actions = self.game.get_adjacent_move_actions(self.player)
+        else:
+            paths = Dijkstra(self.game, self.player, directly_to_adjacent=True).get_paths()
+            if len(paths) > 0:
+                positions = [path.steps[-1] for path in paths]
+                actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
+            self.paths = {path.steps[-1]: path for path in paths}
         actions += self.game.get_leap_actions(self.player)
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
             actions += self.game.get_hypnotic_gaze_actions(self.player)

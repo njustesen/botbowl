@@ -562,9 +562,10 @@ class Dijkstra:
                   Square(1, 0),
                   Square(1, 1)]
 
-    def __init__(self, game, player):
+    def __init__(self, game, player, directly_to_adjacent=False):
         self.game = game
         self.player = player
+        self.directly_to_adjacent = directly_to_adjacent
         self.ma = player.get_ma() - player.state.moves
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
@@ -610,7 +611,7 @@ class Dijkstra:
             # TODO: Ball
             if zones_from > 0:
                 zones_to = self.tzones[to_pos.y][to_pos.x]
-                agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to))
+                agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to - 1))
                 p = p * ((7 - agi_roll) / 6)
                 rolls.append(int(agi_roll))
             best_before = self.locked_nodes[to_pos.y][to_pos.x]
@@ -629,7 +630,7 @@ class Dijkstra:
             self.risky_sets[prob] = []
         self.risky_sets[prob].append(node)
 
-    def get_all_paths_fast(self):
+    def get_paths(self):
 
         ma = self.player.get_ma() - self.player.state.moves
         self.ma = max(0, ma)
@@ -641,17 +642,18 @@ class Dijkstra:
 
         self.open_set.put((0, FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])))
         self._expansion()
+        self._clear()
 
         while len(self.risky_sets) > 0:
-            self._clear()
             self._prepare_nodes()
             self._expansion()
-
-        self._clear()
+            self._clear()
 
         return self._collect_paths()
 
     def _best(self, a: FNode, b: FNode):
+        if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
+            return a
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         if a.prob > b.prob or (a.prob == b.prob and a_moves_left > b_moves_left) or (a.prob == b.prob and a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
@@ -661,6 +663,8 @@ class Dijkstra:
         return None
 
     def _dominant(self, a: FNode, b: FNode):
+        if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
+            return a
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         if a.prob > b.prob and (a_moves_left > b_moves_left or a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
