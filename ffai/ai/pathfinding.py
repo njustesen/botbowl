@@ -633,19 +633,22 @@ class Dijkstra:
         to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
         player_at = self.game.get_player_at(to_pos)
         euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
         if player_at is not None:
             if player_at.team == self.player.team and self.handoff and player_at.can_catch():
                 target = self._get_handoff_target(player_at)
                 p = node.prob * ((7 - target) / 6)
                 next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
-                best_before = self.locked_nodes[to_pos.y][to_pos.x]
+                if best_node is not None and self._dominant(next_node, best_node) == best_node:
+                    return None
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
                 return next_node
             elif player_at.team != self.player.team and self.blitz and player_at.state.up:
                 block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position, blitz=True)
                 gfi = node.moves_left == 0
-                moves_left_next = max(0, node.moves_left - 1)
+                moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
                 gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
                 rolls = []
                 p = node.prob
@@ -653,7 +656,8 @@ class Dijkstra:
                     rolls.append(2)
                     p = p * (5 / 6)
                 next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls, block_dice=block_dice)
-                best_before = self.locked_nodes[to_pos.y][to_pos.x]
+                if best_node is not None and self._dominant(next_node, best_node) == best_node:
+                    return None
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
                 return next_node
@@ -666,7 +670,6 @@ class Dijkstra:
         moves_left_next = max(0, node.moves_left - 1)
         gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
         total_moves_left = moves_left_next + gfis_left_next
-        best_node = self.nodes[to_pos.y][to_pos.x]
         if best_node is not None:
             best_total_moves_left = best_node.moves_left + best_node.gfis_left
             if total_moves_left < best_total_moves_left:
@@ -687,7 +690,6 @@ class Dijkstra:
             p = p * ((7 - roll) / 6)
             rolls.append(int(roll))
         next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-        best_before = self.locked_nodes[to_pos.y][to_pos.x]
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
             return None
         return next_node
@@ -734,6 +736,8 @@ class Dijkstra:
     def _best(self, a: FNode, b: FNode):
         if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
             return a
+        if self.directly_to_adjacent and b.position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
+            return b
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         block = self.blitz and a.block_dice is not None
@@ -758,6 +762,8 @@ class Dijkstra:
     def _dominant(self, a: FNode, b: FNode):
         if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
             return a
+        if self.directly_to_adjacent and b.position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
+            return b
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         if a.prob > b.prob and (a.block_dice is None or a.block_dice >= b.block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance)):

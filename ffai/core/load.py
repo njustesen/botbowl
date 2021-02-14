@@ -262,7 +262,7 @@ def load_config(name):
     config.pathfinding_directly_to_adjacent = False
     if 'pathfinding' in data and data['pathfinding']['enabled']:
         config.pathfinding_enabled = True
-        config.pathfinding_directly_to_adjacent = 'directly_to_adjacent' in data and data['directly_to_adjacent']
+        config.pathfinding_directly_to_adjacent = 'directly_to_adjacent' in data['pathfinding'] and data['pathfinding']['directly_to_adjacent']
     return config
 
 
