@@ -53,7 +53,7 @@ class ProcBot(Agent):
             return self.player_action(game)
         if isinstance(proc, PassAction):
             return self.player_action(game)
-        if isinstance(proc, HandOffAction):
+        if isinstance(proc, HandoffAction):
             return self.player_action(game)
         if isinstance(proc, BlitzAction):
             return self.player_action(game)

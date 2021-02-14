@@ -2564,10 +2564,13 @@ class AlwaysHungry(Procedure):
 
 class MoveAction(Procedure):
 
-    def __init__(self, game, player, is_move_action=True):
+    def __init__(self, game, player, is_move_action=True, is_blitz=False, is_handoff=False, is_foul=False):
         super().__init__(game)
         self.player = player
         self.is_move_action = is_move_action
+        self.is_blitz = is_blitz
+        self.is_handoff = is_handoff
+        self.is_foul = is_foul
         self.paths = {}
         self.steps = None
 
@@ -2654,7 +2657,7 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent).get_paths()
+            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, blitz=self.is_blitz, handoff=self.is_handoff, foul=self.is_foul).get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
@@ -2667,10 +2670,10 @@ class MoveAction(Procedure):
         return actions
 
 
-class HandOffAction(MoveAction):
+class HandoffAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False)
+        super().__init__(game, player, is_move_action=False, is_handoff=True)
 
     def start(self):
         self.game.use_handoff_action()
@@ -2680,7 +2683,11 @@ class HandOffAction(MoveAction):
     def step(self, action):
         # Continue moving along path
         if action is None:
-            return super().step(action)
+            player_at = self.game.get_player_at(self.steps[0])
+            if player_at is None or player_at.team != self.player.team and player_at.can_catch():
+                return super().step(action)
+            action = Action(ActionType.HANDOFF, position=self.steps.pop(0))
+            self.steps = None
 
         if action.action_type is ActionType.HANDOFF:
             EndPlayerTurn(self.game, self.player)
@@ -2802,7 +2809,7 @@ class ThrowBombAction(Procedure):
 class FoulAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player)
+        super().__init__(game, player, is_move_action=False, is_foul=True)
 
     def start(self):
         self.game.use_foul_action()
@@ -2812,7 +2819,11 @@ class FoulAction(MoveAction):
     def step(self, action):
         # Continue moving along path
         if action is None:
-            return super().step(action)
+            player_at = self.game.get_player_at(self.steps[0])
+            if player_at is None or player_at.team == self.player.team and player_at.state.up:
+                return super().step(action)
+            action = Action(ActionType.FOUL, position=self.steps.pop(0))
+            self.steps = None
 
         if action.action_type == ActionType.FOUL:
             player_to = self.game.get_player_at(action.position)
@@ -2874,7 +2885,7 @@ class BlockAction(Procedure):
 class BlitzAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player)
+        super().__init__(game, player, is_move_action=False, is_blitz=True)
         self.player = player
         self.block_used = False
 
@@ -2887,7 +2898,11 @@ class BlitzAction(MoveAction):
 
         # Continue moving along path
         if action is None:
-            return super().step(action)
+            player_at = self.game.get_player_at(self.steps[0])
+            if player_at is None or player_at.team == self.player.team or not player_at.state.up:
+                return super().step(action)
+            action = Action(ActionType.BLOCK, position=self.steps.pop(0))
+            self.steps = None
 
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
@@ -3689,7 +3704,7 @@ class Turn(Procedure):
 
         # Start handoff action
         if action.action_type == ActionType.START_HANDOFF:
-            HandOffAction(self.game, action.player)
+            HandoffAction(self.game, action.player)
 
         # Start handoff action
         if action.action_type == ActionType.START_THROW_BOMB:

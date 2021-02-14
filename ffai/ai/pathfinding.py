@@ -18,13 +18,14 @@ from collections import namedtuple
 
 class Path:
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]]):
+    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None):
         self.steps = steps
         self.prob = prob
         self.dodge_used_prob: float = 0
         self.sure_feet_used_prob: float = 0
         self.rr_used_prob: float = 0
         self.rolls = rolls
+        self.block_dice = block_dice
 
     def __len__(self) -> int:
         return len(self.steps)
@@ -530,7 +531,7 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls):
+    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls, block_dice=None):
         self.parent = parent
         self.position = position
         self.moves_left = moves_left
@@ -538,6 +539,7 @@ class FNode:
         self.euclidean_distance = euclidean_distance
         self.prob = prob
         self.rolls = rolls
+        self.block_dice = block_dice
 
     def __lt__(self, other):
         return self.euclidean_distance < other.euclidean_distance
@@ -559,21 +561,22 @@ class Dijkstra:
                   Square(1, 0),
                   Square(1, 1)]
 
-    def __init__(self, game, player, directly_to_adjacent=False):
+    def __init__(self, game, player, directly_to_adjacent=False, blitz=False, handoff=False, foul=False):
         self.game = game
         self.player = player
         self.directly_to_adjacent = directly_to_adjacent
+        self.blitz = blitz
+        self.handoff = handoff
+        self.foul = foul
         self.ma = player.get_ma() - player.state.moves
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
         self.nodes = np.full((game.arena.height, game.arena.width), None)
         self.tzones = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
-        self.occupied = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
         self.current_prob = 1
         self.open_set = PriorityQueue()
         self.risky_sets = {}
         for p in game.get_players_on_pitch():
-            self.occupied[p.position.y, p.position.x] = 1
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
@@ -588,6 +591,11 @@ class Dijkstra:
                 modifiers -= 1
         if self.player.has_skill(Skill.EXTRA_ARMS):
             modifiers += 1
+        target = Rules.agility_table[self.player.get_ag()] - modifiers
+        return min(6, max(2, target))
+
+    def _get_handoff_target(self, catcher):
+        modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
         target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
@@ -608,7 +616,7 @@ class Dijkstra:
         return min(6, max(2, target))
 
     def _expand(self, node: FNode):
-        if node.moves_left == 0 and node.gfis_left == 0:
+        if (node.moves_left == 0 and node.gfis_left == 0) or node.block_dice is not None:
             return
         for direction in Dijkstra.DIRECTIONS:
             next_node = self._expand_node(node, direction)
@@ -623,7 +631,25 @@ class Dijkstra:
 
     def _expand_node(self, node, direction):
         to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
-        if self.occupied[to_pos.y][to_pos.x] > 0:
+        player_at = self.game.get_player_at(to_pos)
+        if player_at is not None:
+            if player_at.team == self.player.team and self.handoff and player_at.can_catch():
+                target = self._get_handoff_target(player_at)
+                p = node.prob * ((7 - target) / 6)
+                return FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
+            elif player_at.team != self.player.team and self.blitz and player_at.state.up:
+                block_dice = self.game.num_block_dice(attacker=self.player, defender=player_at, blitz=True)
+                gfi = node.moves_left == 0
+                moves_left_next = max(0, node.moves_left - 1)
+                gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
+                rolls = []
+                p = node.prob
+                if gfi:
+                    rolls.append(2)
+                    p = p * (5 / 6)
+                return FNode(node, to_pos, moves_left_next, gfis_left_next, node.euclidean_distance + 1, p, rolls, block_dice=block_dice)
+            elif player_at.team != self.player.team and self.foul and not player_at.state.up:
+                return FNode(node, to_pos, 0, 0, node.euclidean_distance, node.prob, [])
             return None
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
             return None
@@ -655,8 +681,7 @@ class Dijkstra:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         if best_before is not None and self._dominant(node, best_before) == best_before:
             return None
-        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-        return next_node
+        return FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
 
     def _add_risky_move(self, prob, node):
         if prob not in self.risky_sets:
@@ -702,6 +727,16 @@ class Dijkstra:
             return a
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
+        if self.blitz and a.block_dice is not None:
+            if a.block_dice >= b.block_dice and a.prob > b.prob:
+                return a
+            if b.block_dice >= a.block_dice and b.prob > a.prob:
+                return b
+            if b.block_dice == a.block_dice and b.prob == a.prob:
+                if a_moves_left > b_moves_left:
+                    return a
+                elif a_moves_left < b_moves_left:
+                    return b
         if a.prob > b.prob or (a.prob == b.prob and a_moves_left > b_moves_left) or (a.prob == b.prob and a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
             return a
         if b.prob > a.prob or (b.prob == a.prob and b_moves_left > a_moves_left) or (b.prob == a.prob and b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance):
@@ -713,9 +748,9 @@ class Dijkstra:
             return a
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
-        if a.prob > b.prob and (a_moves_left > b_moves_left or a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
+        if a.prob > b.prob and (a.block_dice is None or a.block_dice >= b.block_dice) and (a_moves_left > b_moves_left or a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance):
             return a
-        if b.prob > a.prob and (b_moves_left > a_moves_left or b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance):
+        if b.prob > a.prob and (b.block_dice is None or b.block_dice >= a.block_dice) and (b_moves_left > a_moves_left or b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance):
             return b
         return None
 
@@ -758,6 +793,7 @@ class Dijkstra:
                     prob = node.prob
                     steps = [node.position]
                     rolls = [node.rolls]
+                    block_dice = node.block_dice
                     node = node.parent
                     while node is not None:
                         steps.append(node.position)
@@ -765,6 +801,6 @@ class Dijkstra:
                         node = node.parent
                     steps = list(reversed(steps))[1:]
                     rolls = list(reversed(rolls))[1:]
-                    path = Path(steps, prob=prob, rolls=rolls)
+                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice)
                     paths.append(path)
         return paths

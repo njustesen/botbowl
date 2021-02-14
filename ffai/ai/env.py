@@ -148,7 +148,7 @@ class FFAIEnv(gym.Env):
         BlockAction,
         BlitzAction,
         PassAction,
-        HandOffAction,
+        HandoffAction,
         FoulAction,
         ThrowBombAction,
         Block,
