@@ -549,7 +549,7 @@ class Dijkstra:
     # Hashsets instead of arrays
     # profiler
     # Ball pickup
-    # Quick snap
+    # Stand up
     # Blitz moves
     # Always allow direct move to neighbors - at least in UI
 
@@ -581,49 +581,85 @@ class Dijkstra:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
+    def _get_pickup_target(self, to_pos):
+        zones_to = self.tzones[to_pos.y][to_pos.x]
+        modifiers = 1
+        if not self.player.has_skill(Skill.BIG_HAND):
+            modifiers -= zones_to
+        if self.game.state.weather == WeatherType.POURING_RAIN:
+            if not self.player.has_skill(Skill.BIG_HAND):
+                modifiers -= 1
+        if self.player.has_skill(Skill.EXTRA_ARMS):
+            modifiers += 1
+        target = Rules.agility_table[self.player.get_ag()] - modifiers
+        return min(6, max(2, target))
+
+    def _get_dodge_target(self, from_pos, to_pos):
+        zones_from = self.tzones[from_pos.y][from_pos.x]
+        if zones_from == 0:
+            return None
+        zones_to = self.tzones[to_pos.y][to_pos.x]
+        modifiers = 1
+        if not self.player.has_skill(Skill.BIG_HAND):
+            modifiers -= zones_to
+        if self.game.state.weather == WeatherType.POURING_RAIN:
+            if not self.player.has_skill(Skill.BIG_HAND):
+                modifiers -= 1
+        if self.player.has_skill(Skill.EXTRA_ARMS):
+            modifiers += 1
+        target = Rules.agility_table[self.player.get_ag()] - modifiers
+        return min(6, max(2, target))
+
     def _expand(self, node: FNode):
         if node.moves_left == 0 and node.gfis_left == 0:
             return
         for direction in Dijkstra.DIRECTIONS:
-            to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
-            if self.occupied[to_pos.y][to_pos.x] > 0:
+            next_node = self._expand_node(node, direction)
+            if next_node is None:
                 continue
-            if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
-                continue
-            gfi = node.moves_left == 0
-            moves_left_next = max(0, node.moves_left - 1)
-            gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
-            total_moves_left = moves_left_next + gfis_left_next
-            euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
-            best_node = self.nodes[to_pos.y][to_pos.x]
-            if best_node is not None:
-                best_total_moves_left = best_node.moves_left + best_node.gfis_left
-                if total_moves_left < best_total_moves_left:
-                    continue
-                if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
-                    continue
-            rolls = []
-            p = node.prob
-            if gfi:
-                rolls.append(2)
-                p = p * (5 / 6)
-            zones_from = self.tzones[node.position.y][node.position.x]
-            # TODO: Ball
-            if zones_from > 0:
-                zones_to = self.tzones[to_pos.y][to_pos.x]
-                agi_roll = min(6, max(2, Rules.agility_table[self.player.get_ag()] + zones_to - 1))
-                p = p * ((7 - agi_roll) / 6)
-                rolls.append(int(agi_roll))
-            best_before = self.locked_nodes[to_pos.y][to_pos.x]
-            if best_before is not None and self._dominant(node, best_before) == best_before:
-                continue
-            next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
-            rounded_p = round(p, 6)
+            rounded_p = round(next_node.prob, 6)
             if rounded_p < self.current_prob:
                 self._add_risky_move(rounded_p, next_node)
             else:
-                self.open_set.put((euclidean_distance, next_node))
-                self.nodes[to_pos.y][to_pos.x] = next_node
+                self.open_set.put((next_node.euclidean_distance, next_node))
+                self.nodes[next_node.position.y][next_node.position.x] = next_node
+
+    def _expand_node(self, node, direction):
+        to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
+        if self.occupied[to_pos.y][to_pos.x] > 0:
+            return None
+        if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
+            return None
+        gfi = node.moves_left == 0
+        moves_left_next = max(0, node.moves_left - 1)
+        gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
+        total_moves_left = moves_left_next + gfis_left_next
+        euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        if best_node is not None:
+            best_total_moves_left = best_node.moves_left + best_node.gfis_left
+            if total_moves_left < best_total_moves_left:
+                return None
+            if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
+                return None
+        rolls = []
+        p = node.prob
+        if gfi:
+            rolls.append(2)
+            p = p * (5 / 6)
+        if self.tzones[node.position.y][node.position.x] > 0:
+            roll = self._get_dodge_target(node.position, to_pos)
+            p = p * ((7 - roll) / 6)
+            rolls.append(int(roll))
+        if self.game.get_ball_position() == to_pos:
+            roll = self._get_pickup_target(to_pos)
+            p = p * ((7 - roll) / 6)
+            rolls.append(int(roll))
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
+        if best_before is not None and self._dominant(node, best_before) == best_before:
+            return None
+        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+        return next_node
 
     def _add_risky_move(self, prob, node):
         if prob not in self.risky_sets:

@@ -2639,10 +2639,10 @@ class MoveAction(Procedure):
         if self.steps is not None and len(self.steps) > 0:
             return []
         actions = []
-        if self.game.is_quick_snap():
+        if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            paths = Dijkstra(self.game, self.player, directly_to_adjacent=True).get_paths()
+            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent).get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
