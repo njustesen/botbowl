@@ -1106,18 +1106,22 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             } else {
                 $scope.hover_player = null;
             }
+            $scope.resetPaths();
             if (square.path !== null){
                 $scope.refreshPaths(square.path);
             }
         };
 
-        $scope.refreshPaths = function refreshPaths(path) {
+        $scope.resetPaths = function resetPaths(){
             for (let y = 0; y < $scope.game.state.pitch.board.length; y++) {
                 for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
                     $scope.local_state.board[y][x].agi_rolls = [];
                     $scope.local_state.board[y][x].on_path = false;
                 }
             }
+        };
+
+        $scope.refreshPaths = function refreshPaths(path) {
             for (let i=0; i < path.steps.length; i++){
                 let x = path.steps[i].x;
                 let y = path.steps[i].y;
