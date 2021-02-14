@@ -1169,6 +1169,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
                     $scope.local_state.board[y][x].agi_rolls = [];
                     $scope.local_state.board[y][x].on_path = false;
+                    $scope.local_state.board[y][x].block_roll = null;
                 }
             }
         };
@@ -1179,6 +1180,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 let y = path.steps[i].y;
                 $scope.local_state.board[y][x].agi_rolls = path.rolls[i];
                 $scope.local_state.board[y][x].on_path = true;
+                if (i === path.steps.length-1){
+                    $scope.local_state.board[y][x].block_roll = path.block_dice;
+                }
             }
         };
 

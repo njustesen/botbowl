@@ -469,7 +469,8 @@ class ActionChoice:
                 {
                     "steps": [square.to_json() for square in path.steps],
                     "rolls": path.rolls,
-                    "prob": path.prob
+                    "prob": path.prob,
+                    "block_dice": path.block_dice
                 } for path in self.paths]
         }
 

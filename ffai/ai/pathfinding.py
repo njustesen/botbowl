@@ -596,7 +596,7 @@ class Dijkstra:
 
     def _get_handoff_target(self, catcher):
         modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
-        target = Rules.agility_table[self.player.get_ag()] - modifiers
+        target = Rules.agility_table[catcher.get_ag()] - modifiers
         return min(6, max(2, target))
 
     def _get_dodge_target(self, from_pos, to_pos):
@@ -640,7 +640,7 @@ class Dijkstra:
                 target = self._get_handoff_target(player_at)
                 p = node.prob * ((7 - target) / 6)
                 next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
-                if best_node is not None and self._dominant(next_node, best_node) == best_node:
+                if best_node is not None and self._best(next_node, best_node) == best_node:
                     return None
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
@@ -656,13 +656,18 @@ class Dijkstra:
                     rolls.append(2)
                     p = p * (5 / 6)
                 next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls, block_dice=block_dice)
-                if best_node is not None and self._dominant(next_node, best_node) == best_node:
+                if best_node is not None and self._best(next_node, best_node) == best_node:
                     return None
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
                 return next_node
             elif player_at.team != self.player.team and self.foul and not player_at.state.up:
-                return FNode(node, to_pos, 0, 0, node.euclidean_distance, node.prob, [])
+                next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, node.prob, [])
+                if best_node is not None and self._best(next_node, best_node) == best_node:
+                    return None
+                if best_before is not None and self._dominant(next_node, best_before) == best_before:
+                    return None
+                return next_node
             return None
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
             return None
