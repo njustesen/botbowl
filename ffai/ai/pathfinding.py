@@ -622,7 +622,7 @@ class Dijkstra:
                 self.nodes[next_node.position.y][next_node.position.x] = next_node
 
     def _expand_node(self, node, direction):
-        to_pos = Square(node.position.x + direction.x, node.position.y + direction.y)
+        to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
         if self.occupied[to_pos.y][to_pos.x] > 0:
             return None
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
@@ -754,7 +754,7 @@ class Dijkstra:
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
                 node = self.locked_nodes[y][x]
-                if node is not None:
+                if node is not None and node.position != self.player.position:
                     prob = node.prob
                     steps = [node.position]
                     rolls = [node.rolls]

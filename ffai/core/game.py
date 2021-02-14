@@ -2220,6 +2220,18 @@ class Game:
                                         positions=hand_off_positions, agi_rolls=agi_rolls))
         return actions
 
+    def get_stand_up_actions(self, player):
+        rolls = []
+        if not player.state.up:
+            moves = 0 if player.has_skill(Skill.JUMP_UP) else 3
+            if player.get_ma() < moves:
+                stand_up_roll = max(2, min(6, 4-self.get_stand_up_modifier(player)))
+                rolls.append([stand_up_roll])
+            else:
+                rolls.append([])
+            return [ActionChoice(ActionType.STAND_UP, team=player.team, agi_rolls=rolls)]
+        return []
+
     def get_adjacent_move_actions(self, player):
         quick_snap = self.is_quick_snap()
         actions = []
@@ -2229,15 +2241,7 @@ class Game:
         gfi = player.state.moves + move_needed > player.get_ma()
         sprints = 3 if player.has_skill(Skill.SPRINT) else 2
         gfi_roll = 3 if self.state.weather == WeatherType.BLIZZARD else 2
-        if not player.state.up:
-            moves = 0 if player.has_skill(Skill.JUMP_UP) else 3
-            if player.get_ma() < moves:
-                stand_up_roll = max(2, min(6, 4-self.get_stand_up_modifier(player)))
-                agi_rolls.append([stand_up_roll])
-            else:
-                agi_rolls.append([])
-            actions.append(ActionChoice(ActionType.STAND_UP, team=player.team, agi_rolls=agi_rolls))
-        elif (not quick_snap
+        if (not quick_snap
               and not player.state.taken_root
               and player.state.moves + move_needed <= player.get_ma() + sprints) \
                 or (quick_snap and player.state.moves == 0):

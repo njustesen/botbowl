@@ -2595,6 +2595,10 @@ class MoveAction(Procedure):
 
         if action.action_type == ActionType.STAND_UP:
 
+            # if this is the last step in a path
+            if self.steps is not None and len(self.steps) == 0:
+                self.steps = None
+
             moves = 3
             if self.player.has_skill(Skill.JUMP_UP):
                 moves = 0
@@ -2616,10 +2620,12 @@ class MoveAction(Procedure):
 
         if action.action_type == ActionType.MOVE:
 
+            # Start new path?
             if self.steps is None and len(self.paths) > 0:
                 self.steps = self.paths[action.position].steps
                 return False
 
+            # if this is the last step in a path
             if self.steps is not None and len(self.steps) == 0:
                 self.steps = None
 
@@ -2642,7 +2648,6 @@ class MoveAction(Procedure):
     def available_actions(self):
         if self.steps is not None and len(self.steps) > 0:
             return []
-        self.steps = None
         if self.player.state.taken_root:
             return []
         actions = []
@@ -2654,6 +2659,7 @@ class MoveAction(Procedure):
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
             self.paths = {path.steps[-1]: path for path in paths}
+        actions += self.game.get_stand_up_actions(self.player)
         actions += self.game.get_leap_actions(self.player)
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
             actions += self.game.get_hypnotic_gaze_actions(self.player)
@@ -2672,6 +2678,10 @@ class HandOffAction(MoveAction):
         self.game.state.player_action_type = PlayerActionType.HANDOFF
 
     def step(self, action):
+        # Continue moving along path
+        if action is None:
+            return super().step(action)
+
         if action.action_type is ActionType.HANDOFF:
             EndPlayerTurn(self.game, self.player)
             Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
@@ -2680,6 +2690,9 @@ class HandOffAction(MoveAction):
         return super().step(action)
 
     def available_actions(self):
+        # If MoveAction is following a path -> continue
+        if self.steps is not None:
+            return []
         actions = super().available_actions()
         if self.game.has_ball(self.player):
             actions.extend(self.game.get_handoff_actions(self.player))
@@ -2699,6 +2712,10 @@ class PassAction(MoveAction):
         self.game.state.player_action_type = PlayerActionType.PASS
 
     def step(self, action):
+
+        # Continue moving along path
+        if action is None:
+            return super().step(action)
 
         if action.action_type is ActionType.PASS:
             pass_distance = self.game.get_pass_distance(self.player.position, action.position)
@@ -2725,6 +2742,10 @@ class PassAction(MoveAction):
         return super().step(action)
 
     def available_actions(self):
+        # If MoveAction is following a path -> continue
+        if self.steps is not None:
+            return []
+
         actions = []
         if not self.picked_up_teammate:
             actions.extend(super().available_actions())
@@ -2789,6 +2810,10 @@ class FoulAction(MoveAction):
         self.game.state.player_action_type = PlayerActionType.FOUL
 
     def step(self, action):
+        # Continue moving along path
+        if action is None:
+            return super().step(action)
+
         if action.action_type == ActionType.FOUL:
             player_to = self.game.get_player_at(action.position)
             EndPlayerTurn(self.game, self.player)
@@ -2797,6 +2822,9 @@ class FoulAction(MoveAction):
         return super().step(action)
 
     def available_actions(self):
+        # If MoveAction is following a path -> continue
+        if self.steps is not None:
+            return []
         move_actions = super().available_actions()
         foul_actions = self.game.get_foul_actions(self.player)
         return move_actions + foul_actions
@@ -2856,6 +2884,11 @@ class BlitzAction(MoveAction):
         self.game.state.player_action_type = PlayerActionType.BLITZ
 
     def step(self, action):
+
+        # Continue moving along path
+        if action is None:
+            return super().step(action)
+
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
             return True
@@ -2886,6 +2919,9 @@ class BlitzAction(MoveAction):
         super().step(action)
 
     def available_actions(self):
+        # If MoveAction is following a path -> continue
+        if self.steps is not None:
+            return []
         move_actions = super().available_actions()
         block_actions = self.game.get_block_actions(self.player, blitz=True) if not self.block_used else []
         return move_actions + block_actions
