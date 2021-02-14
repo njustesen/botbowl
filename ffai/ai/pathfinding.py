@@ -548,10 +548,7 @@ class Dijkstra:
     # Improvements:
     # Hashsets instead of arrays
     # profiler
-    # Ball pickup
-    # Stand up
     # Blitz moves
-    # Always allow direct move to neighbors - at least in UI
 
     DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
@@ -676,7 +673,11 @@ class Dijkstra:
         if self.ma + self.gfis <= 0:
             return []
 
-        self.open_set.put((0, FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])))
+        node = FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])
+        if not self.player.state.up:
+            node = self._expand_stand_up(node)
+            self.nodes[node.position.y][node.position.x] = node
+        self.open_set.put((0, node))
         self._expansion()
         self._clear()
 
@@ -686,6 +687,15 @@ class Dijkstra:
             self._clear()
 
         return self._collect_paths()
+
+    def _expand_stand_up(self, node):
+        if self.player.has_skill(Skill.JUMP_UP):
+            return FNode(node, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])
+        elif self.ma < 3:
+            roll = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
+            p = (7 - roll) / 6
+            return FNode(node, self.player.position, 0, self.gfis, euclidean_distance=0, prob=p, rolls=[roll])
+        return FNode(node, self.player.position, self.ma-3, self.gfis, euclidean_distance=0, prob=1, rolls=[])
 
     def _best(self, a: FNode, b: FNode):
         if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:

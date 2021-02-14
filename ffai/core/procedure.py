@@ -2579,8 +2579,12 @@ class MoveAction(Procedure):
     def step(self, action):
 
         if action is None:
-            # Continue on path
-            action = Action(ActionType.MOVE, position=self.steps.pop(0))
+            # Follow the selected path
+            pos = self.steps.pop(0)
+            if pos == self.player.position:
+                action = Action(ActionType.STAND_UP)
+            else:
+                action = Action(ActionType.MOVE, position=pos)
 
         if len(self.player.state.squares_moved) == 0:
             self.player.state.squares_moved.append(self.player.position)
@@ -2637,6 +2641,9 @@ class MoveAction(Procedure):
 
     def available_actions(self):
         if self.steps is not None and len(self.steps) > 0:
+            return []
+        self.steps = None
+        if self.player.state.taken_root:
             return []
         actions = []
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
