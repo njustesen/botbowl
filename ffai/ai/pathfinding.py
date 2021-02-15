@@ -561,13 +561,13 @@ class Dijkstra:
                   Square(1, 0),
                   Square(1, 1)]
 
-    def __init__(self, game, player, directly_to_adjacent=False, blitz=False, handoff=False, foul=False):
+    def __init__(self, game, player, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
         self.player = player
         self.directly_to_adjacent = directly_to_adjacent
-        self.blitz = blitz
-        self.handoff = handoff
-        self.foul = foul
+        self.can_block = can_block
+        self.can_handoff = can_handoff
+        self.can_foul = can_foul
         self.ma = player.get_ma() - player.state.moves
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
@@ -636,7 +636,7 @@ class Dijkstra:
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         if player_at is not None:
-            if player_at.team == self.player.team and self.handoff and player_at.can_catch():
+            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
                 target = self._get_handoff_target(player_at)
                 p = node.prob * ((7 - target) / 6)
                 next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
@@ -645,7 +645,7 @@ class Dijkstra:
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
                 return next_node
-            elif player_at.team != self.player.team and self.blitz and player_at.state.up:
+            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
                 block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position, blitz=True)
                 gfi = node.moves_left == 0
                 moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
@@ -661,7 +661,7 @@ class Dijkstra:
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:
                     return None
                 return next_node
-            elif player_at.team != self.player.team and self.foul and not player_at.state.up:
+            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
                 next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, node.prob, [])
                 if best_node is not None and self._best(next_node, best_node) == best_node:
                     return None
@@ -745,7 +745,7 @@ class Dijkstra:
             return b
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
-        block = self.blitz and a.block_dice is not None
+        block = self.can_block and a.block_dice is not None
         if a.prob > b.prob:
             return a
         if b.prob > a.prob:

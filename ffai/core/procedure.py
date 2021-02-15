@@ -2564,13 +2564,13 @@ class AlwaysHungry(Procedure):
 
 class MoveAction(Procedure):
 
-    def __init__(self, game, player, is_move_action=True, is_blitz=False, is_handoff=False, is_foul=False):
+    def __init__(self, game, player, is_move_action=True, can_block=False, can_handoff=False, can_foul=False):
         super().__init__(game)
         self.player = player
         self.is_move_action = is_move_action
-        self.is_blitz = is_blitz
-        self.is_handoff = is_handoff
-        self.is_foul = is_foul
+        self.can_block = can_block
+        self.can_handoff = can_handoff
+        self.can_foul = can_foul
         self.paths = {}
         self.steps = None
 
@@ -2657,7 +2657,7 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, blitz=self.is_blitz, handoff=self.is_handoff, foul=self.is_foul).get_paths()
+            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_block, can_foul=self.can_foul).get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
@@ -2673,7 +2673,7 @@ class MoveAction(Procedure):
 class HandoffAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, is_handoff=True)
+        super().__init__(game, player, is_move_action=False, can_handoff=True)
 
     def start(self):
         self.game.use_handoff_action()
@@ -2809,7 +2809,7 @@ class ThrowBombAction(Procedure):
 class FoulAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, is_foul=True)
+        super().__init__(game, player, is_move_action=False, can_foul=True)
 
     def start(self):
         self.game.use_foul_action()
@@ -2836,9 +2836,12 @@ class FoulAction(MoveAction):
         # If MoveAction is following a path -> continue
         if self.steps is not None:
             return []
-        move_actions = super().available_actions()
-        foul_actions = self.game.get_foul_actions(self.player)
-        return move_actions + foul_actions
+        # Will include foul actions if pathfinding is enabled
+        actions = super().available_actions()
+        # Else find them for this square
+        if not self.game.config.pathfinding_enabled:
+            actions += self.game.get_foul_actions(self.player)
+        return actions
 
 
 class BlockAction(Procedure):
@@ -2885,7 +2888,7 @@ class BlockAction(Procedure):
 class BlitzAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, is_blitz=True)
+        super().__init__(game, player, is_move_action=False, can_block=True)
         self.player = player
         self.block_used = False
 
@@ -2909,7 +2912,7 @@ class BlitzAction(MoveAction):
             return True
 
         if action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
-            self.block_used = True
+            self.can_block = False
             defender = self.game.get_player_at(action.position)
             move_needed = 1
             if not self.player.state.up:
@@ -2937,9 +2940,12 @@ class BlitzAction(MoveAction):
         # If MoveAction is following a path -> continue
         if self.steps is not None:
             return []
-        move_actions = super().available_actions()
-        block_actions = self.game.get_block_actions(self.player, blitz=True) if not self.block_used else []
-        return move_actions + block_actions
+        # Moce actions will include block moves if pathfinding is enabled
+        actions = super().available_actions()
+        # Else find them for this square
+        if not self.game.config.pathfinding_enabled:
+            actions += self.game.get_block_actions(self.player, blitz=True) if self.can_block else []
+        return actions
 
 
 class StartGame(Procedure):
