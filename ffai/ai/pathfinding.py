@@ -18,7 +18,7 @@ from collections import namedtuple
 
 class Path:
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, is_foul=False):
+    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, is_foul=False, is_handoff=False):
         self.steps = steps
         self.prob = prob
         self.dodge_used_prob: float = 0
@@ -27,6 +27,7 @@ class Path:
         self.rolls = rolls
         self.block_dice = block_dice
         self.is_foul = is_foul
+        self.is_handoff = is_handoff
 
     def __len__(self) -> int:
         return len(self.steps)
@@ -830,7 +831,8 @@ class Dijkstra:
                     steps = list(reversed(steps))[1:]
                     rolls = list(reversed(rolls))[1:]
                     player_at = self.game.get_player_at(steps[-1])
-                    is_foul = self.can_foul and player_at is not None and player_at.team != self.player.team and not player_at.state.up
-                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, is_foul=is_foul)
+                    is_foul = self.can_foul and player_at is not None and player_at.team != self.player.team
+                    is_handoff = self.can_handoff and player_at is not None and player_at != self.player and player_at.team == self.player.team
+                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, is_foul=is_foul, is_handoff=is_handoff)
                     paths.append(path)
         return paths

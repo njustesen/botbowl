@@ -347,7 +347,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.getCursor = function getCursor(square){
             if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1 && $scope.special_action_selected.action_type === "STAB"){
                 return "cursor: url(static/img/icons/actions/stab.gif), auto";
-            } else if (square.available && square.action_type === "HANDOFF"){
+            } else if (square.available && (square.action_type === "HANDOFF" || square.is_handoff)){
                 return "cursor: url(static/img/icons/actions/handover.gif), auto";
             } else if (square.available && square.block_dice !== 0 && square.block_dice !== null){
                 return "cursor: url(static/img/icons/actions/block.gif), auto";
@@ -1174,6 +1174,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     $scope.local_state.board[y][x].on_path = false;
                     $scope.local_state.board[y][x].block_dice = 0;
                     $scope.local_state.board[y][x].is_foul = false;
+                    $scope.local_state.board[y][x].is_handoff = false;
                 }
             }
         };
@@ -1187,6 +1188,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if (i === path.steps.length-1){
                     $scope.local_state.board[y][x].block_dice = path.block_dice;
                     $scope.local_state.board[y][x].is_foul = path.is_foul;
+                    $scope.local_state.board[y][x].is_handoff = path.is_handoff;
                 }
             }
         };

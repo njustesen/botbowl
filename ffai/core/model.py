@@ -471,7 +471,8 @@ class ActionChoice:
                     "rolls": path.rolls,
                     "prob": path.prob,
                     "block_dice": path.block_dice,
-                    "is_foul": path.is_foul
+                    "is_foul": path.is_foul,
+                    "is_handoff": path.is_handoff
                 } for path in self.paths
             ]
         }
