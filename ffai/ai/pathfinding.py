@@ -542,6 +542,9 @@ class FNode:
         self.prob = prob
         self.rolls = rolls
         self.block_dice = block_dice
+        self.dodge_used_prob = 0
+        self.sure_feet_used_prob = 0
+        self.trr_used_prob = 0
 
     def __lt__(self, other):
         return self.euclidean_distance < other.euclidean_distance
@@ -632,51 +635,24 @@ class Dijkstra:
                 self.nodes[next_node.position.y][next_node.position.x] = next_node
 
     def _expand_node(self, node, direction):
-        to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
-        player_at = self.game.get_player_at(to_pos)
         euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
-        best_node = self.nodes[to_pos.y][to_pos.x]
-        best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        if player_at is not None:
-            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
-                target = self._get_handoff_target(player_at)
-                p = node.prob * ((7 - target) / 6)
-                next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
-                if best_node is not None and self._best(next_node, best_node) == best_node:
-                    return None
-                if best_before is not None and self._dominant(next_node, best_before) == best_before:
-                    return None
-                return next_node
-            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
-                block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position, blitz=True)
-                gfi = node.moves_left == 0
-                moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
-                gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
-                rolls = []
-                p = node.prob
-                if gfi:
-                    rolls.append(2)
-                    p = p * (5 / 6)
-                next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls, block_dice=block_dice)
-                if best_node is not None and self._best(next_node, best_node) == best_node:
-                    return None
-                if best_before is not None and self._dominant(next_node, best_before) == best_before:
-                    return None
-                return next_node
-            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
-                assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
-                target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-                p = D6.TWO_PROBS[target] if target > 0 else 1
-                p = node.prob * p
-                next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
-                if best_node is not None and self._best(next_node, best_node) == best_node:
-                    return None
-                if best_before is not None and self._dominant(next_node, best_before) == best_before:
-                    return None
-                return next_node
-            return None
+        to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
             return None
+        player_at = self.game.get_player_at(to_pos)
+        if player_at is not None:
+            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
+                return self._expand_handoff_node(node, euclidean_distance)
+            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
+                return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
+            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
+                return self._expand_foul_node(node, to_pos, player_at)
+            return None
+        return self._expand_move_node(node, euclidean_distance, to_pos)
+
+    def _expand_move_node(self, node, euclidean_distance, to_pos):
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
         gfi = node.moves_left == 0
         moves_left_next = max(0, node.moves_left - 1)
         gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
@@ -701,6 +677,54 @@ class Dijkstra:
             p = p * ((7 - roll) / 6)
             rolls.append(int(roll))
         next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+        if best_before is not None and self._dominant(next_node, best_before) == best_before:
+            return None
+        return next_node
+
+    def _expand_foul_node(self, node, to_pos, player_at):
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
+        assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
+        target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
+        p = D6.TWO_PROBS[target] if target > 0 else 1
+        p = node.prob * p
+        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
+        if best_node is not None and self._best(next_node, best_node) == best_node:
+            return None
+        if best_before is not None and self._dominant(next_node, best_before) == best_before:
+            return None
+        return next_node
+
+    def _expand_handoff_node(self, node, to_pos):
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
+        player_at = self.game.get_player_at(to_pos)
+        target = self._get_handoff_target(player_at)
+        p = node.prob * ((7 - target) / 6)
+        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
+        if best_node is not None and self._best(next_node, best_node) == best_node:
+            return None
+        if best_before is not None and self._dominant(next_node, best_before) == best_before:
+            return None
+        return next_node
+
+    def _expand_block_node(self, node, euclidean_distance, to_pos, player_at):
+        best_node = self.nodes[to_pos.y][to_pos.x]
+        best_before = self.locked_nodes[to_pos.y][to_pos.x]
+        block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position,
+                                                 blitz=True)
+        gfi = node.moves_left == 0
+        moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
+        gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
+        rolls = []
+        p = node.prob
+        if gfi:
+            rolls.append(2)
+            p = p * (5 / 6)
+        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls,
+                          block_dice=block_dice)
+        if best_node is not None and self._best(next_node, best_node) == best_node:
+            return None
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
             return None
         return next_node
@@ -836,3 +860,4 @@ class Dijkstra:
                     path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, is_foul=is_foul, is_handoff=is_handoff)
                     paths.append(path)
         return paths
+
