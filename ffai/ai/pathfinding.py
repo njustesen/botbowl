@@ -533,21 +533,48 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, prob, rolls, block_dice=None):
+    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, block_dice=None):
         self.parent = parent
         self.position = position
         self.moves_left = moves_left
         self.gfis_left = gfis_left
         self.euclidean_distance = euclidean_distance
-        self.prob = prob
-        self.rolls = rolls
+        self.prob = parent.prob if parent is not None else 1
+        self.rolls = []
         self.block_dice = block_dice
-        self.dodge_used_prob = 0
-        self.sure_feet_used_prob = 0
-        self.trr_used_prob = 0
+        self.dodge_used_prob = 0 if parent is None else self.parent.dodge_used_prob
+        self.sure_feet_used_prob = 0 if parent is None else self.parent.sure_feet_used_prob
+        self.trr_used_prob = 0 if parent is None else self.parent.trr_used_prob
 
     def __lt__(self, other):
         return self.euclidean_distance < other.euclidean_distance
+
+    def apply_gfi(self):
+        self.rolls.append(2)
+        self.prob = self.prob * (5 / 6)
+
+    def apply_dodge(self, target):
+        roll = target
+        self.prob = self.prob * ((7 - roll) / 6)
+        self.rolls.append(int(roll))
+
+    def apply_pickup(self, target):
+        self.prob = self.prob * ((7 - target) / 6)
+        self.rolls.append(int(target))
+
+    def apply_handoff(self, target):
+        self.prob = self.prob * ((7 - target) / 6)
+        self.rolls.append(int(target))
+
+    def apply_foul(self, target):
+        p = D6.TWO_PROBS[target] if target > 0 else 1
+        self.prob = self.prob * p
+        self.rolls.append(int(target))
+
+    def apply_stand_up(self, target):
+        p = D6.TWO_PROBS[target] if target > 0 else 1
+        self.prob = self.prob * p
+        self.rolls.append(int(target))
 
 
 class Dijkstra:
@@ -663,20 +690,15 @@ class Dijkstra:
                 return None
             if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
                 return None
-        rolls = []
-        p = node.prob
+        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
-            rolls.append(2)
-            p = p * (5 / 6)
+            next_node.apply_gfi()
         if self.tzones[node.position.y][node.position.x] > 0:
-            roll = self._get_dodge_target(node.position, to_pos)
-            p = p * ((7 - roll) / 6)
-            rolls.append(int(roll))
+            target = self._get_dodge_target(node.position, to_pos)
+            next_node.apply_dodge(target)
         if self.game.get_ball_position() == to_pos:
-            roll = self._get_pickup_target(to_pos)
-            p = p * ((7 - roll) / 6)
-            rolls.append(int(roll))
-        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls)
+            target = self._get_pickup_target(to_pos)
+            next_node.apply_pickup(target)
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
             return None
         return next_node
@@ -686,9 +708,8 @@ class Dijkstra:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-        p = D6.TWO_PROBS[target] if target > 0 else 1
-        p = node.prob * p
-        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
+        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance)
+        next_node.apply_foul(target)
         if best_node is not None and self._best(next_node, best_node) == best_node:
             return None
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
@@ -699,9 +720,9 @@ class Dijkstra:
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         player_at = self.game.get_player_at(to_pos)
+        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance)
         target = self._get_handoff_target(player_at)
-        p = node.prob * ((7 - target) / 6)
-        next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
+        next_node.apply_handoff(target)
         if best_node is not None and self._best(next_node, best_node) == best_node:
             return None
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
@@ -716,13 +737,9 @@ class Dijkstra:
         gfi = node.moves_left == 0
         moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
         gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
-        rolls = []
-        p = node.prob
+        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice=block_dice)
         if gfi:
-            rolls.append(2)
-            p = p * (5 / 6)
-        next_node = FNode(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, p, rolls,
-                          block_dice=block_dice)
+            next_node.apply_gfi()
         if best_node is not None and self._best(next_node, best_node) == best_node:
             return None
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
@@ -744,7 +761,7 @@ class Dijkstra:
         if self.ma + self.gfis <= 0:
             return []
 
-        node = FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])
+        node = FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0)
         if not self.player.state.up:
             node = self._expand_stand_up(node)
             self.nodes[node.position.y][node.position.x] = node
@@ -761,12 +778,14 @@ class Dijkstra:
 
     def _expand_stand_up(self, node):
         if self.player.has_skill(Skill.JUMP_UP):
-            return FNode(node, self.player.position, self.ma, self.gfis, euclidean_distance=0, prob=1, rolls=[])
+            return FNode(node, self.player.position, self.ma, self.gfis, euclidean_distance=0)
         elif self.ma < 3:
-            roll = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
-            p = (7 - roll) / 6
-            return FNode(node, self.player.position, 0, self.gfis, euclidean_distance=0, prob=p, rolls=[roll])
-        return FNode(node, self.player.position, self.ma-3, self.gfis, euclidean_distance=0, prob=1, rolls=[])
+            target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
+            next_node = FNode(node, self.player.position, 0, self.gfis, euclidean_distance=0)
+            next_node.apply_stand_up(target)
+            return next_node
+        next_node = FNode(node, self.player.position, self.ma-3, self.gfis, euclidean_distance=0)
+        return next_node
 
     def _best(self, a: FNode, b: FNode):
         if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
