@@ -8,7 +8,7 @@ This module contains pathfinding functionalities for FFAI.
 
 from typing import Optional, List
 from ffai.core.table import Rules
-from ffai.core.model import Player, Square
+from ffai.core.model import Player, Square, D6
 from ffai.core.table import Skill, WeatherType, Tile
 import copy
 import numpy as np
@@ -662,7 +662,11 @@ class Dijkstra:
                     return None
                 return next_node
             elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
-                next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, node.prob, [])
+                assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
+                target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
+                p = D6.TWO_PROBS[target] if target > 0 else 1
+                p = node.prob * p
+                next_node = FNode(node, to_pos, 0, 0, node.euclidean_distance, p, [target])
                 if best_node is not None and self._best(next_node, best_node) == best_node:
                     return None
                 if best_before is not None and self._dominant(next_node, best_before) == best_before:

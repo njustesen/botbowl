@@ -1954,7 +1954,7 @@ class Game:
                         break
                 if not found_adjacent:
                     n_assists_for += 1
-        return (n_assists_for, n_assist_against)
+        return n_assists_for, n_assist_against
 
     def get_pass_distances(self, passer, piece, dump_off=False):
         """
@@ -2307,14 +2307,14 @@ class Game:
         foul_rolls = []
         for player_to in self.get_adjacent_opponents(player, standing=False, down=True):
             foul_positions.append(player_to.position)
-            armor = player_to.get_av()
             assists_from = self.get_assisting_players(player, player_to, foul=True)
             assists_to = self.get_assisting_players(player_to, player, foul=True)
-            foul_rolls.append(min(0, armor + 1 - len(assists_from) + len(assists_to)))
+            target = min(12, max(2, player_to.get_av() + 1 - len(assists_from) + len(assists_to)))
+            foul_rolls.append([target])
 
         if len(foul_positions) > 0:
             actions.append(ActionChoice(ActionType.FOUL, team=player.team,
-                                        positions=foul_positions, block_rolls=foul_rolls))
+                                        positions=foul_positions, agi_rolls=foul_rolls))
         return actions
 
     def get_pickup_teammate_actions(self, player):

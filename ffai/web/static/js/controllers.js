@@ -1106,7 +1106,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             } else {
                 $scope.hover_player = null;
             }
-            $scope.resetPaths();
+            if ($scope.available_paths.length > 0){
+                $scope.resetPaths();
+            }
             if (square.path !== null){
                 $scope.refreshPaths(square.path);
             }
@@ -1117,7 +1119,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
                     $scope.local_state.board[y][x].agi_rolls = [];
                     $scope.local_state.board[y][x].on_path = false;
-                    $scope.local_state.board[y][x].block_roll = null;
+                    $scope.local_state.board[y][x].block_roll = 0;
                 }
             }
         };
