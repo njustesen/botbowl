@@ -442,15 +442,15 @@ class Pitch:
 
 class ActionChoice:
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, paths=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, d6_rolls=None, skill=None, paths=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
         self.team = team
         self.rolls = [] if rolls is None else rolls
-        self.block_rolls = [] if block_rolls is None else block_rolls
+        self.block_dice = [] if block_dice is None else block_dice
         self.disabled = disabled
-        self.agi_rolls = [] if agi_rolls is None else agi_rolls
+        self.d6_rolls = [] if d6_rolls is None else d6_rolls
         self.skill = skill
         self.paths = [] if paths is None else paths
 
@@ -460,8 +460,8 @@ class ActionChoice:
             'positions': [position.to_json() if position is not None else None for position in self.positions],
             'team_id': self.team.team_id if self.team is not None else None,
             "rolls": self.rolls,
-            "block_rolls": self.block_rolls,
-            "agi_rolls": self.agi_rolls,
+            "block_dice": self.block_dice,
+            "d6_rolls": self.d6_rolls,
             'player_ids': [player.player_id for player in self.players],
             "skill": self.skill.name if self.skill is not None else None,
             "disabled": self.disabled,
@@ -470,8 +470,10 @@ class ActionChoice:
                     "steps": [square.to_json() for square in path.steps],
                     "rolls": path.rolls,
                     "prob": path.prob,
-                    "block_dice": path.block_dice
-                } for path in self.paths]
+                    "block_dice": path.block_dice,
+                    "is_foul": path.is_foul
+                } for path in self.paths
+            ]
         }
 
 

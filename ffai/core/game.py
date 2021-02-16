@@ -2207,17 +2207,17 @@ class Game:
         """
         actions = []
         hand_off_positions = []
-        agi_rolls = []
+        d6_rolls = []
         for player_to in self.get_adjacent_teammates(player):
             if player_to.can_catch():
                 hand_off_positions.append(player_to.position)
                 modifiers = self.get_catch_modifiers(player, player_to.position)
                 target = Rules.agility_table[player.get_ag()]
-                agi_rolls.append([min(6, max(2, target - modifiers))])
+                d6_rolls.append([min(6, max(2, target - modifiers))])
 
         if len(hand_off_positions) > 0:
             actions.append(ActionChoice(ActionType.HANDOFF, team=player.team,
-                                        positions=hand_off_positions, agi_rolls=agi_rolls))
+                                        positions=hand_off_positions, d6_rolls=d6_rolls))
         return actions
 
     def get_stand_up_actions(self, player):
@@ -2229,14 +2229,14 @@ class Game:
                 rolls.append([stand_up_roll])
             else:
                 rolls.append([])
-            return [ActionChoice(ActionType.STAND_UP, team=player.team, agi_rolls=rolls)]
+            return [ActionChoice(ActionType.STAND_UP, team=player.team, d6_rolls=rolls)]
         return []
 
     def get_adjacent_move_actions(self, player):
         quick_snap = self.is_quick_snap()
         actions = []
         move_positions = []
-        agi_rolls = []
+        d6_rolls = []
         move_needed = 1 if not player.state.up else 1
         gfi = player.state.moves + move_needed > player.get_ma()
         sprints = 3 if player.has_skill(Skill.SPRINT) else 2
@@ -2261,10 +2261,10 @@ class Game:
                         target = Rules.agility_table[player.get_ag()]
                         modifiers = self.get_pickup_modifiers(player, square)
                         rolls.append(min(6, max(2, target - modifiers)))
-                agi_rolls.append(rolls)
+                d6_rolls.append(rolls)
             if len(move_positions) > 0:
                 actions.append(ActionChoice(ActionType.MOVE, team=player.team,
-                                            positions=move_positions, agi_rolls=agi_rolls))
+                                            positions=move_positions, d6_rolls=d6_rolls))
 
         return actions
 
@@ -2273,7 +2273,7 @@ class Game:
         if player.can_use_skill(Skill.LEAP) and not self.is_quick_snap():
             sprints = 3 if player.has_skill(Skill.SPRINT) else 2
             gfi_roll = 3 if self.state.weather == WeatherType.BLIZZARD else 2
-            leap_agi_rolls = []
+            leap_d6_rolls = []
             leap_positions = []
             modifiers = 0 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
             target = Rules.agility_table[player.get_ag()]
@@ -2291,10 +2291,10 @@ class Game:
                     if ball_at is not None and ball_at.on_ground:
                         modifiers = self.get_pickup_modifiers(player, square)
                         rolls.append(min(6, max(2, target - modifiers)))
-                    leap_agi_rolls.append(rolls)
+                    leap_d6_rolls.append(rolls)
             if len(leap_positions) > 0:
                 actions.append(ActionChoice(ActionType.LEAP, team=player.team,
-                                            positions=leap_positions, agi_rolls=leap_agi_rolls))
+                                            positions=leap_positions, d6_rolls=leap_d6_rolls))
         return actions
 
     def get_foul_actions(self, player):
@@ -2314,7 +2314,7 @@ class Game:
 
         if len(foul_positions) > 0:
             actions.append(ActionChoice(ActionType.FOUL, team=player.team,
-                                        positions=foul_positions, agi_rolls=foul_rolls))
+                                        positions=foul_positions, d6_rolls=foul_rolls))
         return actions
 
     def get_pickup_teammate_actions(self, player):
@@ -2323,9 +2323,9 @@ class Game:
         if teammates:
             positions = [teammate.position for teammate in teammates]
             rolls = [2] if player.has_skill(Skill.ALWAYS_HUNGRY) else []
-            agi_rolls = [rolls for _ in teammates]
+            d6_rolls = [rolls for _ in teammates]
             actions.append(ActionChoice(ActionType.PICKUP_TEAM_MATE, team=player.team,
-                                        positions=positions, agi_rolls=agi_rolls))
+                                        positions=positions, d6_rolls=d6_rolls))
         return actions
 
     def get_block_actions(self, player, blitz=False):
@@ -2353,14 +2353,14 @@ class Game:
 
         # Find adjacent enemies to block
         block_positions = []
-        block_rolls = []
+        block_dice = []
         stab_rolls = []
         for player_to in self.get_adjacent_opponents(player, down=False):
             block_positions.append(player_to.position)
             dice = self.num_block_dice(attacker=player, defender=player_to,
                                        blitz=blitz,
                                        dauntless_success=False)
-            block_rolls.append(dice)
+            block_dice.append(dice)
             if player.has_skill(Skill.STAB):
                 roll = player_to.get_av() + 1
                 if player.has_skill(Skill.STAKES) and player_to.team.race in ['Khemri', 'Necromantic',
@@ -2371,11 +2371,11 @@ class Game:
             rolls = [(jump_up_rolls + [2] if gfi else []) for _ in block_positions]
             actions.append(ActionChoice(ActionType.BLOCK, team=player.team,
                                         positions=block_positions,
-                                        block_rolls=block_rolls,
-                                        agi_rolls=rolls))
+                                        block_dice=block_dice,
+                                        d6_rolls=rolls))
             if player.has_skill(Skill.STAB):
                 rolls = [roll + stab_rolls[i] for i, roll in enumerate(rolls)]
-                actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, agi_rolls=rolls))
+                actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, d6_rolls=rolls))
 
         return actions
 
@@ -2385,7 +2385,7 @@ class Game:
             ttm = type(piece) == Player
             bomb = type(piece) == Bomb
             positions, distances = self.get_pass_distances(player, piece, dump_off=dump_off)
-            agi_rolls = []
+            d6_rolls = []
             cache = {}
             for i in range(len(distances)):
                 distance = distances[i]
@@ -2400,7 +2400,7 @@ class Game:
                     catch_target = Rules.agility_table[player_to.get_ag()]
                     catch_modifiers = self.get_catch_modifiers(player_to, accurate=True)
                     rolls.append(min(6, max(2, catch_target - catch_modifiers)))
-                agi_rolls.append(rolls)
+                d6_rolls.append(rolls)
             if len(positions) > 0:
                 if bomb:
                     action_type = ActionType.THROW_BOMB
@@ -2409,7 +2409,7 @@ class Game:
                 else:
                     action_type = ActionType.PASS
                 actions.append(ActionChoice(action_type, team=player.team,
-                                            positions=positions, agi_rolls=agi_rolls))
+                                            positions=positions, d6_rolls=d6_rolls))
         if dump_off:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=player.team, skill=Skill.DUMP_OFF))
         return actions
@@ -2423,12 +2423,12 @@ class Game:
             if len(hypno_positions) > 0:
                 modifier = self.get_hypno_modifier(player)
                 target = Rules.agility_table[player.get_ag()]
-                agi_roll = min(6, max(2, target - modifier))
-                agi_rolls = [[agi_roll]] * len(hypno_positions)
+                d6_roll = min(6, max(2, target - modifier))
+                d6_rolls = [[d6_roll]] * len(hypno_positions)
 
                 actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=player.team,
                                             skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions,
-                                            agi_rolls=agi_rolls))
+                                            d6_rolls=d6_rolls))
         return actions
 
     def purge_stack_until(self, proc_class, inclusive=False):

@@ -1213,20 +1213,18 @@ class Interception(Procedure):
         self.game.add_secondary_clock(self.team)
 
     def step(self, action):
-
         if action.action_type == ActionType.SELECT_PLAYER:
             Intercept(self.game, action.player, self.ball, passer=self.passer)
-
         self.game.remove_secondary_clocks()
         return True
 
     def available_actions(self):
-        agi_rolls = []
+        d6_rolls = []
         for interceptor in self.interceptors:
             modifier = self.game.get_catch_modifiers(interceptor, interception=True)
-            agi_rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
+            d6_rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
         return [ActionChoice(ActionType.SELECT_PLAYER, team=self.team,
-                             players=self.interceptors, agi_rolls=agi_rolls),
+                             players=self.interceptors, d6_rolls=d6_rolls),
                 ActionChoice(ActionType.SELECT_NONE, team=self.team)]
 
 
@@ -2657,7 +2655,7 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_block, can_foul=self.can_foul).get_paths()
+            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_handoff, can_foul=self.can_foul).get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
@@ -2902,7 +2900,7 @@ class BlitzAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None or player_at.team == self.player.team or not player_at.state.up:
+            if player_at is None:
                 return super().step(action)
             action = Action(ActionType.BLOCK, position=self.steps.pop(0))
             self.steps = None
