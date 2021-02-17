@@ -9,7 +9,7 @@ before other procedures are run. Procedures can add other procedures to the stac
 """
 from abc import abstractmethod, ABCMeta
 
-from ffai.ai.pathfinding import get_all_paths, Dijkstra
+from ffai.ai.pathfinding import Pathfinder
 from ffai.core.model import *
 from ffai.core.table import *
 import time
@@ -2655,8 +2655,14 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            dijkstra = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_handoff, can_foul=self.can_foul)
-            paths = dijkstra.get_paths(ttr=self.game.can_use_reroll(self.player.team))
+            pathfinder = Pathfinder(self.game,
+                                    self.player,
+                                    directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent,
+                                    can_block=self.can_block,
+                                    can_handoff=self.can_handoff,
+                                    can_foul=self.can_foul,
+                                    trr=self.game.can_use_reroll(self.player.team))
+            paths = pathfinder.get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
