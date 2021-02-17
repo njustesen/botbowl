@@ -18,7 +18,7 @@ from collections import namedtuple
 
 class Path:
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, is_foul=False, is_handoff=False):
+    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
         self.steps = steps
         self.prob = prob
         self.dodge_used_prob: float = 0
@@ -26,8 +26,8 @@ class Path:
         self.rr_used_prob: float = 0
         self.rolls = rolls
         self.block_dice = block_dice
-        self.is_foul = is_foul
-        self.is_handoff = is_handoff
+        self.handoff_roll = handoff_roll
+        self.foul_roll = foul_roll
 
     def __len__(self) -> int:
         return len(self.steps)
@@ -533,13 +533,15 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, block_dice=None):
+    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, block_dice=None, foul_roll=None, handoff_roll=None):
         self.parent = parent
         self.position = position
         self.moves_left = moves_left
         self.gfis_left = gfis_left
         self.euclidean_distance = euclidean_distance
         self.prob = parent.prob if parent is not None else 1
+        self.foul_roll = foul_roll
+        self.handoff_roll = handoff_roll
         self.rolls = []
         self.block_dice = block_dice
         self.dodge_used_prob = 0 if parent is None else self.parent.dodge_used_prob
@@ -563,13 +565,10 @@ class FNode:
         self.rolls.append(int(target))
 
     def apply_handoff(self, target):
-        self.prob = self.prob * ((7 - target) / 6)
-        self.rolls.append(int(target))
+        self.handoff_roll = target
 
     def apply_foul(self, target):
-        p = D6.TWO_PROBS[target] if target > 0 else 1
-        self.prob = self.prob * p
-        self.rolls.append(int(target))
+        self.foul_roll = int(target)
 
     def apply_stand_up(self, target):
         p = D6.TWO_PROBS[target] if target > 0 else 1
@@ -669,7 +668,7 @@ class Dijkstra:
         player_at = self.game.get_player_at(to_pos)
         if player_at is not None:
             if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
-                return self._expand_handoff_node(node, euclidean_distance)
+                return self._expand_handoff_node(node, to_pos)
             elif player_at.team != self.player.team and self.can_block and player_at.state.up:
                 return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
             elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
@@ -794,10 +793,15 @@ class Dijkstra:
             return b
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
-        block = self.can_block and a.block_dice is not None
+        block = a.block_dice is not None
+        foul = a.foul_roll is not None
         if a.prob > b.prob:
             return a
         if b.prob > a.prob:
+            return b
+        if foul and a.foul_roll < b.foul_roll:
+            return a
+        if foul and b.foul_roll < a.foul_roll:
             return b
         if block and a.block_dice > b.block_dice:
             return a
@@ -820,9 +824,10 @@ class Dijkstra:
             return b
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
-        if a.prob > b.prob and (a.block_dice is None or a.block_dice >= b.block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance)):
+        # TODO: Write out as above
+        if a.prob > b.prob and (a.foul_roll is None or a.foul_roll <= b.foul_roll) and (a.block_dice is None or a.block_dice >= b.block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance)):
             return a
-        if b.prob > a.prob and (b.block_dice is None or b.block_dice >= a.block_dice) and (b_moves_left > a_moves_left or (b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance)):
+        if b.prob > a.prob and (b.foul_roll is None or b.foul_roll <= a.foul_roll) and (b.block_dice is None or b.block_dice >= a.block_dice) and (b_moves_left > a_moves_left or (b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance)):
             return b
         return None
 
@@ -866,6 +871,8 @@ class Dijkstra:
                     steps = [node.position]
                     rolls = [node.rolls]
                     block_dice = node.block_dice
+                    foul_roll = node.foul_roll
+                    handoff_roll = node.handoff_roll
                     node = node.parent
                     while node is not None:
                         steps.append(node.position)
@@ -873,10 +880,7 @@ class Dijkstra:
                         node = node.parent
                     steps = list(reversed(steps))[1:]
                     rolls = list(reversed(rolls))[1:]
-                    player_at = self.game.get_player_at(steps[-1])
-                    is_foul = self.can_foul and player_at is not None and player_at.team != self.player.team
-                    is_handoff = self.can_handoff and player_at is not None and player_at != self.player and player_at.team == self.player.team
-                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, is_foul=is_foul, is_handoff=is_handoff)
+                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
                     paths.append(path)
         return paths
 
