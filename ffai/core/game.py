@@ -998,10 +998,7 @@ class Game:
         :param position:
         :return:
         """
-        assert piece.position is not None
         if type(piece) is Player:
-            if self.state.pitch.board[position.y][position.x] == piece:
-                return
             for ball in self.state.pitch.balls:
                 if ball.position == piece.position and ball.is_carried:
                     ball.move_to(position)

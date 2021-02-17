@@ -1108,7 +1108,7 @@ class GrodBot(Agent):
             action = self.blitz(game)
         elif isinstance(proc, Turn):
             action = self.turn(game)
-        elif type(proc) in [MoveAction, PassAction, BlockAction, BlitzAction, HandOffAction, FoulAction]:
+        elif type(proc) in [MoveAction, PassAction, BlockAction, BlitzAction, HandoffAction, FoulAction]:
             action = self.player_action(game)
         elif isinstance(proc, Block):
             action = self.block(game)
@@ -1558,7 +1558,7 @@ class GrodBot(Agent):
         """
         for action in game.state.available_actions:
             if action.action_type == ActionType.SELECT_PLAYER:
-                for player, agi_rolls in zip(action.players, action.agi_rolls):
+                for player, rolls in zip(action.players, action.rolls):
                     return Action(ActionType.SELECT_PLAYER, player=player)
         return Action(ActionType.SELECT_NONE)
 

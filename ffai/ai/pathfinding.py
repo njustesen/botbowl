@@ -101,7 +101,7 @@ class Node:
     def apply_pickup(self, target):
         self.rolls.append(target)
         self._apply_roll((7 - target) / 6, [self.SURE_HANDS, self.TRR])
-        # TODO: Should pickup be added to path prob?
+        # TODO: should pickup be added to path prob if it's the last step?
 
     def apply_handoff(self, target):
         self.handoff_roll = target
@@ -125,11 +125,10 @@ class Pathfinder:
                   Square(1, 0),
                   Square(1, 1)]
 
-    def __init__(self, game, player, trr=False, target=None, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
+    def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
         self.player = player
         self.trr = trr
-        self.target = target
         self.directly_to_adjacent = directly_to_adjacent
         self.can_block = can_block
         self.can_handoff = can_handoff
@@ -147,7 +146,13 @@ class Pathfinder:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
-    def get_paths(self):
+    def get_path(self, target):
+        paths = self.get_paths(target)
+        if len(paths) > 0:
+            return paths[0]
+        return None
+
+    def get_paths(self, target=None):
 
         ma = self.player.get_ma() - self.player.state.moves
         self.ma = max(0, ma)
@@ -166,15 +171,15 @@ class Pathfinder:
             node = self._expand_stand_up(node)
             self.nodes[node.position.y][node.position.x] = node
         self.open_set.put((0, node))
-        self._expansion()
+        self._expansion(target)
         self._clear()
 
         while len(self.risky_sets) > 0:
             self._prepare_nodes()
-            self._expansion()
+            self._expansion(target)
             self._clear()
 
-        return self._collect_paths()
+        return self._collect_paths(target)
 
     def _get_pickup_target(self, to_pos):
         zones_to = self.tzones[to_pos.y][to_pos.x]
@@ -210,8 +215,12 @@ class Pathfinder:
         target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
-    def _expand(self, node: Node):
-        if (node.moves_left == 0 and node.gfis_left == 0) or node.block_dice is not None:
+    def _expand(self, node: Node, target=None):
+        if node.moves_left + node.gfis_left == 0 or node.block_dice is not None:
+            return
+        if type(target) == Square and target.distance(node.position) > node.moves_left + node.gfis_left:
+            return
+        if type(target) == int and abs(target - node.position.x) > node.moves_left + node.gfis_left:
             return
         for direction in self.DIRECTIONS:
             next_node = self._expand_node(node, direction)
@@ -395,33 +404,45 @@ class Pathfinder:
                     self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
 
-    def _expansion(self):
+    def _expansion(self, target=None):
         while not self.open_set.empty():
             _, best_node = self.open_set.get()
-            self._expand(best_node)
+            self._expand(best_node, target)
 
-    def _collect_paths(self):
+    def _collect_paths(self, target=None):
+        if type(target) == Square:
+            node = self.locked_nodes[target.y][target.x]
+            if node is not None:
+                return [self._collect_path(node)]
+            return []
         paths = []
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
+                if self.player.position.x == x and self.player.position.y == y:
+                    continue
+                if type(target) == int and not target == x:
+                    continue
                 node = self.locked_nodes[y][x]
-                if node is not None and node.position != self.player.position:
-                    prob = node.prob
-                    steps = [node.position]
-                    rolls = [node.rolls]
-                    block_dice = node.block_dice
-                    foul_roll = node.foul_roll
-                    handoff_roll = node.handoff_roll
-                    node = node.parent
-                    while node is not None:
-                        steps.append(node.position)
-                        rolls.append(node.rolls)
-                        node = node.parent
-                    steps = list(reversed(steps))[1:]
-                    rolls = list(reversed(rolls))[1:]
-                    path = Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
-                    paths.append(path)
+                if node is not None:
+                    paths.append(self._collect_path(node))
         return paths
+
+    def _collect_path(self, node):
+        prob = node.prob
+        steps = [node.position]
+        rolls = [node.rolls]
+        block_dice = node.block_dice
+        foul_roll = node.foul_roll
+        handoff_roll = node.handoff_roll
+        node = node.parent
+        while node is not None:
+            steps.append(node.position)
+            rolls.append(node.rolls)
+            node = node.parent
+        steps = list(reversed(steps))[1:]
+        rolls = list(reversed(rolls))[1:]
+        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll,
+                    handoff_roll=handoff_roll)
 
 
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
@@ -437,10 +458,9 @@ def get_safest_path(game, player, position, from_position=None, allow_team_rerol
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
     finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz)
-    path = finder.get_path(position)
+    path = finder.get_path(target=position)
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)
-
     return path
 
 
