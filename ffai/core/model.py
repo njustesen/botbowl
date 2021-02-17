@@ -145,10 +145,40 @@ class Configuration:
         self.defensive_formations = []
         self.time_limits = None
 
+class LoggedState:
+    def __init__(self):
+        super().__setattr__("_logger", None)
+        super().__setattr__("_logging_enabled", False)
 
-class PlayerState:
+    def __setattr__(self, key, value):
+        if getattr(self, "_logging_enabled"):
+            from_val = getattr(self, key) if hasattr(self, key) else None
+
+            log_entry = (self, key, from_val, value)  # Log entry
+            self._logger.log_state_change(*log_entry)
+        super().__setattr__(key, value)
+
+    def reset_to(self, key, value):
+        super().__setattr__(key, value)
+
+    def set_logger_state(self, state):
+        super().__setattr__("_logging_enabled", state)
+
+    def set_logger(self, logger):
+        super().__setattr__("_logger", logger)
+        self.set_logger_state(True)
+
+    def __eq__(self, other):
+        """
+        For testing purposes. Makes class unhashable.
+        """
+        return self.to_json() == other.to_json()
+
+
+class PlayerState(LoggedState):
 
     def __init__(self):
+        super().__init__()
         self.up = True
         self.in_air = False
         self.used = False
@@ -247,9 +277,10 @@ class Agent:
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
 
-class TeamState:
+class TeamState(LoggedState):
 
     def __init__(self, team):
+        super().__init__()
         self.bribes = 0
         self.babes = 0
         self.apothecaries = team.apothecaries
@@ -344,9 +375,10 @@ class Clock:
         }
 
 
-class GameState:
+class GameState(LoggedState):
 
     def __init__(self, game, home_team, away_team):
+        super().__init__()
         self.stack = Stack()
         self.reports = []
         self.half = 1
@@ -364,7 +396,9 @@ class GameState:
         self.player_by_id = {}
         self.team_by_player_id = {}
         for team in self.teams:
+            team.state.set_logger(game)
             for player in team.players:
+                player.state.set_logger(game)
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
         self.pitch = Pitch(game.arena.width, game.arena.height)

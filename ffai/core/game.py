@@ -36,6 +36,11 @@ class Game:
         self.action = None
         self.ff_map = None
 
+        self.action_log = [[]]
+        self.current_step = 0
+        self.state.set_logger(self)
+        self.logging_enabled = False
+
     def to_json(self, ignore_reports=False):
         return {
             'game_id': self.game_id,
@@ -54,6 +59,19 @@ class Game:
             'time_limits': self.config.time_limits.to_json(),
             'active_other_player_id': self.get_other_active_player_id()
         }
+
+    def log_state_change(self, owner, key, from_val, to_val):
+        if self.logging_enabled:
+            log_entry = (owner, key, from_val, to_val)
+            self.action_log[self.current_step].append(log_entry)
+
+    def revert_state(self, to_step=0, clear_log=True):
+        revert_actions = reversed([log_entry for step in self.action_log[to_step:] for log_entry in step])
+        for log_entry in revert_actions:
+            owner = log_entry[0]
+            key = log_entry[1]
+            val = log_entry[2]
+            owner.reset_to(key, val)
 
     def init(self):
         """
@@ -348,6 +366,11 @@ class Game:
         if self.config.debug_mode:
             print("Done={}".format(proc.done))
             print(f"DONE={self.state.stack.peek().done}")
+
+        # Handle action log
+        if self.logging_enabled:
+            self.action_log.append([])
+            self.current_step += 1
 
         # Used if players was accidentally cloned
         if self.config.debug_mode:
