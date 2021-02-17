@@ -2655,7 +2655,8 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
-            paths = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_handoff, can_foul=self.can_foul).get_paths()
+            dijkstra = Dijkstra(self.game, self.player, directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent, can_block=self.can_block, can_handoff=self.can_handoff, can_foul=self.can_foul)
+            paths = dijkstra.get_paths(ttr=self.game.can_use_reroll(self.player.team))
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]
                 actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))

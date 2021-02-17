@@ -1138,9 +1138,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     $scope.local_state.board[y][x].block_dice = path.block_dice;
                     if (path.foul_roll !== null){
                         $scope.local_state.board[y][x].d6_rolls = [path.foul_roll];
+                        $scope.local_state.board[y][x].foul_roll = path.foul_roll;
                     }
                     if (path.handoff_roll !== null){
                         $scope.local_state.board[y][x].d6_rolls = [path.handoff_roll];
+                        $scope.local_state.board[y][x].handoff_roll = path.handoff_roll;
                     }
                 }
             }

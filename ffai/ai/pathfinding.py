@@ -13,7 +13,6 @@ from ffai.core.table import Skill, WeatherType, Tile
 import copy
 import numpy as np
 from queue import PriorityQueue
-from collections import namedtuple
 
 
 class Path:
@@ -533,7 +532,21 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
 
 class FNode:
 
-    def __init__(self, parent, position, moves_left, gfis_left, euclidean_distance, block_dice=None, foul_roll=None, handoff_roll=None):
+    TRR = 0
+    DODGE = 1
+    SURE_FEET = 2
+    SURE_HANDS = 3
+
+    def __init__(self,
+                 parent,
+                 position,
+                 moves_left,
+                 gfis_left,
+                 euclidean_distance,
+                 rr_states=None,
+                 block_dice=None,
+                 foul_roll=None,
+                 handoff_roll=None):
         self.parent = parent
         self.position = position
         self.moves_left = moves_left
@@ -544,44 +557,56 @@ class FNode:
         self.handoff_roll = handoff_roll
         self.rolls = []
         self.block_dice = block_dice
-        self.dodge_used_prob = 0 if parent is None else self.parent.dodge_used_prob
-        self.sure_feet_used_prob = 0 if parent is None else self.parent.sure_feet_used_prob
-        self.trr_used_prob = 0 if parent is None else self.parent.trr_used_prob
+        self.rr_states = rr_states if rr_states is not None else copy.deepcopy(parent.rr_states)
 
     def __lt__(self, other):
         return self.euclidean_distance < other.euclidean_distance
 
+    def _apply_roll(self, p, rerolls):
+        rr_states = {}
+        for rr_state, rr_state_p in self.rr_states.items():
+            rr_states[rr_state] = rr_state_p * p
+            for reroll in rerolls:
+                if rr_state[reroll]:
+                    self._add_fail_state(rr_states, rr_state, rr_state_p, p, reroll)
+        self.rr_states = rr_states
+        self.prob = sum(self.rr_states.values())
+
+    def _add_fail_state(self, rr_states, rr_state, rr_state_p, p, index):
+        rr_state_no_rr = [rr for rr in rr_state]
+        rr_state_no_rr[index] = False
+        rr_state_no_rr_p = rr_state_p * (1 - p) * p
+        rr_state_no_rr = tuple(rr_state_no_rr)
+        if rr_state_no_rr in rr_states:
+            rr_states[rr_state_no_rr] += rr_state_no_rr_p
+        else:
+            rr_states[rr_state_no_rr] = rr_state_no_rr_p
+
     def apply_gfi(self):
         self.rolls.append(2)
-        self.prob = self.prob * (5 / 6)
+        self._apply_roll(5 / 6, [self.SURE_FEET, self.TRR])
 
     def apply_dodge(self, target):
-        roll = target
-        self.prob = self.prob * ((7 - roll) / 6)
-        self.rolls.append(int(roll))
+        self.rolls.append(target)
+        self._apply_roll((7 - target) / 6, [self.DODGE, self.TRR])
 
     def apply_pickup(self, target):
-        self.prob = self.prob * ((7 - target) / 6)
-        self.rolls.append(int(target))
+        self.rolls.append(target)
+        self._apply_roll((7 - target) / 6, [self.SURE_HANDS, self.TRR])
+        # TODO: Should pickup be added to path prob?
 
     def apply_handoff(self, target):
         self.handoff_roll = target
 
     def apply_foul(self, target):
-        self.foul_roll = int(target)
+        self.foul_roll = target
 
     def apply_stand_up(self, target):
-        p = D6.TWO_PROBS[target] if target > 0 else 1
-        self.prob = self.prob * p
-        self.rolls.append(int(target))
+        self.rolls.append(target)
+        self._apply_roll((7 - target) / 6, [self.TRR])
 
 
 class Dijkstra:
-
-    # Improvements:
-    # Hashsets instead of arrays
-    # profiler
-    # Blitz moves
 
     DIRECTIONS = [Square(-1, -1),
                   Square(-1, 0),
@@ -612,11 +637,40 @@ class Dijkstra:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
+    def get_paths(self, ttr=False):
+
+        ma = self.player.get_ma() - self.player.state.moves
+        self.ma = max(0, ma)
+        gfis_used = 0 if ma >= 0 else -ma
+        self.gfis = 3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
+
+        if self.ma + self.gfis <= 0:
+            return []
+
+        can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
+        can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
+        can_sure_hands = self.player.has_skill(Skill.SURE_HANDS)
+        rr_states = {(ttr, can_dodge, can_sure_feet, can_sure_hands): 1}
+        node = FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, rr_states=rr_states)
+        if not self.player.state.up:
+            node = self._expand_stand_up(node)
+            self.nodes[node.position.y][node.position.x] = node
+        self.open_set.put((0, node))
+        self._expansion()
+        self._clear()
+
+        while len(self.risky_sets) > 0:
+            self._prepare_nodes()
+            self._expansion()
+            self._clear()
+
+        return self._collect_paths()
+
     def _get_pickup_target(self, to_pos):
         zones_to = self.tzones[to_pos.y][to_pos.x]
         modifiers = 1
         if not self.player.has_skill(Skill.BIG_HAND):
-            modifiers -= zones_to
+            modifiers -= int(zones_to)
         if self.game.state.weather == WeatherType.POURING_RAIN:
             if not self.player.has_skill(Skill.BIG_HAND):
                 modifiers -= 1
@@ -637,7 +691,7 @@ class Dijkstra:
         zones_to = self.tzones[to_pos.y][to_pos.x]
         modifiers = 1
         if not self.player.has_skill(Skill.BIG_HAND):
-            modifiers -= zones_to
+            modifiers -= int(zones_to)
         if self.game.state.weather == WeatherType.POURING_RAIN:
             if not self.player.has_skill(Skill.BIG_HAND):
                 modifiers -= 1
@@ -749,31 +803,6 @@ class Dijkstra:
         if prob not in self.risky_sets:
             self.risky_sets[prob] = []
         self.risky_sets[prob].append(node)
-
-    def get_paths(self):
-
-        ma = self.player.get_ma() - self.player.state.moves
-        self.ma = max(0, ma)
-        gfis_used = 0 if ma >= 0 else -ma
-        self.gfis = 3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
-
-        if self.ma + self.gfis <= 0:
-            return []
-
-        node = FNode(None, self.player.position, self.ma, self.gfis, euclidean_distance=0)
-        if not self.player.state.up:
-            node = self._expand_stand_up(node)
-            self.nodes[node.position.y][node.position.x] = node
-        self.open_set.put((0, node))
-        self._expansion()
-        self._clear()
-
-        while len(self.risky_sets) > 0:
-            self._prepare_nodes()
-            self._expansion()
-            self._clear()
-
-        return self._collect_paths()
 
     def _expand_stand_up(self, node):
         if self.player.has_skill(Skill.JUMP_UP):
