@@ -65,42 +65,57 @@ class Node:
         self.handoff_roll = handoff_roll
         self.rolls = []
         self.block_dice = block_dice
-        self.rr_states = rr_states if rr_states is not None else copy.deepcopy(parent.rr_states)
+        self.rr_states = rr_states if rr_states is not None else parent.rr_states
 
     def __lt__(self, other):
         return self.euclidean_distance < other.euclidean_distance
 
-    def _apply_roll(self, p, rerolls):
-        rr_states = {}
-        for rr_state, rr_state_p in self.rr_states.items():
-            rr_states[rr_state] = rr_state_p * p
-            for reroll in rerolls:
-                if rr_state[reroll]:
-                    self._add_fail_state(rr_states, rr_state, rr_state_p, p, reroll)
-        self.rr_states = rr_states
+    def _apply_roll(self, p, skill_rr, team_rr):
+        # Find new states
+        new_states = {}
+        for state, prev_p in self.rr_states.items():
+            p_success = prev_p * p
+            if state in new_states:
+                new_states[state] += p_success
+            else:
+                new_states[state] = prev_p * p
+            if skill_rr is not None and state[skill_rr]:
+                self._add_fail_state(new_states, state, prev_p, p, skill_rr)
+            elif state[team_rr]:
+                self._add_fail_state(new_states, state, prev_p, p, team_rr)
+        '''
+        # Merge new states with previous states
+        for rr_state, rr_state_p in new_rr_states.items():
+            if rr_state in self.rr_states:
+                self.rr_states[rr_state] += rr_state_p
+            else:
+                self.rr_states[rr_state] = rr_state_p
+        '''
+        # Merge with self.rr_state
+        self.rr_states = new_states
         self.prob = sum(self.rr_states.values())
 
-    def _add_fail_state(self, rr_states, rr_state, rr_state_p, p, index):
-        rr_state_no_rr = [rr for rr in rr_state]
-        rr_state_no_rr[index] = False
-        rr_state_no_rr_p = rr_state_p * (1 - p) * p
-        rr_state_no_rr = tuple(rr_state_no_rr)
-        if rr_state_no_rr in rr_states:
-            rr_states[rr_state_no_rr] += rr_state_no_rr_p
+    def _add_fail_state(self, new_states, prev_state, prev_state_p, p, index):
+        fail_state = [rr for rr in prev_state]
+        fail_state[index] = False
+        fail_state_p = prev_state_p * (1 - p) * p
+        fail_state = tuple(fail_state)
+        if fail_state in new_states:
+            new_states[fail_state] += fail_state_p
         else:
-            rr_states[rr_state_no_rr] = rr_state_no_rr_p
+            new_states[fail_state] = fail_state_p
 
     def apply_gfi(self):
         self.rolls.append(2)
-        self._apply_roll(5 / 6, [self.SURE_FEET, self.TRR])
+        self._apply_roll(5 / 6, self.SURE_FEET, self.TRR)
 
     def apply_dodge(self, target):
         self.rolls.append(target)
-        self._apply_roll((7 - target) / 6, [self.DODGE, self.TRR])
+        self._apply_roll((7 - target) / 6, self.DODGE, self.TRR)
 
     def apply_pickup(self, target):
         self.rolls.append(target)
-        self._apply_roll((7 - target) / 6, [self.SURE_HANDS, self.TRR])
+        self._apply_roll((7 - target) / 6, self.SURE_HANDS, self.TRR)
         # TODO: should pickup be added to path prob if it's the last step?
 
     def apply_handoff(self, target):
@@ -111,7 +126,7 @@ class Node:
 
     def apply_stand_up(self, target):
         self.rolls.append(target)
-        self._apply_roll((7 - target) / 6, [self.TRR])
+        self._apply_roll((7 - target) / 6, None, self.TRR)
 
 
 class Pathfinder:
@@ -141,6 +156,7 @@ class Pathfinder:
         self.current_prob = 1
         self.open_set = PriorityQueue()
         self.risky_sets = {}
+        self.target_found = False
         for p in game.get_players_on_pitch():
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
@@ -174,7 +190,7 @@ class Pathfinder:
         self._expansion(target)
         self._clear()
 
-        while len(self.risky_sets) > 0:
+        while not self.target_found and len(self.risky_sets) > 0:
             self._prepare_nodes()
             self._expansion(target)
             self._clear()
@@ -203,25 +219,40 @@ class Pathfinder:
         zones_from = self.tzones[from_pos.y][from_pos.x]
         if zones_from == 0:
             return None
-        zones_to = self.tzones[to_pos.y][to_pos.x]
+        zones_to = int(self.tzones[to_pos.y][to_pos.x])
         modifiers = 1
-        if not self.player.has_skill(Skill.BIG_HAND):
-            modifiers -= int(zones_to)
-        if self.game.state.weather == WeatherType.POURING_RAIN:
-            if not self.player.has_skill(Skill.BIG_HAND):
-                modifiers -= 1
-        if self.player.has_skill(Skill.EXTRA_ARMS):
+
+        ignore_opp_mods = False
+        if self.player.has_skill(Skill.STUNTY):
+            modifiers = 1
+            ignore_opp_mods = True
+        if self.player.has_skill(Skill.TITCHY):
             modifiers += 1
+            ignore_opp_mods = True
+        if self.player.has_skill(Skill.TWO_HEADS):
+            modifiers += 1
+
+        if not ignore_opp_mods:
+            modifiers -= zones_to
+
         target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
     def _expand(self, node: Node, target=None):
+        if target is not None:
+            if type(target) == Square and target.distance(node.position) > node.moves_left + node.gfis_left:
+                return
+            if type(target) == int and abs(target - node.position.x) > node.moves_left + node.gfis_left:
+                return
+            if type(target) == Square and node.position == target:
+                self.target_found = True
+                return
+            if type(target) == int and node.position.x == target:
+                self.target_found = True
+                return
         if node.moves_left + node.gfis_left == 0 or node.block_dice is not None:
             return
-        if type(target) == Square and target.distance(node.position) > node.moves_left + node.gfis_left:
-            return
-        if type(target) == int and abs(target - node.position.x) > node.moves_left + node.gfis_left:
-            return
+
         for direction in self.DIRECTIONS:
             next_node = self._expand_node(node, direction)
             if next_node is None:
@@ -457,7 +488,8 @@ def get_safest_path(game, player, position, from_position=None, allow_team_rerol
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz)
+    can_handoff = game.is_handoff_available() and game.get_ball_carrier() == player
+    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz, can_handoff=can_handoff)
     path = finder.get_path(target=position)
     if from_position is not None and num_moves_used != 0:
         _reset_state(game, player, orig_player, orig_ball)

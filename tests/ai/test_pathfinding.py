@@ -50,7 +50,7 @@ skills_and_rerolls_perms = [
 ]
 
 @pytest.mark.parametrize("skills_and_rerolls", skills_and_rerolls_perms)
-def test_all_paths(skills_and_rerolls):
+def test_get_safest_path(skills_and_rerolls):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
     position = Square(1, 1)
@@ -149,34 +149,6 @@ def test_dodge_needed_path_long():
     assert path.prob == (4 / 6)*(5 / 6)*(5 / 6)
 
 
-def test_path_to_player():
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.home_team)[0]
-    player.role.ma = 6
-    position = Square(1, 1)
-    game.put(player, position)
-    opp = game.get_reserves(game.state.away_team)[0]
-    opp_position = Square(1, 10)
-    game.put(opp, opp_position)
-    path = pf.get_safest_path_to_player(game, player, target_player=opp)
-    assert path is not None
-    assert len(path.steps) == 8
-    assert path.prob == (5 / 6)*(5 / 6)
-
-
-def test_path_to_player_too_far():
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.home_team)[0]
-    player.role.ma = 6
-    position = Square(1, 1)
-    game.put(player, position)
-    opp = game.get_reserves(game.state.away_team)[0]
-    opp_position = Square(1, 11)
-    game.put(opp, opp_position)
-    path = pf.get_safest_path_to_player(game, player, target_player=opp)
-    assert path is None
-
-
 def test_path_to_endzone_home():
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -219,7 +191,8 @@ def test_all_blitz_paths():
     game.put(opp_player, Square(3, 3))
     paths = pf.get_all_paths(game, player, blitz=True)
     assert paths is not None
-    assert len(paths) == 8
+    blitz_paths = [path for path in paths if path.block_dice is not None]
+    assert len(blitz_paths) == 1
 
 
 def test_all_blitz_paths_two():
@@ -233,5 +206,6 @@ def test_all_blitz_paths_two():
     game.put(opp_player, Square(4, 3))
     paths = pf.get_all_paths(game, player, blitz=True)
     assert paths is not None
-    assert len(paths) == 10
+    blitz_paths = [path for path in paths if path.block_dice is not None]
+    assert len(blitz_paths) == 2
 
