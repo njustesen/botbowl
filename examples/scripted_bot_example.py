@@ -240,7 +240,7 @@ class MyScriptedBot(ProcBot):
                     td_path = pf.get_safest_path_to_endzone(game, player, allow_team_reroll=True)
                     if td_path is None:
                         continue
-                    handoff_path = pf.get_safest_path(game, ball_carrier, player, allow_team_reroll=True)
+                    handoff_path = pf.get_safest_path(game, ball_carrier, player.position, allow_team_reroll=True)
                     if handoff_path is None:
                         continue
                     p_catch = game.get_catch_prob(player, handoff=True, allow_catch_reroll=True, allow_team_reroll=True)
@@ -378,15 +378,18 @@ class MyScriptedBot(ProcBot):
 
         #print("6. Blitz with open block players")
         if game.is_blitz_available():
+
             best_blitz_attacker = None
             best_blitz_defender = None
             best_blitz_score = None
             best_blitz_path = None
             for blitzer in open_players:
                 if blitzer.position is not None and not blitzer.state.used and blitzer.has_skill(Skill.BLOCK):
+                    print(f"Before: {len(game.get_players_on_pitch())}")
                     blitz_paths = pf.get_all_paths(game, blitzer, blitz=True)
+                    print(f"After: {len(game.get_players_on_pitch())}")
                     for path in blitz_paths:
-                        final_position = path.steps[-1] if len(path) > 0 else blitzer.position
+                        final_position = path.steps[-2] if len(path.steps) > 1 else blitzer.position
                         for defender in game.get_adjacent_players(final_position, team=game.get_opp_team(blitzer.team)):
                             p_self, p_opp, p_fumble_self, p_fumble_opp = game.get_blitz_probs(blitzer, final_position, defender)
                             p_self_up = path.prob * (1-p_self)
@@ -400,6 +403,7 @@ class MyScriptedBot(ProcBot):
                                 best_blitz_defender = defender
                                 best_blitz_score = score
                                 best_blitz_path = path
+            print(f"After After: {len(game.get_players_on_pitch())}")
             if best_blitz_attacker is not None and best_blitz_score >= 1.25:
                 self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
                 self.actions.append(Action(ActionType.MOVE, position=best_blitz_path.steps[-1]))
@@ -468,7 +472,7 @@ class MyScriptedBot(ProcBot):
                 path = None
                 for p in paths:
                     distance = p.steps[-1].distance(game.get_ball_position())
-                    if p.prob == 1 and shortest_distance is None or distance < shortest_distance:
+                    if shortest_distance is None or (p.prob == 1 and distance < shortest_distance):
                         shortest_distance = distance
                         path = p
             elif ball_carrier.team != self.my_team:
@@ -477,13 +481,13 @@ class MyScriptedBot(ProcBot):
                 path = None
                 for p in paths:
                     distance = p.steps[-1].distance(ball_carrier.position)
-                    if p.prob == 1 and shortest_distance is None or distance < shortest_distance:
+                    if shortest_distance is None or (p.prob == 1 and distance < shortest_distance):
                         shortest_distance = distance
                         path = p
             else:
                 continue
             if path is not None:
-                if len(steps) > 0:
+                if len(path.steps) > 0:
                     self.actions.append(Action(ActionType.START_MOVE, player=player))
                     self.actions.append(Action(ActionType.MOVE, position=path.steps[-1]))
                     #print(f"Move towards ball {player.role.name}")

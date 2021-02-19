@@ -11,7 +11,7 @@
     "turns": 8,
     "kick_off_table": true,
     "fast_mode": false,
-    "debug_mode": false,
+    "debug_mode": true,
     "competition_mode": true,
     "kick_scatter_dice": "d6",
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],

@@ -342,12 +342,14 @@ class Game:
         if self.config.debug_mode:
             print("Proc={}".format(proc))
             print("Action={}".format(action.action_type if action is not None else "None"))
+            print("Players on Field={}".format(len(self.get_players_on_pitch())))
 
         proc.done = proc.step(action)
 
         if self.config.debug_mode:
             print("Done={}".format(proc.done))
             print(f"DONE={self.state.stack.peek().done}")
+            print("Players on Field={}".format(len(self.get_players_on_pitch())))
 
         # Used if players was accidentally cloned
         if self.config.debug_mode:
@@ -993,12 +995,13 @@ class Game:
 
     def move(self, piece, position):
         """
-        Move a pirece already on the board. If the piece is a ball carrier, the ball is moved as well.
+        Move a piece already on the board. If the piece is a ball carrier, the ball is moved as well.
         :param piece:
         :param position:
         :return:
         """
         if type(piece) is Player:
+            assert self.get_player_at(position) is None
             for ball in self.state.pitch.balls:
                 if ball.position == piece.position and ball.is_carried:
                     ball.move_to(position)
@@ -1757,9 +1760,11 @@ class Game:
         blitzes from attack_position.
         """
         orig_position = self.get_square(attacker.position.x, attacker.position.y)
-        self.move(attacker, attack_position)
+        if attacker.position != attack_position:
+            self.move(attacker, attack_position)
         p_self, p_opp, p_fumble_self, p_fumble_opp = self.get_block_probs(attacker, defender)
-        self.move(attacker, orig_position)
+        if attacker.position != orig_position:
+            self.move(attacker, orig_position)
         return p_self, p_opp, p_fumble_self, p_fumble_opp
 
     def get_dodge_prob(self, player, position, allow_dodge_reroll=True, allow_team_reroll=False):

@@ -3599,12 +3599,10 @@ class TurnStunned(Procedure):
         self.team = team
 
     def step(self, action):
-        players = []
         for player in self.team.players:
             if player.state.stunned:
                 player.state.stunned = False
                 player.state.used = True
-                players.append(player)
         self.game.report(Outcome(OutcomeType.STUNNED_TURNED))
         return True
 
