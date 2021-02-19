@@ -1001,7 +1001,7 @@ class Game:
         :return:
         """
         if type(piece) is Player:
-            assert self.get_player_at(position) is None
+            assert self.get_player_at(position) is None or (type(piece) == Player and piece.state.in_air)
             for ball in self.state.pitch.balls:
                 if ball.position == piece.position and ball.is_carried:
                     ball.move_to(position)
@@ -2209,17 +2209,17 @@ class Game:
         """
         actions = []
         hand_off_positions = []
-        d6_rolls = []
+        rolls = []
         for player_to in self.get_adjacent_teammates(player):
             if player_to.can_catch():
                 hand_off_positions.append(player_to.position)
                 modifiers = self.get_catch_modifiers(player, player_to.position)
                 target = Rules.agility_table[player.get_ag()]
-                d6_rolls.append([min(6, max(2, target - modifiers))])
+                rolls.append([min(6, max(2, target - modifiers))])
 
         if len(hand_off_positions) > 0:
             actions.append(ActionChoice(ActionType.HANDOFF, team=player.team,
-                                        positions=hand_off_positions, d6_rolls=d6_rolls))
+                                        positions=hand_off_positions, rolls=rolls))
         return actions
 
     def get_stand_up_actions(self, player):
@@ -2231,7 +2231,7 @@ class Game:
                 rolls.append([stand_up_roll])
             else:
                 rolls.append([])
-            return [ActionChoice(ActionType.STAND_UP, team=player.team, d6_rolls=rolls)]
+            return [ActionChoice(ActionType.STAND_UP, team=player.team, rolls=rolls)]
         return []
 
     def get_adjacent_move_actions(self, player):
@@ -2266,7 +2266,7 @@ class Game:
                 d6_rolls.append(rolls)
             if len(move_positions) > 0:
                 actions.append(ActionChoice(ActionType.MOVE, team=player.team,
-                                            positions=move_positions, d6_rolls=d6_rolls))
+                                            positions=move_positions, rolls=d6_rolls))
 
         return actions
 
@@ -2275,7 +2275,7 @@ class Game:
         if player.can_use_skill(Skill.LEAP) and not self.is_quick_snap():
             sprints = 3 if player.has_skill(Skill.SPRINT) else 2
             gfi_roll = 3 if self.state.weather == WeatherType.BLIZZARD else 2
-            leap_d6_rolls = []
+            leap_rolls = []
             leap_positions = []
             modifiers = 0 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
             target = Rules.agility_table[player.get_ag()]
@@ -2293,10 +2293,10 @@ class Game:
                     if ball_at is not None and ball_at.on_ground:
                         modifiers = self.get_pickup_modifiers(player, square)
                         rolls.append(min(6, max(2, target - modifiers)))
-                    leap_d6_rolls.append(rolls)
+                    leap_rolls.append(rolls)
             if len(leap_positions) > 0:
                 actions.append(ActionChoice(ActionType.LEAP, team=player.team,
-                                            positions=leap_positions, d6_rolls=leap_d6_rolls))
+                                            positions=leap_positions, rolls=leap_rolls))
         return actions
 
     def get_foul_actions(self, player):
@@ -2316,7 +2316,7 @@ class Game:
 
         if len(foul_positions) > 0:
             actions.append(ActionChoice(ActionType.FOUL, team=player.team,
-                                        positions=foul_positions, d6_rolls=foul_rolls))
+                                        positions=foul_positions, rolls=foul_rolls))
         return actions
 
     def get_pickup_teammate_actions(self, player):
@@ -2327,7 +2327,7 @@ class Game:
             rolls = [2] if player.has_skill(Skill.ALWAYS_HUNGRY) else []
             d6_rolls = [rolls for _ in teammates]
             actions.append(ActionChoice(ActionType.PICKUP_TEAM_MATE, team=player.team,
-                                        positions=positions, d6_rolls=d6_rolls))
+                                        positions=positions, rolls=d6_rolls))
         return actions
 
     def get_block_actions(self, player, blitz=False):
@@ -2377,10 +2377,10 @@ class Game:
             actions.append(ActionChoice(ActionType.BLOCK, team=player.team,
                                         positions=block_positions,
                                         block_dice=block_dice,
-                                        d6_rolls=rolls))
+                                        rolls=rolls))
             if player.has_skill(Skill.STAB):
                 rolls = [roll + stab_rolls[i] for i, roll in enumerate(rolls)]
-                actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, d6_rolls=rolls))
+                actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, rolls=rolls))
 
         return actions
 
@@ -2414,7 +2414,7 @@ class Game:
                 else:
                     action_type = ActionType.PASS
                 actions.append(ActionChoice(action_type, team=player.team,
-                                            positions=positions, d6_rolls=d6_rolls))
+                                            positions=positions, rolls=d6_rolls))
         if dump_off:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=player.team, skill=Skill.DUMP_OFF))
         return actions
@@ -2429,11 +2429,11 @@ class Game:
                 modifier = self.get_hypno_modifier(player)
                 target = Rules.agility_table[player.get_ag()]
                 d6_roll = min(6, max(2, target - modifier))
-                d6_rolls = [[d6_roll]] * len(hypno_positions)
+                rolls = [[d6_roll]] * len(hypno_positions)
 
                 actions.append(ActionChoice(ActionType.HYPNOTIC_GAZE, team=player.team,
                                             skill=Skill.HYPNOTIC_GAZE, positions=hypno_positions,
-                                            d6_rolls=d6_rolls))
+                                            rolls=rolls))
         return actions
 
     def purge_stack_until(self, proc_class, inclusive=False):

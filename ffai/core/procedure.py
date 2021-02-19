@@ -1226,12 +1226,12 @@ class Interception(Procedure):
         return True
 
     def available_actions(self):
-        d6_rolls = []
+        rolls = []
         for interceptor in self.interceptors:
             modifier = self.game.get_catch_modifiers(interceptor, interception=True)
-            d6_rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
+            rolls.append([max(2, min(6, Rules.agility_table[interceptor.get_ag()] - modifier))])
         return [ActionChoice(ActionType.SELECT_PLAYER, team=self.team,
-                             players=self.interceptors, d6_rolls=d6_rolls),
+                             players=self.interceptors, rolls=rolls),
                 ActionChoice(ActionType.SELECT_NONE, team=self.team)]
 
 
@@ -2653,9 +2653,9 @@ class MoveAction(Procedure):
 
     def available_actions(self):
         if self.steps is not None and len(self.steps) > 0:
-            return []
+            return []  # No actions -> Continue path
         if self.player.state.taken_root:
-            return []
+            return [ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team)]
         actions = []
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
@@ -2697,7 +2697,7 @@ class HandoffAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None or player_at == self.player:
+            if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
             action = Action(ActionType.HANDOFF, position=self.steps.pop(0))
             self.steps = None
@@ -2837,7 +2837,7 @@ class FoulAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None or player_at.team == self.player.team and player_at.state.up:
+            if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
             action = Action(ActionType.FOUL, position=self.steps.pop(0))
             self.steps = None
@@ -2918,7 +2918,7 @@ class BlitzAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None or player_at == self.player:
+            if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
             action = Action(ActionType.BLOCK, position=self.steps.pop(0))
             self.steps = None

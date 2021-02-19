@@ -212,8 +212,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.getD6Rolls = function getD6Rolls(square, scaled){
-            if ($scope.special_action_selected !== null && square.special_d6_rolls[$scope.special_action_selected.action_type] !== undefined) {
-                let rolls = square.special_d6_rolls[$scope.special_action_selected.action_type];
+            if ($scope.special_action_selected !== null && square.special_rolls[$scope.special_action_selected.action_type] !== undefined) {
+                let rolls = square.special_rolls[$scope.special_action_selected.action_type];
                 if (scaled){
                     if ($scope.special_action_selected.action_type === "STAB"){
                         let scaled_rolls = [];
@@ -226,7 +226,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 }
                 return rolls;
             } else {
-                return square.d6_rolls;
+                return square.rolls;
             }
         };
 
@@ -479,9 +479,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 path: null,
                 action_type: undefined,
                 on_path: false,
-                d6_rolls: [],
+                rolls: [],
                 special_actions: [],
-                special_d6_rolls: [],
+                special_rolls: [],
                 roll: false,
                 block_dice: 0,
                 area: area,
@@ -521,14 +521,14 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_dodge_rolls = [];
             $scope.available_leap_rolls = [];
             $scope.available_block_dice = [];
-            $scope.available_block_d6_rolls = [];
+            $scope.available_block_rolls = [];
             $scope.available_handoff_rolls = [];
             $scope.available_pass_rolls = [];
             $scope.available_players = [];
             $scope.available_interception_players = [];
             $scope.available_interception_rolls = [];
             $scope.special_actions = [];
-            $scope.special_d6_rolls = {};
+            $scope.special_rolls = {};
             $scope.special_positions = {};
             $scope.available_select_rolls = [];
             $scope.main_action = null;
@@ -550,12 +550,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;
                             $scope.available_block_dice = action.block_dice;
-                            $scope.available_block_d6_rolls = action.d6_rolls;
+                            $scope.available_block_rolls = action.rolls;
                         } else if (action.action_type === "PASS"){
                             $scope.available_pass_positions = action.positions;
-                            $scope.available_pass_rolls = action.d6_rolls;
+                            $scope.available_pass_rolls = action.rolls;
                             $scope.special_actions.push("PASS");
-                            $scope.special_d6_rolls["PASS"] = action.d6_rolls;
+                            $scope.special_rolls["PASS"] = action.rolls;
                             $scope.special_positions["PASS"] = action.positions;
                         } else if (action.action_type === "HANDOFF"){
                             $scope.available_handoff_positions = action.positions;
@@ -563,26 +563,26 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.available_foul_positions = action.positions;
                         } else if (action.action_type === "MOVE"){
                             $scope.available_move_positions = action.positions;
-                            $scope.available_dodge_rolls = action.d6_rolls;
+                            $scope.available_dodge_rolls = action.rolls;
                         } else if (action.action_type === "LEAP") {
                             $scope.special_actions.push("LEAP");
-                            $scope.special_d6_rolls["LEAP"] = action.d6_rolls;
+                            $scope.special_rolls["LEAP"] = action.rolls;
                             $scope.special_positions["LEAP"] = action.positions;
                         } else if (action.action_type === "STAB"){
                             $scope.special_actions.push("STAB");
-                            $scope.special_d6_rolls["STAB"] = action.d6_rolls;
+                            $scope.special_rolls["STAB"] = action.rolls;
                             $scope.special_positions["STAB"] = action.positions;
                         } else if (action.action_type === "HYPNOTIC_GAZE"){
                             $scope.special_actions.push("HYPNOTIC_GAZE");
-                            $scope.special_d6_rolls["HYPNOTIC_GAZE"] = action.d6_rolls;
+                            $scope.special_rolls["HYPNOTIC_GAZE"] = action.rolls;
                             $scope.special_positions["HYPNOTIC_GAZE"] = action.positions;
                         } else if (action.action_type === "PICKUP_TEAM_MATE"){
                             $scope.special_actions.push("PICKUP_TEAM_MATE");
-                            $scope.special_d6_rolls["PICKUP_TEAM_MATE"] = action.d6_rolls;
+                            $scope.special_rolls["PICKUP_TEAM_MATE"] = action.rolls;
                             $scope.special_positions["PICKUP_TEAM_MATE"] = action.positions;
                         } else if (action.action_type === "THROW_TEAM_MATE"){
                             $scope.special_actions.push("THROW_TEAM_MATE");
-                            $scope.special_d6_rolls["THROW_TEAM_MATE"] = action.d6_rolls;
+                            $scope.special_rolls["THROW_TEAM_MATE"] = action.rolls;
                             $scope.special_positions["THROW_TEAM_MATE"] = action.positions;
                             $scope.special_action_selected = action;
                         } else {
@@ -595,11 +595,11 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     let active_player = $scope.getPlayer(active_player_id);
                     let stand_up_position = active_player.position;
                     $scope.available_select_positions = [stand_up_position];
-                    $scope.available_select_rolls = action.d6_rolls;
+                    $scope.available_select_rolls = action.rolls;
                 }
-                if (action.action_type === "SELECT_PLAYER" && action.d6_rolls.length > 0) {
+                if (action.action_type === "SELECT_PLAYER" && action.rolls.length > 0) {
                     $scope.available_interception_players = action.player_ids;
-                    $scope.available_interception_rolls = action.d6_rolls;
+                    $scope.available_interception_rolls = action.rolls;
                     $scope.main_action = action;
                 } else {
                     // Add available players
@@ -652,7 +652,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     // Pitch positions
                 } else if (position != null) {
                     $scope.local_state.board[position.y][position.x].available = true;
-                    $scope.local_state.board[position.y][position.x].d6_rolls = roll;
+                    $scope.local_state.board[position.y][position.x].rolls = roll;
                     if ($scope.main_action !== null) {
                         $scope.local_state.board[position.y][position.x].action_type = $scope.main_action.action_type;
                     }
@@ -688,7 +688,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                             $scope.local_state.board[position.y][position.x].available = true;
                             $scope.local_state.board[position.y][position.x].action_type = "PASS";
                             if ($scope.available_pass_rolls.length > i) {
-                                $scope.local_state.board[position.y][position.x].d6_rolls = $scope.available_pass_rolls[i];
+                                $scope.local_state.board[position.y][position.x].rolls = $scope.available_pass_rolls[i];
                             }
                         }
                     }
@@ -702,7 +702,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.local_state.board[position.y][position.x].available = true;
                 $scope.local_state.board[position.y][position.x].action_type = "SELECT_PLAYER";
                 if ($scope.available_interception_rolls.length > i){
-                    $scope.local_state.board[position.y][position.x].d6_rolls = $scope.available_interception_rolls[i];
+                    $scope.local_state.board[position.y][position.x].rolls = $scope.available_interception_rolls[i];
                 }
             }
 
@@ -717,7 +717,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.local_state.board[pos.y][pos.x].available = true;
                 $scope.local_state.board[pos.y][pos.x].action_type = "MOVE";
                 if ($scope.available_dodge_rolls.length > i){
-                    $scope.local_state.board[pos.y][pos.x].d6_rolls = $scope.available_dodge_rolls[i];
+                    $scope.local_state.board[pos.y][pos.x].rolls = $scope.available_dodge_rolls[i];
                 }
             }
 
@@ -729,8 +729,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 if ($scope.available_block_dice.length > i){
                     $scope.local_state.board[position.y][position.x].block_dice = $scope.available_block_dice[i];
                 }
-                if ($scope.available_block_d6_rolls.length > i){
-                    $scope.local_state.board[position.y][position.x].d6_rolls = $scope.available_block_d6_rolls[i];
+                if ($scope.available_block_rolls.length > i){
+                    $scope.local_state.board[position.y][position.x].rolls = $scope.available_block_rolls[i];
                 }
             }
 
@@ -748,7 +748,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 $scope.local_state.board[position.y][position.x].available = true;
                 $scope.local_state.board[position.y][position.x].action_type = "HANDOFF";
                 if ($scope.available_dodge_rolls.length > i){
-                    $scope.local_state.board[position.y][position.x].d6_rolls = $scope.available_handoff_rolls[i];
+                    $scope.local_state.board[position.y][position.x].rolls = $scope.available_handoff_rolls[i];
                 }
             }
             // Special actions: TODO: do like this for all actions
@@ -757,8 +757,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 for (let j in $scope.special_positions[action]) {
                     let pos = $scope.special_positions[action][j];
                     $scope.local_state.board[pos.y][pos.x].special_actions.push(action);
-                    if ($scope.special_d6_rolls[action].length > j){  // TODO: Is this check necessary?
-                        $scope.local_state.board[pos.y][pos.x].special_d6_rolls[action] = $scope.special_d6_rolls[action][j];
+                    if ($scope.special_rolls[action].length > j){  // TODO: Is this check necessary?
+                        $scope.local_state.board[pos.y][pos.x].special_rolls[action] = $scope.special_rolls[action][j];
                     }
                 }
             }
@@ -998,7 +998,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     $scope.local_state.board[y][x].available = false;
                     $scope.local_state.board[y][x].roll = false;
                     $scope.local_state.board[y][x].block_dice = 0;
-                    $scope.local_state.board[y][x].d6_rolls = [];
+                    $scope.local_state.board[y][x].rolls = [];
                 }
             }
             for (let y = 0; y < $scope.local_state.home_dugout.length; y++){
@@ -1171,7 +1171,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.resetPaths = function resetPaths(){
             for (let y = 0; y < $scope.game.state.pitch.board.length; y++) {
                 for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
-                    $scope.local_state.board[y][x].d6_rolls = [];
+                    $scope.local_state.board[y][x].rolls = [];
                     $scope.local_state.board[y][x].on_path = false;
                     $scope.local_state.board[y][x].block_dice = 0;
                     $scope.local_state.board[y][x].foul_roll = null;
@@ -1184,16 +1184,16 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             for (let i=0; i < path.steps.length; i++){
                 let x = path.steps[i].x;
                 let y = path.steps[i].y;
-                $scope.local_state.board[y][x].d6_rolls = path.rolls[i];
+                $scope.local_state.board[y][x].rolls = path.rolls[i];
                 $scope.local_state.board[y][x].on_path = true;
                 if (i === path.steps.length-1){
                     $scope.local_state.board[y][x].block_dice = path.block_dice;
                     if (path.foul_roll !== null){
-                        $scope.local_state.board[y][x].d6_rolls = [path.foul_roll];
+                        $scope.local_state.board[y][x].rolls = [path.foul_roll];
                         $scope.local_state.board[y][x].foul_roll = path.foul_roll;
                     }
                     if (path.handoff_roll !== null){
-                        $scope.local_state.board[y][x].d6_rolls = [path.handoff_roll];
+                        $scope.local_state.board[y][x].rolls = [path.handoff_roll];
                         $scope.local_state.board[y][x].handoff_roll = path.handoff_roll;
                     }
                 }
