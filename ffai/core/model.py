@@ -145,34 +145,7 @@ class Configuration:
         self.defensive_formations = []
         self.time_limits = None
 
-class LoggedState:
-    def __init__(self):
-        super().__setattr__("_logger", None)
-        super().__setattr__("_logging_enabled", False)
 
-    def __setattr__(self, key, value):
-        if getattr(self, "_logging_enabled"):
-            from_val = getattr(self, key) if hasattr(self, key) else None
-
-            log_entry = (self, key, from_val, value)  # Log entry
-            self._logger.log_state_change(*log_entry)
-        super().__setattr__(key, value)
-
-    def reset_to(self, key, value):
-        super().__setattr__(key, value)
-
-    def set_logger_state(self, state):
-        super().__setattr__("_logging_enabled", state)
-
-    def set_logger(self, logger):
-        super().__setattr__("_logger", logger)
-        self.set_logger_state(True)
-
-    def __eq__(self, other):
-        """
-        For testing purposes. Makes class unhashable.
-        """
-        return self.to_json() == other.to_json()
 
 
 class PlayerState(LoggedState):
@@ -191,12 +164,12 @@ class PlayerState(LoggedState):
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.injuries_gained = []
+        self.injuries_gained = [] #log
         self.wild_animal = False
         self.taken_root = False
         self.blood_lust = False 
-        self.used_skills = set()
-        self.squares_moved = []
+        self.used_skills = set() #log
+        self.squares_moved = [] #log
 
     def to_json(self):
         return {
@@ -379,8 +352,8 @@ class GameState(LoggedState):
 
     def __init__(self, game, home_team, away_team):
         super().__init__()
-        self.stack = Stack()
-        self.reports = []
+        self.stack = Stack() #special log
+        self.reports = [] #special log
         self.half = 1
         self.round = 0
         self.coin_toss_winner = None
@@ -389,30 +362,32 @@ class GameState(LoggedState):
         self.kicking_this_drive = None
         self.receiving_this_drive = None
         self.current_team = None
-        self.teams = [home_team, away_team]
-        self.home_team = home_team
-        self.away_team = away_team
-        self.team_by_id = {team.team_id: team for team in self.teams}
-        self.player_by_id = {}
-        self.team_by_player_id = {}
+        self.teams = [home_team, away_team] #constant
+        self.home_team = home_team #constant-isch
+        self.away_team = away_team #constant-isch
+        self.team_by_id = {team.team_id: team for team in self.teams} #constant
+        self.player_by_id = {} #constant after init
+        self.team_by_player_id = {} #constant after init
         for team in self.teams:
-            team.state.set_logger(game)
+            team.state.set_logger(game.state_log)
             for player in team.players:
-                player.state.set_logger(game)
+                player.state.set_logger(game.state_log)
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
-        self.pitch = Pitch(game.arena.width, game.arena.height)
+        self.pitch = Pitch(game.arena.width, game.arena.height) # Special to track balls
         self.dugouts = {team.team_id: Dugout(team) for team in self.teams}
         self.weather = WeatherType.NICE
         self.gentle_gust = False
-        self.turn_order = []
+        self.turn_order = [] #log
         self.spectators = 0
         self.active_player = None
         self.game_over = False
-        self.available_actions = []
-        self.clocks = []
-        self.rerolled_procs = set()
+        self.available_actions = [] # Calculate after reversing state
+        self.clocks = [] # Doesn't need tracking for MCTS purpose
+        self.rerolled_procs = set() # Log
         self.player_action_type = None
+
+        self.set_logger(game.state_log)
 
     def to_json(self, ignore_reports=False):
         return {
@@ -756,14 +731,14 @@ class BBDie(Die):
         }
 
 
-class Dugout:
+class Dugout(LoggedState): # All except team needs logging here.
 
     def __init__(self, team):
         self.team = team
         self.reserves = []
         self.kod = []
         self.casualties = []
-        self.dungeon = []  # Ejected
+        self.dungeon = [] # Ejected
 
     def to_json(self):
         return {

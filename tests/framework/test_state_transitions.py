@@ -2,6 +2,7 @@ from tests.util import *
 import pytest
 from copy import deepcopy
 from ffai.core.table import *
+from ffai.core.util import compare_json
 
 def test_game_state_revert():
     # Init
@@ -17,17 +18,27 @@ def test_game_state_revert():
 
     # Prepare test
     init_state = deepcopy(game.state)
-    game.logging_enabled = True
-    assert init_state == game.state
+    game.state_log.enabled = True
+    saved_step = game.state_log.current_step
+    assert init_state.to_json() == game.state.to_json()
 
     # Do the thing that will be reverted
     game.state.weather = WeatherType.SWELTERING_HEAT
     player.state.stunned = True
 
     # Revert and assert
-    assert not init_state == game.state
-    game.revert_state()
-    assert init_state == game.state
+    assert not init_state.to_json() == game.state.to_json()
+    game.state_log.step_backward(to_step=saved_step)
+
+    assert not player.state.stunned
+    assert game.state.weather != WeatherType.SWELTERING_HEAT
+
+
+
+    for s in compare_json(init_state.to_json(), game.state.to_json()):
+        print(s)
+
+    assert init_state.to_json() == game.state.to_json()
 
     # catcher = team.players[1]
     # catcher_position = Square(passer.position.x + 12, passer.position.y + 0)
