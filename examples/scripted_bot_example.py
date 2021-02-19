@@ -385,9 +385,7 @@ class MyScriptedBot(ProcBot):
             best_blitz_path = None
             for blitzer in open_players:
                 if blitzer.position is not None and not blitzer.state.used and blitzer.has_skill(Skill.BLOCK):
-                    print(f"Before: {len(game.get_players_on_pitch())}")
                     blitz_paths = pf.get_all_paths(game, blitzer, blitz=True)
-                    print(f"After: {len(game.get_players_on_pitch())}")
                     for path in blitz_paths:
                         final_position = path.steps[-2] if len(path.steps) > 1 else blitzer.position
                         for defender in game.get_adjacent_players(final_position, team=game.get_opp_team(blitzer.team)):
@@ -403,7 +401,6 @@ class MyScriptedBot(ProcBot):
                                 best_blitz_defender = defender
                                 best_blitz_score = score
                                 best_blitz_path = path
-            print(f"After After: {len(game.get_players_on_pitch())}")
             if best_blitz_attacker is not None and best_blitz_score >= 1.25:
                 self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
                 self.actions.append(Action(ActionType.MOVE, position=best_blitz_path.steps[-1]))

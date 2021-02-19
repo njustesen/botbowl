@@ -252,6 +252,9 @@ class Stab(Procedure):
         self.blitz = blitz
         self.gfi = gfi
 
+    def end(self):
+        self.attacker.state.has_blocked = True
+
     def step(self, action):
         # GfI
         if self.gfi:
@@ -310,6 +313,7 @@ class Block(Procedure):
 
     def __init__(self, game, attacker, defender, blitz=False, frenzy_block=False, gfi=False):
         super().__init__(game)
+        assert attacker != defender
         self.attacker = attacker
         self.defender = defender
         self.roll = None
@@ -333,6 +337,9 @@ class Block(Procedure):
     def start(self):
         self.waiting_dump_off = self.game.get_ball_carrier() == self.defender and self.defender.has_skill(Skill.DUMP_OFF) and not self.frenzy_block
         self.waiting_foul_appearance = self.defender.has_skill(Skill.FOUL_APPEARANCE)
+
+    def end(self):
+        self.attacker.state.has_blocked = True
 
     def step(self, action):
 
@@ -2449,6 +2456,7 @@ class EndPlayerTurn(Procedure):
         self.game.state.active_player = None
         self.player.state.squares_moved.clear()
         self.game.state.player_action_type = None
+        self.player.state.has_blocked = False
         return True
 
 
@@ -2562,18 +2570,15 @@ class AlwaysHungry(Procedure):
 
 class MoveAction(Procedure):
 
-    def __init__(self, game, player, is_move_action=True, can_block=False, can_handoff=False, can_foul=False):
+    def __init__(self, game, player, player_action_type=PlayerActionType.MOVE):
         super().__init__(game)
         self.player = player
-        self.is_move_action = is_move_action
-        self.can_block = can_block
-        self.can_handoff = can_handoff
-        self.can_foul = can_foul
+        self.player_action_type = player_action_type
         self.paths = {}
         self.steps = None
 
     def start(self):
-        if self.is_move_action:
+        if self.player_action_type == PlayerActionType.MOVE:
             self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
             self.game.state.player_action_type = PlayerActionType.MOVE
 
@@ -2639,7 +2644,7 @@ class MoveAction(Procedure):
             self.player.state.moves += 1
             return False
 
-        if action.action_type == ActionType.HYPNOTIC_GAZE and self.is_move_action:
+        if action.action_type == ActionType.HYPNOTIC_GAZE and self.player_action_type == PlayerActionType.MOVE:
 
             EndPlayerTurn(self.game, self.player)
             target_opponent = self.game.get_player_at(action.position)
@@ -2655,12 +2660,15 @@ class MoveAction(Procedure):
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
         else:
+            can_block = self.player_action_type == PlayerActionType.BLITZ and not self.player.state.has_blocked
+            can_foul = self.player_action_type == PlayerActionType.FOUL
+            can_handoff = self.player_action_type == PlayerActionType.HANDOFF and self.game.has_ball(self.player)
             pathfinder = Pathfinder(self.game,
                                     self.player,
                                     directly_to_adjacent=self.game.config.pathfinding_directly_to_adjacent,
-                                    can_block=self.can_block,
-                                    can_handoff=self.can_handoff,
-                                    can_foul=self.can_foul,
+                                    can_block=can_block,
+                                    can_handoff=can_handoff,
+                                    can_foul=can_foul,
                                     trr=self.game.can_use_reroll(self.player.team))
             paths = pathfinder.get_paths()
             if len(paths) > 0:
@@ -2669,7 +2677,7 @@ class MoveAction(Procedure):
             self.paths = {path.steps[-1]: path for path in paths}
         actions += self.game.get_stand_up_actions(self.player)
         actions += self.game.get_leap_actions(self.player)
-        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.is_move_action:
+        if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player_action_type == PlayerActionType.MOVE:
             actions += self.game.get_hypnotic_gaze_actions(self.player)
         actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
         return actions
@@ -2678,7 +2686,7 @@ class MoveAction(Procedure):
 class HandoffAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, can_handoff=True)
+        super().__init__(game, player, player_action_type=PlayerActionType.HANDOFF)
 
     def start(self):
         self.game.use_handoff_action()
@@ -2689,14 +2697,16 @@ class HandoffAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None or player_at.team != self.player.team and player_at.can_catch():
+            if player_at is None or player_at == self.player:
                 return super().step(action)
             action = Action(ActionType.HANDOFF, position=self.steps.pop(0))
             self.steps = None
 
         if action.action_type is ActionType.HANDOFF:
             EndPlayerTurn(self.game, self.player)
-            Handoff(self.game, self.game.get_ball_at(self.player.position), self.player, action.position,
+            ball = self.game.get_ball_at(self.player.position)
+            assert ball is not None
+            Handoff(self.game, ball, self.player, action.position,
                     self.game.get_player_at(action.position))
             return True
         return super().step(action)
@@ -2705,8 +2715,10 @@ class HandoffAction(MoveAction):
         # If MoveAction is following a path -> continue
         if self.steps is not None:
             return []
+        # Handoff actions will be included in paths
         actions = super().available_actions()
-        if self.game.has_ball(self.player):
+        # If pathfinding not enabled add them
+        if not self.game.config.pathfinding_enabled and self.game.has_ball(self.player):
             actions.extend(self.game.get_handoff_actions(self.player))
         return actions
 
@@ -2714,7 +2726,7 @@ class HandoffAction(MoveAction):
 class PassAction(MoveAction):
 
     def __init__(self, game, player, dump_off=False):
-        super().__init__(game, player, is_move_action=False)
+        super().__init__(game, player, player_action_type=PlayerActionType.PASS)
         self.dump_off = dump_off
         self.picked_up_teammate = None
 
@@ -2814,7 +2826,7 @@ class ThrowBombAction(Procedure):
 class FoulAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, can_foul=True)
+        super().__init__(game, player, player_action_type=PlayerActionType.FOUL)
 
     def start(self):
         self.game.use_foul_action()
@@ -2893,9 +2905,8 @@ class BlockAction(Procedure):
 class BlitzAction(MoveAction):
 
     def __init__(self, game, player):
-        super().__init__(game, player, is_move_action=False, can_block=True)
+        super().__init__(game, player, player_action_type=PlayerActionType.BLITZ)
         self.player = player
-        self.block_used = False
 
     def start(self):
         self.game.use_blitz_action()
@@ -2907,7 +2918,7 @@ class BlitzAction(MoveAction):
         # Continue moving along path
         if action is None:
             player_at = self.game.get_player_at(self.steps[0])
-            if player_at is None:
+            if player_at is None or player_at == self.player:
                 return super().step(action)
             action = Action(ActionType.BLOCK, position=self.steps.pop(0))
             self.steps = None
@@ -2917,7 +2928,6 @@ class BlitzAction(MoveAction):
             return True
 
         if action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
-            self.can_block = False
             defender = self.game.get_player_at(action.position)
             move_needed = 1
             if not self.player.state.up:
@@ -2945,11 +2955,11 @@ class BlitzAction(MoveAction):
         # If MoveAction is following a path -> continue
         if self.steps is not None:
             return []
-        # Moce actions will include block moves if pathfinding is enabled
+        # Move actions will include block moves if pathfinding is enabled
         actions = super().available_actions()
         # Else find them for this square
         if not self.game.config.pathfinding_enabled:
-            actions += self.game.get_block_actions(self.player, blitz=True) if self.can_block else []
+            actions += self.game.get_block_actions(self.player, blitz=True)
         return actions
 
 
@@ -3076,6 +3086,7 @@ class Push(Procedure):
 
     def __init__(self, game, pusher, player, knock_down=False, blitz=False, chain=False):
         super().__init__(game)
+        assert pusher != player
         self.pusher = pusher
         self.player = player
         self.knock_down = knock_down

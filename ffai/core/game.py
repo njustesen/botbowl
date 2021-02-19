@@ -2332,6 +2332,9 @@ class Game:
 
     def get_block_actions(self, player, blitz=False):
 
+        if player.state.has_blocked:
+            return []
+
         move_needed = 1 if blitz else 0
         jump_up_rolls = []
         if not player.state.up:

@@ -169,6 +169,7 @@ class PlayerState:
         self.blood_lust = False 
         self.used_skills = set()
         self.squares_moved = []
+        self.has_blocked = False
 
     def to_json(self):
         return {
@@ -188,7 +189,8 @@ class PlayerState:
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
             'taken_root': self.taken_root, 
-            'blood_lust': self.blood_lust
+            'blood_lust': self.blood_lust,
+            'has_blocked': self.has_blocked
         }
 
     def reset(self):

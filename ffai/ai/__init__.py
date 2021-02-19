@@ -67,3 +67,58 @@ register(
             'away_team': load_team_by_filename('human-1', ruleset, board_size=1)
             }
 )
+
+register(
+    id='FFAI-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-11-pf"),
+            'home_team': load_team_by_filename('human', ruleset, board_size=11),
+            'away_team': load_team_by_filename('human', ruleset, board_size=11)
+            }
+)
+
+# With patfinding enabled
+register(
+    id='FFAI-11-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-11-pf"),
+            'home_team': load_team_by_filename('human', ruleset, board_size=11),
+            'away_team': load_team_by_filename('human', ruleset, board_size=11)
+            }
+)
+
+register(
+    id='FFAI-7-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-7-pf"),
+            'home_team': load_team_by_filename('human-7', ruleset, board_size=7),
+            'away_team': load_team_by_filename('human-7', ruleset, board_size=7)
+            }
+)
+
+register(
+    id='FFAI-5-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-5-pf"),
+            'home_team': load_team_by_filename('human-5', ruleset, board_size=5),
+            'away_team': load_team_by_filename('human-5', ruleset, board_size=5)
+            }
+)
+
+register(
+    id='FFAI-3-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-3-pf"),
+            'home_team': load_team_by_filename('human-3', ruleset, board_size=3),
+            'away_team': load_team_by_filename('human-3', ruleset, board_size=3)
+            }
+)
+
+register(
+    id='FFAI-1-v3',
+    entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("ff-1-pf"),
+            'home_team': load_team_by_filename('human-1', ruleset, board_size=1),
+            'away_team': load_team_by_filename('human-1', ruleset, board_size=1)
+            }
+)
