@@ -68,6 +68,6 @@ if __name__ == "__main__":
             print(steps)
 
             # Render
-            env.render(feature_layers=False)
+            env.render(feature_layers=True)
 
     print(steps)

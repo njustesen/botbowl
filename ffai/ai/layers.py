@@ -309,7 +309,9 @@ class RollProbabilityLayer(FeatureLayer):
         for action_choice in game.state.available_actions:
             for i in range(len(action_choice.positions)):
                 if action_choice.positions[i] is not None:
-                    if i < len(action_choice.rolls):
+                    if len(action_choice.paths) == len(action_choice.positions):
+                        out[action_choice.positions[i].y][action_choice.positions[i].x] = action_choice.paths[i].prob
+                    elif i < len(action_choice.rolls):
                         # Convert to chance of succeeding
                         chance = 1.0
                         for roll in action_choice.rolls[i]:
