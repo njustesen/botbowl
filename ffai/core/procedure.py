@@ -49,6 +49,24 @@ class Procedure:
         """
         return []
 
+    def __eq__(self, other):
+        # TODO: This makes the class not hashable.. Which is a problem!
+
+        if type(self) != type(other):
+            return False
+
+        for attr_name in dir(self):
+            if attr_name[0] == "_" or callable(getattr(self, attr_name)) or attr_name == "game":
+                continue
+
+            if getattr(self, attr_name) != getattr(other, attr_name):
+                return False
+
+        return True
+
+    def __hash__(self):
+        raise NotImplementedError("Procs need hashes. Need to custom make it because custom __eq__")
+
 
 class Regeneration(Procedure):
 
@@ -2423,6 +2441,10 @@ class PlaceBall(Procedure):
         self.game.state.pitch.balls.append(self.ball)
         self.ball.on_ground = False
         self.ball.move_to(action.position)
+
+        # This doesn't belong here, but I can find a better place.
+        self.ball.set_logger(self.game.state_log)
+
         self.game.report(Outcome(OutcomeType.BALL_PLACED, position=action.position, team=self.game.get_kicking_team()))
         self.game.remove_secondary_clocks()
         return True

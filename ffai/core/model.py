@@ -169,7 +169,7 @@ class PlayerState(LoggedState):
         self.taken_root = False
         self.blood_lust = False 
         self.used_skills = set() #log
-        self.squares_moved = [] #log
+        self.squares_moved = LoggedList([])
 
     def to_json(self):
         return {
@@ -351,7 +351,7 @@ class Clock:
 class GameState(LoggedState):
 
     def __init__(self, game, home_team, away_team):
-        super().__init__()
+        super().__init__(ignored_keys=["available_actions", "clocks"])
         self.stack = Stack() #special log
         self.reports = [] #special log
         self.half = 1
@@ -372,6 +372,8 @@ class GameState(LoggedState):
             team.state.set_logger(game.state_log)
             for player in team.players:
                 player.state.set_logger(game.state_log)
+                player.set_logger(game.state_log)
+                player.state.squares_moved.set_logger(game.state_log)
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
         self.pitch = Pitch(game.arena.width, game.arena.height) # Special to track balls
@@ -380,16 +382,25 @@ class GameState(LoggedState):
         self.gentle_gust = False
         self.turn_order = [] #log
         self.spectators = 0
-        self.active_player = None
+        self.active_player = None # Log as usual, player is logged.
         self.game_over = False
-        self.available_actions = [] # Calculate after reversing state
+        self.available_actions = []  # TODO: Calculate after reversing state
         self.clocks = [] # Doesn't need tracking for MCTS purpose
         self.rerolled_procs = set() # Log
         self.player_action_type = None
 
         self.set_logger(game.state_log)
+        self.stack.items.set_logger(game.state_log)
 
-    def to_json(self, ignore_reports=False):
+    def compare(self, other, trace=False):
+        errors = compare_iterable(self.to_json(ignore_reports=True, ignore_clocks=True),
+                                  other.to_json(ignore_reports=True, ignore_clocks=True), path="state")
+
+        errors.extend(compare_iterable(self.stack.items, other.stack.items, path="state.stack.items"))
+
+        return errors
+
+    def to_json(self, ignore_reports=False, ignore_clocks=False):
         return {
             'half': self.half,
             'kicking_first_half': self.kicking_first_half.team_id if self.kicking_first_half is not None else None,
@@ -410,7 +421,7 @@ class GameState(LoggedState):
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'clocks': [clock.to_json() for clock in self.clocks],
+            'clocks': [clock.to_json() for clock in self.clocks] if not ignore_clocks else None,
             'player_action_type': self.player_action_type.name if self.player_action_type is not None else None
         }
 
@@ -731,9 +742,10 @@ class BBDie(Die):
         }
 
 
-class Dugout(LoggedState): # All except team needs logging here.
+class Dugout(LoggedState): # TODO: All except team needs logging here.
 
     def __init__(self, team):
+        super().__init__()
         self.team = team
         self.reserves = []
         self.kod = []
@@ -802,11 +814,26 @@ class Catchable(Piece):
         return True
 
 
-class Ball(Catchable):
+class Ball(Catchable, LoggedState):
 
     def __init__(self, position, on_ground=True, is_carried=False):
-        super().__init__(position, on_ground, is_carried)
+        LoggedState.__init__(self, ["position"])
+        Catchable.__init__(self, position, on_ground, is_carried)
 
+    def move(self, x, y):
+        if self.logger_initialized():
+            log_entry = GenericLogEntry(self, Catchable.move, (x, y), Catchable.move, (-x, -y))
+            self.log_this(log_entry)
+
+        super().move(x, y)
+
+    def move_to(self, position):
+
+        if self.logger_initialized():
+            log_entry = GenericLogEntry(self, Catchable.move_to, (copy(position),), Catchable.move_to, (self.position,))
+            self.log_this(log_entry)
+
+        super().move_to(position)
 
 class Bomb(Catchable):
 
@@ -814,10 +841,11 @@ class Bomb(Catchable):
         super().__init__(position, on_ground, is_carried)
 
 
-class Player(Piece):
+class Player(Piece, LoggedState):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
+        LoggedState.__init__(self, ignored_keys=["position"])
         super().__init__(position)
         self.player_id = player_id
         self.role = role

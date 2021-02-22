@@ -976,6 +976,10 @@ class Game:
         if type(piece) is Player:
             if not piece.state.in_air:
                 self.state.pitch.board[position.y][position.x] = piece
+
+            log_entry = LogEntryBoard(self.state.pitch.board if not piece.state.in_air else None, piece, position,
+                                      put=True)
+            self.state_log.log_state_change(log_entry)
         elif type(piece) is Ball:
             self.state.pitch.balls.append(piece)
         elif type(piece) is Bomb:
@@ -992,6 +996,10 @@ class Game:
         if type(piece) is Player:
             if not piece.state.in_air:
                 self.state.pitch.board[piece.position.y][piece.position.x] = None
+
+            log_entry = LogEntryBoard(self.state.pitch.board if not piece.state.in_air else None, piece, piece.position, put=False)
+            self.state_log.log_state_change( log_entry )
+
             piece.position = None
         elif type(piece) is Ball:
             self.state.pitch.balls.remove(piece)
