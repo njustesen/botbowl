@@ -123,6 +123,7 @@ class GenericLogEntry:
         except TypeError as error:
             set_trace()
 
+
 class LogEntry:
     def __init__(self, owner, key, from_val, to_val):
         self.owner = owner
@@ -135,6 +136,7 @@ class LogEntry:
 
     def step_forward(self):
         self.owner.reset_to(self.key, self.to_val)
+
 
 class LogEntryBoard:
     def __init__(self, board, piece, square, put=True):
@@ -164,7 +166,6 @@ class LogEntryBoard:
             self._remove()
 
 
-
 class LoggedState:
     _immutable_types = {int, float, str, tuple, bool, range, type(None)}
 
@@ -175,13 +176,21 @@ class LoggedState:
     def __setattr__(self, key, value):
         if self.logger_initialized() and hasattr(self, key):
             from_val = getattr(self, key)
-            if not (type(from_val) in LoggedState._immutable_types or key in self._ignored_keys or isinstance(from_val,
-                                                                                                              Enum) or isinstance(
-                    from_val, LoggedState)):
+            if not (key in self._ignored_keys or self._allowed_change(from_val, value)):
                 raise AttributeError(f"Mutable attribute '{key}' in owner {self}, may not be overridden by assignment "
                                      f"because the state is logged.")
             self.log_this(LogEntry(self, key, from_val, value))
         super().__setattr__(key, value)
+
+    def _allowed_change(self, from_val, to_val):
+
+        from_val_ok = type(from_val) in LoggedState._immutable_types \
+                      or isinstance(from_val, Enum) \
+                      or isinstance(from_val, LoggedState)
+        to_val_ok = type(to_val) in LoggedState._immutable_types \
+                    or isinstance(to_val, Enum) or isinstance(to_val, LoggedState)
+
+        return from_val_ok and to_val_ok
 
     def log_this(self, entry):  # To be used in derived classes
         self._logger.log_state_change(entry)
@@ -263,7 +272,12 @@ class LoggedList(list, LoggedState):
         return list.__setitem__(self, key, value)
 
     def clear(self):
-        raise NotImplementedError()
+        if self.logger_initialized():
+            log_entry = GenericLogEntry(self, forward_func=list.clear, forward_args=(),
+                                        backward_func=list.extend, backward_args=(self[:],))
+            self.log_this(log_entry)
+
+        list.clear(self)
 
     def extend(self, value):
         raise NotImplementedError()
@@ -276,11 +290,11 @@ class LoggedList(list, LoggedState):
 
         list.remove(self, value)
 
+
 def get_data_path(rel_path):
     root_dir = ffai.__file__.replace("__init__.py", "")
     filename = os.path.join(root_dir, "data/" + rel_path)
     return os.path.abspath(os.path.realpath(filename))
-
 
 
 def compare_iterable(s1, s2, path=""):

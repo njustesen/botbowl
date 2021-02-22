@@ -171,6 +171,10 @@ class PlayerState(LoggedState):
         self.used_skills = set() #log
         self.squares_moved = LoggedList([])
 
+    def set_logger(self, logger):
+        super().set_logger(logger)
+        self.squares_moved.set_logger(logger)
+
     def to_json(self):
         return {
             'up': self.up,
@@ -369,11 +373,7 @@ class GameState(LoggedState):
         self.player_by_id = {} #constant after init
         self.team_by_player_id = {} #constant after init
         for team in self.teams:
-            team.state.set_logger(game.state_log)
             for player in team.players:
-                player.state.set_logger(game.state_log)
-                player.set_logger(game.state_log)
-                player.state.squares_moved.set_logger(game.state_log)
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
         self.pitch = Pitch(game.arena.width, game.arena.height) # Special to track balls
@@ -390,7 +390,13 @@ class GameState(LoggedState):
         self.player_action_type = None
 
         self.set_logger(game.state_log)
-        self.stack.items.set_logger(game.state_log)
+
+    def set_logger(self, logger):
+        super().set_logger(logger)
+        self.stack.items.set_logger(logger)
+
+        for team in self.teams:
+            team.set_logger(logger)
 
     def compare(self, other, trace=False):
         errors = compare_iterable(self.to_json(ignore_reports=True, ignore_clocks=True),
@@ -864,6 +870,11 @@ class Player(Piece, LoggedState):
         self.spp = spp
         self.state = PlayerState()
 
+    def set_logger(self, logger):
+        super().set_logger(logger)
+        self.state.set_logger(logger)
+
+
     def to_json(self):
         return {
             'player_id': self.player_id,
@@ -1015,10 +1026,11 @@ class Race:
         self.stakes = stakes
 
 
-class Team:
+class Team(LoggedState):
 
     def __init__(self, team_id, name, race, players=None, treasury=0, apothecaries=0, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
+        super().__init__()
         self.team_id = team_id
         self.name = name
         self.race = race
@@ -1030,6 +1042,12 @@ class Team:
         self.ass_coaches = ass_coaches
         self.cheerleaders = cheerleaders
         self.state = TeamState(self)
+
+    def set_logger(self, logger):
+        super().set_logger(logger)
+        self.state.set_logger(logger)
+        for player in self.players:
+            player.set_logger(logger)
 
     def to_json(self):
         players = []

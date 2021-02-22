@@ -88,23 +88,24 @@ def test_game_state_revert():
     saved_step = game.state_log.current_step
     assert len(game.state.compare(init_state)) == 0
 
-    # Do the thing that will be reverted
+    # Do the things that will be reverted
     game.state.weather = WeatherType.SWELTERING_HEAT
     player.state.spp_earned = 2
     game.step(Action(ActionType.START_MOVE, player=player))
     game.step(Action(ActionType.MOVE, position=Square(3, 3)))
+    game.step(Action(ActionType.END_PLAYER_TURN))
+    # game.step(Action(ActionType.END_TURN))  #  Not working yet.
 
     # Make sure the differences are found
     errors = game.state.compare(init_state)
     assert len(errors) > 0
-    print("\n\nThese were the differences:")
-    for e in errors:
-        print(e)
+    # print("\n\nThese were the differences:")
+    # for e in errors:
+    #    print(e)
 
     # Revert and assert
-    set_trace()
     game.state_log.step_backward(to_step=saved_step)
-    assert not player.state.spp_earned == 2
+    assert player.state.spp_earned == 0
     assert game.state.weather != WeatherType.SWELTERING_HEAT
 
     errors = game.state.compare(init_state)
