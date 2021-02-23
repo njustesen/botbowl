@@ -383,6 +383,7 @@ class ActionType(Enum):
     DONT_CATCH_BOMB = 63
     PICKUP_TEAM_MATE = 64
     THROW_TEAM_MATE = 65
+    UNDO = 66
 
 
 class WeatherType(Enum):

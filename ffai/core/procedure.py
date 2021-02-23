@@ -2568,6 +2568,19 @@ class AlwaysHungry(Procedure):
         return True
 
 
+class UndoPlayerAction(Procedure):
+
+    def __init__(self, game, player):
+        super().__init__(game)
+        self.game = game
+        self.player = player
+
+    def step(self, action):
+        self.game.state.player_action_type = None
+        self.game.state.active_player = None
+        return True
+
+
 class MoveAction(Procedure):
 
     def __init__(self, game, player, player_action_type=PlayerActionType.MOVE):
@@ -2576,6 +2589,7 @@ class MoveAction(Procedure):
         self.player_action_type = player_action_type
         self.paths = {}
         self.steps = None
+        self.can_undo = self.game.get_team_agent(player.team).human
 
     def start(self):
         if self.player_action_type == PlayerActionType.MOVE:
@@ -2591,6 +2605,12 @@ class MoveAction(Procedure):
                 action = Action(ActionType.STAND_UP)
             else:
                 action = Action(ActionType.MOVE, position=pos)
+
+        if action.action_type == ActionType.UNDO:
+            UndoPlayerAction(self.game, self.player)
+            return True
+
+        self.can_undo = False
 
         if len(self.player.state.squares_moved) == 0:
             self.player.state.squares_moved.append(self.player.position)
@@ -2680,6 +2700,10 @@ class MoveAction(Procedure):
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player_action_type == PlayerActionType.MOVE:
             actions += self.game.get_hypnotic_gaze_actions(self.player)
         actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+
+        if self.can_undo:
+            actions.append(ActionChoice(ActionType.UNDO, team=self.player.team))
+
         return actions
 
 
@@ -2866,6 +2890,7 @@ class BlockAction(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
+        self.can_undo = True
 
     def start(self):
         self.game.report(Outcome(OutcomeType.BLOCK_ACTION_STARTED, player=self.player))
@@ -2876,6 +2901,12 @@ class BlockAction(Procedure):
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
             return True
+
+        if action.action_type == ActionType.UNDO:
+            UndoPlayerAction(self.game, self.player)
+            return True
+
+        self.can_undo = False
 
         defender = self.game.get_player_at(action.position)
 
@@ -2899,6 +2930,8 @@ class BlockAction(Procedure):
     def available_actions(self):
         actions = self.game.get_block_actions(self.player, blitz=False)
         actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
+        if self.can_undo:
+            actions.append(ActionChoice(ActionType.UNDO, team=self.player.team))
         return actions
 
 

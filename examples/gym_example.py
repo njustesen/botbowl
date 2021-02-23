@@ -8,14 +8,14 @@ import ffai
 if __name__ == "__main__":
 
     # Create environment
-    env = gym.make("FFAI-v3")
+    # env = gym.make("FFAI-v3")
     # env = gym.make("FFAI-v2")  # Without pathfinding enabled
 
     # Smaller variants
     # env = gym.make("FFAI-7-v3")
     # env = gym.make("FFAI-5-v3")
     # env = gym.make("FFAI-3-v3")
-    # env = gym.make("FFAI-1-v3")
+    env = gym.make("FFAI-1-v3")
 
     # Get observations space (layer, height, width)
     obs_space = env.observation_space
@@ -68,6 +68,6 @@ if __name__ == "__main__":
             print(steps)
 
             # Render
-            env.render(feature_layers=True)
+            #env.render(feature_layers=True)
 
     print(steps)

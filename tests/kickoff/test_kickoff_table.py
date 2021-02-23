@@ -181,7 +181,7 @@ def test_quick_snap():
                     assert player in action_choice.players
                     game.step(Action(ActionType.START_MOVE, player=player))
                     for action_choice in game.state.available_actions:
-                        if action_choice.action_type != ActionType.END_PLAYER_TURN:
+                        if action_choice.action_type == ActionType.MOVE:
                             assert len(action_choice.positions) == len(adjacent_squares)
                             game.step(Action(ActionType.MOVE, player=player, position=action_choice.positions[0]))
                             game.step(Action(ActionType.END_PLAYER_TURN, player=player))

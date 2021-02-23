@@ -309,6 +309,8 @@ class Game:
         :return: True if game requires action or game is over, False if not
         """
 
+        print(action.action_type if action is not None else action)
+
         # Get proc
         proc = self.state.stack.peek()
 
@@ -379,7 +381,7 @@ class Game:
 
         # Is game over
         if self.state.stack.is_empty():
-            return False  # Can continue without user input
+            return False  # Can end the game without user input
 
         if self.config.debug_mode:
             print("-Proc={}".format(self.state.stack.peek()))
@@ -402,7 +404,6 @@ class Game:
         # End player turn if only action available
         if len(self.state.available_actions) == 1 and self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:
             return self._one_step(Action(ActionType.END_PLAYER_TURN))
-            # return False  # We can continue without user input
 
         return True  # Game needs user input
     

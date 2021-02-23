@@ -59,7 +59,10 @@ class Replay:
         replay_id = game.game_id
         self.reports = game.state.reports
         name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(replay_id)
-        filename = get_data_path('replays') + '/' + name + '.rep'
+        directory = get_data_path('replays')
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        filename = os.path.join(directory, f"{name}.rep")
         print(f"Saving replay to {filename}")
         pickle.dump(self, open(filename, "wb"))
         print(f"Replay saved to {filename}")

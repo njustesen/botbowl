@@ -28,7 +28,7 @@ save_interval = 500
 ppcg = False
 
 # Environment
-env_name = "FFAI-1-v2"
+env_name = "FFAI-1-v3"
 #env_name = "FFAI-3-v2"
 #num_steps = 10000000 # Increase training time
 #log_interval = 100
