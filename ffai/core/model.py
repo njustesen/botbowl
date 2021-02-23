@@ -162,11 +162,11 @@ class PlayerState(LoggedState):
         self.heated = False
         self.knocked_out = False
         self.ejected = False
-        self.injuries_gained = [] #log
+        self.injuries_gained = []
         self.wild_animal = False
         self.taken_root = False
         self.blood_lust = False 
-        self.used_skills = set() #log
+        self.used_skills = set()
         self.squares_moved = []
 
     def to_json(self):
@@ -350,8 +350,8 @@ class GameState(LoggedState):
 
     def __init__(self, game, home_team, away_team):
         super().__init__(ignored_keys=["available_actions", "clocks"])
-        self.stack = Stack() #special log
-        self.reports = [] #special log
+        self.stack = Stack()
+        self.reports = []
         self.half = 1
         self.round = 0
         self.coin_toss_winner = None
@@ -360,27 +360,27 @@ class GameState(LoggedState):
         self.kicking_this_drive = None
         self.receiving_this_drive = None
         self.current_team = None
-        self.teams = [home_team, away_team] #constant
-        self.home_team = home_team #constant-isch
-        self.away_team = away_team #constant-isch
-        self.team_by_id = {team.team_id: team for team in self.teams} #constant
-        self.player_by_id = {} #constant after init
-        self.team_by_player_id = {} #constant after init
+        self.teams = [home_team, away_team]
+        self.home_team = home_team
+        self.away_team = away_team
+        self.team_by_id = {team.team_id: team for team in self.teams}
+        self.player_by_id = {}
+        self.team_by_player_id = {}
         for team in self.teams:
             for player in team.players:
                 self.team_by_player_id[player.player_id] = team
                 self.player_by_id[player.player_id] = player
-        self.pitch = Pitch(game.arena.width, game.arena.height) # Special to track balls
+        self.pitch = Pitch(game.arena.width, game.arena.height)
         self.dugouts = {team.team_id: Dugout(team) for team in self.teams}
         self.weather = WeatherType.NICE
         self.gentle_gust = False
-        self.turn_order = [] #log
+        self.turn_order = []
         self.spectators = 0
-        self.active_player = None # Log as usual, player is logged.
+        self.active_player = None
         self.game_over = False
         self.available_actions = []  # TODO: Calculate after reversing state
-        self.clocks = [] # Doesn't need tracking for MCTS purpose
-        self.rerolled_procs = set() # Log
+        self.clocks = []
+        self.rerolled_procs = set()
         self.player_action_type = None
 
     def compare(self, other, trace=False):
