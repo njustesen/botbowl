@@ -2441,10 +2441,6 @@ class PlaceBall(Procedure):
         self.game.state.pitch.balls.append(self.ball)
         self.ball.on_ground = False
         self.ball.move_to(action.position)
-
-        # This doesn't belong here, but I can find a better place.
-        self.ball.set_logger(self.game.state_log)
-
         self.game.report(Outcome(OutcomeType.BALL_PLACED, position=action.position, team=self.game.get_kicking_team()))
         self.game.remove_secondary_clocks()
         return True

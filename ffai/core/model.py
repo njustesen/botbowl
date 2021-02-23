@@ -417,11 +417,12 @@ class GameState(LoggedState):
         }
 
 
-class Pitch:
+class Pitch(LoggedState):
 
     range = [-1, 0, 1]
 
     def __init__(self, width, height):
+        super().__init__(ignored_keys=["board", "squares"])
         self.balls = []
         self.bomb = None
         self.board = []
@@ -733,7 +734,7 @@ class BBDie(Die):
         }
 
 
-class Dugout(LoggedState): # TODO: All except team needs logging here.
+class Dugout(LoggedState):
 
     def __init__(self, team):
         super().__init__()
@@ -741,7 +742,7 @@ class Dugout(LoggedState): # TODO: All except team needs logging here.
         self.reserves = []
         self.kod = []
         self.casualties = []
-        self.dungeon = [] # Ejected
+        self.dungeon = []  # Ejected
 
     def to_json(self):
         return {
