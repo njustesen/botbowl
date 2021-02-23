@@ -146,8 +146,6 @@ class Configuration:
         self.time_limits = None
 
 
-
-
 class PlayerState(LoggedState):
 
     def __init__(self):
@@ -169,11 +167,7 @@ class PlayerState(LoggedState):
         self.taken_root = False
         self.blood_lust = False 
         self.used_skills = set() #log
-        self.squares_moved = LoggedList([])
-
-    def set_logger(self, logger):
-        super().set_logger(logger)
-        self.squares_moved.set_logger(logger)
+        self.squares_moved = []
 
     def to_json(self):
         return {
@@ -388,15 +382,6 @@ class GameState(LoggedState):
         self.clocks = [] # Doesn't need tracking for MCTS purpose
         self.rerolled_procs = set() # Log
         self.player_action_type = None
-
-        self.set_logger(game.state_log)
-
-    def set_logger(self, logger):
-        super().set_logger(logger)
-        self.stack.items.set_logger(logger)
-
-        for team in self.teams:
-            team.set_logger(logger)
 
     def compare(self, other, trace=False):
         errors = compare_iterable(self.to_json(ignore_reports=True, ignore_clocks=True),
@@ -870,11 +855,6 @@ class Player(Piece, LoggedState):
         self.spp = spp
         self.state = PlayerState()
 
-    def set_logger(self, logger):
-        super().set_logger(logger)
-        self.state.set_logger(logger)
-
-
     def to_json(self):
         return {
             'player_id': self.player_id,
@@ -1042,12 +1022,6 @@ class Team(LoggedState):
         self.ass_coaches = ass_coaches
         self.cheerleaders = cheerleaders
         self.state = TeamState(self)
-
-    def set_logger(self, logger):
-        super().set_logger(logger)
-        self.state.set_logger(logger)
-        for player in self.players:
-            player.set_logger(logger)
 
     def to_json(self):
         players = []

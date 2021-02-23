@@ -25,7 +25,6 @@ class Game:
         self.config = config
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
 
-        self.state_log = Logger()
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.rnd = np.random.RandomState(seed)
 
@@ -37,6 +36,9 @@ class Game:
 
         self.action = None
         self.ff_map = None
+
+        self.state_log = Logger()
+        self.state.set_logger(self.state_log)
 
     def to_json(self, ignore_reports=False):
         return {

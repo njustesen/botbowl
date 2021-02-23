@@ -52,6 +52,9 @@ def test_logged_state():
             self.set_logger(log)
             self.data = data
 
+    class Cant_log_this:
+        pass
+
     log = Logger()
     log.enabled = True
 
@@ -63,7 +66,7 @@ def test_logged_state():
     ms = MyState(["mutable", "object"], log)
     exception_caught = False
     try:
-        ms.data = []  # Should raise an exception
+        ms.data = Cant_log_this()  # Should raise an exception
     except AttributeError:
         exception_caught = True
     assert exception_caught

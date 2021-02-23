@@ -83,29 +83,6 @@ def get_line(start, end):
     return points
 
 
-class Stack:
-    def __init__(self):
-        self.items = LoggedList([])
-
-    def is_empty(self):
-        return self.items == []
-
-    def push(self, item):
-        self.items.append(item)
-
-    def pop(self):
-        return self.items.pop()
-
-    def remove(self, item):
-        self.items.remove(item)
-
-    def peek(self):
-        return self.items[len(self.items)-1]
-
-    def size(self):
-        return len(self.items)
-
-
 class GenericLogEntry:
     def __init__(self, owner, forward_func, forward_args, backward_func, backward_args):
         self.owner = owner
@@ -166,8 +143,10 @@ class LogEntryBoard:
             self._remove()
 
 
+immutable_types = {int, float, str, tuple, bool, range, type(None)}
+
+
 class LoggedState:
-    _immutable_types = {int, float, str, tuple, bool, range, type(None)}
 
     def __init__(self, ignored_keys=[]):
         super().__setattr__("_logger", None)
@@ -177,17 +156,22 @@ class LoggedState:
         if self.logger_initialized() and hasattr(self, key):
             from_val = getattr(self, key)
             if not (key in self._ignored_keys or self._allowed_change(from_val, value)):
-                raise AttributeError(f"Mutable attribute '{key}' in owner {self}, may not be overridden by assignment "
-                                     f"because the state is logged.")
+
+                new_value, successful = add_logging(value, self._logger)
+                if not successful:
+                    raise AttributeError(f"Mutable attribute '{key}' in owner {self}, may not be overridden by "
+                                         f"assignment because the state is logged.")
+                else:
+                    value = new_value
             self.log_this(LogEntry(self, key, from_val, value))
         super().__setattr__(key, value)
 
     def _allowed_change(self, from_val, to_val):
 
-        from_val_ok = type(from_val) in LoggedState._immutable_types \
+        from_val_ok = type(from_val) in immutable_types \
                       or isinstance(from_val, Enum) \
                       or isinstance(from_val, LoggedState)
-        to_val_ok = type(to_val) in LoggedState._immutable_types \
+        to_val_ok = type(to_val) in immutable_types \
                     or isinstance(to_val, Enum) or isinstance(to_val, LoggedState)
 
         return from_val_ok and to_val_ok
@@ -199,10 +183,23 @@ class LoggedState:
         super().__setattr__(key, value)
 
     def set_logger(self, logger):
+        if self.logger_initialized():
+            return
+
         super().__setattr__("_logger", logger)
 
+        for attr_name in dir(self):
+            if attr_name[0] == "_" or attr_name in self._ignored_keys:
+                continue
+
+            attr = getattr(self, attr_name)
+            if callable(attr):
+                continue
+            new_value, successful = add_logging(attr, logger) # TODO: raise error if not successful
+            super().__setattr__(attr_name, new_value)
+
     def logger_initialized(self):
-        return self._logger is not None and self._logger.enabled
+        return self._logger is not None
 
 
 class Logger:
@@ -249,11 +246,25 @@ class LoggedList(list, LoggedState):
         super().__init__(value)
         LoggedState.__init__(self)
 
+    def set_logger(self, logger):
+        if self.logger_initialized():
+            return
+
+        LoggedState.set_logger(self, logger)
+        for i in range(len(self)):
+            new_value, successful = add_logging(self[i], logger) # TODO: raise error if not successful
+            list.__setitem__(self, i, new_value)
+
     def append(self, value):
         if self.logger_initialized():
             log_entry = GenericLogEntry(self, forward_func=list.append, forward_args=(value,),
                                         backward_func=list.pop, backward_args=())
             self.log_this(log_entry)
+
+            # TODO: consider calling add_logging() here too?
+            if isinstance(value, LoggedState) and not value.logger_initialized():
+                value.set_logger(self._logger)
+
         list.append(self, value)
 
     def pop(self, i=None):
@@ -289,6 +300,72 @@ class LoggedList(list, LoggedState):
             self.log_this(log_entry)
 
         list.remove(self, value)
+
+
+class LoggedSet(set, LoggedState):
+    def __init__(self, value):
+        super().__init__()
+        raise NotImplementedError()
+
+
+class LoggedDict(dict, LoggedState):
+    def __init__(self, value):
+        super().__init__()
+        raise NotImplementedError()
+
+
+# replacement_type = [(list, LoggedList), (dict, LoggedDict), (set, LoggedSet)]
+replacement_type = [(list, LoggedList)]
+
+
+def add_logging(value, logger=None):
+    if isinstance(value, LoggedState):
+        if not value.logger_initialized():
+            value.set_logger(logger)
+        return value, True
+
+    val_type = type(value)
+    if isinstance(value, Enum) or val_type in immutable_types:
+        return value, True
+
+    new_types = [t[1] for t in replacement_type if val_type == t[0]]
+    if len(new_types) == 1:
+        new_type = new_types.pop()
+
+        # try:
+        new_value = new_type(value)
+        # except TypeError:
+        #    set_trace()
+        if logger is not None:
+            new_value.set_logger(logger)
+        return new_value, True
+    else:
+        print(f"Not possible to add logging to type='{val_type}'.Obj={value}")
+        return value, False
+
+
+class Stack(LoggedState):
+    def __init__(self):
+        super().__init__()
+        self.items = []
+
+    def is_empty(self):
+        return self.items == []
+
+    def push(self, item):
+        self.items.append(item)
+
+    def pop(self):
+        return self.items.pop()
+
+    def remove(self, item):
+        self.items.remove(item)
+
+    def peek(self):
+        return self.items[len(self.items) - 1]
+
+    def size(self):
+        return len(self.items)
 
 
 def get_data_path(rel_path):
