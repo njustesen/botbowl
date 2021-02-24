@@ -32,9 +32,7 @@ class Game:
         self.last_request_time = None
         self.last_action_time = None
         self.forced_action = None
-
         self.action = None
-        self.ff_map = None
 
     def to_json(self, ignore_reports=False):
         return {
@@ -107,8 +105,8 @@ class Game:
                 self._end_game()
                 return
 
-            # Reset pathfinding map
-            self.ff_map = None
+            if self.state.stack.is_empty():
+                print("Somethings wrong")
             
             # if procedure is ready for input
             if done:
@@ -130,6 +128,7 @@ class Game:
 
                 # Did the game terminate?
                 if self.state.game_over:
+                    self._end_game()
                     return
                 
             else:
@@ -196,7 +195,6 @@ class Game:
         '''
         # Game ended when the last action was received - to avoid timout during finishing procedures
         self.end_time = self.last_action_time
-        self.state.game_over = True
 
         # Let agents know that the game ended
         if not self.home_agent.human:
@@ -309,7 +307,7 @@ class Game:
         :return: True if game requires action or game is over, False if not
         """
 
-        print(action.action_type if action is not None else action)
+        # print(action.action_type if action is not None else action)
 
         # Get proc
         proc = self.state.stack.peek()
@@ -2397,7 +2395,7 @@ class Game:
                 distance = distances[i]
                 position = positions[i]
                 if distance not in cache:
-                    modifiers = self.get_pass_modifiers(player, distance, ttm=ttm is not None)
+                    modifiers = self.get_pass_modifiers(player, distance, ttm=ttm)
                     target = Rules.agility_table[player.get_ag()]
                     cache[distance] = min(6, max(2, target - modifiers))
                 rolls = [cache[distance]]
@@ -2438,13 +2436,12 @@ class Game:
         return actions
 
     def purge_stack_until(self, proc_class, inclusive=False):
-        x = 0 if inclusive else -1
-        for i in reversed(range(self.state.stack.size())):
-            x += 1
-            if isinstance(self.state.stack.items[i], proc_class):
-                break
-        for i in range(x):
+        assert proc_class in [proc.__class__ for proc in self.state.stack.items]
+        while not isinstance(self.state.stack.peek(), proc_class):
             self.state.stack.pop()
+        if inclusive:
+            self.state.stack.pop()
+        assert not self.state.stack.is_empty()
 
     def get_proc(self, proc_type):
         for proc in self.state.stack.items:

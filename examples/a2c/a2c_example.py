@@ -15,7 +15,7 @@ import ffai
 import random
 
 # Training configuration
-num_steps = 1000000
+num_steps = 10000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
@@ -426,7 +426,7 @@ def main():
     memory = Memory(steps_per_update, num_processes, spatial_obs_space, (1, non_spatial_obs_space), action_space)
 
     # PPCG
-    difficulty = 0.0
+    difficulty = 0.0 if ppcg else 1.0
     dif_delta = 0.01
 
     # Reset environments

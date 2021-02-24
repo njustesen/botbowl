@@ -491,8 +491,8 @@ class Block(Procedure):
 
         # Dice result
         if self.selected_die == BBDieResult.ATTACKER_DOWN:
-            Turnover(self.game)
-            KnockDown(self.game, self.attacker, inflictor=self.defender)
+            # Turnover(self.game)
+            KnockDown(self.game, self.attacker, inflictor=self.defender, turnover=True)
             return True
 
         elif self.selected_die == BBDieResult.BOTH_DOWN:
@@ -535,8 +535,7 @@ class Block(Procedure):
     def both_down(self):
         # Attacker down
         if not self.attacker.has_skill(Skill.BLOCK):
-            Turnover(self.game)
-            KnockDown(self.game, self.attacker, inflictor=self.defender)
+            KnockDown(self.game, self.attacker, inflictor=self.defender, turnover=True)
         else:
             self.game.report(Outcome(OutcomeType.SKILL_USED, player=self.attacker, skill=Skill.BLOCK))
         # Defender down
@@ -2091,9 +2090,7 @@ class TurnoverIfPossessionLost(Procedure):
 
     def step(self, action):
         player_at = self.game.get_player_at(self.ball.position)
-        if player_at is None:
-            Turnover(self.game)
-        elif player_at.team != self.game.state.current_team:
+        if player_at is None or player_at.team != self.game.state.current_team:
             Turnover(self.game)
         return True
 
@@ -3660,7 +3657,9 @@ class EndTurn(Procedure):
     def step(self, action):
 
         # Remove all procs in the current turn - including the current turn proc.
-        self.game.purge_stack_until(Turn, inclusive=True)
+        # In rare cases there is no Turn proc yet - e.g. during a kickoff
+        if self.game.get_current_turn_proc() is not None:
+            self.game.purge_stack_until(Turn, inclusive=True)
 
         # Reset turn
         if self.game.state.current_team is not None:

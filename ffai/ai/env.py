@@ -383,6 +383,8 @@ class FFAIEnv(gym.Env):
             obs['available-action-types'][action_type.name] = 0.0
 
         for action_choice in game.get_available_actions():
+            if action_choice.action_type not in FFAIEnv.actions:
+                continue
             # idx = FFAIEnv.actions.index(action_choice.action_type)
             action_name = action_choice.action_type.name
             # Ignore end setup action if setup is illegal

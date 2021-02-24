@@ -1171,11 +1171,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         $scope.resetPaths = function resetPaths(){
             for (let y = 0; y < $scope.game.state.pitch.board.length; y++) {
                 for (let x = 0; x < $scope.game.state.pitch.board[y].length; x++) {
-                    $scope.local_state.board[y][x].rolls = [];
-                    $scope.local_state.board[y][x].on_path = false;
-                    $scope.local_state.board[y][x].block_dice = 0;
-                    $scope.local_state.board[y][x].foul_roll = null;
-                    $scope.local_state.board[y][x].handoff_roll = null;
+                    if ($scope.local_state.board[y][x].path !== null) {
+                        $scope.local_state.board[y][x].rolls = [];
+                        $scope.local_state.board[y][x].on_path = false;
+                        $scope.local_state.board[y][x].block_dice = 0;
+                        $scope.local_state.board[y][x].foul_roll = null;
+                        $scope.local_state.board[y][x].handoff_roll = null;
+                    }
                 }
             }
         };
