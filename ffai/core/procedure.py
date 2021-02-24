@@ -3569,7 +3569,7 @@ class EndTurn(Procedure):
 
         self.game.state.current_team = None
         self.game.remove_clocks()
-        self.game.state.rerolled_procs = set()
+        self.game.state.rerolled_procs = []
         self.game.state.player_action_type = None
         return True
 
@@ -4064,7 +4064,7 @@ class Reroll(Procedure):
 
         # Add context to set of re-rolled procs
         if self.use_reroll:
-            self.game.state.rerolled_procs.add(self.context)
+            self.game.state.rerolled_procs.append(self.context)
 
     def available_actions(self):
         """
