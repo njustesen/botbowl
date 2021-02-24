@@ -159,8 +159,12 @@ class LoggedState:
 
                 new_value, successful = add_logging(value, self._logger)
                 if not successful:
-                    raise AttributeError(f"Mutable attribute '{key}' in owner {self}, may not be overridden by "
-                                         f"assignment because the state is logged.")
+
+                    error_text = f"In owner {self}. Member attribute '{key}'\n" + \
+                                 f"may not be reassigned to an object of type '{type(value)}' because the owner \n" + \
+                                 f"a LoggedState and the object can't be converted to a LoggedState.\n" + \
+                                 f"To solve this error, make sure this object can be converted."
+                    raise AttributeError(error_text)
                 else:
                     value = new_value
             self.log_this(LogEntry(self, key, from_val, value))
@@ -195,7 +199,7 @@ class LoggedState:
             attr = getattr(self, attr_name)
             if callable(attr):
                 continue
-            new_value, successful = add_logging(attr, logger) # TODO: raise error if not successful
+            new_value, successful = add_logging(attr, logger)  # TODO: raise error if not successful
             super().__setattr__(attr_name, new_value)
 
     def logger_initialized(self):
@@ -252,7 +256,7 @@ class LoggedList(list, LoggedState):
 
         LoggedState.set_logger(self, logger)
         for i in range(len(self)):
-            new_value, successful = add_logging(self[i], logger) # TODO: raise error if not successful
+            new_value, successful = add_logging(self[i], logger)  # TODO: raise error if not successful
             list.__setitem__(self, i, new_value)
 
     def append(self, value):
@@ -304,7 +308,25 @@ class LoggedList(list, LoggedState):
 
 class LoggedSet(set, LoggedState):
     def __init__(self, value):
-        super().__init__()
+        super().__init__(value)
+        LoggedState.__init__(self)
+
+    def add(self, value):
+        if self.logger_initialized():
+            log_entry = GenericLogEntry(self, forward_func=set.add, forward_args=(value,),
+                                        backward_func=set.remove, backward_args=(value,))
+            self.log_this(log_entry)
+
+            # TODO: consider calling add_logging() here too?
+            if isinstance(value, LoggedState) and not value.logger_initialized():
+                value.set_logger(self._logger)
+
+        set.add(self, value)
+
+    def pop(self):
+        raise NotImplementedError()
+
+    def remove(self, value):
         raise NotImplementedError()
 
 
@@ -315,7 +337,7 @@ class LoggedDict(dict, LoggedState):
 
 
 # replacement_type = [(list, LoggedList), (dict, LoggedDict), (set, LoggedSet)]
-replacement_type = [(list, LoggedList)]
+replacement_type = [(list, LoggedList), (set, LoggedSet)]
 
 
 def add_logging(value, logger=None):

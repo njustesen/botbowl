@@ -837,7 +837,7 @@ class Player(Piece, LoggedState):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
-        LoggedState.__init__(self, ignored_keys=["position"])
+        LoggedState.__init__(self, ignored_keys=["position", "role"])
         super().__init__(position)
         self.player_id = player_id
         self.role = role

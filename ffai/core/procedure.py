@@ -14,14 +14,15 @@ from ffai.core.table import *
 import time
 
 
-class Procedure:
+class Procedure(LoggedState):
 
     def __init__(self, game, context=None):
+        super().__init__(ignored_keys=["game"])
         self.game = game
         self.context = context
-        self.game.state.stack.push(self)
         self.done = False
         self.started = False
+        self.game.state.stack.push(self)  # Note: The stack will call this object's set_logger
 
     def start(self):
         """

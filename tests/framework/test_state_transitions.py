@@ -97,7 +97,10 @@ def test_game_state_revert():
     game.step(Action(ActionType.START_MOVE, player=player))
     game.step(Action(ActionType.MOVE, position=Square(3, 3)))
     game.step(Action(ActionType.END_PLAYER_TURN))
-    # game.step(Action(ActionType.END_TURN))  #  Not working yet.
+    game.step(Action(ActionType.END_TURN))
+    game.step(Action(ActionType.END_TURN))
+    game.step(Action(ActionType.START_PASS, player=player))
+    game.step(Action(ActionType.PASS, position=Square(5, 5)))
 
     # Make sure the differences are found
     errors = game.state.compare(init_state)
@@ -116,7 +119,6 @@ def test_game_state_revert():
         print("\n\nThese differences were not reverted:")
         for error in errors:
             print(error)
-        set_trace()
         assert len(errors) == 0
 
 
