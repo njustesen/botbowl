@@ -536,9 +536,10 @@ class Die:
         Exception("Method not implemented")
 
 
-class DiceRoll:
+class DiceRoll(LoggedState):
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
+        super().__init__()
         self.dice = dice
         self.sum = 0
         self.d68 = d68
