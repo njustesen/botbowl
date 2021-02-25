@@ -16,8 +16,8 @@ import time
 
 class Procedure(LoggedState):
 
-    def __init__(self, game, context=None):
-        super().__init__(ignored_keys=["game"])
+    def __init__(self, game, context=None, ignored_keys=[]):
+        super().__init__(ignored_keys=["game"]+ignored_keys)
         self.game = game
         self.context = context
         self.done = False

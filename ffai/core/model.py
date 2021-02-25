@@ -349,7 +349,7 @@ class Clock:
 class GameState(LoggedState):
 
     def __init__(self, game, home_team, away_team):
-        super().__init__(ignored_keys=["available_actions", "clocks"])
+        super().__init__(ignored_keys=["clocks"])
         self.stack = Stack()
         self.reports = []
         self.half = 1
@@ -450,7 +450,7 @@ class Pitch(LoggedState):
         }
 
 
-class ActionChoice:
+class ActionChoice(Immutable):
 
     def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, disabled=False):
         self.action_type = action_type
@@ -477,9 +477,10 @@ class ActionChoice:
         }
 
 
-class Action:
+class Action(LoggedState):
 
     def __init__(self, action_type, position=None, player=None):
+        super().__init__()
         self.action_type = action_type
         self.position = position
         self.player = player
@@ -790,11 +791,14 @@ class Catchable(Piece):
         self.is_carried = is_carried
 
     def move(self, x, y):
-        self.position.x += x
-        self.position.y += y
+        # This is unfortunately way slower than below, but Square is Immutable
+        self.position = Square(self.position.x + x, self.position.y + y)
+
+        #self.position.x += x
+        #self.position.y += y
 
     def move_to(self, position):
-        self.position = Square(position.x, position.y)
+        self.position = position
 
     def to_json(self):
         return {
@@ -966,7 +970,7 @@ class Player(Piece, LoggedState):
         self.state.taken_root = False
 
 
-class Square:
+class Square(Immutable):
 
     def __init__(self, x, y):
         self.x = x

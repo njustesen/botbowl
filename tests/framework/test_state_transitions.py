@@ -4,6 +4,52 @@ from copy import deepcopy
 from ffai.core.table import *
 from ffai.core.util import *
 
+from ffai.ai.registry import make_bot
+
+
+def assert_equal_game_states(g1, g2):
+    errors = g1.state.compare(g2.state)
+    if len(errors) > 0:
+        print("\n\nThese differences were not reverted:")
+        for error in errors:
+            print(error)
+        assert len(errors) == 0
+
+
+def test_random_games():
+    steps = 1000
+
+    config = load_config("ff-11")
+    config.fast_mode = False
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
+    away_agent = make_bot("random")
+    home_agent = make_bot("random")
+    game = Game(1, home, away, home_agent, away_agent, config)
+
+    game.init()
+
+    to_step = game.state_log.current_step
+
+    game_unchanged = deepcopy(game)
+    game.state_log.enabled = True
+
+    i = 0
+    while not game.state.game_over and i < steps:
+        game.step()
+        i += 1
+
+    game.state_log.step_backward(to_step, clear_log=False)
+
+    try:
+        assert_equal_game_states(game, game_unchanged)
+    except AssertionError as e:
+        set_trace()
+        raise e
+
+
+
 
 def test_logged_list():
     log = Logger()
@@ -64,11 +110,13 @@ def test_logged_state():
     assert ms.data == "immutable"
 
     ms = MyState(["mutable", "object"], log)
+
     exception_caught = False
     try:
         ms.data = Cant_log_this()  # Should raise an exception
     except AttributeError:
         exception_caught = True
+
     assert exception_caught
 
 
@@ -86,6 +134,7 @@ def test_game_state_revert():
     game.set_available_actions()
 
     # Prepare test
+
     init_state = deepcopy(game.state)
     game.state_log.enabled = True
     saved_step = game.state_log.current_step
@@ -120,23 +169,3 @@ def test_game_state_revert():
         for error in errors:
             print(error)
         assert len(errors) == 0
-
-
-
-    # assert init_state.to_json() == game.state.to_json()
-
-    # catcher = team.players[1]
-    # catcher_position = Square(passer.position.x + 12, passer.position.y + 0)
-    # game.put(catcher, catcher_position)
-    #
-    # game.set_available_actions()
-    # game.state.reports.clear()
-    #
-    # D6.fix(2)  # Fumble pass
-    #
-    # game.step(Action(ActionType.START_PASS, player=passer))
-    # game.step(Action(ActionType.PASS, position=catcher_position))
-    #
-    # assert game.has_report_of_type(OutcomeType.SKILL_USED)
-    # assert not game.has_report_of_type(OutcomeType.FUMBLE)
-    # assert game.get_ball_carrier() == passer

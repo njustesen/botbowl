@@ -63,10 +63,12 @@ def test_perfect_defence():
             assert player in game.get_players_on_pitch(team)
             square = Square(player.position.x, player.position.y)
             assert game.get_player_at(square) == player
+
             if square.x <= 13:
-                square.x -= 1
+                square = Square(square.x-1, square.y)
             else:
-                square.y += 1
+                square = Square(square.x, square.y+1)
+
             game.step(Action(ActionType.PLACE_PLAYER, player=player, position=square))
             assert game.get_player_at(square) == player
 
@@ -328,12 +330,12 @@ def test_changing_weather(dice_roll):
     D6.fix(4)  # Changing weather
     D6.fix(dice_roll[0])  # Weather roll
     D6.fix(dice_roll[1])  # Weather roll
-    pos = game.state.available_actions[0].positions[0]
-    if pos.x <= 13:
-        pos.x = 6
-    elif pos.x >= 14:
-        pos.x = 19
-    pos.y = 7
+
+    if game.state.available_actions[0].positions[0].x <= 13:
+        pos = Square(6, 7)
+    else:
+        pos = Square(19, 7)
+
     game.step(Action(ActionType.PLACE_BALL, position=pos))
     assert game.has_report_of_type(OutcomeType.KICKOFF_CHANGING_WHEATHER)
     if np.sum(dice_roll) == 2:

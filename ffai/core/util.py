@@ -146,39 +146,31 @@ class LogEntryBoard:
 immutable_types = {int, float, str, tuple, bool, range, type(None)}
 
 
+class Immutable:
+    def __setattr__(self, key, value):
+        if hasattr(self, key):
+            raise AttributeError()
+        else:
+            super().__setattr__(key, value)
+
+
 class LoggedState:
 
     def __init__(self, ignored_keys=[]):
         super().__setattr__("_logger", None)
-        super().__setattr__("_ignored_keys", ignored_keys)
+        super().__setattr__("_ignored_keys", set(ignored_keys))
 
-    def __setattr__(self, key, value):
-        if self.logger_initialized() and hasattr(self, key):
-            from_val = getattr(self, key)
-            if not (key in self._ignored_keys or self._allowed_change(from_val, value)):
+    def __setattr__(self, key, to_value):
+        if self.logger_initialized() and hasattr(self, key) and key not in self._ignored_keys:
+            from_value = getattr(self, key)
+            if not (is_immutable(from_value) and is_immutable(to_value)):
 
-                new_value, successful = add_logging(value, self._logger)
+                to_value, successful = add_logging(to_value, self._logger)
                 if not successful:
+                    raise AttributeError(self.make_error_text(key, to_value))
 
-                    error_text = f"In owner {self}. Member attribute '{key}'\n" + \
-                                 f"may not be reassigned to an object of type '{type(value)}' because the owner \n" + \
-                                 f"a LoggedState and the object can't be converted to a LoggedState.\n" + \
-                                 f"To solve this error, make sure this object can be converted."
-                    raise AttributeError(error_text)
-                else:
-                    value = new_value
-            self.log_this(LogEntry(self, key, from_val, value))
-        super().__setattr__(key, value)
-
-    def _allowed_change(self, from_val, to_val):
-
-        from_val_ok = type(from_val) in immutable_types \
-                      or isinstance(from_val, Enum) \
-                      or isinstance(from_val, LoggedState)
-        to_val_ok = type(to_val) in immutable_types \
-                    or isinstance(to_val, Enum) or isinstance(to_val, LoggedState)
-
-        return from_val_ok and to_val_ok
+            self.log_this(LogEntry(self, key, from_value, to_value))
+        super().__setattr__(key, to_value)
 
     def log_this(self, entry):  # To be used in derived classes
         self._logger.log_state_change(entry)
@@ -193,14 +185,21 @@ class LoggedState:
         super().__setattr__("_logger", logger)
 
         for attr_name in dir(self):
-            if attr_name[0] == "_" or attr_name in self._ignored_keys:
+            attr = getattr(self, attr_name)
+            if attr_name[0] == "_" or callable(attr) or attr_name in self._ignored_keys:
                 continue
 
-            attr = getattr(self, attr_name)
-            if callable(attr):
-                continue
-            new_value, successful = add_logging(attr, logger)  # TODO: raise error if not successful
+            new_value, successful = add_logging(attr, logger)
+            if not successful:
+                pass # TODO: raise error if not successful
+
             super().__setattr__(attr_name, new_value)
+
+    def make_error_text(self, key, value):
+        return f"In owner {self}. Member attribute '{key}'\n" + \
+               f"may not be reassigned to an object of type '{type(value)}' because the owner \n" + \
+               f"a LoggedState and the object can't be converted to a LoggedState.\n" + \
+               f"To solve this error, make sure this object can be converted."
 
     def logger_initialized(self):
         return self._logger is not None
@@ -332,12 +331,39 @@ class LoggedSet(set, LoggedState):
 
 class LoggedDict(dict, LoggedState):
     def __init__(self, value):
-        super().__init__()
+        super().__init__(value)
+        LoggedState.__init__(self)
+
+    def set_logger(self, logger):
+        if self.logger_initialized():
+            return
+
+        LoggedState.set_logger(self, logger)
+        for key in self:
+            new_value, successful = add_logging(self[key], logger)  # TODO: raise error if not successful
+            dict.__setitem__(self, key, new_value)
+
+    def pop(self, key):
         raise NotImplementedError()
 
+    def clear(self) -> None:
+        raise NotImplementedError()
 
-# replacement_type = [(list, LoggedList), (dict, LoggedDict), (set, LoggedSet)]
-replacement_type = [(list, LoggedList), (set, LoggedSet)]
+    def popitem(self):
+        raise NotImplementedError()
+
+    def __setitem__(self, key, value):
+        if key in self.keys():
+            raise NotImplementedError()
+        else:
+            super().__setitem__(key, value)
+
+
+replacement_type = [(list, LoggedList), (dict, LoggedDict), (set, LoggedSet)]
+
+
+def is_immutable(obj):
+    return type(obj) in immutable_types or isinstance(obj, Enum) or isinstance(obj, Immutable)
 
 
 def add_logging(value, logger=None):
@@ -346,23 +372,19 @@ def add_logging(value, logger=None):
             value.set_logger(logger)
         return value, True
 
-    val_type = type(value)
-    if isinstance(value, Enum) or val_type in immutable_types:
+    if is_immutable(value):
         return value, True
 
-    new_types = [t[1] for t in replacement_type if val_type == t[0]]
+    new_types = [t[1] for t in replacement_type if type(value) == t[0]]
     if len(new_types) == 1:
         new_type = new_types.pop()
-
-        # try:
         new_value = new_type(value)
-        # except TypeError:
-        #    set_trace()
+
         if logger is not None:
             new_value.set_logger(logger)
         return new_value, True
     else:
-        print(f"Not possible to add logging to type='{val_type}'.Obj={value}")
+        print(f"Not possible to add logging to type '{type(value)}'")
         return value, False
 
 
