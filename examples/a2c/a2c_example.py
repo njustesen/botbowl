@@ -15,7 +15,7 @@ import ffai
 import random
 
 # Training configuration
-num_steps = 10000000
+num_steps = 1000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001

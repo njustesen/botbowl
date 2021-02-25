@@ -307,8 +307,6 @@ class Game:
         :return: True if game requires action or game is over, False if not
         """
 
-        # print(action.action_type if action is not None else action)
-
         # Get proc
         proc = self.state.stack.peek()
 
