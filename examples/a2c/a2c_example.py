@@ -13,6 +13,7 @@ import sys
 from a2c_agent import A2CAgent
 import ffai
 import random
+import uuid
 
 # Training configuration
 num_steps = 1000000
@@ -24,7 +25,7 @@ entropy_coef = 0.01
 value_loss_coef = 0.5
 max_grad_norm = 0.05
 log_interval = 50
-save_interval = 500
+save_interval = 10
 ppcg = False
 
 # Environment
@@ -49,10 +50,8 @@ selfplay_swap_steps = selfplay_save_steps
 num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
 
-model_name = env_name
-log_filename = "logs/" + model_name + ".dat"
 
-
+# Make directories
 def ensure_dir(file_path):
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
@@ -61,6 +60,14 @@ def ensure_dir(file_path):
 ensure_dir("logs/")
 ensure_dir("models/")
 ensure_dir("plots/")
+exp_id = str(uuid.uuid1())
+log_dir = f"logs/{env_name}/"
+model_dir = f"models/{env_name}/"
+plot_dir = f"plots/{env_name}/"
+ensure_dir(log_dir)
+ensure_dir(model_dir)
+ensure_dir(plot_dir)
+
 
 # --- Reward function ---
 rewards_own = {
@@ -410,12 +417,6 @@ def main():
         spatial_action_type = spatial_action_types[spatial_action_type_idx]
         return spatial_action_type, spatial_x, spatial_y
 
-    # Clear log file
-    try:
-        os.remove(log_filename)
-    except OSError:
-        pass
-
     # MODEL
     ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels, actions=action_space)
 
@@ -465,9 +466,10 @@ def main():
     selfplay_next_swap = selfplay_swap_steps
     selfplay_models = 0
     if selfplay:
-        model_path = f"models/{model_name}_selfplay_0"
+        model_name = f"{exp_id}_selfplay_0.nn"
+        model_path = os.path.join(model_dir, model_name)
         torch.save(ac_agent, model_path)
-        envs.swap(A2CAgent(name=f"selfplay-0", env_name=env_name, filename=model_path))
+        envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
         selfplay_models += 1
 
     renderer = ffai.Renderer()
@@ -596,7 +598,8 @@ def main():
         # Self-play save
         if selfplay and all_steps >= selfplay_next_save:
             selfplay_next_save = max(all_steps+1, selfplay_next_save+selfplay_save_steps)
-            model_path = f"models/{model_name}_selfplay_{selfplay_models}"
+            model_name = f"{exp_id}_selfplay_{selfplay_models}.nn"
+            model_path = os.path.join(model_dir, model_name)
             print(f"Saving {model_path}")
             torch.save(ac_agent, model_path)
             selfplay_models += 1
@@ -606,15 +609,10 @@ def main():
             selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
             lower = max(0, selfplay_models-1-(selfplay_window-1))
             i = random.randint(lower, selfplay_models-1)
-            model_path = f"models/{model_name}_selfplay_{i}"
+            model_name = f"{exp_id}_selfplay_{i}.nn"
+            model_path = os.path.join(model_dir, model_name)
             print(f"Swapping opponent to {model_path}")
-            envs.swap(A2CAgent(name=f"selfplay-{i}", env_name=env_name, filename=model_path))
-
-        # Save
-        if all_updates % save_interval == 0 and len(episode_rewards) >= num_processes:
-            # Save to files
-            with open(log_filename, "a") as myfile:
-                myfile.write(log_to_file)
+            envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
 
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
@@ -644,6 +642,12 @@ def main():
             log_to_file = "{}, {}, {}, {}, {}, {}, {}\n" \
                 .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
 
+            # Save to files
+            log_path = os.path.join(log_dir, f"{exp_id}.dat")
+            print(f"Save log to {log_path}")
+            with open(log_path, "a") as myfile:
+                myfile.write(log_to_file)
+
             print(log)
 
             episodes = 0
@@ -651,7 +655,9 @@ def main():
             policy_losses.clear()
 
             # Save model
-            torch.save(ac_agent, "models/" + model_name)
+            model_name = f"{exp_id}.nn"
+            model_path = os.path.join(model_dir, model_name)
+            torch.save(ac_agent, model_path)
             
             # plot
             n = 3
@@ -683,11 +689,14 @@ def main():
                 axs[3].set_yticks(np.arange(0, 1.001, step=0.1))
                 axs[3].set_xlim(left=0)
             fig.tight_layout()
-            fig.savefig(f"plots/{model_name}{'_selfplay' if selfplay else ''}.png")
+            plot_name = f"{exp_id}_{'_selfplay' if selfplay else ''}.png"
+            plot_path = os.path.join(plot_dir, plot_name)
+            fig.savefig(plot_path)
             plt.close('all')
 
-
-    torch.save(ac_agent, "models/" + model_name)
+    model_name = f"{exp_id}.nn"
+    model_path = os.path.join(model_dir, model_name)
+    torch.save(ac_agent, model_path)
     envs.close()
 
 
