@@ -2723,6 +2723,10 @@ class HandoffAction(MoveAction):
             action = Action(ActionType.HANDOFF, position=self.steps.pop(0))
             self.steps = None
 
+        if action.action_type is ActionType.UNDO:
+            self.game.unuse_handoff_action()
+            return super().step(action)
+
         if action.action_type is ActionType.HANDOFF:
             EndPlayerTurn(self.game, self.player)
             ball = self.game.get_ball_at(self.player.position)
@@ -2730,6 +2734,7 @@ class HandoffAction(MoveAction):
             Handoff(self.game, ball, self.player, action.position,
                     self.game.get_player_at(action.position))
             return True
+        
         return super().step(action)
 
     def available_actions(self):
@@ -2760,6 +2765,10 @@ class PassAction(MoveAction):
 
         # Continue moving along path
         if action is None:
+            return super().step(action)
+
+        if action.action_type is ActionType.UNDO:
+            self.game.unuse_pass_action()
             return super().step(action)
 
         if action.action_type is ActionType.PASS:
@@ -2863,11 +2872,16 @@ class FoulAction(MoveAction):
             action = Action(ActionType.FOUL, position=self.steps.pop(0))
             self.steps = None
 
+        if action.action_type is ActionType.UNDO:
+            self.game.unuse_foul_action()
+            return super().step(action)
+
         if action.action_type == ActionType.FOUL:
             player_to = self.game.get_player_at(action.position)
             EndPlayerTurn(self.game, self.player)
             Foul(self.game, self.player, player_to)
             return True
+
         return super().step(action)
 
     def available_actions(self):
@@ -2939,9 +2953,9 @@ class BlitzAction(MoveAction):
         self.player = player
 
     def start(self):
-        self.game.use_blitz_action()
         self.game.report(Outcome(OutcomeType.BLITZ_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.BLITZ
+        self.game.use_blitz_action()
 
     def step(self, action):
 
@@ -2950,8 +2964,13 @@ class BlitzAction(MoveAction):
             player_at = self.game.get_player_at(self.steps[0])
             if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
+            # Last path step is a block action
             action = Action(ActionType.BLOCK, position=self.steps.pop(0))
             self.steps = None
+
+        if action.action_type is ActionType.UNDO:
+            self.game.unuse_blitz_action()
+            return super().step(action)
 
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
@@ -2979,7 +2998,7 @@ class BlitzAction(MoveAction):
             elif action.action_type == ActionType.STAB:
                 Stab(self.game, self.player, defender, blitz=True, gfi=gfi)
 
-        super().step(action)
+        return super().step(action)
 
     def available_actions(self):
         # If MoveAction is following a path -> continue

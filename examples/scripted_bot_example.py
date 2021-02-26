@@ -627,7 +627,7 @@ class MyScriptedBot(ProcBot):
         """
         for action in game.state.available_actions:
             if action.action_type == ActionType.SELECT_PLAYER:
-                for player, agi_rolls in zip(action.players, action.agi_rolls):
+                for player, rolls in zip(action.players, action.rolls):
                     return Action(ActionType.SELECT_PLAYER, player=player)
         return Action(ActionType.SELECT_NONE)
 

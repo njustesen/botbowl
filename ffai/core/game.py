@@ -26,7 +26,7 @@ class Game:
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.rnd = np.random.RandomState(seed)
-
+        self.ff_map = None
         self.start_time = None
         self.end_time = None
         self.last_request_time = None
@@ -801,6 +801,14 @@ class Game:
         if turn is not None:
             turn.blitz_available = False
 
+    def unuse_blitz_action(self):
+        """
+        Unuses this turn's blitz action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.blitz_available = True
+
     def is_pass_available(self):
         """
         :return: True if the current team can make a pass this turn.
@@ -816,6 +824,14 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             turn.pass_available = False
+
+    def unuse_pass_action(self):
+        """
+        Use this turn's pass action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.pass_available = True
 
     def is_handoff_available(self):
         """
@@ -833,6 +849,14 @@ class Game:
         if turn is not None:
             turn.handoff_available = False
 
+    def unuse_handoff_action(self):
+        """
+        Uses this turn's handoff action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.handoff_available = True
+
     def is_foul_available(self):
         """
         :return: True if the current team can make a foul this turn.
@@ -848,6 +872,14 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             turn.foul_available = False
+
+    def unuse_foul_action(self):
+        """
+        Uses this turn's foul action.
+        """
+        turn = self.current_turn()
+        if turn is not None:
+            turn.foul_available = True
 
     def is_blitz(self):
         """
