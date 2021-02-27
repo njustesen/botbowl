@@ -388,8 +388,6 @@ class GameState(LoggedState):
         errors = compare_iterable(self.to_json(ignore_clocks=True),
                                   other.to_json(ignore_clocks=True), path="state")
 
-        stack_compare = []
-
         errors.extend(compare_iterable(self.stack.items, other.stack.items, path="state.stack.items"))
 
         return errors
