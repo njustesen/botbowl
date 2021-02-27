@@ -3,6 +3,7 @@ import pytest
 from copy import deepcopy
 from ffai.core.table import *
 from ffai.core.util import *
+from ffai.core.forward_model import *
 
 from ffai.ai.registry import make_bot
 
@@ -27,20 +28,20 @@ def test_random_games():
     away_agent = make_bot("random")
     home_agent = make_bot("random")
     game = Game(1, home, away, home_agent, away_agent, config)
-
     game.init()
 
-    to_step = game.state_log.current_step
+    to_step = game.get_forward_model_current_step()
 
+    game.enable_forward_model()
     game_unchanged = deepcopy(game)
-    game.state_log.enabled = True
+
 
     i = 0
     while not game.state.game_over and i < steps:
         game.step()
         i += 1
 
-    game.state_log.step_backward(to_step, clear_log=False)
+    game.revert_state(to_step)
 
     try:
         assert_equal_game_states(game, game_unchanged)
@@ -49,10 +50,8 @@ def test_random_games():
         raise e
 
 
-
-
 def test_logged_list():
-    log = Logger()
+    log = Trajectory()
     log.enabled = True
 
     l = LoggedList(["yolo"])
@@ -101,7 +100,7 @@ def test_logged_state():
     class Cant_log_this:
         pass
 
-    log = Logger()
+    log = Trajectory()
     log.enabled = True
 
     ms = MyState("immutable", log)
@@ -113,7 +112,7 @@ def test_logged_state():
 
     exception_caught = False
     try:
-        ms.data = Cant_log_this()  # Should raise an exception
+        ms.data = Cant_log_this()
     except AttributeError:
         exception_caught = True
 
@@ -134,10 +133,9 @@ def test_game_state_revert():
     game.set_available_actions()
 
     # Prepare test
-
+    game.enable_forward_model()
     init_state = deepcopy(game.state)
-    game.state_log.enabled = True
-    saved_step = game.state_log.current_step
+    saved_step = game.get_forward_model_current_step()
     assert len(game.state.compare(init_state)) == 0
 
     # Do the things that will be reverted
@@ -154,15 +152,9 @@ def test_game_state_revert():
     # Make sure the differences are found
     errors = game.state.compare(init_state)
     assert len(errors) > 0
-    # print("\n\nThese were the differences:")
-    # for e in errors:
-    #    print(e)
 
     # Revert and assert
-    game.state_log.step_backward(to_step=saved_step)
-    assert player.state.spp_earned == 0
-    assert game.state.weather != WeatherType.SWELTERING_HEAT
-
+    game.revert_state(to_step=saved_step)
     errors = game.state.compare(init_state)
     if len(errors) > 0:
         print("\n\nThese differences were not reverted:")

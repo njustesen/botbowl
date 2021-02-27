@@ -15,6 +15,7 @@ import pickle
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
+from ffai.core.forward_model import Immutable, LoggedState, CallableStep
 
 
 class ReplayStep:
@@ -383,9 +384,11 @@ class GameState(LoggedState):
         self.rerolled_procs = []
         self.player_action_type = None
 
-    def compare(self, other, trace=False):
-        errors = compare_iterable(self.to_json(ignore_reports=True, ignore_clocks=True),
-                                  other.to_json(ignore_reports=True, ignore_clocks=True), path="state")
+    def compare(self, other):
+        errors = compare_iterable(self.to_json(ignore_clocks=True),
+                                  other.to_json(ignore_clocks=True), path="state")
+
+        stack_compare = []
 
         errors.extend(compare_iterable(self.stack.items, other.stack.items, path="state.stack.items"))
 
@@ -648,7 +651,7 @@ class D3(Die):
         }
 
 
-class D6(Die):
+class D6(Die, Immutable):
 
     FixedRolls = []
 
@@ -675,7 +678,7 @@ class D6(Die):
         }
 
 
-class D8(Die):
+class D8(Die, Immutable):
 
     FixedRolls = []
 
@@ -702,7 +705,7 @@ class D8(Die):
         }
 
 
-class BBDie(Die):
+class BBDie(Die, Immutable):
 
     FixedRolls = []
 
@@ -819,7 +822,7 @@ class Ball(Catchable, LoggedState):
 
     def move(self, x, y):
         if self.logger_initialized():
-            log_entry = GenericLogEntry(self, Catchable.move, (x, y), Catchable.move, (-x, -y))
+            log_entry = CallableStep(self, Catchable.move, (x, y), Catchable.move, (-x, -y))
             self.log_this(log_entry)
 
         super().move(x, y)
@@ -827,7 +830,7 @@ class Ball(Catchable, LoggedState):
     def move_to(self, position):
 
         if self.logger_initialized():
-            log_entry = GenericLogEntry(self, Catchable.move_to, (copy(position),), Catchable.move_to, (self.position,))
+            log_entry = CallableStep(self, Catchable.move_to, (copy(position),), Catchable.move_to, (self.position,))
             self.log_this(log_entry)
 
         super().move_to(position)
@@ -1056,7 +1059,7 @@ class Team(LoggedState):
         return self.team_id
 
 
-class Outcome:
+class Outcome(Immutable):
 
     def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type

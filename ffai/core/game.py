@@ -8,6 +8,7 @@ This module contains the Game class, which is the main class and interface used 
 
 from ffai.core.load import *
 from ffai.core.procedure import *
+from ffai.core.forward_model import Trajectory, MovementStep
 
 
 class Game:
@@ -37,8 +38,7 @@ class Game:
         self.action = None
         self.ff_map = None
 
-        self.state_log = Logger()
-        self.state.set_logger(self.state_log)
+        self.state_log = Trajectory()
 
     def to_json(self, ignore_reports=False):
         return {
@@ -59,7 +59,15 @@ class Game:
             'active_other_player_id': self.get_other_active_player_id()
         }
 
+    def enable_forward_model(self):
+        self.state_log.enabled = True
+        self.state.set_logger(self.state_log)
 
+    def get_forward_model_current_step(self):
+        return self.state_log.current_step
+
+    def revert_state(self, to_step):
+        self.state_log.step_backward(to_step, clear_log=False)
 
     def init(self):
         """
@@ -979,8 +987,8 @@ class Game:
             if not piece.state.in_air:
                 self.state.pitch.board[position.y][position.x] = piece
 
-            log_entry = LogEntryBoard(self.state.pitch.board if not piece.state.in_air else None, piece, position,
-                                      put=True)
+            log_entry = MovementStep(self.state.pitch.board if not piece.state.in_air else None, piece, position,
+                                     put=True)
             self.state_log.log_state_change(log_entry)
         elif type(piece) is Ball:
             self.state.pitch.balls.append(piece)
@@ -999,7 +1007,7 @@ class Game:
             if not piece.state.in_air:
                 self.state.pitch.board[piece.position.y][piece.position.x] = None
 
-            log_entry = LogEntryBoard(self.state.pitch.board if not piece.state.in_air else None, piece, piece.position, put=False)
+            log_entry = MovementStep(self.state.pitch.board if not piece.state.in_air else None, piece, piece.position, put=False)
             self.state_log.log_state_change( log_entry )
 
             piece.position = None

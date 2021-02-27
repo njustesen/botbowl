@@ -50,9 +50,7 @@ class Procedure(LoggedState):
         """
         return []
 
-    def __eq__(self, other):
-        # TODO: This makes the class not hashable.. Which is a problem!
-
+    def compare(self, other):
         if type(self) != type(other):
             return False
 
@@ -64,9 +62,6 @@ class Procedure(LoggedState):
                 return False
 
         return True
-
-    def __hash__(self):
-        raise NotImplementedError("Procs need hashes. Need to custom make it because custom __eq__")
 
 
 class Regeneration(Procedure):
