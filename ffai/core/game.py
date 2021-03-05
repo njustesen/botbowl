@@ -60,6 +60,9 @@ class Game:
         }
 
     def enable_forward_model(self):
+        if self.state_log.enabled:
+            raise RuntimeError("Forward model already enabled")
+
         self.state_log.enabled = True
         self.state.set_logger(self.state_log)
 
@@ -67,7 +70,8 @@ class Game:
         return self.state_log.current_step
 
     def revert_state(self, to_step):
-        self.state_log.step_backward(to_step, clear_log=False)
+        assert self.state_log.enabled
+        self.state_log.step_backward(to_step)
 
     def init(self):
         """

@@ -8,6 +8,25 @@ from ffai.core.forward_model import *
 from ffai.ai.registry import make_bot
 
 
+def test_game_deep_copy():
+    config = load_config("ff-11")
+    config.fast_mode = False
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
+    away_agent = make_bot("random")
+    home_agent = make_bot("random")
+    game = Game(1, home, away, home_agent, away_agent, config)
+
+    game.init()
+    game.enable_forward_model()
+    game_copy = deepcopy(game)
+
+    assert game is not game_copy
+    assert game.state is not game_copy.state
+    assert_equal_game_states(game, game_copy)
+
+
 def assert_equal_game_states(g1, g2):
     errors = g1.state.compare(g2.state)
     if len(errors) > 0:
@@ -35,7 +54,6 @@ def test_random_games():
     game.enable_forward_model()
     game_unchanged = deepcopy(game)
 
-
     i = 0
     while not game.state.game_over and i < steps:
         game.step()
@@ -49,45 +67,6 @@ def test_random_games():
         set_trace()
         raise e
 
-
-def test_logged_list():
-    log = Trajectory()
-    log.enabled = True
-
-    l = LoggedList(["yolo"])
-    l.set_logger(log)
-
-    l.append("1337")
-    assert l.__repr__() == "['yolo', '1337']"
-
-    log.step_backward(clear_log=False)
-    assert l.__repr__() == "['yolo']"
-
-    log.step_forward(to_step=0)
-    assert l.__repr__() == "['yolo', '1337']"
-
-    log.next_step()
-    assert l.pop() == "1337"
-    assert l.__repr__() == "['yolo']"
-
-    log.step_backward(to_step=1, clear_log=False)
-    assert l.__repr__() == "['yolo', '1337']"
-
-    log.step_forward(to_step=1)
-    assert l.__repr__() == "['yolo']"
-
-    l.append("123")
-    log.next_step()
-    assert l.__repr__() == "['yolo', '123']"
-
-    l[0] = "swag"
-    assert l.__repr__() == "['swag', '123']"
-
-    log.step_backward(to_step=2, clear_log=False)
-    assert l.__repr__() == "['yolo', '123']"
-
-    log.step_forward(to_step=2)
-    assert l.__repr__() == "['swag', '123']"
 
 
 def test_logged_state():
