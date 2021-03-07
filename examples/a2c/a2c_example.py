@@ -29,10 +29,8 @@ save_interval = 10
 ppcg = False
 
 # Environment
-env_name = "FFAI-v3"
-#num_steps = 10000000 # Increase training time
+env_name = "FFAI-1-v3"
 
-# env_name = "FFAI-v2"
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
 # Self-play
@@ -44,6 +42,9 @@ selfplay_swap_steps = selfplay_save_steps
 # Architecture
 num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
+
+# Pathfinding-assisted paths enabled?
+# pathfinding_enabled = True
 
 
 # Make directories
@@ -729,6 +730,7 @@ def update_obs(observations):
 def make_env(worker_id):
     print("Initializing worker", worker_id, "...")
     env = gym.make(env_name)
+    env.config.pathfinding_enabled = pathfinding_enabled
     return env
 
 

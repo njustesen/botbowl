@@ -336,9 +336,14 @@ class BlockDiceLayer(FeatureLayer):
         for action_choice in game.state.available_actions:
             for i in range(len(action_choice.positions)):
                 if action_choice.positions[i] is not None:
+                    roll = 0
                     if i < len(action_choice.block_dice):
                         roll = (action_choice.block_dice[i] + 3) / 6.0
-                        out[action_choice.positions[i].y][action_choice.positions[i].x] = roll
+                    elif i < len(action_choice.paths):
+                        if action_choice.paths[i].block_dice is not None:
+                            roll = (action_choice.paths[i].block_dice + 3) / 6.0
+                    out[action_choice.positions[i].y][action_choice.positions[i].x] = roll
+
         return out
 
     def key(self, game):
