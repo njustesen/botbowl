@@ -17,6 +17,10 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 3. [**Reinforcement Learning III: The Full Board**](a2c-full.md)
 4. [**Reinforcement Learning IV: Self-play**](a2c-selfplay.md)
 
+## Forward Model
+1. [**Forward Model I: The Forward Model**](forward-model.md)
+1. [**Forward Model II: Flat Monte-Carlo Search**](monte-carlo.md)
+
 ## Submission
 1. [**Submit to Bot Bowl**](submit.md)
 

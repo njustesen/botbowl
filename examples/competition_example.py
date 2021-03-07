@@ -7,6 +7,7 @@ from multiprocessing import Process
 import time
 import secrets
 import ffai
+import socket
 
 
 def run_agent(registration_name, port, token):
@@ -34,7 +35,7 @@ hostname = socket.gethostname()
 time.sleep(2)
 
 # Load configurations, rules, arena and teams
-config = ffai.load_config("bot-bowl-ii")
+config = ffai.load_config("bot-bowl-iii")
 
 ruleset = ffai.load_rule_set(config.ruleset)
 arena = ffai.load_arena(config.arena)
@@ -42,8 +43,9 @@ team_a = ffai.load_team_by_filename("human", ruleset)
 team_b = ffai.load_team_by_filename("human", ruleset)
 
 # Make proxy agents
-client_a = PythonSocketClient("Player A", 'niels-mac', 5100, token=token_a)
-client_b = PythonSocketClient("Player B", 'niels-mac', 5200, token=token_b)
+hostname = socket.gethostname()
+client_a = PythonSocketClient("Player A", hostname, 5100, token=token_a)
+client_b = PythonSocketClient("Player B", hostname, 5200, token=token_b)
 
 # Run competition
 competition = ffai.Competition(client_a, client_b, team_a, team_b, config=config, ruleset=ruleset, arena=arena, n=2, record=True)

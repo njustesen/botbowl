@@ -29,14 +29,9 @@ save_interval = 10
 ppcg = False
 
 # Environment
-env_name = "FFAI-1-v3"
-#env_name = "FFAI-3-v2"
+env_name = "FFAI-v3"
 #num_steps = 10000000 # Increase training time
-#log_interval = 100
-#env_name = "FFAI-5-v2"
-#num_steps = 100000000 # Increase training time
-#log_interval = 1000
-#save_interval = 5000
+
 # env_name = "FFAI-v2"
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 

@@ -706,11 +706,11 @@ if __name__ == "__main__":
     # Uncomment to this to evaluate the bot against the random baseline
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-ii")
+    config = ffai.load_config("bot-bowl-iii")
     config.competition_mode = False
-    # config = get_config("ff-7.json")
-    # config = get_config("ff-5.json")
-    # config = get_config("ff-3.json")
+    # config = get_config("gym-7.json")
+    # config = get_config("gym-5.json")
+    # config = get_config("gym-3.json")
     ruleset = ffai.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
     arena = ffai.load_arena(config.arena)
     home = ffai.load_team_by_filename("human", ruleset)
