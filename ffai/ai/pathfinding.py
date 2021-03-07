@@ -238,6 +238,7 @@ class Pathfinder:
 
     def _expand(self, node: Node, target=None):
         if target is not None:
+            # TODO: handoff?
             if type(target) == Square and target.distance(node.position) > node.moves_left + node.gfis_left:
                 return
             if type(target) == int and abs(target - node.position.x) > node.moves_left + node.gfis_left:
@@ -248,11 +249,18 @@ class Pathfinder:
             if type(target) == int and node.position.x == target:
                 self.target_found = True
                 return
-        if node.moves_left + node.gfis_left == 0 or node.block_dice is not None:
+
+        if node.block_dice is not None or node.handoff_roll is not None:
             return
 
+        out_of_moves = False
+        if node.moves_left + node.gfis_left == 0:
+            if not self.can_handoff:
+                return
+            out_of_moves = True
+
         for direction in self.DIRECTIONS:
-            next_node = self._expand_node(node, direction)
+            next_node = self._expand_node(node, direction, out_of_moves=out_of_moves)
             if next_node is None:
                 continue
             rounded_p = round(next_node.prob, 6)
@@ -262,7 +270,7 @@ class Pathfinder:
                 self.open_set.put((next_node.euclidean_distance, next_node))
                 self.nodes[next_node.position.y][next_node.position.x] = next_node
 
-    def _expand_node(self, node, direction):
+    def _expand_node(self, node, direction, out_of_moves=False):
         euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
         to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
@@ -276,7 +284,9 @@ class Pathfinder:
             elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
                 return self._expand_foul_node(node, to_pos, player_at)
             return None
-        return self._expand_move_node(node, euclidean_distance, to_pos)
+        if not out_of_moves:
+            return self._expand_move_node(node, euclidean_distance, to_pos)
+        return None
 
     def _expand_move_node(self, node, euclidean_distance, to_pos):
         best_node = self.nodes[to_pos.y][to_pos.x]
