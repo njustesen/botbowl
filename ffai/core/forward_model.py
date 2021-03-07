@@ -214,6 +214,17 @@ class LoggedList(list, LoggedState):
 
         list.remove(self, value)
 
+    def __reduce__(self):
+        func = LoggedList.init_LoggedList
+        values = []
+        values.extend(self)
+        return func, (values, self._logger)
+
+    def init_LoggedList(values, logger):  # Static method
+        logged_list =  LoggedList(values)
+        object.__setattr__(logged_list, "_logger", logger)
+        return logged_list
+
 
 class LoggedSet(set, LoggedState):
     def __init__(self, value):
@@ -250,6 +261,17 @@ class LoggedSet(set, LoggedState):
     def remove(self, value):
         raise NotImplementedError()
 
+    def __reduce__(self):
+        func = LoggedSet.init_LoggedSet
+        values = set()
+        values.update(self)
+        return func, (values, self._logger)
+
+    def init_LoggedSet(values, logger):  # Static method
+        logged_set = LoggedSet(values)
+        object.__setattr__(logged_set, "_logger", logger)
+        return logged_set
+
 
 class LoggedDict(dict, LoggedState):
     def __init__(self, value):
@@ -281,6 +303,17 @@ class LoggedDict(dict, LoggedState):
 
     def popitem(self):
         raise NotImplementedError()
+
+    def __reduce__(self):
+        func = LoggedDict.init_LoggedDict
+        values = {}
+        values.update(self)
+        return func, (values, self._logger)
+
+    def init_LoggedDict(values, logger):  # Static method
+        logged_dict = LoggedDict(values)
+        object.__setattr__(logged_dict, "_logger", logger)
+        return logged_dict
 
 
 def is_immutable(obj):
