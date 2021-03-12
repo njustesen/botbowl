@@ -382,9 +382,9 @@ class GameState(LoggedState):
         self.spectators = 0
         self.active_player = None
         self.game_over = False
-        self.available_actions = []  # TODO: Calculate after reversing state
+        self.available_actions = []
         self.clocks = []
-        self.rerolled_procs = []
+        self.rerolled_procs = set()
         self.player_action_type = None
 
     def compare(self, other):
