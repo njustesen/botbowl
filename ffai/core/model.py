@@ -13,6 +13,9 @@ import time
 import json
 import pickle
 from math import sqrt
+
+from pytest import set_trace
+
 from ffai.core.util import *
 from ffai.core.table import *
 from ffai.core.forward_model import Immutable, LoggedState, CallableStep
@@ -385,6 +388,11 @@ class GameState(LoggedState):
         self.player_action_type = None
 
     def compare(self, other):
+        """
+        :param other, another GameState
+        Compares all relevant values of the two game states and returns a list strings containing all the
+        differences. Empty list if all relevant values are equal.
+        """
         errors = compare_iterable(self.to_json(ignore_clocks=True),
                                   other.to_json(ignore_clocks=True), path="state")
 
@@ -1212,3 +1220,18 @@ class Formation:
                     actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
                     positions_used.append(position)
         return actions
+
+    def compare(self, other, path):
+        """
+        For testing purposes only
+        """
+        diff = []
+        if self.name != other.name:
+            diff.append(f"{path}.name: {self.name} _NotEqual_ {other.name}")
+
+        formations_equal = all([(self_a == other_a).all() for self_a, other_a in zip(self.formation, other.formation)])
+
+        if not formations_equal:
+            diff.append(f"{path}.formation: <too big to display> _NotEqual_ <too big to display>")
+
+        return diff

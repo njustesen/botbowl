@@ -21,24 +21,27 @@ def get_game(fast_mode=False):
 
 
 def test_game_deep_copy():
-    config = load_config("ff-11")
-    config.fast_mode = False
+    config = load_config("ff-3")
+    config.fast_mode = True
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)
     away = load_team_by_filename("human", ruleset)
-    away_agent = make_bot("random")
-    home_agent = make_bot("random")
-    game = Game(1, home, away, home_agent, away_agent, config)
+    agent = make_bot("random")
+    human_agent = Agent("Gym Learner", human=True)
+    game = Game(1, home, away, human_agent, human_agent, config)
 
-    game.init()
     game.enable_forward_model()
+    game.init()
 
-    for i in range(0, 100, 20):
-        for _ in range(i):
-            game.step()
+    actions = 0
+
+    while not game.state.game_over and actions < 20:
+        actions += 1
         game_copy = deepcopy(game)
+        assert_game_states(game, game_copy, equal=True)
+        game.step(agent.act(game))
 
-        assert game.state is not game_copy.state
+    assert actions == 20
 
 
 def test_revert_multiple_times():
@@ -74,119 +77,31 @@ def assert_game_states(g1, g2, equal):
 def test_random_games():
     steps = 1000
 
-    game = get_game()
-    game.init()
-
-    to_step = game.get_forward_model_current_step()
-
-    game.enable_forward_model()
-    game_unchanged = deepcopy(game)
-
-    i = 0
-    while not game.state.game_over and i < steps:
-        game.step()
-        i += 1
-
-    game.revert_state(to_step)
-
-    try:
-        assert_game_states(game, game_unchanged, equal=True)
-    except AssertionError as e:
-        set_trace()
-        raise e
-
-
-def test_flat_MCTS():
-    class MCTSNode:
-        def __init__(self, action):
-            self.action = action
-            self.evaluations = []
-
-        def visits(self):
-            return len(self.evaluations)
-
-        def visit(self, score):
-            self.evaluations.append(score)
-
-        def score(self):
-            return np.average(self.evaluations)
-
-    class FlatMCTSBot(ffai.Agent):
-
-        def __init__(self, name, seed=None):
-            super().__init__(name)
-            self.my_team = None
-            self.rnd = np.random.RandomState(seed)
-
-        def new_game(self, game, team):
-            self.my_team = team
-
-        def act(self, game):
-
-            nodes = []
-            root = game.get_forward_model_current_step()
-
-            for action_choice in game.get_available_actions():
-                if action_choice.action_type == ffai.ActionType.PLACE_PLAYER:
-                    continue
-                for player in action_choice.players:
-                    nodes.append(MCTSNode(Action(action_choice.action_type, player=player)))
-                for position in action_choice.positions:
-                    nodes.append(MCTSNode(Action(action_choice.action_type, position=position)))
-                if len(action_choice.players) == len(action_choice.positions) == 0:
-                    nodes.append(MCTSNode(Action(action_choice.action_type)))
-
-            best_node = None
-            for node in nodes:
-                game.step(node.action)
-                score = self._evaluate(game)
-                node.visit(score)
-                if best_node is None or node.score() > best_node.score():
-                    best_node = node
-
-                game.revert_state(root)
-
-            return best_node.action
-
-        def _evaluate(self, game):
-            return 1
-
-        def end_game(self, game):
-            pass
-
-    # Register the bot to the framework
-    ffai.register_bot('mcts_bot', FlatMCTSBot)
-
-    # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-ii")
-    config.competition_mode = False
-    ruleset = ffai.load_rule_set(config.ruleset)
-    arena = ffai.load_arena(config.arena)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
-    config.competition_mode = False
-    config.debug_mode = False
-    config.fast_mode = True
-
-    # Play 10 games
-    for i in range(10):
-        human_player = Agent("Gym Learner", human=True)
-        bot = ffai.make_bot("mcts_bot")
-
-        game = ffai.Game(i, home, away, human_player, human_player, config, arena=arena, ruleset=ruleset)
+    for _ in range(4):
+        game = get_game()
         game.init()
+
+        to_step = game.get_forward_model_current_step()
+
         game.enable_forward_model()
+        game_unchanged = deepcopy(game)
 
-        assert game.config.fast_mode
-        for _ in range(100):
-            if game.state.game_over:
-                break
+        i = 0
+        while not game.state.game_over and i < steps:
+            game.step()
+            i += 1
 
-            while len(game.get_available_actions()) == 0:
-                game.step()
+        try:
+            game.revert_state(to_step)
+        except KeyError as error:
+            set_trace()
+            print("Got key error, investigate!")
 
-            action = bot.act(game)
-            game.step(action)
+        try:
+            assert_game_states(game, game_unchanged, equal=True)
+        except AssertionError as e:
+            set_trace()
+            raise e
 
 
 def test_logged_state():
@@ -260,3 +175,27 @@ def test_game_state_revert():
         for error in errors:
             print(error)
         assert len(errors) == 0
+
+
+def test_logged_set():
+    traj = Trajectory()
+    traj.enabled = True
+    logged_set = LoggedSet(set())
+    logged_set.set_logger(traj)
+
+    logged_set.add(123)
+
+    assert 123 in logged_set
+    assert len(logged_set) == 1
+
+    traj.next_step()
+    logged_set.clear()
+    assert len(logged_set) == 0
+
+    traj.step_backward(1)
+    assert 123 in logged_set
+    assert len(logged_set) == 1
+
+    traj.step_backward(0)
+
+    assert len(logged_set) == 0

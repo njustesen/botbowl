@@ -8,6 +8,9 @@ responsible for an isolated part of the game. Procedures are added to a stack, a
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 from abc import abstractmethod, ABCMeta
+from collections.abc import Iterable
+
+from pytest import set_trace
 
 from ffai.core.model import *
 from ffai.core.table import *
@@ -50,18 +53,24 @@ class Procedure(LoggedState):
         """
         return []
 
-    def compare(self, other):
+    def compare(self, other, path=""):
+
+        diff = []
+
         if type(self) != type(other):
-            return False
+            diff.append(f"{path}: __class__: '{type(self)}' _notEqual_ '{type(other)}'")
+            return diff
 
         for attr_name in dir(self):
-            if attr_name[0] == "_" or callable(getattr(self, attr_name)) or attr_name == "game":
+            self_attr = getattr(self, attr_name)
+            if attr_name[0] == "_" or callable(self_attr) or attr_name == "game" or isinstance(self_attr, Procedure):
                 continue
 
-            if getattr(self, attr_name) != getattr(other, attr_name):
-                return False
+            other_attr = getattr(other, attr_name)
 
-        return True
+            diff.extend(compare_iterable(self_attr, other_attr, path=f"{path}.{attr_name}"))
+
+        return diff
 
 
 class Regeneration(Procedure):

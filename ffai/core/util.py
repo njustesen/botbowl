@@ -7,6 +7,7 @@ A few utilities used across the core modules.
 """
 
 import os
+from collections.abc import Iterable
 from copy import copy
 
 import ffai
@@ -117,29 +118,26 @@ def compare_iterable(s1, s2, path=""):
     if type(s1) != type(s2):
         diff.append(f"{path}: __class__: '{type(s1)}' _notEqual_ '{type(s2)}'")
 
-    elif isinstance(s1, dict):
-
-        if len(s1) != len(s2):
-            diff.append(f"{path}: __len__: '{len(s1)}' _notEqual_ '{len(s2)}'")
-        else:
-            for key in s1.keys():
-                if isinstance(s1[key], dict) or isinstance(s1[key], list):
-                    diff.extend(compare_iterable(s1[key], s2[key], path + "." + key))
-                elif s1[key] != s2[key]:
-                    d = f"{path}.{key}: '{s1[key]}' _notEqual_ '{s2[key]}'"
-                    diff.append(d)
-    elif isinstance(s1, list):
-
-        if len(s1) != len(s2):
-            diff.append(f"{path}: __len__: '{len(s1)}' _notEqual_ '{len(s2)}'")
-        else:
-            for i, (item1, item2) in enumerate(zip(s1, s2)):
-                diff.extend(compare_iterable(item1, item2, f"{path}[{i}]"))
+    elif hasattr(s1, "to_json"):
+        diff.extend(compare_iterable(s1.to_json(), s2.to_json()))
 
     elif hasattr(s1, "compare"):
-        if not s1.compare(s2):
-            d = f"{path}: '{s1}' _notEqual_ '{s2}'"
-            diff.append(d)
+        diff.extend(s1.compare(s2, f"{path}"))
+
+    elif isinstance(s1, Iterable) and len(s1) != len(s2):
+        diff.append(f"{path}: __len__: '{len(s1)}' _notEqual_ '{len(s2)}'")
+
+    elif isinstance(s1, dict):
+        for key in s1.keys():
+            if isinstance(s1[key], dict) or isinstance(s1[key], list):
+                diff.extend(compare_iterable(s1[key], s2[key], path + "." + key))
+            elif s1[key] != s2[key]:
+                d = f"{path}.{key}: '{s1[key]}' _notEqual_ '{s2[key]}'"
+                diff.append(d)
+
+    elif isinstance(s1, list):
+        for i, (item1, item2) in enumerate(zip(s1, s2)):
+            diff.extend(compare_iterable(item1, item2, f"{path}[{i}]"))
 
     else:
         if s1 != s2:

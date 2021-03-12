@@ -5,7 +5,7 @@ Year: 2021
 ==========================
 Classes and method for recursively tracing changes to objects.
 """
-from copy import deepcopy
+from copy import deepcopy, copy
 from enum import Enum
 from pytest import set_trace
 
@@ -111,6 +111,10 @@ class CallableStep(Step):
 
     def undo(self):
         self.backward_func(self.owner, *self.backward_args)
+
+    def __repr__(self):
+        return f"CallableStep(owner={self.owner}, redo={self.forward_func}, {self.forward_args}, " \
+               f"undo={self.backward_func}, {self.backward_args}"
 
 
 class AssignmentStep(Step):
@@ -250,7 +254,7 @@ class LoggedSet(set, LoggedState):
     def clear(self):
         if self.logger_initialized():
             log_entry = CallableStep(self, forward_func=set.clear, forward_args=(),
-                                     backward_func=set.update, backward_args=(self,))
+                                     backward_func=set.update, backward_args=(copy(self),))
             self.log_this(log_entry)
 
         set.clear(self)
