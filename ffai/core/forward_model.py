@@ -184,12 +184,16 @@ class LoggedList(list, LoggedState):
         list.append(self, value)
 
     def pop(self, i=None):
-        assert i is None  # Not implemented yet
         if self.logger_initialized():
-            log_entry = CallableStep(self, forward_func=list.pop, forward_args=(),
-                                     backward_func=list.append, backward_args=(self[-1],))
+            if i is None:
+                log_entry = CallableStep(self, forward_func=list.pop, forward_args=(),
+                                         backward_func=list.append, backward_args=(self[-1],))
+            else:
+                log_entry = CallableStep(self, forward_func=list.pop, forward_args=(i,),
+                                         backward_func=list.insert, backward_args=(i, self[i],))
+
             self.log_this(log_entry)
-        return list.pop(self)
+        return list.pop(self) if i is None else list.pop(self, i)
 
     def __setitem__(self, key, value):
         if self.logger_initialized():
