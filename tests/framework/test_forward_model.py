@@ -1,3 +1,5 @@
+from random import random
+
 from tests.util import *
 import pytest
 from copy import deepcopy
@@ -8,100 +10,38 @@ from ffai.core.forward_model import *
 from ffai.ai.registry import make_bot
 
 
-def get_game(fast_mode=False):
-    config = load_config("ff-11")
-    config.fast_mode = fast_mode
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
-    away_agent = make_bot("random")
-    home_agent = make_bot("random")
-    game = Game(1, home, away, home_agent, away_agent, config)
-    return game
+def test_deepcopy_of_game_is_correct():
+    game = get_game(fast_mode=True, human_agents=True)
+    game_copy = deepcopy(game)
 
-
-def test_game_deep_copy():
-    config = load_config("ff-3")
-    config.fast_mode = True
-    ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("human", ruleset)
-    agent = make_bot("random")
-    human_agent = Agent("Gym Learner", human=True)
-    game = Game(1, home, away, human_agent, human_agent, config)
-
-    game.enable_forward_model()
-    game.init()
-
-    actions = 0
-
-    while not game.state.game_over and actions < 20:
-        actions += 1
-        game_copy = deepcopy(game)
+    for actions in range(1, 30):
         assert_game_states(game, game_copy, equal=True)
-        game.step(agent.act(game))
 
-    assert actions == 20
+        game.step(get_random_action(game))
+        assert_game_states(game, game_copy, equal=False)
+
+        game_copy = deepcopy(game)
+
+        if game.state.game_over:
+            return
 
 
-def test_revert_multiple_times():
-    game = get_game()
-    game.init()
+def test_forward_model_revert_multiple_times():
+    game = get_game(fast_mode=True, human_agents=True)
 
-    game.enable_forward_model()
     step = game.get_forward_model_current_step()
     init_state = deepcopy(game)
     assert_game_states(game, init_state, equal=True)
 
     for i in range(1, 10):
         for _ in range(i):
-            game.step()
+            game.step(get_random_action(game))
+            if game.state.game_over:
+                return
 
         assert_game_states(game, init_state, equal=False)
-
         game.revert_state(to_step=step)
         assert_game_states(game, init_state, equal=True)
-
-
-def assert_game_states(g1, g2, equal):
-    errors = g1.state.compare(g2.state)
-    if len(errors) > 0 and equal:
-        print("\n\nThese differences were not reverted:")
-        for error in errors:
-            print(error)
-        assert len(errors) == 0
-    elif len(errors) == 0 and not equal:
-        raise AssertionError("Expected not equal game states")
-
-
-def test_random_games():
-    steps = 1000
-
-    for _ in range(4):
-        game = get_game()
-        game.init()
-
-        to_step = game.get_forward_model_current_step()
-
-        game.enable_forward_model()
-        game_unchanged = deepcopy(game)
-
-        i = 0
-        while not game.state.game_over and i < steps:
-            game.step()
-            i += 1
-
-        try:
-            game.revert_state(to_step)
-        except KeyError as error:
-            set_trace()
-            print("Got key error, investigate!")
-
-        try:
-            assert_game_states(game, game_unchanged, equal=True)
-        except AssertionError as e:
-            set_trace()
-            raise e
 
 
 def test_logged_state():
@@ -133,50 +73,6 @@ def test_logged_state():
     assert exception_caught
 
 
-def test_game_state_revert():
-    # Init
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-
-    # Setup
-    player = team.players[0]
-    game.put(player, Square(2, 2))
-    game.get_ball().move_to(player.position)
-    game.get_ball().is_carried = True
-    game.set_available_actions()
-
-    # Prepare test
-    game.enable_forward_model()
-    init_state = deepcopy(game.state)
-    saved_step = game.get_forward_model_current_step()
-    assert len(game.state.compare(init_state)) == 0
-
-    # Do the things that will be reverted
-    game.state.weather = WeatherType.SWELTERING_HEAT
-    player.state.spp_earned = 2
-    game.step(Action(ActionType.START_MOVE, player=player))
-    game.step(Action(ActionType.MOVE, position=Square(3, 3)))
-    game.step(Action(ActionType.END_PLAYER_TURN))
-    game.step(Action(ActionType.END_TURN))
-    game.step(Action(ActionType.END_TURN))
-    game.step(Action(ActionType.START_PASS, player=player))
-    game.step(Action(ActionType.PASS, position=Square(5, 5)))
-
-    # Make sure the differences are found
-    errors = game.state.compare(init_state)
-    assert len(errors) > 0
-
-    # Revert and assert
-    game.revert_state(to_step=saved_step)
-    errors = game.state.compare(init_state)
-    if len(errors) > 0:
-        print("\n\nThese differences were not reverted:")
-        for error in errors:
-            print(error)
-        assert len(errors) == 0
-
-
 def test_logged_set():
     traj = Trajectory()
     traj.enabled = True
@@ -201,32 +97,59 @@ def test_logged_set():
     assert len(logged_set) == 0
 
 
-def test_steps():
-    game = get_game(fast_mode=True)
-    game.home_agent = Agent("Human 1", human=True, agent_id=1)
-    game.away_agent = Agent("Human 2", human=True, agent_id=2)
-    game.init()
-    game.enable_forward_model()
+def test_forward_model_revert_few_steps():
+    game = get_game(fast_mode=True, human_agents=True)
 
     def avail_actions_str(game):
         return "-".join([action_choice.action_type.name for action_choice in game.state.available_actions])
 
-    def get_random_action(game):
-        while True:
-            action_choice = game.rnd.choice(game.state.available_actions)
-            if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
-                break
-        position = game.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
-        player = game.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
-        return ffai.Action(action_choice.action_type, position=position, player=player)
+    tmp_step = game.get_forward_model_current_step()
+    tmp_available_actions_str = avail_actions_str(game)
 
     while not game.state.game_over:
-        tmp_step = game.get_forward_model_current_step()
-        tmp_available_actions_str = avail_actions_str(game)
-        action = get_random_action(game)
+        game.step(get_random_action(game))
 
-        game.step(action)
-        game.revert_state(tmp_step)
-        assert tmp_available_actions_str == avail_actions_str(game)
+        if random() < 0.3:
+            game.revert_state(tmp_step)
+            assert tmp_available_actions_str == avail_actions_str(game)
+            game.step(get_random_action(game))
 
-        game.step(action)
+            tmp_step = game.get_forward_model_current_step()
+            tmp_available_actions_str = avail_actions_str(game)
+
+
+def get_game(fast_mode=True, human_agents=True):
+    config = load_config("ff-11")
+    config.fast_mode = fast_mode
+    ruleset = load_rule_set(config.ruleset)
+    home = load_team_by_filename("human", ruleset)
+    away = load_team_by_filename("human", ruleset)
+    away_agent = Agent("Human 1", human=True, agent_id=1) if human_agents else make_bot("random")
+    home_agent = Agent("Human 2", human=True, agent_id=2) if human_agents else make_bot("random")
+    game = Game(1, home, away, home_agent, away_agent, config)
+    game.init()
+
+    game.enable_forward_model()
+
+    return game
+
+
+def get_random_action(game):
+    while True:
+        action_choice = game.rnd.choice(game.state.available_actions)
+        if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
+            break
+    position = game.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+    player = game.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+    return ffai.Action(action_choice.action_type, position=position, player=player)
+
+
+def assert_game_states(g1, g2, equal):
+    errors = g1.state.compare(g2.state)
+    if len(errors) > 0 and equal:
+        print("\n\nThese differences were not reverted:")
+        for error in errors:
+            print(error)
+        assert len(errors) == 0
+    elif len(errors) == 0 and not equal:
+        raise AssertionError("Expected not equal game states")
