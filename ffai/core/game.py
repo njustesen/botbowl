@@ -123,9 +123,7 @@ class Game:
             # Game over
             if self.state.game_over:
                 self._end_game()
-                # Handle action log
-                self.state_log.next_step()
-                return
+                break
 
             # Reset pathfinding map
             self.ff_map = None
@@ -135,9 +133,7 @@ class Game:
 
                 # If human player - wait for input
                 if self.actor is None or self.actor.human:
-                    # Handle action log
-                    self.state_log.next_step()
-                    return
+                    break
 
                 # Query agent for action
                 self.last_request_time = time.time()
@@ -152,20 +148,20 @@ class Game:
 
                 # Did the game terminate?
                 if self.state.game_over:
-                    # Handle action log
-                    self.state_log.next_step()
-                    return
+                    break
                 
             else:
 
                 # If not in fast mode - wait for input before continuing
                 if not self.config.fast_mode:
-                    # Handle action log
-                    self.state_log.next_step()
-                    return
+                    break
                 
                 # Else continue procedure with no action
                 self.action = None
+
+        self.state_log.next_step()
+
+
 
     def refresh(self):
         """
