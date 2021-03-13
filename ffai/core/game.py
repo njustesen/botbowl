@@ -123,6 +123,8 @@ class Game:
             # Game over
             if self.state.game_over:
                 self._end_game()
+                # Handle action log
+                self.state_log.next_step()
                 return
 
             # Reset pathfinding map
@@ -133,6 +135,8 @@ class Game:
 
                 # If human player - wait for input
                 if self.actor is None or self.actor.human:
+                    # Handle action log
+                    self.state_log.next_step()
                     return
 
                 # Query agent for action
@@ -148,12 +152,16 @@ class Game:
 
                 # Did the game terminate?
                 if self.state.game_over:
+                    # Handle action log
+                    self.state_log.next_step()
                     return
                 
             else:
 
                 # If not in fast mode - wait for input before continuing
                 if not self.config.fast_mode:
+                    # Handle action log
+                    self.state_log.next_step()
                     return
                 
                 # Else continue procedure with no action
@@ -367,8 +375,6 @@ class Game:
             print("Done={}".format(proc.done))
             print(f"DONE={self.state.stack.peek().done}")
 
-        # Handle action log
-        self.state_log.next_step()
 
         # Used if players was accidentally cloned
         if self.config.debug_mode:

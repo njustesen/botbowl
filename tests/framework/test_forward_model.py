@@ -199,3 +199,50 @@ def test_logged_set():
     traj.step_backward(0)
 
     assert len(logged_set) == 0
+
+
+def test_steps():
+    game = get_game()
+    game.home_agent = Agent("Human 1", human=True, agent_id=1)
+    game.away_agent = Agent("Human 2", human=True, agent_id=2)
+    game.init()
+    game.enable_forward_model()
+    game.config.fast_mode = True
+
+
+
+    def avail_actions_str(game):
+        return "-".join([action_choice.action_type.name for action_choice in game.state.available_actions])
+
+    def get_random_action(game):
+        while True:
+            action_choice = game.rnd.choice(game.state.available_actions)
+            if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
+                break
+        position = game.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        player = game.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+        return ffai.Action(action_choice.action_type, position=position, player=player)
+
+    for _ in range(20):
+        game.step(get_random_action(game))
+
+
+    while not game.state.game_over:
+
+        tmp_step = game.get_forward_model_current_step()
+        tmp_available_actions_str = avail_actions_str(game)
+        #tmp_game = deepcopy(game)
+        #assert_game_states(game, tmp_game, equal=True)
+        print(f"tmp avail actions = {tmp_available_actions_str}")
+
+        action = get_random_action(game)
+        game.step(action)
+
+        print(f"current={game.state_log.current_step}, revert_to={tmp_step}")
+        game.revert_state(tmp_step)
+
+        #assert game.state_log.current_step == tmp_game.state_log.current_step
+        #assert_game_states(game, tmp_game, equal=True)
+        assert tmp_available_actions_str == avail_actions_str(game)
+
+        game.step(action)
