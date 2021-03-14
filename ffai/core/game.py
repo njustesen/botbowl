@@ -25,7 +25,6 @@ class Game:
         self.arena = load_arena(config.arena) if arena is None else arena
         self.config = config
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
-
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.rnd = np.random.RandomState(seed)
         self.ff_map = None
@@ -35,7 +34,6 @@ class Game:
         self.last_action_time = None
         self.forced_action = None
         self.action = None
-
         self.state_log = Trajectory()
 
     def to_json(self, ignore_reports=False):
@@ -158,8 +156,6 @@ class Game:
                 self.action = None
 
         self.state_log.next_step()
-
-
 
     def refresh(self):
         """
@@ -369,7 +365,6 @@ class Game:
             print("Done={}".format(proc.done))
             print(f"DONE={self.state.stack.peek().done}")
             print("Players on Field={}".format(len(self.get_players_on_pitch())))
-
 
         # Used if players was accidentally cloned
         if self.config.debug_mode:

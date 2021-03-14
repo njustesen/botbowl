@@ -9,11 +9,8 @@ A few utilities used across the core modules.
 import os
 from collections.abc import Iterable
 from copy import copy
-
 import ffai
 from ffai.core.forward_model import LoggedState
-
-
 from ffai.core.model import *
 
 

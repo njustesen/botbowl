@@ -13,9 +13,6 @@ import time
 import json
 import pickle
 from math import sqrt
-
-from pytest import set_trace
-
 from ffai.core.util import *
 from ffai.core.table import *
 from ffai.core.forward_model import Immutable, LoggedState, CallableStep
