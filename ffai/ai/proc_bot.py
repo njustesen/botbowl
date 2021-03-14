@@ -45,7 +45,7 @@ class ProcBot(Agent):
             return self.blitz(game)
         if isinstance(proc, Turn):
             return self.turn(game)
-        if isinstance(proc, Action):
+        if isinstance(proc, MoveAction):
             return self.player_action(game)
         if isinstance(proc, MoveAction):
             return self.player_action(game)
@@ -53,7 +53,7 @@ class ProcBot(Agent):
             return self.player_action(game)
         if isinstance(proc, PassAction):
             return self.player_action(game)
-        if isinstance(proc, HandOffAction):
+        if isinstance(proc, HandoffAction):
             return self.player_action(game)
         if isinstance(proc, BlitzAction):
             return self.player_action(game)

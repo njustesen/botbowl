@@ -258,6 +258,11 @@ def load_config(name):
         init = data['time_limits']['init']
         end = data['time_limits']['end']
     config.time_limits = TimeLimits(turn=turn, secondary=secondary, init=init, end=end)
+    config.pathfinding_enabled = False
+    config.pathfinding_directly_to_adjacent = False
+    if 'pathfinding' in data and data['pathfinding']['enabled']:
+        config.pathfinding_enabled = True
+        config.pathfinding_directly_to_adjacent = 'directly_to_adjacent' in data['pathfinding'] and data['pathfinding']['directly_to_adjacent']
     return config
 
 

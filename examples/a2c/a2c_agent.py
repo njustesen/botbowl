@@ -12,10 +12,10 @@ import matplotlib.pyplot as plt
 import sys
 
 # Architecture
-model_name = 'FFAI-v2'
-env_name = 'FFAI-v2'
-model_filename = "models/" + model_name
-log_filename = "logs/" + model_name + ".dat"
+model_name = '585f6180-7f54-11eb-918b-acde48001122'
+env_name = 'FFAI-v3'
+model_filename = f"models/{env_name}/{model_name}.nn"
+log_filename = f"logs/{env_name}/{env_name}.dat"
 
 
 class CNNPolicy(nn.Module):
@@ -109,11 +109,12 @@ class CNNPolicy(nn.Module):
 
 class A2CAgent(Agent):
 
-    def __init__(self, name, env_name=env_name, filename=model_filename):
+    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True, exclude_pathfinding_moves=True):
         super().__init__(name)
         self.my_team = None
         self.env = self.make_env(env_name)
-
+        self.copy_game = copy_game
+        self.exclude_pathfinding_moves = exclude_pathfinding_moves
         self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
         self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
         self.board_squares = self.spatial_obs_space[1] * self.spatial_obs_space[2]
@@ -144,14 +145,39 @@ class A2CAgent(Agent):
             flipped[name] = np.flip(layer, 1)
         return flipped
 
+    def _filter_actions(self):
+        """
+        Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
+        """
+        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
+            actions = []
+            for action_choice in self.env.game.state.available_actions:
+                if action_choice.action_type == ActionType.MOVE:
+                    positions, block_dice, rolls = [], [], []
+                    for i in range(len(action_choice.positions)):
+                        position = action_choice.positions[i]
+                        roll = action_choice.paths[i].rolls[0]
+                        # Only include positions where there are not players
+                        if self.env.game.get_player_at(position) is None:
+                            positions.append(position)
+                            rolls.append(roll)
+                    actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
+                else:
+                    actions.append(action_choice)
+            self.env.game.state.available_actions = actions
+
     def act(self, game):
 
         if self.end_setup:
             self.end_setup = False
             return ffai.Action(ActionType.END_SETUP)
 
-        # Get observation
         self.env.game = game
+
+        # Filter out pathfinding-assisted move actions
+        self._filter_actions()
+
+        # Get observation
         observation = self.env.get_observation()
 
         # Flip board observation if away team - we probably only trained as home team
@@ -269,8 +295,9 @@ if __name__ == "__main__":
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("ff-1")
+    config = ffai.load_config("bot-bowl-iii")
     config.competition_mode = False
+    config.pathfinding_enabled = False
     ruleset = ffai.load_rule_set(config.ruleset)
     arena = ffai.load_arena(config.arena)
     home = ffai.load_team_by_filename("human", ruleset)

@@ -16,8 +16,13 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 2. [**Reinforcement Learning II: A2C**](a2c.md)
 3. [**Reinforcement Learning III: The Full Board**](a2c-full.md)
 4. [**Reinforcement Learning IV: Self-play**](a2c-selfplay.md)
+5. **Reinforcement Learning V: Pathfinding-assitance** *COMING SOON*
 
-## Submission
+## Forward Model
+1. **Forward Model I: The Forward Model** *COMING SOON*
+2. **Forward Model II: Flat Monte-Carlo Search** *COMING SOON*
+
+## Submit
 1. [**Submit to Bot Bowl**](submit.md)
 
 If you find any problems or have questions as you go through the tutorials, please report an issue on [https://github.com/njustesen/ffai/](github).
