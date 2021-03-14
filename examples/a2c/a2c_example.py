@@ -44,7 +44,7 @@ num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
 
 # Pathfinding-assisted paths enabled?
-# pathfinding_enabled = True
+pathfinding_enabled = False
 
 
 # Make directories
@@ -494,7 +494,7 @@ def main():
                 action_objects.append(action_object)
 
             obs, env_reward, shaped_reward, tds_scored, tds_opp_scored, done, info = envs.step(action_objects, difficulty=difficulty)
-            #envs.render()
+            # envs.render()
 
             '''
             for j in range(len(obs)):

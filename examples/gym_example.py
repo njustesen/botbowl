@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # env = gym.make("FFAI-7-v3")
     # env = gym.make("FFAI-5-v3")
     # env = gym.make("FFAI-3-v3")
-    env = gym.make("FFAI-v3")
+    env = gym.make("FFAI-1-v3")
 
     # env.config.pathfinding_enabled = True
 
