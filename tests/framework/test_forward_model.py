@@ -119,7 +119,7 @@ def test_forward_model_revert_few_steps():
 
 
 def get_game(fast_mode=True, human_agents=True):
-    config = load_config("ff-11")
+    config = load_config("bot-bowl-iii")
     config.fast_mode = fast_mode
     ruleset = load_rule_set(config.ruleset)
     home = load_team_by_filename("human", ruleset)

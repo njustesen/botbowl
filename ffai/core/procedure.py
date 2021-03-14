@@ -55,23 +55,7 @@ class Procedure(LoggedState):
         return []
 
     def compare(self, other, path=""):
-
-        diff = []
-
-        if type(self) != type(other):
-            diff.append(f"{path}: __class__: '{type(self)}' _notEqual_ '{type(other)}'")
-            return diff
-
-        for attr_name in dir(self):
-            self_attr = getattr(self, attr_name)
-            if attr_name[0] == "_" or callable(self_attr) or attr_name == "game" or isinstance(self_attr, Procedure):
-                continue
-
-            other_attr = getattr(other, attr_name)
-
-            diff.extend(compare_iterable(self_attr, other_attr, path=f"{path}.{attr_name}"))
-
-        return diff
+        return compare_object(self, other, path, ignored_keys={"game"}, ignored_types={Procedure})
 
 
 class Regeneration(Procedure):

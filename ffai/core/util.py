@@ -129,11 +129,7 @@ def compare_iterable(s1, s2, path=""):
 
     elif isinstance(s1, dict):
         for key in s1.keys():
-            if isinstance(s1[key], dict) or isinstance(s1[key], list):
-                diff.extend(compare_iterable(s1[key], s2[key], path + "." + key))
-            elif s1[key] != s2[key]:
-                d = f"{path}.{key}: '{s1[key]}' _notEqual_ '{s2[key]}'"
-                diff.append(d)
+            diff.extend(compare_iterable(s1[key], s2[key], f"{path}.{key}"))
 
     elif isinstance(s1, list):
         for i, (item1, item2) in enumerate(zip(s1, s2)):
@@ -143,4 +139,23 @@ def compare_iterable(s1, s2, path=""):
         if s1 != s2:
             d = f"{path}: '{s1}' _notEqual_ '{s2}'"
             diff.append(d)
+    return diff
+
+
+def compare_object(self, other, path="", ignored_keys=None, ignored_types=None):
+    diff = []
+
+    if type(self) != type(other):
+        diff.append(f"{path}: __class__: '{type(self)}' _notEqual_ '{type(other)}'")
+        return diff
+
+    for attr_name in dir(self):
+        self_attr = getattr(self, attr_name)
+        if attr_name[0] == "_" or callable(self_attr) or \
+                ignored_keys is not None and attr_name in ignored_keys or \
+                ignored_types is not None and any([isinstance(self_attr, T) for T in ignored_types]):
+            continue
+
+        other_attr = getattr(other, attr_name)
+        diff.extend(compare_iterable(self_attr, other_attr, path=f"{path}.{attr_name}"))
     return diff
