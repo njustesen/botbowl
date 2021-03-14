@@ -7,11 +7,11 @@ import multiprocessing
 import os
 
 envs = [
-    "FFAI-1-v2",
-    "FFAI-3-v2",
-    "FFAI-5-v2",
-    "FFAI-7-v2",
-    "FFAI-11-v2"
+    "FFAI-1-v3",
+    "FFAI-3-v3",
+    "FFAI-5-v3",
+    "FFAI-7-v3",
+    "FFAI-11-v3"
 ]
 
 

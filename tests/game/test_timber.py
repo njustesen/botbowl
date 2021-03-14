@@ -32,7 +32,7 @@ def test_pass_roll_inaccurate(nbr_of_teammates):
     game.step(Action(ActionType.START_MOVE, player=player))
     for action in game.get_available_actions(): 
         if action.action_type == ActionType.STAND_UP: 
-            assert action.agi_rolls == [[target]] 
+            assert action.rolls == [[target]]
             break 
     
     game.step(Action(ActionType.STAND_UP, player=player))

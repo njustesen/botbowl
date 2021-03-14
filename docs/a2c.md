@@ -27,6 +27,8 @@ In future tutorials, we will attempt to:
 1. scale this approach to the 11-player variant of the game
 2. apply self-play to achieve a robust policy against diverse opponents
 
+The v2 environments don't use pathfinding, i.e. you can only move one square at each step. The results shown in the first two RL tutorials use v2. The v3 environments (simply change the name from FFAI-1-v2 to FFAI-1-v3) does use pathfinding such that players can move several squares in one action. The games thus have fewer steps in v3 but are slower. 
+
 ## Observation and Action Space
 We will use the [default observation space](gym.md) in FFAI. 
 

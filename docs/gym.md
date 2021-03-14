@@ -161,49 +161,51 @@ The 19 procedures represented in the one-hot vector obs['procedure'] are:
 18. Pickup
 
 ## Action Types
-Actions consists of 31 action types. Some action types, denoted by `<position>` also requires an x and y-coordinate.
+Actions consists of 43 action types. Some action types, denoted by `<position>` also requires a position and `<player>` requires a player to be specified.
 
-0. ActionType.START_GAME
-1. ActionType.HEADS
-2. ActionType.TAILS
-3. ActionType.KICK
-4. ActionType.RECEIVE
-5. ActionType.END_PLAYER_TURN
-6. ActionType.USE_REROLL
-7. ActionType.DONT_USE_REROLL
-8. ActionType.END_TURN
-9. ActionType.STAND_UP
-10. ActionType.SELECT_ATTACKER_DOWN
-11. ActionType.SELECT_BOTH_DOWN
-12. ActionType.SELECT_PUSH
-13. ActionType.SELECT_DEFENDER_STUMBLES
-14. ActionType.SELECT_DEFENDER_DOWN
-15. ActionType.SELECT_NONE
-16. ActionType.PLACE_PLAYER`<Position>`
-17. ActionType.PLACE_BALL`<Position>`
-18. ActionType.PUSH`<Position>`
-19. ActionType.FOLLOW_UP`<Position>` 
-20. ActionType.SELECT_PLAYER`<Position>` (position of the player)
-21. ActionType.MOVE`<Position>`
-22. ActionType.BLOCK`<Position>`
-23. ActionType.PASS`<Position>`
-24. ActionType.FOUL`<Position>`
-25. ActionType.HANDOFF`<Position>`
-24. ActionType.LEAP
-25. ActionType.START_MOVE`<Position>` (position of the player)
-26. ActionType.START_BLOCK`<Position>` (position of the player)
-27. ActionType.START_BLITZ`<Position>` (position of the player)
-28. ActionType.START_PASS`<Position>` (position of the player)
-29. ActionType.START_FOUL`<Position>` (position of the player)
-30. ActionType.START_HANDOFF`<Position>` (position of the player)
-31. ActionType.USE_SKILL
-32. ActionType.DONT_USE_SKILL
-33. ActionType.SETUP_FORMATION_WEDGE
-34. ActionType.SETUP_FORMATION_LINE
-35. ActionType.SETUP_FORMATION_SPREAD
-36. ActionType.SETUP_FORMATION_ZONE
-37. ActionType.USE_BRIBE
-38. ActionType.DONT_USE_BRIBE
+0. ```ActionType.START_GAME```,
+1. ```ActionType.HEADS```,
+2. ```ActionType.TAILS```,
+3. ```ActionType.KICK```,
+4. ```ActionType.RECEIVE```,
+5. ```ActionType.END_PLAYER_TURN```,
+6. ```ActionType.USE_REROLL```,
+7. ```ActionType.DONT_USE_REROLL```,
+8. ```ActionType.END_TURN```,
+9. ```ActionType.END_SETUP```,
+10. ```ActionType.STAND_UP```,
+11. ```ActionType.SELECT_ATTACKER_DOWN```,
+12. ```ActionType.SELECT_BOTH_DOWN```,
+13. ```ActionType.SELECT_PUSH```,
+14. ```ActionType.SELECT_DEFENDER_STUMBLES```,
+15. ```ActionType.SELECT_DEFENDER_DOWN```,
+16. ```ActionType.SELECT_NONE```,
+17. ```ActionType.PLACE_PLAYER<Player, Position>``` (player to place and position of the target),,
+18. ```ActionType.PLACE_BALL<Position>``` (position of the player),
+19. ```ActionType.PUSH<Position>``` (position of the target),
+20. ```ActionType.FOLLOW_UP```,
+21. ```ActionType.SELECT_PLAYER<Position>``` (position of the player),
+22. ```ActionType.MOVE<Position>``` (position of the target),
+23. ```ActionType.BLOCK<Position>``` (position of the target),
+24. ```ActionType.PASS<Position>``` (position of the target),
+25. ```ActionType.FOUL<Position>``` (position of the target),
+26. ```ActionType.HANDOFF<Position>``` (position of the target),
+27. ```ActionType.LEAP<Position>``` (position of the target),
+28. ```ActionType.STAB<Position>``` (position of the target),
+29. ```ActionType.START_MOVE<Position>``` (position of the player),
+30. ```ActionType.START_BLOCK<Position>``` (position of the player),
+31. ```ActionType.START_BLITZ<Position>``` (position of the player),
+32. ```ActionType.START_PASS<Position>``` (position of the player),
+33. ```ActionType.START_FOUL<Position>``` (position of the player),
+34. ```ActionType.START_HANDOFF<Position>```,
+35. ```ActionType.USE_SKILL```,
+36. ```ActionType.DONT_USE_SKILL```,
+37. ```ActionType.SETUP_FORMATION_WEDGE```,
+38. ```ActionType.SETUP_FORMATION_LINE```,
+39. ```ActionType.SETUP_FORMATION_SPREAD```,
+40. ```ActionType.SETUP_FORMATION_ZONE```,
+41. ```ActionType.USE_BRIBE```,
+42. ```ActionType.DONT_USE_BRIBE```
 
 ### Observation: 'procedure'
 The 'procedure' part of the observation contains a one-hot vector with 16 values representing which procedures the game is in:
@@ -227,47 +229,6 @@ The 'procedure' part of the observation contains a one-hot vector with 16 values
 
 ### Observation: 'available-action-types'
 The 'available-action-types' part of the observation contains a one-hot vector describing which action types that are currently available.
-
-0. ```ActionType.START_GAME```
-1. ```ActionType.HEADS```
-2. ```ActionType.TAILS```
-3. ```ActionType.KICK```
-4. ```ActionType.RECEIVE```
-5. ```ActionType.END_PLAYER_TURN```
-6. ```ActionType.USE_REROLL```
-7. ```ActionType.DONT_USE_REROLL```
-8. ```ActionType.END_TURN```
-9. ```ActionType.STAND_UP```
-10. ```ActionType.SELECT_ATTACKER_DOWN```
-11. ```ActionType.SELECT_BOTH_DOWN```
-12. ```ActionType.SELECT_PUSH```
-13. ```ActionType.SELECT_DEFENDER_STUMBLES```
-14. ```ActionType.SELECT_DEFENDER_DOWN```
-15. ```ActionType.SELECT_NONE```
-16. ```ActionType.PLACE_PLAYER <Position>```
-17. ```ActionType.PLACE_BALL <Position>```
-18. ```ActionType.PUSH <Position>```
-19. ```ActionType.FOLLOW_UP <Position>```
-20. ```ActionType.SELECT_PLAYER <Position>```
-21. ```ActionType.MOVE <Position>```
-22. ```ActionType.BLOCK <Position>```
-23. ```ActionType.PASS <Position>```
-24. ```ActionType.FOUL <Position>```
-25. ```ActionType.HANDOFF`<Position>```
-26. ```ActionType.LEAP`<Position>```
-27. ```ActionType.STAB <Position>```
-28. ```ActionType.START_MOVE <Position>```
-29. ```ActionType.START_BLOCK <Position>```
-30. ```ActionType.START_BLITZ <Position>```
-31. ```ActionType.START_PASS <Position>```
-32. ```ActionType.START_FOUL <Position>```
-33. ```ActionType.START_HANDOFF <Position>```
-34. ```ActionType.USE_SKILL```
-35. ```ActionType.DONT_USE_SKILL```
-36. ```ActionType.SETUP_FORMATION_WEDGE```
-37. ```ActionType.SETUP_FORMATION_LINE```
-38. ```ActionType.SETUP_FORMATION_SPREAD```
-39. ```ActionType.SETUP_FORMATION_ZONE```
 
 ## Actions
 To take an action, the step function must be called with an Action instance that contains an action type and a position if needed. See the list above whether an actions needs a position. Actions are instantiated and used like this:

@@ -733,6 +733,15 @@ a:hover {
   margin: 10px 10px;
   height: 10px;
   width: 10px;
+  background-color: rgba(255, 255, 255, 0.33);
+  border-radius: 50%;
+  display: inline-block;
+}
+.gamecontent .gameboard .pathdot {
+  position: absolute;
+  margin: 10px 10px;
+  height: 10px;
+  width: 10px;
   background-color: rgba(0, 0, 0, 0.33);
   border-radius: 50%;
   display: inline-block;
@@ -741,11 +750,11 @@ a:hover {
   stroke: rgba(255, 0, 255, 0.5);
   stroke-width: 3px;
 }
-.gamecontent .gameboard .agi-rolls {
+.gamecontent .gameboard .d6-rolls {
   z-index: 10;
   position: absolute;
 }
-.gamecontent .gameboard .agi-rolls .agi {
+.gamecontent .gameboard .d6-rolls .d6 {
   color: white;
   padding: 1px;
   padding-left: 2px;
@@ -756,15 +765,15 @@ a:hover {
   margin-top: 8px;
   background: rgba(0, 0, 0, 0.5);
 }
-.gamecontent .gameboard .agi-rolls .agi-2 {
+.gamecontent .gameboard .d6-rolls .d6-2 {
   margin-left: 1px;
   margin-top: 8px;
 }
-.gamecontent .gameboard .agi-rolls .agi-3 {
+.gamecontent .gameboard .d6-rolls .d6-3 {
   margin-left: 1px;
   margin-top: 1px;
 }
-.gamecontent .gameboard .agi-rolls .agi-4 {
+.gamecontent .gameboard .d6-rolls .d6-4 {
   margin-left: 1px;
   margin-top: 1px;
 }

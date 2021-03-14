@@ -390,14 +390,17 @@
                         <div class="movedot" id="movedot-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" ng-if="local_state.board[$parent.$index+1][$index+1].number >= 0">
 
                         </div>
+                        <div class="pathdot" id="pathdot-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" ng-if="local_state.board[$parent.$index+1][$index+1].on_path">
+
+                        </div>
                         <!--
                         <svg style="position:absolute;top:-15;left:-15;height:200%;bottom:200%;z-index: -1" ng-if="local_state.board[$parent.$index+1][$index+1].number >= 0">
                             <line class="moveline" X="{{$parent.$index+1}}" Y="{{$parent.$parent.$index+1}}" id="moveline-{{local_state.board[$parent.$parent.$index+1][$parent.$index+1].number}}" x1="30" y1="30" x2="30" y2="30" />
                         </svg>
                         -->
-                        <div class="agi-rolls">
-                            <span class="agi agi-{{getAgiRolls(local_state.board[$parent.$parent.$index+1][$parent.$index+1], false).length}}" ng-repeat="roll in getAgiRolls(local_state.board[$parent.$index+1][$index+1], true) track by $index">
-                                {{ getAgiRolls(local_state.board[$parent.$parent.$index+1][$parent.$index+1], false)[$index] }}+
+                        <div class="d6-rolls">
+                            <span class="d6 d6-{{getD6Rolls(local_state.board[$parent.$parent.$index+1][$parent.$index+1], false).length}}" ng-repeat="roll in getD6Rolls(local_state.board[$parent.$index+1][$index+1], true) track by $index">
+                                {{ getD6Rolls(local_state.board[$parent.$parent.$index+1][$parent.$index+1], false)[$index] }}+
                             </span>
                         </div>
                         <div class="playericon align-middle text-center" ng-if="local_state.board[$parent.$index+1][$index+1].player != null">
@@ -411,12 +414,12 @@
                             <img src="static/img/icons/game/dice_small.png" class="transparent dice" />
                         </div>
                         <div class="block_roll_icon align-middle text-center">
-                            <img src="static/img/icons/decorations/block1dagainst.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == -1" />
-                            <img src="static/img/icons/decorations/block2dagainst.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == -2" />
-                            <img src="static/img/icons/decorations/block3dagainst.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == -3" />
-                            <img src="static/img/icons/decorations/block1d.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == 1" />
-                            <img src="static/img/icons/decorations/block2d.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == 2" />
-                            <img src="static/img/icons/decorations/block3d.gif" class="blockDice" ng-if="getBlockRoll(local_state.board[$parent.$index+1][$index+1]) == 3" />
+                            <img src="static/img/icons/decorations/block1dagainst.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == -1" />
+                            <img src="static/img/icons/decorations/block2dagainst.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == -2" />
+                            <img src="static/img/icons/decorations/block3dagainst.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == -3" />
+                            <img src="static/img/icons/decorations/block1d.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == 1" />
+                            <img src="static/img/icons/decorations/block2d.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == 2" />
+                            <img src="static/img/icons/decorations/block3d.gif" class="blockDice" ng-if="getBlockDice(local_state.board[$parent.$index+1][$index+1]) == 3" />
                         </div>
                         <div class="stateicon align-middle text-center">
                             <img ng-if="local_state.board[$parent.$index+1][$index+1].player.state.bone_headed" src="static/img/player_status/bonehead.gif" />

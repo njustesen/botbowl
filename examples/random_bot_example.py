@@ -43,7 +43,7 @@ ffai.register_bot('my-random-bot', MyRandomBot)
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-ii")
+    config = ffai.load_config("bot-bowl-iii")
     config.competition_mode = False
     ruleset = ffai.load_rule_set(config.ruleset)
     arena = ffai.load_arena(config.arena)

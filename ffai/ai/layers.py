@@ -309,10 +309,12 @@ class RollProbabilityLayer(FeatureLayer):
         for action_choice in game.state.available_actions:
             for i in range(len(action_choice.positions)):
                 if action_choice.positions[i] is not None:
-                    if i < len(action_choice.agi_rolls):
+                    if len(action_choice.paths) == len(action_choice.positions):
+                        out[action_choice.positions[i].y][action_choice.positions[i].x] = action_choice.paths[i].prob
+                    elif i < len(action_choice.rolls):
                         # Convert to chance of succeeding
                         chance = 1.0
-                        for roll in action_choice.agi_rolls[i]:
+                        for roll in action_choice.rolls[i]:
                             chance = chance * ((1+(6-roll)) / 6)
                         out[action_choice.positions[i].y][action_choice.positions[i].x] = chance
         return out
@@ -334,9 +336,14 @@ class BlockDiceLayer(FeatureLayer):
         for action_choice in game.state.available_actions:
             for i in range(len(action_choice.positions)):
                 if action_choice.positions[i] is not None:
-                    if i < len(action_choice.block_rolls):
-                        roll = (action_choice.block_rolls[i] + 3) / 6.0
-                        out[action_choice.positions[i].y][action_choice.positions[i].x] = roll
+                    roll = 0
+                    if i < len(action_choice.block_dice):
+                        roll = (action_choice.block_dice[i] + 3) / 6.0
+                    elif i < len(action_choice.paths):
+                        if action_choice.paths[i].block_dice is not None:
+                            roll = (action_choice.paths[i].block_dice + 3) / 6.0
+                    out[action_choice.positions[i].y][action_choice.positions[i].x] = roll
+
         return out
 
     def key(self, game):

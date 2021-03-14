@@ -102,10 +102,12 @@ scripted bots in our previous tutorials. In the constructor of our Agent class, 
 model_filename = "my-model"
 class A2CAgent(Agent):
 
-    def __init__(self, name):
+    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True):
         super().__init__(name)
         self.my_team = None
-        self.env = self.make_env('FFAI-v2')
+        self.env = self.make_env(env_name)
+        self.copy_game = copy_game
+        self.pathfinding_enabled = self.env.game.config.pathfinding_enabled
 
         self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
         self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
@@ -123,11 +125,15 @@ class A2CAgent(Agent):
         self.is_home = True
 
         # MODEL
-        self.policy = torch.load(model_filename)
+        self.policy = torch.load(filename)
         self.policy.eval()
         self.end_setup = False
     ...
 ```
+
+The env_name argument is particularly important as it should be the environment name that the model was trained on. 
+If the model was trained on ```FFAI-11-v2``` (where pathfinding is disabled)  use that environment name when instantiating A2CAgent. 
+The agent can still play in games with pathfinding enabled. It will do this by excluding pathfinding-assisted move actions later.
 
 In the agent's ```act()``` implementation, we will steal a bit of code from our training loop that calls our neural network. 
 Additionally, if the agent is playing as the away team, we need to flip the spatial observation of the board, as it is now playing on 
@@ -139,12 +145,38 @@ the opposite side of the board.
         for name, layer in board.items():
             flipped[name] = np.flip(layer, 1)
         return flipped
+    
+    def _filter_actions(self):
+    """
+    Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
+    """
+    if not self.pathfinding_enabled and self.env.game.config.pathfinding_enabled:
+        actions = []
+        for action_choice in self.env.game.state.available_actions:
+            if action_choice.action_type == ActionType.MOVE:
+                positions, block_dice, rolls = [], [], []
+                for i in range(action_choice.positions):
+                    position = action_choice.positions[i]
+                    roll = action_choice.rolls[i]
+                    if self.env.game.get_player_at(position) is None:
+                        positions.append(position)
+                        rolls.append(roll)
+                actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
+            else:
+                actions.append(action_choice)
+        self.env.game.state.available_actions = actions
 
     def act(self, game):
 
         if self.end_setup:
             self.end_setup = False
             return ffai.Action(ActionType.END_SETUP)
+        
+        # Update the game in our gym environment
+        self.env.game = deepcopy(game) if self.copy_game else game
+
+        # Filter out pathfinding-assisted move actions
+        self._filter_actions()
 
         # Get observation
         self.env.game = game

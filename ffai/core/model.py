@@ -63,7 +63,10 @@ class Replay:
         replay_id = game.game_id
         self.reports = game.state.reports
         name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(replay_id)
-        filename = get_data_path('replays') + '/' + name + '.rep'
+        directory = get_data_path('replays')
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+        filename = os.path.join(directory, f"{name}.rep")
         print(f"Saving replay to {filename}")
         pickle.dump(self, open(filename, "wb"))
         print(f"Replay saved to {filename}")
@@ -148,6 +151,8 @@ class Configuration:
         self.offensive_formations = []
         self.defensive_formations = []
         self.time_limits = None
+        self.pathfinding_enabled = True
+        self.pathfinding_directly_to_adjacent = True
 
 
 class PlayerState(LoggedState):
@@ -172,6 +177,7 @@ class PlayerState(LoggedState):
         self.blood_lust = False 
         self.used_skills = set()
         self.squares_moved = []
+        self.has_blocked = False
 
     def to_json(self):
         return {
@@ -191,7 +197,8 @@ class PlayerState(LoggedState):
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
             'taken_root': self.taken_root, 
-            'blood_lust': self.blood_lust
+            'blood_lust': self.blood_lust,
+            'has_blocked': self.has_blocked
         }
 
     def reset(self):
@@ -461,16 +468,16 @@ class Pitch(LoggedState):
 
 class ActionChoice(Immutable):
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_rolls=None, agi_rolls=None, skill=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None, paths=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
         self.team = team
         self.rolls = [] if rolls is None else rolls
-        self.block_rolls = [] if block_rolls is None else block_rolls
+        self.block_dice = [] if block_dice is None else block_dice
         self.disabled = disabled
-        self.agi_rolls = [] if agi_rolls is None else agi_rolls
         self.skill = skill
+        self.paths = [] if paths is None else paths
 
     def to_json(self):
         return {
@@ -478,11 +485,20 @@ class ActionChoice(Immutable):
             'positions': [position.to_json() if position is not None else None for position in self.positions],
             'team_id': self.team.team_id if self.team is not None else None,
             "rolls": self.rolls,
-            "block_rolls": self.block_rolls,
-            "agi_rolls": self.agi_rolls,
+            "block_dice": self.block_dice,
             'player_ids': [player.player_id for player in self.players],
             "skill": self.skill.name if self.skill is not None else None,
-            "disabled": self.disabled
+            "disabled": self.disabled,
+            "paths": [
+                {
+                    "steps": [square.to_json() for square in path.steps],
+                    "rolls": path.rolls,
+                    "prob": path.prob,
+                    "block_dice": path.block_dice,
+                    "foul_roll": path.foul_roll,
+                    "handoff_roll": path.handoff_roll
+                } for path in self.paths
+            ]
         }
 
 
@@ -660,6 +676,20 @@ class D3(Die):
 class D6(Die, Immutable):
 
     FixedRolls = []
+
+    TWO_PROBS = {
+        2: (1/6 * 1/6),
+        3: 2 * (1/6 * 1/6),
+        4: 3 * (1/6 * 1/6),
+        5: 4 * (1/6 * 1/6),
+        6: 5 * (1/6 * 1/6),
+        7: 6 * (1/6 * 1/6),
+        8: 5 * (1/6 * 1/6),
+        9: 4 * (1/6 * 1/6),
+        10: 3 * (1/6 * 1/6),
+        11: 2 * (1/6 * 1/6),
+        12: 1 * (1/6 * 1/6)
+    }
 
     @staticmethod
     def fix(value):

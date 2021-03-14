@@ -141,8 +141,8 @@ def test_high_kick_touchback():
 def test_blitz_movement():
     game = get_game_kickoff()
     D6.fix(1)  # Scatter
-    D6.fix(5)
-    D6.fix(5)
+    D6.fix(5)  # Blitz
+    D6.fix(5)  # Blitz
     game.step(Action(ActionType.PLACE_BALL, position=game.state.available_actions[0].positions[0]))
     assert game.has_report_of_type(OutcomeType.KICKOFF_BLITZ)
     actor = game.actor
@@ -160,6 +160,28 @@ def test_blitz_movement():
             assert player.position.x == x - 1
             game.step(Action(ActionType.END_PLAYER_TURN, player=player))
     game.step(Action(ActionType.END_TURN))
+
+
+def test_blitz_touchdown():
+    game = get_game_kickoff()
+    D6.fix(1)  # Scatter
+    D6.fix(5)  # Blitz
+    D6.fix(5)  # Blitz
+    team = game.get_agent_team(game.actor)
+    endzone_x = game.get_opp_endzone_x(team)
+    target = Square(endzone_x, 5)
+    game.step(Action(ActionType.PLACE_BALL, position=target))
+    assert game.has_report_of_type(OutcomeType.KICKOFF_BLITZ)
+    team = game.get_agent_team(game.actor)
+    assert team == game.get_kicking_team()
+    assert game.is_blitz()
+    player = team.players[0]
+    assert player.position is not None
+    game.move(player, target)
+    game.move(game.get_ball(), target)
+    D6.fix(6)  # Catch
+    game.step(Action(ActionType.END_TURN))
+    assert game.has_report_of_type(OutcomeType.TOUCHDOWN)
 
 
 def test_quick_snap():
@@ -183,7 +205,7 @@ def test_quick_snap():
                     assert player in action_choice.players
                     game.step(Action(ActionType.START_MOVE, player=player))
                     for action_choice in game.state.available_actions:
-                        if action_choice.action_type != ActionType.END_PLAYER_TURN:
+                        if action_choice.action_type == ActionType.MOVE:
                             assert len(action_choice.positions) == len(adjacent_squares)
                             game.step(Action(ActionType.MOVE, player=player, position=action_choice.positions[0]))
                             game.step(Action(ActionType.END_PLAYER_TURN, player=player))
