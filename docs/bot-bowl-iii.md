@@ -43,10 +43,12 @@ the intermediate steps automatically.
 
 **Available actions with pathfinding-assistance:**
 ![pathfinding](img/pathfinding.png?raw=true "Pathfinding-assisted actions")
+
 *The user interface is, for demonstration purposes, showing here the safest path to blitz the opponent safety lineman. All green squares are reachable and each of them has a pre-computed path.*
 
 **Available actions without pathfinding-assistance:**
 ![no-athfinding](img/no-pathfinding.png?raw=true "Normal move actions")
+
 *Previously, bots could only move players one square at the time*
 
 During a Blitz action, the set of available actions will also include pathfinding-assisted move actions to opponent players, where it 
