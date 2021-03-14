@@ -61,4 +61,3 @@ Please also join the [Fantasy Football AI Discord server](https://discord.gg/MTX
 
 # Submit to Bot Bowl III
 Submission details can be seen [here](submit.md).
->>>>>>> dijkstra
