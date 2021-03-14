@@ -1,7 +1,6 @@
 ![Bot Bowl III](img/botbowl-iii.png?raw=true "Bot Bowl III")
 
-Bot Bowl III the third AI competition in Blood Bowl and is set to happen (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). 
-Submit your bot by **July 15** to participate in the competition and have chance at winning one of the prestigious prizes.
+Bot Bowl III is the third AI competition in Blood Bowl and is set to happen (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). Submit your bot by **July 15** to participate in the competition and have chance at winning one of the prestigious prizes.
 
 # Format
 Bot Bowl III will have the same format as last year while the framework offers a few new features that will empower bot developers. 
@@ -30,8 +29,7 @@ Bot Bowl III is funded by [IEEE Computational Intelligence Society](https://cis.
 **modl.ai Sponsored Prize:**
 - $500 for the most impressive machine learning bot.
 
-The machine learning prize sponsored by modl.ai $500 will be given to the most impressive bot that relies on machine learning 
-or search algorithms. A jury of AI Researchers from modl.ai will decide the winner of this prize based on the competition results, the implementation, and the submitted descriptions of the bots.
+The machine learning prize sponsored by modl.ai of $500 will be given to the most impressive bot that relies on machine learning or search algorithms. A jury of AI Researchers from modl.ai will decide the winner of this prize based on the competition results, the implementation, and the submitted descriptions of the bots.
 
 # New Features
 
@@ -42,11 +40,15 @@ Bots are then able to perform move actions to squares that are further away than
 the intermediate steps automatically. 
 
 **Available actions with pathfinding-assistance:**
+
 ![pathfinding](img/pathfinding.png?raw=true "Pathfinding-assisted actions")
+
 *The user interface is, for demonstration purposes, showing here the safest path to blitz the opponent safety lineman. All green squares are reachable and each of them has a pre-computed path.*
 
 **Available actions without pathfinding-assistance:**
+
 ![no-athfinding](img/no-pathfinding.png?raw=true "Normal move actions")
+
 *Previously, bots could only move players one square at the time*
 
 During a Blitz action, the set of available actions will also include pathfinding-assisted move actions to opponent players, where it 
@@ -61,4 +63,3 @@ Please also join the [Fantasy Football AI Discord server](https://discord.gg/MTX
 
 # Submit to Bot Bowl III
 Submission details can be seen [here](submit.md).
->>>>>>> dijkstra
