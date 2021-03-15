@@ -19,7 +19,7 @@ Each match will using the following configurations:
 Group submissions are allowed but each person can only be part of one bot submission.
 
 # Prizes
-Bot Bowl III is funded by [IEEE Computational Intelligence Society](https://cis.ieee.org/) and [modl.ai](www.modl.ai) and has a prize pool of $1,500.
+Bot Bowl III is funded by [IEEE Computational Intelligence Society](https://cis.ieee.org/) and [modl.ai](http://www.modl.ai) and has a prize pool of $1,500.
 
 **IEEE CIS Sponsored Prizes:**
 - $500 for the winner
