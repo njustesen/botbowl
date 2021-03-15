@@ -57,6 +57,13 @@ for handoff and foul actions.
 
 Check out our new tutorial on how to use [pathfinding-assistance in reinforcement learning](a2c-pathfinding.md). 
 
+## Forward Model
+Previously, it was difficult to get a fast forward model up and running in FFAI due to the reliance on the slow copy.deepcopy() function. Thanks to amazing work by Mattias Bermell, FFAI now has a built-in forward model that is reasonably fast. At least much faster that what we had before!
+
+It works by tracking changes to non-immutable properties in the game state. Such changes can then be reverted to go back in time, e.g. to reset the state, where we had to completely reinstantiate the entire game object before.
+
+Check out our tutorials on [how to use the forward model](forward-model.md) and [how to implement a Flat Monte-Carlo search](a2c-pathfinding.md).
+
 # Get Started
 If you are completely new to bot development for Blood Bowl, there are plenty of detailed [tutorials](tutorials.md) to get started.
 Please also join the [Fantasy Football AI Discord server](https://discord.gg/MTXMuae) for news, discussions, and assistance if you get stuck.
