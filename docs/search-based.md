@@ -1,3 +1,3 @@
-# Search-based Bot
+# Search-based Bots
 
 Coming soon
