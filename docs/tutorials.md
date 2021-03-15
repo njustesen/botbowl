@@ -20,7 +20,7 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 
 ## Forward Model
 1. [**Forward Model I: The Forward Model**](forward-model.md)
-2. [**Forward Model II: Search-based Bot**](search-based.md)
+2. [**Forward Model II: Search-based Bots**](search-based.md)
 
 ## Submit
 1. [**Submit to Bot Bowl**](submit.md)
