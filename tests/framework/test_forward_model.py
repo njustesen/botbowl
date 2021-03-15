@@ -1,3 +1,4 @@
+from itertools import cycle
 from random import random
 
 from tests.util import *
@@ -97,25 +98,43 @@ def test_logged_set():
     assert len(logged_set) == 0
 
 
-def test_forward_model_revert_few_steps():
+def test_forward_model_revert_every_step():
     game = get_game(fast_mode=True, human_agents=True)
+    game.config.pathfinding_enabled = False
 
     def avail_actions_str(game):
         return "-".join([action_choice.action_type.name for action_choice in game.state.available_actions])
 
-    tmp_step = game.get_forward_model_current_step()
-    tmp_available_actions_str = avail_actions_str(game)
+    def stack_str(game):
+        return "-".join([type(proc).__name__ for proc in game.state.stack.items])
+
+    def position_str(game):
+        positions = [player.position for team in game.state.teams for player in team.players] + [game.get_ball_position()]
+        return "-".join([f"{pos.x},{pos.y}" if pos is not None else "None" for pos in positions])
+
+    cycled_counter = cycle(range(10))
+    tmp_game = None
 
     while not game.state.game_over:
+        tmp_step = game.get_forward_model_current_step()
+        tmp_available_actions_str = avail_actions_str(game)
+        tmp_stack_str = stack_str(game)
+        tmp_position_str = position_str(game)
+
+        do_deepcopy = next(cycled_counter) == 0
+        if do_deepcopy:
+            tmp_game = deepcopy(game)
+
         game.step(get_random_action(game))
+        game.revert_state(tmp_step)
 
-        if random() < 0.3:
-            game.revert_state(tmp_step)
-            assert tmp_available_actions_str == avail_actions_str(game)
-            game.step(get_random_action(game))
+        assert tmp_available_actions_str == avail_actions_str(game)
+        assert tmp_stack_str == stack_str(game)
+        assert tmp_position_str == position_str(game)
+        if do_deepcopy:
+            assert_game_states(game, tmp_game, equal=True)
 
-            tmp_step = game.get_forward_model_current_step()
-            tmp_available_actions_str = avail_actions_str(game)
+        game.step(get_random_action(game))
 
 
 def get_game(fast_mode=True, human_agents=True):
