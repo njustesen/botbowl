@@ -62,7 +62,7 @@ Previously, it was difficult to get a fast forward model up and running in FFAI 
 
 It works by tracking changes to non-immutable properties in the game state. Such changes can then be reverted to go back in time, e.g. to reset the state, where we had to completely reinstantiate the entire game object before.
 
-Check out our tutorials on [how to use the forward model](forward-model.md) and [how to implement a Flat Monte-Carlo search](a2c-pathfinding.md).
+Check out our tutorials on [how to use the forward model](forward-model.md) and [how to implement a search-based bot](search-based.md).
 
 # Get Started
 If you are completely new to bot development for Blood Bowl, there are plenty of detailed [tutorials](tutorials.md) to get started.
