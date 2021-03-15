@@ -13,7 +13,7 @@ import pstats
 #from pstats import SortKey
 
 
-config = load_config("ff-11")
+config = load_config("gym-11")
 ruleset = load_rule_set(config.ruleset)
 home = load_team_by_filename("human", ruleset)
 away = load_team_by_filename("human", ruleset)
