@@ -1170,7 +1170,7 @@ class RuleSet:
         raise Exception("Race not found: " + race)
 
 
-class Formation:
+class Formation(Immutable):
 
     def __init__(self, name, formation):
         self.name = name
