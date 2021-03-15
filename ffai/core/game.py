@@ -35,6 +35,7 @@ class Game:
         self.forced_action = None
         self.action = None
         self.state_log = Trajectory()
+        self.square_shortcut = self.state.pitch.squares
 
     def to_json(self, ignore_reports=False):
         return {
@@ -105,7 +106,7 @@ class Game:
         # Ensure player points to player object
         if action is not None:
             action.player = self.get_player(action.player.player_id) if action.player is not None else None
-            action.position = Square(action.position.x, action.position.y) if action.position is not None else None
+
 
         # Set action as a property so other methods can access it
         self.action = action
@@ -582,7 +583,7 @@ class Game:
         for y in range(len(self.arena.board)):
             for x in range(len(self.arena.board[y])):
                 if self.arena.board[y][x] in (TwoPlayerArena.home_tiles if team == self.state.home_team else TwoPlayerArena.away_tiles):
-                    tiles.append(Square(x, y))
+                    tiles.append(self.get_square(x, y))
         return tiles
 
     def is_scrimmage(self, position):
@@ -1013,7 +1014,7 @@ class Game:
         :param piece: Ball or player
         :param position: square to put the player on or above
         """
-        piece.position = Square(position.x, position.y)
+        piece.position = position
         if type(piece) is Player:
             if not piece.state.in_air:
                 self.state.pitch.board[position.y][position.x] = piece
@@ -1071,7 +1072,7 @@ class Game:
         :param x
         :param y
         """
-        self.move(piece, Square(piece.position.x + x, piece.position.y + y))
+        self.move(piece, self.get_square(piece.position.x + x, piece.position.y + y))
 
     def swap(self, piece_a, piece_b):
         """
@@ -1082,8 +1083,8 @@ class Game:
         """
         assert piece_a.position is not None
         assert piece_b.position is not None
-        pos_a = Square(piece_a.position.x, piece_a.position.y)
-        pos_b = Square(piece_b.position.x, piece_b.position.y)
+        pos_a = piece_a.position
+        pos_b = piece_b.position
         piece_a.position = pos_b
         piece_b.position = pos_a
         if type(piece_b) is Player:
@@ -1287,7 +1288,7 @@ class Game:
         cnt = 0
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
-                if not self.is_team_side(Square(x, y), team):
+                if not self.is_team_side(self.get_square(x, y), team):
                     continue
                 if tile is None or self.arena.board[y][x] == tile:
                     piece = self.state.pitch.board[y][x]
@@ -1598,9 +1599,7 @@ class Game:
         :param y:
         :return: A square with the position (x,y)
         """
-        if 0 >= x < self.state.pitch.width and 0 >= y < self.state.pitch.height:
-            return self.state.pitch.squares[y][x]
-        return Square(x, y)
+        return self.square_shortcut[y][x]
 
     def get_adjacent_squares(self, position, diagonal=True, out=False, occupied=True, distance=1):
         """
@@ -1697,7 +1696,7 @@ class Game:
             for xx in range(-1, 2, 1):
                 if yy == 0 and xx == 0:
                     continue
-                p = Square(opp_player.position.x+xx, opp_player.position.y+yy)
+                p = self.get_square(opp_player.position.x+xx, opp_player.position.y+yy)
                 if not self.is_out_of_bounds(p) and player.position != p:
                     player_at = self.get_player_at(p)
                     if player_at is not None:
@@ -1735,7 +1734,7 @@ class Game:
             for xx in range(-1, 2, 1):
                 if yy == 0 and xx == 0:
                     continue
-                p = Square(opp_player.position.x+xx, opp_player.position.y+yy)
+                p = self.get_square(opp_player.position.x+xx, opp_player.position.y+yy)
                 if not self.is_out_of_bounds(p) and player.position != p:
                     player_at = self.get_player_at(p)
                     if player_at is not None:
@@ -2041,7 +2040,7 @@ class Game:
                 else [PassDistance.QUICK_PASS, PassDistance.SHORT_PASS, PassDistance.LONG_PASS, PassDistance.LONG_BOMB]
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
-                to_position = Square(x, y)
+                to_position = self.get_square(x, y)
                 if self.is_out_of_bounds(to_position) or position == to_position:
                     continue
                 distance = self.get_pass_distance(position, to_position)
@@ -2101,7 +2100,7 @@ class Game:
         # 3) Find squares s where x intersects
         s = []
         for i in x:
-            s.append(Square(i[0], i[1]))
+            s.append(self.get_square(i[0], i[1]))
 
         # 3) Include manhattan neighbors s into n
         # 4) Remove squares where distance to a is larger than dist(a,b)
