@@ -32,6 +32,7 @@ game.step(Action(ActionType.HEADS))
 game.step(Action(ActionType.TAILS))
 game.step(Action(ActionType.RECEIVE))
 
+# Kicking team is random if you didn't set the seed
 print("Home is kicking: ", game.get_kicking_team() == game.state.home_team)
 
 # Revert state
