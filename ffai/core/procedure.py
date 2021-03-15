@@ -18,7 +18,7 @@ from ffai.core.table import *
 import time
 
 
-class Procedure(LoggedState):
+class Procedure(Reversible):
 
     def __init__(self, game, context=None, ignored_keys=[]):
         super().__init__(ignored_keys=["game"]+ignored_keys)

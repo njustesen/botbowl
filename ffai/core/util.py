@@ -10,7 +10,7 @@ import os
 from collections.abc import Iterable
 from copy import copy
 import ffai
-from ffai.core.forward_model import LoggedState
+from ffai.core.forward_model import Reversible
 from ffai.core.model import *
 
 
@@ -79,7 +79,7 @@ def get_line(start, end):
     return points
 
 
-class Stack(LoggedState):
+class Stack(Reversible):
     def __init__(self):
         super().__init__()
         self.items = []

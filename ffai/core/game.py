@@ -34,7 +34,7 @@ class Game:
         self.last_action_time = None
         self.forced_action = None
         self.action = None
-        self.state_log = Trajectory()
+        self.trajectory = Trajectory()
         self.square_shortcut = self.state.pitch.squares
 
     def to_json(self, ignore_reports=False):
@@ -57,18 +57,28 @@ class Game:
         }
 
     def enable_forward_model(self):
-        if self.state_log.enabled:
+        """
+        Enables the forward model. Should not be called before Game.init(). Can only be called once. Can't be undone
+        """
+        if self.trajectory.enabled:
             raise RuntimeError("Forward model already enabled")
 
-        self.state_log.enabled = True
-        self.state.set_logger(self.state_log)
+        self.trajectory.enabled = True
+        self.state.set_trajectory(self.trajectory)
 
-    def get_forward_model_current_step(self):
-        return self.state_log.current_step
+    def get_step(self):
+        """
+        Returns an int that is the forward model step counter. The step counter can be used to revert the game state
+        to this state with Game.revert()
+        """
+        return self.trajectory.current_step
 
-    def revert_state(self, to_step):
-        assert self.state_log.enabled
-        self.state_log.step_backward(to_step)
+    def revert(self, to_step):
+        """
+        Reverts the game state to how a the step to_step
+        """
+        assert self.trajectory.enabled
+        self.trajectory.revert(to_step)
 
     def init(self):
         """
@@ -156,7 +166,7 @@ class Game:
                 # Else continue procedure with no action
                 self.action = None
 
-        self.state_log.next_step()
+        self.trajectory.next_step()
 
     def refresh(self):
         """
@@ -1021,7 +1031,7 @@ class Game:
 
             log_entry = MovementStep(self.state.pitch.board if not piece.state.in_air else None, piece, position,
                                      put=True)
-            self.state_log.log_state_change(log_entry)
+            self.trajectory.log_state_change(log_entry)
         elif type(piece) is Ball:
             self.state.pitch.balls.append(piece)
         elif type(piece) is Bomb:
@@ -1040,7 +1050,7 @@ class Game:
                 self.state.pitch.board[piece.position.y][piece.position.x] = None
 
             log_entry = MovementStep(self.state.pitch.board if not piece.state.in_air else None, piece, piece.position, put=False)
-            self.state_log.log_state_change( log_entry )
+            self.trajectory.log_state_change(log_entry)
 
             piece.position = None
         elif type(piece) is Ball:

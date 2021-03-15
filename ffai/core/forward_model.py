@@ -10,43 +10,43 @@ from enum import Enum
 from pytest import set_trace
 
 
-class LoggedState:
+class Reversible:
 
     def __init__(self, ignored_keys=[]):
-        super().__setattr__("_logger", None)
+        super().__setattr__("_trajectory", None)
         super().__setattr__("_ignored_keys", set(ignored_keys))
 
     def __setattr__(self, key, to_value):
-        if self.logger_initialized() and hasattr(self, key) and \
+        if self.trajectory_initialized() and hasattr(self, key) and \
                 key not in self._ignored_keys and to_value != getattr(self, key):
             from_value = getattr(self, key)
-            to_value = add_logging(to_value, self._logger)
+            to_value = add_reversibility(to_value, self._trajectory)
             self.log_this(AssignmentStep(self, key, from_value, to_value))
         super().__setattr__(key, to_value)
 
     def log_this(self, entry):
-        self._logger.log_state_change(entry)
+        self._trajectory.log_state_change(entry)
 
     def reset_to(self, key, value):
         super().__setattr__(key, value)
 
-    def set_logger(self, logger):
-        if self.logger_initialized():
+    def set_trajectory(self, trajectory):
+        if self.trajectory_initialized():
             return
 
-        super().__setattr__("_logger", logger)
+        super().__setattr__("_trajectory", trajectory)
 
         for attr_name in dir(self):
             attr = getattr(self, attr_name)
             if attr_name[0] == "_" or callable(attr) or attr_name in self._ignored_keys:
                 continue
 
-            new_value = add_logging(attr, logger)
+            new_value = add_reversibility(attr, trajectory)
 
             super().__setattr__(attr_name, new_value)
 
-    def logger_initialized(self):
-        return self._logger is not None
+    def trajectory_initialized(self):
+        return self._trajectory is not None
 
 
 class Trajectory:
@@ -59,7 +59,7 @@ class Trajectory:
         if self.enabled:
             self.action_log[self.current_step].append(log_entry)
 
-    def step_backward(self, to_step=0):
+    def revert(self, to_step=0):
         assert to_step <= self.current_step
 
         revert_actions = reversed([log_entry for step in self.action_log[to_step:] for log_entry in step])
@@ -159,24 +159,24 @@ class MovementStep(Step):
             self._remove()
 
 
-class LoggedList(list, LoggedState):
+class ReversibleList(list, Reversible):
 
     def __init__(self, value):
         super().__init__(value)
-        LoggedState.__init__(self)
+        Reversible.__init__(self)
 
-    def set_logger(self, logger):
-        if self.logger_initialized():
+    def set_trajectory(self, trajectory):
+        if self.trajectory_initialized():
             return
 
-        LoggedState.set_logger(self, logger)
+        Reversible.set_trajectory(self, trajectory)
         for i in range(len(self)):
-            new_value = add_logging(self[i], logger)
+            new_value = add_reversibility(self[i], trajectory)
             list.__setitem__(self, i, new_value)
 
     def append(self, value):
-        if self.logger_initialized():
-            value = add_logging(value, self._logger)
+        if self.trajectory_initialized():
+            value = add_reversibility(value, self._trajectory)
             log_entry = CallableStep(self, forward_func=list.append, forward_args=(value,),
                                      backward_func=list.pop, backward_args=())
             self.log_this(log_entry)
@@ -184,7 +184,7 @@ class LoggedList(list, LoggedState):
         list.append(self, value)
 
     def pop(self, i=None):
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             if i is None:
                 log_entry = CallableStep(self, forward_func=list.pop, forward_args=(),
                                          backward_func=list.append, backward_args=(self[-1],))
@@ -196,15 +196,15 @@ class LoggedList(list, LoggedState):
         return list.pop(self) if i is None else list.pop(self, i)
 
     def __setitem__(self, key, value):
-        if self.logger_initialized():
-            value = add_logging(value, self._logger)
+        if self.trajectory_initialized():
+            value = add_reversibility(value, self._trajectory)
             log_entry = CallableStep(self, forward_func=list.__setitem__, forward_args=(key, value),
                                      backward_func=list.__setitem__, backward_args=(key, self[key],))
             self.log_this(log_entry)
         return list.__setitem__(self, key, value)
 
     def clear(self):
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             log_entry = CallableStep(self, forward_func=list.clear, forward_args=(),
                                      backward_func=list.extend, backward_args=(self[:],))
             self.log_this(log_entry)
@@ -215,7 +215,7 @@ class LoggedList(list, LoggedState):
         raise NotImplementedError()
 
     def remove(self, value):
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             log_entry = CallableStep(self, forward_func=list.remove, forward_args=(value,),
                                      backward_func=list.insert, backward_args=(self.index(value), value,))
             self.log_this(log_entry)
@@ -223,32 +223,32 @@ class LoggedList(list, LoggedState):
         list.remove(self, value)
 
     def __reduce__(self):
-        func = LoggedList.init_LoggedList
+        func = ReversibleList.init_ReversibleList
         values = []
         values.extend(self)
-        return func, (values, self._logger)
+        return func, (values, self._trajectory)
 
-    def init_LoggedList(values, logger):  # Static method
-        logged_list =  LoggedList(values)
-        object.__setattr__(logged_list, "_logger", logger)
+    def init_ReversibleList(values, trajectory):  # Static method
+        logged_list =  ReversibleList(values)
+        object.__setattr__(logged_list, "_trajectory", trajectory)
         return logged_list
 
 
-class LoggedSet(set, LoggedState):
+class ReversibleSet(set, Reversible):
     def __init__(self, value):
         super().__init__(value)
-        LoggedState.__init__(self)
+        Reversible.__init__(self)
 
-    def set_logger(self, logger):
-        if self.logger_initialized():
+    def set_trajectory(self, trajectory):
+        if self.trajectory_initialized():
             return
-        LoggedState.set_logger(self, logger)
+        Reversible.set_trajectory(self, trajectory)
 
-        # TODO: call add logger for all items in the set.
+        # TODO: call add trajectory for all items in the set?
 
     def add(self, value):
-        if self.logger_initialized():
-            value = add_logging(value, self._logger)
+        if self.trajectory_initialized():
+            value = add_reversibility(value, self._trajectory)
             log_entry = CallableStep(self, forward_func=set.add, forward_args=(value,),
                                      backward_func=set.remove, backward_args=(value,))
             self.log_this(log_entry)
@@ -256,7 +256,7 @@ class LoggedSet(set, LoggedState):
         set.add(self, value)
 
     def clear(self):
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             log_entry = CallableStep(self, forward_func=set.clear, forward_args=(),
                                      backward_func=set.update, backward_args=(copy(self),))
             self.log_this(log_entry)
@@ -270,37 +270,37 @@ class LoggedSet(set, LoggedState):
         raise NotImplementedError()
 
     def __reduce__(self):
-        func = LoggedSet.init_LoggedSet
+        func = ReversibleSet.init_ReversibleSet
         values = set()
         values.update(self)
-        return func, (values, self._logger)
+        return func, (values, self._trajectory)
 
-    def init_LoggedSet(values, logger):  # Static method
-        logged_set = LoggedSet(values)
-        object.__setattr__(logged_set, "_logger", logger)
+    def init_ReversibleSet(values, trajectory):  # Static method
+        logged_set = ReversibleSet(values)
+        object.__setattr__(logged_set, "_trajectory", trajectory)
         return logged_set
 
 
-class LoggedDict(dict, LoggedState):
+class ReversibleDict(dict, Reversible):
     def __init__(self, value):
         super().__init__(value)
-        LoggedState.__init__(self)
+        Reversible.__init__(self)
 
-    def set_logger(self, logger):
-        if self.logger_initialized():
+    def set_trajectory(self, trajectory):
+        if self.trajectory_initialized():
             return
 
-        LoggedState.set_logger(self, logger)
+        Reversible.set_trajectory(self, trajectory)
         for key in self:
-            new_value = add_logging(self[key], logger)
+            new_value = add_reversibility(self[key], trajectory)
             dict.__setitem__(self, key, new_value)
 
     def __setitem__(self, key, value):
         if key in self.keys():
             raise NotImplementedError()
         else:
-            if self.logger_initialized():
-                value = add_logging(value, self._logger)
+            if self.trajectory_initialized():
+                value = add_reversibility(value, self._trajectory)
             super().__setitem__(key, value)
 
     def pop(self, key):
@@ -313,14 +313,14 @@ class LoggedDict(dict, LoggedState):
         raise NotImplementedError()
 
     def __reduce__(self):
-        func = LoggedDict.init_LoggedDict
+        func = ReversibleDict.init_ReversibleDict
         values = {}
         values.update(self)
-        return func, (values, self._logger)
+        return func, (values, self._trajectory)
 
-    def init_LoggedDict(values, logger):  # Static method
-        logged_dict = LoggedDict(values)
-        object.__setattr__(logged_dict, "_logger", logger)
+    def init_ReversibleDict(values, trajectory):  # Static method
+        logged_dict = ReversibleDict(values)
+        object.__setattr__(logged_dict, "_trajectory", trajectory)
         return logged_dict
 
 
@@ -328,24 +328,24 @@ def is_immutable(obj):
     return type(obj) in immutable_types or isinstance(obj, Enum) or isinstance(obj, Immutable)
 
 
-replacement_type = [(list, LoggedList), (dict, LoggedDict), (set, LoggedSet)]
+replacement_type = [(list, ReversibleList), (dict, ReversibleDict), (set, ReversibleSet)]
 immutable_types = {int, float, str, tuple, bool, range, type(None)}
 
 
-def add_logging(value, logger):
+def add_reversibility(value, trajectory):
     if is_immutable(value):
         return value
 
-    if isinstance(value, LoggedState):
-        if not value.logger_initialized():
-            value.set_logger(logger)
+    if isinstance(value, Reversible):
+        if not value.trajectory_initialized():
+            value.set_trajectory(trajectory)
         return value
 
     new_types = [t[1] for t in replacement_type if type(value) == t[0]]
     if len(new_types) == 1:
         new_type = new_types.pop()
         new_value = new_type(value)
-        new_value.set_logger(logger)
+        new_value.set_trajectory(trajectory)
         return new_value
     else:
         raise AttributeError(f"Unable to add logging to {value}")

@@ -15,7 +15,7 @@ import pickle
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
-from ffai.core.forward_model import Immutable, LoggedState, CallableStep
+from ffai.core.forward_model import Immutable, Reversible, CallableStep
 
 
 class ReplayStep:
@@ -152,7 +152,7 @@ class Configuration:
         self.pathfinding_directly_to_adjacent = True
 
 
-class PlayerState(LoggedState):
+class PlayerState(Reversible):
 
     def __init__(self):
         super().__init__()
@@ -256,7 +256,7 @@ class Agent:
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
 
-class TeamState(LoggedState):
+class TeamState(Reversible):
 
     def __init__(self, team):
         super().__init__()
@@ -354,7 +354,7 @@ class Clock:
         }
 
 
-class GameState(LoggedState):
+class GameState(Reversible):
 
     def __init__(self, game, home_team, away_team):
         super().__init__(ignored_keys=["clocks"])
@@ -430,7 +430,7 @@ class GameState(LoggedState):
         }
 
 
-class Pitch(LoggedState):
+class Pitch(Reversible):
 
     range = [-1, 0, 1]
 
@@ -499,7 +499,7 @@ class ActionChoice(Immutable):
         }
 
 
-class Action(LoggedState):
+class Action(Reversible):
 
     def __init__(self, action_type, position=None, player=None):
         super().__init__()
@@ -559,7 +559,7 @@ class Die:
         Exception("Method not implemented")
 
 
-class DiceRoll(LoggedState):
+class DiceRoll(Reversible):
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
         super().__init__()
@@ -772,7 +772,7 @@ class BBDie(Die, Immutable):
         }
 
 
-class Dugout(LoggedState):
+class Dugout(Reversible):
 
     def __init__(self, team):
         super().__init__()
@@ -847,14 +847,14 @@ class Catchable(Piece):
         return True
 
 
-class Ball(Catchable, LoggedState):
+class Ball(Catchable, Reversible):
 
     def __init__(self, position, on_ground=True, is_carried=False):
-        LoggedState.__init__(self, ["position"])
+        Reversible.__init__(self, ["position"])
         Catchable.__init__(self, position, on_ground, is_carried)
 
     def move(self, x, y):
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             log_entry = CallableStep(self, Catchable.move, (x, y), Catchable.move, (-x, -y))
             self.log_this(log_entry)
 
@@ -862,7 +862,7 @@ class Ball(Catchable, LoggedState):
 
     def move_to(self, position):
 
-        if self.logger_initialized():
+        if self.trajectory_initialized():
             log_entry = CallableStep(self, Catchable.move_to, (copy(position),), Catchable.move_to, (self.position,))
             self.log_this(log_entry)
 
@@ -874,11 +874,11 @@ class Bomb(Catchable):
         super().__init__(position, on_ground, is_carried)
 
 
-class Player(Piece, LoggedState):
+class Player(Piece, Reversible):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
-        LoggedState.__init__(self, ignored_keys=["position", "role"])
+        Reversible.__init__(self, ignored_keys=["position", "role"])
         super().__init__(position)
         self.player_id = player_id
         self.role = role
@@ -1065,7 +1065,7 @@ class Race:
         self.stakes = stakes
 
 
-class Team(LoggedState):
+class Team(Reversible):
 
     def __init__(self, team_id, name, race, players=None, treasury=0, apothecaries=0, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
