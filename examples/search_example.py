@@ -7,11 +7,13 @@ import time
 
 
 class Node:
-    def __init__(self, action):
+    def __init__(self, action=None, parent=None):
+        self.parent = parent
+        self.children = []
         self.action = action
         self.evaluations = []
 
-    def visits(self):
+    def num_visits(self):
         return len(self.evaluations)
 
     def visit(self, score):
@@ -32,32 +34,27 @@ class SearchBot(ffai.Agent):
         self.my_team = team
 
     def act(self, game):
-
-        print(f"Turn {self.my_team.state.turn}")
-
-        nodes = []
         game_copy = deepcopy(game)
         game_copy.enable_forward_model()
         game_copy.home_agent.human = True
         game_copy.away_agent.human = True
 
+        root_step = game_copy.get_step()
+        root_node = Node()
         for action_choice in game_copy.get_available_actions():
             if action_choice.action_type == ffai.ActionType.PLACE_PLAYER:
                 continue
             for player in action_choice.players:
-                nodes.append(Node(Action(action_choice.action_type, player=player)))
+                root_node.children.append(Node(Action(action_choice.action_type, player=player), parent=root_node))
             for position in action_choice.positions:
-                nodes.append(Node(Action(action_choice.action_type, position=position)))
+                root_node.children.append(Node(Action(action_choice.action_type, position=position), parent=root_node))
             if len(action_choice.players) == len(action_choice.positions) == 0:
-                nodes.append(Node(Action(action_choice.action_type)))
-
-        root = game_copy.get_step()
-        print("ROOT STACK: ", len(game_copy.state.stack.items))
+                root_node.children.append(Node(Action(action_choice.action_type), parent=root_node))
 
         best_node = None
-        print(f"Evaluating {len(nodes)} nodes")
+        print(f"Evaluating {len(root_node.children)} nodes")
         t = time.time()
-        for node in nodes:
+        for node in root_node.children:
             game_copy.step(node.action)
             while not game.state.game_over and len(game.state.available_actions) == 0:
                 game_copy.step()
@@ -67,7 +64,7 @@ class SearchBot(ffai.Agent):
             if best_node is None or node.score() > best_node.score():
                 best_node = node
 
-            game_copy.revert(root)
+            game_copy.revert(root_step)
 
         print(f"{best_node.action.action_type} selected in {time.time() - t} seconds")
 
