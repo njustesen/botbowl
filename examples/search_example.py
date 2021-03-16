@@ -97,7 +97,7 @@ config.pathfinding_enabled = False
 # Play a game
 bot_a = ffai.make_bot("search-bot")
 bot_b = ffai.make_bot("search-bot")
-game = ffai.Game(i, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
+game = ffai.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
 print("Starting game")
 game.init()
 print("Game is over")
