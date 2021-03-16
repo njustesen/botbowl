@@ -45,7 +45,7 @@ for action_choice in game.get_available_actions():
 # Output: START_GAME
 ```
 
-The example script is available here.
+This example script is also available [here](../examples/forward_model_example.py).
 
 Notice, that with this forward model, we can go forward and the back. After this, we can go forward again, and then back to a previous state on the trajectory but we cannot revert to a step that lies forward in time or that we have already reverted away from. I.e. the tracked history of changes are cleared when we revert, and the information about the future is lost. 
 
