@@ -134,7 +134,7 @@ def _evaluate(self, game):
     return random.random()
 ```
 
-## Next Stesp
+## Next Steps
 You find the script in [examples/search_example.py](../examples/search_example.py).
 
 - Implement the ```_evaluate(game)``` function so it actually evaluates the game state.
