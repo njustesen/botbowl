@@ -9,7 +9,6 @@ if __name__ == "__main__":
 
     # Create environment
     # env = gym.make("FFAI-v3")
-    # env = gym.make("FFAI-v2")  # Without pathfinding enabled
 
     # Smaller variants
     # env = gym.make("FFAI-7-v3")
