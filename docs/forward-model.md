@@ -18,6 +18,7 @@ away = ffai.load_team_by_filename("human", ruleset)
 agent_home = Agent("home agent", human=True)
 agent_away = Agent("home agent", human=True)
 game = ffai.Game(1, home, away, agent_home, agent_away, config, arena=arena, ruleset=ruleset)
+game.init()
 
 # Enable forward model
 game.enable_forward_model()
@@ -44,6 +45,7 @@ for action_choice in game.get_available_actions():
 
 # Output: START_GAME
 ```
+It is important that you initialize the game before you enabled the forward model.
 
 This example script is also available [here](../examples/forward_model_example.py).
 

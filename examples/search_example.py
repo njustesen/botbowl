@@ -51,7 +51,7 @@ class SearchBot(ffai.Agent):
             if len(action_choice.players) == len(action_choice.positions) == 0:
                 nodes.append(Node(Action(action_choice.action_type)))
 
-        root = game_copy.get_forward_model_current_step()
+        root = game_copy.get_step()
         print("ROOT STACK: ", len(game_copy.state.stack.items))
 
         best_node = None
@@ -67,7 +67,7 @@ class SearchBot(ffai.Agent):
             if best_node is None or node.score() > best_node.score():
                 best_node = node
 
-            game_copy.revert_state(root)
+            game_copy.revert(root)
 
         print(f"{best_node.action.action_type} selected in {time.time() - t} seconds")
 
@@ -84,7 +84,7 @@ class SearchBot(ffai.Agent):
 ffai.register_bot('search-bot', SearchBot)
 
 # Load configurations, rules, arena and teams
-config = ffai.load_config("bot-bowl-ii")
+config = ffai.load_config("bot-bowl-iii")
 ruleset = ffai.load_rule_set(config.ruleset)
 arena = ffai.load_arena(config.arena)
 home = ffai.load_team_by_filename("human", ruleset)

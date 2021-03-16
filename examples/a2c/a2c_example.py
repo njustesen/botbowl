@@ -44,7 +44,7 @@ num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
 
 # Pathfinding-assisted paths enabled?
-pathfinding_enabled = False
+pathfinding_enabled = True
 
 
 # Make directories

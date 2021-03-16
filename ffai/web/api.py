@@ -27,7 +27,7 @@ def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, c
     home = load_team_by_name(home_team_name, ruleset, board_size=board_size)
     away = load_team_by_name(away_team_name, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
-    game = Game(game_id, home, away, home_agent, away_agent, config, record=True)
+    game = Game(game_id, home, away, home_agent, away_agent, config, record=False)
     game.init()
     host.add_game(game)
     print("Game created with id ", game.game_id)

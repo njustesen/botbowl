@@ -15,6 +15,7 @@ import pickle
 from math import sqrt
 from ffai.core.util import *
 from ffai.core.table import *
+from ffai.core.forward_model import Immutable, Reversible, CallableStep
 
 
 class ReplayStep:
@@ -151,9 +152,10 @@ class Configuration:
         self.pathfinding_directly_to_adjacent = True
 
 
-class PlayerState:
+class PlayerState(Reversible):
 
     def __init__(self):
+        super().__init__()
         self.up = True
         self.in_air = False
         self.used = False
@@ -254,9 +256,10 @@ class Agent:
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
 
-class TeamState:
+class TeamState(Reversible):
 
     def __init__(self, team):
+        super().__init__()
         self.bribes = 0
         self.babes = 0
         self.apothecaries = team.apothecaries
@@ -351,9 +354,10 @@ class Clock:
         }
 
 
-class GameState:
+class GameState(Reversible):
 
     def __init__(self, game, home_team, away_team):
+        super().__init__(ignored_keys=["clocks"])
         self.stack = Stack()
         self.reports = []
         self.half = 1
@@ -387,7 +391,20 @@ class GameState:
         self.rerolled_procs = set()
         self.player_action_type = None
 
-    def to_json(self, ignore_reports=False):
+    def compare(self, other):
+        """
+        :param other, another GameState
+        Compares all relevant values of the two game states and returns a list strings containing all the
+        differences. Empty list if all relevant values are equal.
+        """
+        errors = compare_iterable(self.to_json(ignore_clocks=True),
+                                  other.to_json(ignore_clocks=True), path="state")
+
+        errors.extend(compare_iterable(self.stack.items, other.stack.items, path="state.stack.items"))
+
+        return errors
+
+    def to_json(self, ignore_reports=False, ignore_clocks=False):
         return {
             'half': self.half,
             'kicking_first_half': self.kicking_first_half.team_id if self.kicking_first_half is not None else None,
@@ -408,16 +425,17 @@ class GameState:
             'round': self.round,
             'spectators': self.spectators,
             'active_player_id': self.active_player.player_id if self.active_player is not None else None,
-            'clocks': [clock.to_json() for clock in self.clocks],
+            'clocks': [clock.to_json() for clock in self.clocks] if not ignore_clocks else None,
             'player_action_type': self.player_action_type.name if self.player_action_type is not None else None
         }
 
 
-class Pitch:
+class Pitch(Reversible):
 
     range = [-1, 0, 1]
 
     def __init__(self, width, height):
+        super().__init__(ignored_keys=["board", "squares"])
         self.balls = []
         self.bomb = None
         self.board = []
@@ -445,7 +463,7 @@ class Pitch:
         }
 
 
-class ActionChoice:
+class ActionChoice(Immutable):
 
     def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None, paths=None, disabled=False):
         self.action_type = action_type
@@ -481,9 +499,10 @@ class ActionChoice:
         }
 
 
-class Action:
+class Action(Reversible):
 
     def __init__(self, action_type, position=None, player=None):
+        super().__init__()
         self.action_type = action_type
         self.position = position
         self.player = player
@@ -540,9 +559,10 @@ class Die:
         Exception("Method not implemented")
 
 
-class DiceRoll:
+class DiceRoll(Reversible):
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
+        super().__init__()
         self.dice = dice
         self.sum = 0
         self.d68 = d68
@@ -650,7 +670,7 @@ class D3(Die):
         }
 
 
-class D6(Die):
+class D6(Die, Immutable):
 
     FixedRolls = []
 
@@ -691,7 +711,7 @@ class D6(Die):
         }
 
 
-class D8(Die):
+class D8(Die, Immutable):
 
     FixedRolls = []
 
@@ -718,7 +738,7 @@ class D8(Die):
         }
 
 
-class BBDie(Die):
+class BBDie(Die, Immutable):
 
     FixedRolls = []
 
@@ -752,9 +772,10 @@ class BBDie(Die):
         }
 
 
-class Dugout:
+class Dugout(Reversible):
 
     def __init__(self, team):
+        super().__init__()
         self.team = team
         self.reserves = []
         self.kod = []
@@ -806,11 +827,14 @@ class Catchable(Piece):
         self.is_carried = is_carried
 
     def move(self, x, y):
-        self.position.x += x
-        self.position.y += y
+        # This is unfortunately way slower than below, but Square is Immutable
+        self.position = Square(self.position.x + x, self.position.y + y)
+
+        #self.position.x += x
+        #self.position.y += y
 
     def move_to(self, position):
-        self.position = Square(position.x, position.y)
+        self.position = position
 
     def to_json(self):
         return {
@@ -823,11 +847,26 @@ class Catchable(Piece):
         return True
 
 
-class Ball(Catchable):
+class Ball(Catchable, Reversible):
 
     def __init__(self, position, on_ground=True, is_carried=False):
-        super().__init__(position, on_ground, is_carried)
+        Reversible.__init__(self, ["position"])
+        Catchable.__init__(self, position, on_ground, is_carried)
 
+    def move(self, x, y):
+        if self.trajectory_initialized():
+            log_entry = CallableStep(self, Catchable.move, (x, y), Catchable.move, (-x, -y))
+            self.log_this(log_entry)
+
+        super().move(x, y)
+
+    def move_to(self, position):
+
+        if self.trajectory_initialized():
+            log_entry = CallableStep(self, Catchable.move_to, (copy(position),), Catchable.move_to, (self.position,))
+            self.log_this(log_entry)
+
+        super().move_to(position)
 
 class Bomb(Catchable):
 
@@ -835,10 +874,11 @@ class Bomb(Catchable):
         super().__init__(position, on_ground, is_carried)
 
 
-class Player(Piece):
+class Player(Piece, Reversible):
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
                  niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
+        Reversible.__init__(self, ignored_keys=["position", "role"])
         super().__init__(position)
         self.player_id = player_id
         self.role = role
@@ -966,11 +1006,28 @@ class Player(Piece):
         self.state.taken_root = False
 
 
-class Square:
+class Square(Immutable):
 
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self._x = x
+        self._y = y
+
+    @property
+    def x(self):
+        return self._x
+
+    @x.setter
+    def x(self, x):
+        raise AttributeError("Squares is immutable, how dare you?!")
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, y):
+        raise AttributeError("Squares is immutable, how dare you?!")
+
 
     def to_json(self):
         return {
@@ -1008,10 +1065,11 @@ class Race:
         self.stakes = stakes
 
 
-class Team:
+class Team(Reversible):
 
     def __init__(self, team_id, name, race, players=None, treasury=0, apothecaries=0, rerolls=0, ass_coaches=0,
                  cheerleaders=0, fan_factor=0):
+        super().__init__()
         self.team_id = team_id
         self.name = name
         self.race = race
@@ -1051,7 +1109,7 @@ class Team:
         return self.team_id
 
 
-class Outcome:
+class Outcome(Immutable):
 
     def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type
@@ -1112,7 +1170,7 @@ class RuleSet:
         raise Exception("Race not found: " + race)
 
 
-class Formation:
+class Formation(Immutable):
 
     def __init__(self, name, formation):
         self.name = name
@@ -1206,3 +1264,18 @@ class Formation:
                     actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
                     positions_used.append(position)
         return actions
+
+    def compare(self, other, path):
+        """
+        For testing purposes only
+        """
+        diff = []
+        if self.name != other.name:
+            diff.append(f"{path}.name: {self.name} _NotEqual_ {other.name}")
+
+        formations_equal = all([(self_a == other_a).all() for self_a, other_a in zip(self.formation, other.formation)])
+
+        if not formations_equal:
+            diff.append(f"{path}.formation: <too big to display> _NotEqual_ <too big to display>")
+
+        return diff

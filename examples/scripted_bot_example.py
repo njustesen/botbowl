@@ -708,6 +708,7 @@ if __name__ == "__main__":
     # Load configurations, rules, arena and teams
     config = ffai.load_config("bot-bowl-iii")
     config.competition_mode = False
+    config.pathfinding_enabled = True
     # config = get_config("gym-7.json")
     # config = get_config("gym-5.json")
     # config = get_config("gym-3.json")
