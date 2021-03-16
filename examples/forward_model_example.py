@@ -1,5 +1,5 @@
 import ffai
-from ffai.core import Action, Agent
+from ffai.core import Action, Agent, ActionType
 
 # Setup a game
 config = ffai.load_config("bot-bowl-iii")
