@@ -9,15 +9,18 @@ This module contains pathfinding functionalities for FFAI.
 from typing import Optional, List
 from ffai.core.table import Rules
 from ffai.core.model import Player, Square, D6
+from ffai.core.forward_model import Reversible
+from ffai.core.util import compare_object
 from ffai.core.table import Skill, WeatherType, Tile
 import copy
 import numpy as np
 from queue import PriorityQueue
 
 
-class Path:
+class Path(Reversible):
 
     def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False, rr_used_prob=0):
+        super().__init__()
         self.steps = steps
         self.prob = prob
         self.rr_used_prob = rr_used_prob
@@ -34,6 +37,9 @@ class Path:
 
     def is_empty(self) -> bool:
         return len(self) == 0
+
+    def compare(self, other, path=""):
+        return compare_object(self, other, path)
 
 
 class Node:

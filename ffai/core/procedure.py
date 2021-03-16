@@ -8,6 +8,9 @@ responsible for an isolated part of the game. Procedures are added to a stack, a
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 from abc import abstractmethod, ABCMeta
+from collections.abc import Iterable
+
+from pytest import set_trace
 
 from ffai.ai.pathfinding import Pathfinder
 from ffai.core.model import *
@@ -15,14 +18,15 @@ from ffai.core.table import *
 import time
 
 
-class Procedure:
+class Procedure(Reversible):
 
-    def __init__(self, game, context=None):
+    def __init__(self, game, context=None, ignored_keys=[]):
+        super().__init__(ignored_keys=["game"]+ignored_keys)
         self.game = game
         self.context = context
-        self.game.state.stack.push(self)
         self.done = False
         self.started = False
+        self.game.state.stack.push(self)  # Note: The stack will call this object's set_logger
 
     def start(self):
         """
@@ -49,6 +53,9 @@ class Procedure:
         :return: a list of available actions. This can vary based on the state of the procedure.
         """
         return []
+
+    def compare(self, other, path=""):
+        return compare_object(self, other, path, ignored_keys={"game"}, ignored_types={Procedure})
 
 
 class Regeneration(Procedure):
@@ -639,7 +646,7 @@ class Bounce(Procedure):
             # Out of bounds
             if self.game.is_out_of_bounds(self.piece.position):
                 if type(self.piece) is Ball:
-                    ThrowIn(self.game, self.piece, Square(self.piece.position.x - x, self.piece.position.y - y))
+                    ThrowIn(self.game, self.piece, self.game.get_square(self.piece.position.x - x, self.piece.position.y - y))
                     self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS))
                 elif type(self.piece) is Player:
                     KnockDown(self.game, self.piece, in_crowd=True)
@@ -3259,8 +3266,8 @@ class Push(Procedure):
             self.squares = None
 
             # Save positions before chaining
-            self.push_to = Square(action.position.x, action.position.y)
-            self.follow_to = Square(self.player.position.x, self.player.position.y)
+            self.push_to = action.position
+            self.follow_to = self.player.position
 
             assert self.push_to != self.follow_to
 
@@ -3359,7 +3366,7 @@ class Scatter(Procedure):
                     # Throw in
                     if self.game.is_out_of_bounds(self.piece.position):
                         if type(self.piece) is Ball:
-                            ThrowIn(self.game, self.piece, Square(self.piece.position.x-x, self.piece.position.y-y))
+                            ThrowIn(self.game, self.piece, self.game.get_square(self.piece.position.x-x, self.piece.position.y-y))
                             self.game.report(Outcome(OutcomeType.BALL_SCATTER, rolls=rolls))
                             self.game.report(Outcome(OutcomeType.BALL_OUT_OF_BOUNDS,
                                                      position=self.piece.position))
@@ -3593,7 +3600,7 @@ class ThrowIn(Procedure):
         for i in range(roll_distance.get_sum()):
             self.ball.move(x, y)
             if self.game.is_out_of_bounds(self.ball.position):
-                ThrowIn(self.game, self.ball, Square(self.ball.position.x - x, self.ball.position.y - y))
+                ThrowIn(self.game, self.ball, self.game.get_square(self.ball.position.x - x, self.ball.position.y - y))
                 self.game.report(Outcome(OutcomeType.THROW_IN_OUT_OF_BOUNDS, position=self.ball.position,
                                          rolls=[roll_direction, roll_distance]))
                 return True
@@ -3703,7 +3710,7 @@ class EndTurn(Procedure):
 
         self.game.state.current_team = None
         self.game.remove_clocks()
-        self.game.state.rerolled_procs = set()
+        self.game.state.rerolled_procs.clear()
         self.game.state.player_action_type = None
         return True
 

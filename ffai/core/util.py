@@ -7,7 +7,11 @@ A few utilities used across the core modules.
 """
 
 import os
+from collections.abc import Iterable
+from copy import copy
 import ffai
+from ffai.core.forward_model import Reversible
+from ffai.core.model import *
 
 
 def parse_enum(enum_class, name):
@@ -75,8 +79,9 @@ def get_line(start, end):
     return points
 
 
-class Stack:
+class Stack(Reversible):
     def __init__(self):
+        super().__init__()
         self.items = []
 
     def is_empty(self):
@@ -92,7 +97,7 @@ class Stack:
         self.items.remove(item)
 
     def peek(self):
-        return self.items[len(self.items)-1]
+        return self.items[len(self.items) - 1]
 
     def size(self):
         return len(self.items)
@@ -103,3 +108,51 @@ def get_data_path(rel_path):
     filename = os.path.join(root_dir, "data/" + rel_path)
     return os.path.abspath(os.path.realpath(filename))
 
+
+def compare_iterable(s1, s2, path=""):
+    diff = []
+
+    if type(s1) != type(s2):
+        diff.append(f"{path}: __class__: '{type(s1)}' _notEqual_ '{type(s2)}'")
+
+    elif hasattr(s1, "to_json"):
+        diff.extend(compare_iterable(s1.to_json(), s2.to_json()))
+
+    elif hasattr(s1, "compare"):
+        diff.extend(s1.compare(s2, f"{path}"))
+
+    elif isinstance(s1, Iterable) and len(s1) != len(s2):
+        diff.append(f"{path}: __len__: '{len(s1)}' _notEqual_ '{len(s2)}'")
+
+    elif isinstance(s1, dict):
+        for key in s1.keys():
+            diff.extend(compare_iterable(s1[key], s2[key], f"{path}.{key}"))
+
+    elif isinstance(s1, list):
+        for i, (item1, item2) in enumerate(zip(s1, s2)):
+            diff.extend(compare_iterable(item1, item2, f"{path}[{i}]"))
+
+    else:
+        if s1 != s2:
+            d = f"{path}: '{s1}' _notEqual_ '{s2}'"
+            diff.append(d)
+    return diff
+
+
+def compare_object(self, other, path="", ignored_keys=None, ignored_types=None):
+    diff = []
+
+    if type(self) != type(other):
+        diff.append(f"{path}: __class__: '{type(self)}' _notEqual_ '{type(other)}'")
+        return diff
+
+    for attr_name in dir(self):
+        self_attr = getattr(self, attr_name)
+        if attr_name[0] == "_" or callable(self_attr) or \
+                ignored_keys is not None and attr_name in ignored_keys or \
+                ignored_types is not None and any([isinstance(self_attr, T) for T in ignored_types]):
+            continue
+
+        other_attr = getattr(other, attr_name)
+        diff.extend(compare_iterable(self_attr, other_attr, path=f"{path}.{attr_name}"))
+    return diff
