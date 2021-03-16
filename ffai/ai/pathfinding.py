@@ -19,11 +19,10 @@ from queue import PriorityQueue
 
 class Path(Reversible):
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False, rr_used_prob=0):
+    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
         super().__init__()
         self.steps = steps
         self.prob = prob
-        self.rr_used_prob = rr_used_prob
         self.rolls = rolls
         self.block_dice = block_dice
         self.handoff_roll = handoff_roll
@@ -480,18 +479,13 @@ class Pathfinder:
         foul_roll = node.foul_roll
         handoff_roll = node.handoff_roll
         node = node.parent
-        rr_used_prob = 0
-        for state, p in node.rr_states.items():
-            if not state[Node.TRR]:
-                rr_used_prob += p
         while node is not None:
             steps.append(node.position)
             rolls.append(node.rolls)
             node = node.parent
         steps = list(reversed(steps))[1:]
         rolls = list(reversed(rolls))[1:]
-        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll,
-                    handoff_roll=handoff_roll, rr_used_prob=rr_used_prob)
+        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
 
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):

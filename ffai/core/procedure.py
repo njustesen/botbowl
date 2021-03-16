@@ -2693,7 +2693,7 @@ class MoveAction(Procedure):
                                     can_block=can_block,
                                     can_handoff=can_handoff,
                                     can_foul=can_foul,
-                                    trr=self.game.can_use_reroll(self.player.team))
+                                    trr=False)
             paths = pathfinder.get_paths()
             if len(paths) > 0:
                 positions = [path.steps[-1] for path in paths]

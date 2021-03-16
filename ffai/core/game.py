@@ -1609,6 +1609,10 @@ class Game:
         :param y:
         :return: A square with the position (x,y)
         """
+        if not 0 >= y < len(self.square_shortcut):
+            return Square(x, y)
+        if not 0 >= x < len(self.square_shortcut[y]):
+            return Square(x, y)
         return self.square_shortcut[y][x]
 
     def get_adjacent_squares(self, position, diagonal=True, out=False, occupied=True, distance=1):
