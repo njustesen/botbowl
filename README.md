@@ -16,8 +16,7 @@ Please cite our paper if you use FFAI in your publications.
 ```
 
 ## Bot Bowl
-Bot Bowl III will be announced soon.
-Bot Bowl is an AI competition using FFAI. See the results of [Bot Bowl II](docs/bot-bowl-ii.md) or [Bot Bowl](docs/bot-bowl-i.md).
+Bot Bowl is an AI competition using the FFAI framework. Go read all about the upcoming [Bot Bowl III](docs/bot-bowl-iii.md).
 
 ## Installation
 [Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
