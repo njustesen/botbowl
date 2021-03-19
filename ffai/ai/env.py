@@ -372,7 +372,7 @@ class FFAIEnv(gym.Env):
 
         for procedure in game.state.stack.items:
             if procedure.__class__ in FFAIEnv.procedures:
-            # proc_idx = FFAIEnv.procedures.index(procedure.__class__)
+                # proc_idx = FFAIEnv.procedures.index(procedure.__class__)
                 proc_name = procedure.__class__.__name__
                 obs['procedures'][proc_name] = 1.0
 
@@ -640,3 +640,25 @@ class FFAIEnv(gym.Env):
         self.root = None
         self.cv = None
 
+    # Dimensions of observation space
+    def get_nbr_of_spat_layers(self):
+        return self.observation_space.spaces['board'].shape[0]
+
+    def get_non_spatial_inputs(self):
+        names = ['state', 'procedures', 'available-action-types']
+        sizes = [self.observation_space.spaces[name].shape[0] for name in names]
+        return sum(sizes)
+
+    def get_layer_width(self):
+        return self.observation_space.spaces['board'].shape[1]
+
+    def get_layer_height(self):
+        return self.observation_space.spaces['board'].shape[2]
+
+    def get_nbr_of_output_actions(self):
+        non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+        num_non_spatial_action_types = len(non_spatial_action_types)
+        spatial_action_types = FFAIEnv.positional_action_types
+        num_spatial_action_types = len(spatial_action_types)
+        num_spatial_actions = num_spatial_action_types * self.get_layer_width() * self.get_layer_height()
+        return num_non_spatial_action_types + num_spatial_actions

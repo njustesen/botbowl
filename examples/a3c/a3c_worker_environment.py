@@ -1,19 +1,13 @@
 import warnings
 from dataclasses import dataclass
 
-import numpy as np
+from multiprocessing import Process, Pipe, Queue
+import torch
 from pytest import set_trace
 
-import Curriculum as gc
-from multiprocessing import Process, Pipe, Queue
-from queue import Empty
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-from ffai.core.table import OutcomeType
-
-from Reward import reward_function
+from examples.a3c.a3c_agent import RL_Agent
+from examples.a3c.a3c_reward import reward_function
+from ffai import FFAIEnv
 
 warnings.filterwarnings('ignore')
 
@@ -25,11 +19,11 @@ class EndOfGameReport:
     opp_td: int = 0
     total_reward: float = 0
 
-    def add(self, other):
+    def merge(self, other) -> None:
         raise NotImplementedError()
 
 
-class Memory(object):
+class VectorMemory(object):
     def __init__(self, steps_per_update, env):
         spatial_obs_shape = env.get_spatial_obs_shape()
         non_spatial_obs_shape = env.get_non_spatial_obs_shape()
@@ -81,19 +75,21 @@ class Memory(object):
 
 
 class WorkerMemory(object):
-    def __init__(self, max_steps, env):
+    def __init__(self, max_steps, env: FFAIEnv):
 
-        spatial_obs_shape = env.get_spatial_obs_shape()
-        non_spatial_obs_shape = env.get_non_spatial_obs_shape()
-        action_space = env.get_action_shape()
+        nbr_of_spat_layers = env.get_nbr_of_spat_layers()
+        layer_width = env.get_layer_width()
+        layer_height = env.get_layer_height()
+        non_spatial_obs_shape = env.get_non_spatial_inputs()
+        action_space = env.get_nbr_of_output_actions()
 
         self.max_steps = max_steps
         self.looped = None
         self.step = None
         self.reset()  # Sets step=0 and looped=False
 
-        self.spatial_obs = torch.zeros(max_steps, *spatial_obs_shape)
-        self.non_spatial_obs = torch.zeros(max_steps, *non_spatial_obs_shape)
+        self.spatial_obs = torch.zeros(max_steps, nbr_of_spat_layers, layer_width, layer_height)
+        self.non_spatial_obs = torch.zeros(max_steps, non_spatial_obs_shape)
         self.rewards = torch.zeros(max_steps, 1)
         self.returns = torch.zeros(max_steps, 1)
         self.td_outcome = torch.zeros(max_steps, 1)
@@ -111,12 +107,12 @@ class WorkerMemory(object):
 
     def insert_network_step(self, spatial_obs, non_spatial_obs, action, reward, action_masks):
         # The observation and the action, reward and action mask is inserted in the same step.
-        # It means that this observation lead to this action. This is not the case in the tutorial from Njustesen!
+        # It means that this observation lead to this action. This is not the case in the a2c tutorial!
         self.actions[self.step] = action
         self.rewards[self.step] = reward
         self.action_masks[self.step].copy_(action_masks)
         self.spatial_obs[self.step].copy_(spatial_obs)
-        self.non_spatial_obs[self.step].copy_(non_spatial_obs)
+        self.non_spatial_obs[self.step].copy_(non_spatial_obs.squeeze())
 
         self.step += 1
         if self.step == self.max_steps:
@@ -143,7 +139,29 @@ class WorkerMemory(object):
         return self.max_steps if self.looped else self.step
 
 
-class VecEnv():
+
+class AbstractVectorEnv:
+
+    def step(self, agent) -> (VectorMemory, EndOfGameReport):
+        raise NotImplementedError("To be over written by subclass")
+
+
+class VectorEnv(AbstractVectorEnv):
+    def __init__(self, envs, starting_agent, memory_size):
+        self.envs = envs
+        self.memory = VectorMemory(memory_size, envs[0])
+
+    def step(self, agent: RL_Agent) -> (VectorMemory, EndOfGameReport):
+        result_report = EndOfGameReport()
+        for env in self.envs:
+            worker_mem, report = run_environment_to_done(env, agent)
+            result_report.merge(report)
+            self.memory.insert_worker_memory(worker_mem)
+
+        return self.memory, result_report
+
+
+class VectorEnvMultiProcess(AbstractVectorEnv):
     def __init__(self, envs, starting_agent, memory_size):
         """
         envs: list of FFAI environments to run in subprocesses
@@ -161,9 +179,9 @@ class VecEnv():
             p.daemon = True  # If the main process crashes, we should not cause things to hang
             p.start()
 
-        self.memory = Memory(memory_size, envs[0])
+        self.memory = VectorMemory(memory_size, envs[0])
 
-    def step(self):
+    def step(self, agent) -> (VectorMemory, EndOfGameReport):
 
         report = EndOfGameReport()
 
@@ -171,7 +189,7 @@ class VecEnv():
             data = self.results_queue.get()  # Blocking call
             self.memory.insert_worker_memory(data[0])
 
-            report.add(data[1])
+            report.merge(data[1])
 
         return self.memory, report
 
@@ -200,55 +218,61 @@ class VecEnv():
         return len(self.ps)
 
 
-def worker(results_queue, msg_queue, env, worker_id, trainee):
-    worker_running = True
-    steps = 0
-    reset_steps = 2000
+def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, EndOfGameReport):
 
     with torch.no_grad():
 
         env.reset()
         memory = WorkerMemory(worker_max_steps, env)
 
-        while worker_running:
+        steps = 0
+        while True:
 
-            # Updates from master process?
-            if not msg_queue.empty():
-                command, data = msg_queue.get()
-                if command == 'swap trainee':
-                    trainee = data
-                    # print(f"swap trainee on step - {steps}") # TODO, is quite a lot of steps...
-                elif command == 'close':
-                    break
-                else:
-                    raise Exception(f"Unknown command to worker: {command}")
+            (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
+            try:
+                assert isinstance(action_dict, dict)
+            except AssertionError:
+                set_trace()
+                pass
 
-            # Agent takes step  and insert to memory
-            steps += 1
-
-            # Todo, to big tuple to return
-            (action, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = trainee.act_when_training(env)
-            (_, _, done, info) = env.step(action)
+            (_, _, done, info) = env.step(action_dict)
             reward_shaped = reward_function(env, info)
 
             memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
 
-            # Check progress and report back
+
             if done:
                 memory.insert_epside_end()
-                result_report = {"score": 0}
-                results_queue.put((memory, result_report))
+                result_report = EndOfGameReport()
 
-                env.reset()
-                memory.reset()
-                steps = 0
+                return memory, result_report
 
-            if steps >= reset_steps:
+            if steps >= 4000:
                 # If we  get stuck or something - reset the environment
                 print("Max. number of steps exceeded! Consider increasing the number.")
                 env.reset()
                 memory.reset()
                 steps = 0
+            steps += 1
+
+def worker(results_queue, msg_queue, env, worker_id, trainee):
+
+    while True:
+
+        # Updates from master process?
+        if not msg_queue.empty():
+            command, data = msg_queue.get()
+            if command == 'swap trainee':
+                trainee = data
+            elif command == 'close':
+                break
+            else:
+                raise Exception(f"Unknown command to worker: {command}")
+
+        memory, report = run_environment_to_done(env, trainee)
+
+        results_queue.put((memory, report))
+
 
     msg_queue.cancel_join_thread()
     results_queue.cancel_join_thread()

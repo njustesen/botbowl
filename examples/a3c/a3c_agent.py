@@ -1,18 +1,13 @@
-import os
+from abc import ABC
 from typing import Optional
 
 import gym
 from ffai import FFAIEnv
-from pytest import set_trace
 from torch.autograd import Variable
-import torch.optim as optim
-from multiprocessing import Process, Pipe
 from ffai.ai.layers import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
-import sys
 
 
 # Architecture
@@ -22,29 +17,43 @@ model_filename = "models/" + model_name
 log_filename = "logs/" + model_name + ".dat"
 
 
-class CNNPolicy(nn.Module):
-    """
-    Same as a2c exmaple
-    """
+class RL_Agent(Agent, ABC):
+    def act_when_training(self, env: FFAIEnv):
+        # Shall return = (action_dict, actions, action_masks, value, spatial_obs, non_spatial_obs)
+        raise NotImplementedError("To be overwritten in subclass ")
 
-    def __init__(self, spatial_shape, non_spatial_inputs, hidden_nodes, kernels, actions):
+    def new_game(self, game, team):
+        pass
+
+    def end_game(self, game):
+        pass
+
+
+class CNNPolicy(nn.Module):
+    def __init__(self, env, hidden_nodes, kernels):
         super(CNNPolicy, self).__init__()
 
+        nbr_of_spat_layers = env.get_nbr_of_spat_layers()
+        non_spatial_inputs = env.get_non_spatial_inputs()
+        layer_width = env.get_layer_width()
+        layer_height = env.get_layer_height()
+        output_actions = env.get_nbr_of_output_actions()
+
         # Spatial input stream
-        self.conv1 = nn.Conv2d(spatial_shape[0], out_channels=kernels[0], kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(nbr_of_spat_layers, out_channels=kernels[0], kernel_size=3, stride=1, padding=1)
         self.conv2 = nn.Conv2d(in_channels=kernels[0], out_channels=kernels[1], kernel_size=3, stride=1, padding=1)
 
         # Non-spatial input stream
         self.linear0 = nn.Linear(non_spatial_inputs, hidden_nodes)
 
         # Linear layers
-        stream_size = kernels[1] * spatial_shape[1] * spatial_shape[2]
+        stream_size = kernels[1] * layer_width * layer_height
         stream_size += hidden_nodes
         self.linear1 = nn.Linear(stream_size, hidden_nodes)
 
         # The outputs
         self.critic = nn.Linear(hidden_nodes, 1)
-        self.actor = nn.Linear(hidden_nodes, actions)
+        self.actor = nn.Linear(hidden_nodes, output_actions)
 
         self.train()
         self.reset_parameters()
@@ -115,9 +124,9 @@ class CNNPolicy(nn.Module):
         return values, action_probs
 
 
-class A3CAgent(Agent):
+class A3CAgent(RL_Agent):
 
-    def __init__(self, name, env_name=env_name, cnn=None, filename: Optional[str] = model_filename):
+    def __init__(self, name, env_name=env_name, policy=None, filename: Optional[str] = model_filename):
         super().__init__(name)
         self.my_team = None
         self.env = self.make_env(env_name)
@@ -138,29 +147,32 @@ class A3CAgent(Agent):
         self.is_home = True
 
         # MODEL
-        if cnn is not None:
-            raise NotImplementedError
+        if policy is not None:
+            self.policy = policy
+            self.policy.eval()
 
-        elif filename is not None
+        elif filename is not None:
             self.policy = torch.load(filename)
             self.policy.eval()
 
         self.end_setup = False
         self.cnn_used = False
 
-    def act(self, game):
+    def act(self, game) -> Action:
         self.env.game = game
-        action_object, _, _, _, _, _ = self.act_when_training(self.env)
-        return action_object
+        action_dict, _, _, _, _, _ = self.act_when_training(self.env)
+        return self.create_action_object(action_dict)
 
     def act_when_training(self, env):
+
+        # todo, can be called after the if statement.
+        action_dict, actions, action_masks, value, spatial_obs, non_spatial_obs = self.act_NN(env)
+
         if self.end_setup:
             self.end_setup = False
 
-            # Todo, need to return the whole tuple here, set the action_mask to only show end_setup.
-            return self.create_action_object(ActionType.END_SETUP)
-
-        action_dict, actions, action_masks, value, spatial_obs, non_spatial_obs = self.act_NN(env)
+            # Todo: set the action_mask to only show end_setup.
+            return {"action-type": ActionType.END_SETUP, "x": None, "y": None}, actions, action_masks, value, spatial_obs, non_spatial_obs
 
         # Let's just end the setup right after picking a formation
         if action_dict["action-type"].name.lower().startswith('setup'):
@@ -201,8 +213,8 @@ class A3CAgent(Agent):
 
         return action_object, actions, action_masks, value, spatial_obs, non_spatial_obs
 
-    def create_action_object(self, action_dict):
-        if action_dict["action-type"] is None:
+    def create_action_object(self, action_dict: Optional[dict]):
+        if action_dict is None:
             return None
 
         if action_dict["action-type"] in FFAIEnv.positional_action_types:
@@ -221,9 +233,6 @@ class A3CAgent(Agent):
         for name, layer in board.items():
             flipped[name] = np.flip(layer, 1)
         return flipped
-
-    def end_game(self, game):
-        pass
 
     def _compute_action_masks(self, ob):
         mask = np.zeros(self.action_space)
