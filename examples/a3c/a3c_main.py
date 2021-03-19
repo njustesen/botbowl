@@ -122,8 +122,7 @@ def main():
         actions = Variable(torch.LongTensor(memory.actions[:memory.step].view(-1, 1)))
         actions_mask = Variable(memory.action_masks[:memory.step])
 
-        action_log_probs, values, dist_entropy, td_pred = ac_agent.evaluate_actions(spatial, non_spatial, actions,
-                                                                                    actions_mask)
+        action_log_probs, values, dist_entropy = ac_agent.evaluate_actions(spatial, non_spatial, actions, actions_mask)
 
         # ### Compute loss and back propagate ###
         # values = values.view(steps_per_update, num_processes, 1)
@@ -133,14 +132,13 @@ def main():
         value_loss = advantages.pow(2).mean()
 
         outcome_prediction_error = Variable(memory.td_outcome[:memory.step]) - td_pred
-        prediction_loss = outcome_prediction_error.pow(2).mean()
 
         action_loss = -(Variable(advantages.data) * action_log_probs).mean()
 
         optimizer.zero_grad()
 
         total_loss = (
-                    value_loss * value_loss_coef + prediction_loss * prediction_loss_coeff + action_loss - dist_entropy * entropy_coef)
+                    value_loss * value_loss_coef + action_loss - dist_entropy * entropy_coef)
         total_loss.backward()
 
         nn.utils.clip_grad_norm_(ac_agent.parameters(), max_grad_norm)
