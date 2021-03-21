@@ -1,7 +1,10 @@
 import warnings
 from dataclasses import dataclass
+from itertools import chain
 
-from multiprocessing import Process, Pipe, Queue
+import numpy as np
+
+from multiprocessing import Process, Queue
 import torch
 from pytest import set_trace
 
@@ -12,6 +15,7 @@ from ffai import FFAIEnv
 warnings.filterwarnings('ignore')
 
 worker_max_steps = 400
+
 
 @dataclass
 class EndOfGameReport:
@@ -25,15 +29,17 @@ class EndOfGameReport:
 
 class VectorMemory(object):
     def __init__(self, steps_per_update, env):
-        spatial_obs_shape = env.get_spatial_obs_shape()
-        non_spatial_obs_shape = env.get_non_spatial_obs_shape()
-        action_space = env.get_action_shape()
+        nbr_of_spat_layers = env.get_nbr_of_spat_layers()
+        layer_width = env.get_layer_width()
+        layer_height = env.get_layer_height()
+        non_spatial_obs_shape = env.get_non_spatial_inputs()
+        action_space = env.get_nbr_of_output_actions()
 
         self.step = 0
         self.max_steps = steps_per_update
 
-        self.spatial_obs = torch.zeros(steps_per_update, *spatial_obs_shape)
-        self.non_spatial_obs = torch.zeros(steps_per_update, *non_spatial_obs_shape)
+        self.spatial_obs = torch.zeros(steps_per_update, nbr_of_spat_layers, layer_width, layer_height)
+        self.non_spatial_obs = torch.zeros(steps_per_update, non_spatial_obs_shape)
         self.rewards = torch.zeros(steps_per_update, 1)
         self.returns = torch.zeros(steps_per_update, 1)
         self.td_outcome = torch.zeros(steps_per_update, 1)  # Todo, remove td outcome
@@ -123,21 +129,19 @@ class WorkerMemory(object):
         gamma = 0.99
 
         # Compute returns
-        assert not (self.step == 0 and self.looped == False)
-        if self.step != 0:
-
-            self.returns[self.step - 1] = self.rewards[self.step - 1]
-            for i in reversed(range(self.step - 1)):
-                self.returns[i] = self.returns[i + 1] * gamma + self.rewards[i]
-
         if self.looped:
-            self.returns[-1] = gamma * self.returns[0] + self.rewards[-1]
-            for i in reversed(range(self.step + 1, self.max_steps - 1)):
-                self.returns[i] = self.returns[i + 1] * gamma + self.rewards[i]
+            order = chain(range(self.step, self.max_steps), range(self.step))
+            order = reversed(list(order))
+        else:
+            order = reversed(range(self.step))
+
+        previous_return = 0
+        for i in order:
+            self.returns[i] = self.rewards[i] + gamma * previous_return
+            previous_return = self.returns[i]
 
     def get_steps_to_copy(self):
         return self.max_steps if self.looped else self.step
-
 
 
 class AbstractVectorEnv:
@@ -219,7 +223,6 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
 
 
 def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, EndOfGameReport):
-
     with torch.no_grad():
 
         env.reset()
@@ -229,17 +232,10 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
         while True:
 
             (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
-            try:
-                assert isinstance(action_dict, dict)
-            except AssertionError:
-                set_trace()
-                pass
-
             (_, _, done, info) = env.step(action_dict)
             reward_shaped = reward_function(env, info)
 
             memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
-
 
             if done:
                 memory.insert_epside_end()
@@ -255,8 +251,8 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
                 steps = 0
             steps += 1
 
-def worker(results_queue, msg_queue, env, worker_id, trainee):
 
+def worker(results_queue, msg_queue, env, worker_id, trainee):
     while True:
 
         # Updates from master process?
@@ -272,7 +268,6 @@ def worker(results_queue, msg_queue, env, worker_id, trainee):
         memory, report = run_environment_to_done(env, trainee)
 
         results_queue.put((memory, report))
-
 
     msg_queue.cancel_join_thread()
     results_queue.cancel_join_thread()
