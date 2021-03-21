@@ -1,12 +1,8 @@
 import warnings
-from dataclasses import dataclass
 from itertools import chain
-
-import numpy as np
 
 from multiprocessing import Process, Queue
 import torch
-from pytest import set_trace
 
 from examples.a3c.a3c_agent import RL_Agent
 from examples.a3c.a3c_reward import reward_function
@@ -17,14 +13,32 @@ warnings.filterwarnings('ignore')
 worker_max_steps = 400
 
 
-@dataclass
 class EndOfGameReport:
-    own_td: int = 0
-    opp_td: int = 0
-    total_reward: float = 0
+    def __init__(self, time_steps, reward, game):
+        self.time_steps = time_steps
+        self.own_td = game.state.home_team.state.score
+        self.opp_td = game.state.away_team.state.score
+        self.total_reward = reward
+        self.episodes = 1
+        self.win_rate = 1.0 if self.own_td>self.opp_td else 0.5 if self.own_td == self.opp_td else 0
 
-    def merge(self, other) -> None:
-        raise NotImplementedError()
+    def merge(self, other):
+        self.time_steps += other.time_steps
+        self.own_td += other.own_td
+        self.opp_td += other.opp_td
+        self.total_reward += other.total_reward
+        self.win_rate = (self.win_rate * self.episodes + other.win_rate * other.episodes) / (
+                    self.episodes + other.episodes)
+        self.episodes += other.episodes
+
+    def __repr__(self):
+        s = f"Episodes: {self.episodes}, " \
+            f"Timesteps: {self.time_steps}, " \
+            f"Win rate: {self.win_rate:.2f}, " \
+            f"TD rate: {self.own_td/self.episodes:.2f}, " \
+            f"TD rate opp: {self.opp_td/self.episodes:.2f}, " \
+            f"Mean reward: {self.total_reward/self.episodes:.3f}, "
+        return s
 
 
 class Memory:
@@ -133,11 +147,15 @@ class VectorEnv(AbstractVectorEnv):
         self.memory = VectorMemory(memory_size, envs[0])
 
     def step(self, agent: RL_Agent) -> (VectorMemory, EndOfGameReport):
-        result_report = EndOfGameReport()
+        result_report = None
         for env in self.envs:
             worker_mem, report = run_environment_to_done(env, agent)
-            result_report.merge(report)
             self.memory.insert_worker_memory(worker_mem)
+
+            if result_report is None:
+                result_report = report
+            else:
+                result_report.merge(report)
 
         return self.memory, result_report
 
@@ -164,15 +182,20 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
 
     def step(self, agent) -> (VectorMemory, EndOfGameReport):
 
-        report = EndOfGameReport()
+        result_report = None
 
         while self.memory.not_full():
             data = self.results_queue.get()  # Blocking call
-            self.memory.insert_worker_memory(data[0])
+            worker_mem = data[0]
+            report = data[1]
+            self.memory.insert_worker_memory(worker_mem)
 
-            report.merge(data[1])
+            if result_report is None:
+                result_report = report
+            else:
+                result_report.merge(report)
 
-        return self.memory, report
+        return self.memory, result_report
 
     def update_trainee(self, agent):
 
@@ -206,6 +229,7 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
         memory = WorkerMemory(worker_max_steps, env)
 
         steps = 0
+        total_reward = 0
         while True:
 
             (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
@@ -216,7 +240,7 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
 
             if done:
                 memory.insert_epside_end()
-                result_report = EndOfGameReport()
+                result_report = EndOfGameReport(time_steps=steps, game=env.game, reward=total_reward)
 
                 return memory, result_report
 
