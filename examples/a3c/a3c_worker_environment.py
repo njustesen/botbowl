@@ -27,30 +27,29 @@ class EndOfGameReport:
         raise NotImplementedError()
 
 
-class VectorMemory(object):
-    def __init__(self, steps_per_update, env):
+class Memory:
+    def __init__(self, size, env):
+        self.step = 0
+        self.max_steps = size
+
         nbr_of_spat_layers = env.get_nbr_of_spat_layers()
         layer_width = env.get_layer_width()
         layer_height = env.get_layer_height()
         non_spatial_obs_shape = env.get_non_spatial_inputs()
         action_space = env.get_nbr_of_output_actions()
 
-        self.step = 0
-        self.max_steps = steps_per_update
-
-        self.spatial_obs = torch.zeros(steps_per_update, nbr_of_spat_layers, layer_width, layer_height)
-        self.non_spatial_obs = torch.zeros(steps_per_update, non_spatial_obs_shape)
-        self.rewards = torch.zeros(steps_per_update, 1)
-        self.returns = torch.zeros(steps_per_update, 1)
-        self.td_outcome = torch.zeros(steps_per_update, 1)  # Todo, remove td outcome
-
-        action_shape = 1
-        self.actions = torch.zeros(steps_per_update, action_shape)
+        self.spatial_obs = torch.zeros(size, nbr_of_spat_layers, layer_width, layer_height)
+        self.non_spatial_obs = torch.zeros(size, non_spatial_obs_shape)
+        self.rewards = torch.zeros(size, 1)
+        self.returns = torch.zeros(size, 1)
+        self.actions = torch.zeros(size, 1)
         self.actions = self.actions.long()
-        self.action_masks = torch.zeros(steps_per_update, action_space, dtype=torch.uint8)
+        self.action_masks = torch.zeros(size, action_space, dtype=torch.uint8)
 
-    def cuda(self):
-        pass
+
+class VectorMemory(Memory):
+    def __init__(self, size, env):
+        super().__init__(size, env)
 
     def clear_memory(self):
         pass  # TODO
@@ -69,7 +68,6 @@ class VectorMemory(object):
         self.non_spatial_obs[begin:end].copy_(worker_mem.non_spatial_obs[:steps_to_copy])
         self.rewards[begin:end].copy_(worker_mem.rewards[:steps_to_copy])
         self.returns[begin:end].copy_(worker_mem.returns[:steps_to_copy])
-        self.td_outcome[begin:end].copy_(worker_mem.td_outcome[:steps_to_copy])
 
         self.actions[begin:end].copy_(worker_mem.actions[:steps_to_copy])
         self.action_masks[begin:end].copy_(worker_mem.action_masks[:steps_to_copy])
@@ -80,31 +78,10 @@ class VectorMemory(object):
         return 0.9 * self.max_steps > self.step
 
 
-class WorkerMemory(object):
-    def __init__(self, max_steps, env: FFAIEnv):
-
-        nbr_of_spat_layers = env.get_nbr_of_spat_layers()
-        layer_width = env.get_layer_width()
-        layer_height = env.get_layer_height()
-        non_spatial_obs_shape = env.get_non_spatial_inputs()
-        action_space = env.get_nbr_of_output_actions()
-
-        self.max_steps = max_steps
-        self.looped = None
-        self.step = None
-        self.reset()  # Sets step=0 and looped=False
-
-        self.spatial_obs = torch.zeros(max_steps, nbr_of_spat_layers, layer_width, layer_height)
-        self.non_spatial_obs = torch.zeros(max_steps, non_spatial_obs_shape)
-        self.rewards = torch.zeros(max_steps, 1)
-        self.returns = torch.zeros(max_steps, 1)
-        self.td_outcome = torch.zeros(max_steps, 1)
-
-        self.actions = torch.zeros(max_steps, 1).long()  # action_shape = 1
-        self.action_masks = torch.zeros(max_steps, action_space, dtype=torch.uint8)
-
-    def cuda(self):
-        pass
+class WorkerMemory(Memory):
+    def __init__(self, size, env: FFAIEnv):
+        super().__init__(size, env)
+        self.looped = False
 
     def reset(self):
         # TODO: consider clearing the variables
