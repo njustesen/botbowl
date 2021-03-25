@@ -1,4 +1,5 @@
 import warnings
+from asyncio import sleep
 from itertools import chain
 
 from multiprocessing import Process, Queue
@@ -142,6 +143,9 @@ class AbstractVectorEnv:
 
 
 class VectorEnv(AbstractVectorEnv):
+    """
+    This class is here for debugging purposes. It's easier to analyze the trace one just one process.
+    """
     def __init__(self, envs, starting_agent, memory_size):
         self.envs = envs
         self.memory = VectorMemory(memory_size, envs[0])
@@ -182,8 +186,9 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
 
     def step(self, agent) -> (VectorMemory, EndOfGameReport):
 
-        result_report = None
+        self.update_trainee(agent)
 
+        result_report = None
         while self.memory.not_full():
             data = self.results_queue.get()  # Blocking call
             worker_mem = data[0]
@@ -195,13 +200,16 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
             else:
                 result_report.merge(report)
 
+        self._send_to_children('pause')
+
         return self.memory, result_report
 
     def update_trainee(self, agent):
+        self._send_to_children('swap trainee', agent)
 
+    def _send_to_children(self, command, data=None):
         for ps_msg in self.ps_message:
-            # Todo: check that queue is empty, otherwise process is very slow.
-            ps_msg.put(('swap trainee', agent))
+            ps_msg.put((command, data))
 
     def close(self):
         if self.closed:
@@ -221,6 +229,9 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
     def num_envs(self):
         return len(self.ps)
 
+    def __del__(self):
+        self.close()
+
 
 def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, EndOfGameReport):
     with torch.no_grad():
@@ -235,6 +246,7 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
             (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
             (_, _, done, info) = env.step(action_dict)
             reward_shaped = reward_function(env, info)
+            total_reward += reward_shaped
 
             memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
 
@@ -254,6 +266,8 @@ def run_environment_to_done(env: FFAIEnv, agent: RL_Agent) -> (WorkerMemory, End
 
 
 def worker(results_queue, msg_queue, env, worker_id, trainee):
+
+    pause = True
     while True:
 
         # Updates from master process?
@@ -261,14 +275,19 @@ def worker(results_queue, msg_queue, env, worker_id, trainee):
             command, data = msg_queue.get()
             if command == 'swap trainee':
                 trainee = data
+                pause = False
             elif command == 'close':
                 break
+            elif command == 'pause':
+                pause = True
             else:
                 raise Exception(f"Unknown command to worker: {command}")
 
-        memory, report = run_environment_to_done(env, trainee)
-
-        results_queue.put((memory, report))
+        if pause:
+            sleep(0.005)
+        else:
+            memory, report = run_environment_to_done(env, trainee)
+            results_queue.put((memory, report))
 
     msg_queue.cancel_join_thread()
     results_queue.cancel_join_thread()

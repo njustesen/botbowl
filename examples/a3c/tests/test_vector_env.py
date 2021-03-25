@@ -104,7 +104,7 @@ def test_vector_memory():
     except IndexError:
         pass
     else:
-        raise AssertionError("statement in try block above should've a raised exception")
+        raise AssertionError("statement in try block above should've a raised IndexError")
 
 
 def test_simple_vector_environment():

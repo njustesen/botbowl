@@ -106,7 +106,7 @@ class CNNPolicy(nn.Module):
 
     def evaluate_actions(self, spatial_inputs, non_spatial_input, actions, actions_mask):
         value, policy = self(spatial_inputs, non_spatial_input)
-        actions_mask = actions_mask.view(-1, 1, actions_mask.shape[2]).squeeze().bool()
+        actions_mask = actions_mask.bool()
         policy[~actions_mask] = float('-inf')
         log_probs = F.log_softmax(policy, dim=1)
         probs = F.softmax(policy, dim=1)
