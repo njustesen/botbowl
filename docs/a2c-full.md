@@ -94,7 +94,7 @@ At the moment, the policy is just a neural network with some code around it so t
 Additionally, the bot was only trained to play as the home team and would not know how to play on the other side of the field. Let's fix these things so we can watch 
 our agent play, and even play against it. The code that will be presented can also be used to submit your own neural network based bot to the Bot Bowl competition.
 
-The [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
+The [examples/a2c/a2c_agent.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
 scripted bots in our previous tutorials. In the constructor of our Agent class, we load in our neural network policy.
 
 ```python
