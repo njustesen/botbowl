@@ -371,6 +371,7 @@ class GameState:
         self.spectators = 0
         self.active_player = None
         self.game_over = False
+        self.game_paused = False
         self.available_actions = []
         self.clocks = []
         self.rerolled_procs = set()
@@ -388,6 +389,7 @@ class GameState:
             'home_team': self.home_team.to_json(),
             'away_team': self.away_team.to_json(),
             'game_over': self.game_over,
+            'game_paused': self.game_paused,
             'weather': self.weather.name,
             'gentle_gust': self.gentle_gust,
             'available_actions': [action.to_json() for action in self.available_actions],
