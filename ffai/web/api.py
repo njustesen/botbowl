@@ -64,6 +64,7 @@ def pause_resume_game(game_id):
     game = host.get_game(game_id) 
     if game is not None and game.actor is not None and game.actor.human:
         game.pause_resume_clocks() 
+        game.state.game_paused = not game.state.game_paused
 
 
 def get_game(game_id):
