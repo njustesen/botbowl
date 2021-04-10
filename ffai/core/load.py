@@ -257,7 +257,14 @@ def load_config(name):
         secondary = data['time_limits']['secondary']
         init = data['time_limits']['init']
         end = data['time_limits']['end']
-    config.time_limits = TimeLimits(turn=turn, secondary=secondary, init=init, end=end)
+        config.time_limits = TimeLimits(turn=turn, secondary=secondary, init=init, end=end)
+    if 'pausing' in data:
+        if data['pausing'] is not None:
+            enabled = data['pausing']['enabled']
+            opp_unpausing = data['pausing']['opp_unpausing']
+            num_pauses = data['pausing']['num_pauses']
+            pause_time = data['pausing']['pause_time']
+            config.pausing = Pausing(enabled=enabled, opp_unpausing=opp_unpausing, num_pauses=num_pauses, pause_time=pause_time)
     return config
 
 

@@ -23,5 +23,10 @@
         "disqualification": 1000,
         "init": 10,
         "end": 10
-    }
+    },
+    "pausing": { 
+        "enabled": true, 
+        "opp_unpausing": true, 
+        "num_pauses": 10, 
+        "pause_time": 120 }
 }

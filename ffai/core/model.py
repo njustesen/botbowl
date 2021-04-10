@@ -123,6 +123,22 @@ class TimeLimits:
             'end': self.end
         }
 
+class Pausing:
+
+    def __init__(self, enabled, opp_unpausing, num_pauses, pause_time):
+        self.enabled = enabled
+        self.opp_unpausing = opp_unpausing
+        self.num_pauses = num_pauses
+        self.pause_time = pause_time
+
+    def to_json(self):
+        return {
+            'enabled': self.enabled,
+            'opp_unpausing': self.opp_unpausing,
+            'num_pauses': self.num_pauses,
+            'pause_time': self.pause_time
+        }
+
 
 class Configuration:
 
@@ -144,6 +160,7 @@ class Configuration:
         self.offensive_formations = []
         self.defensive_formations = []
         self.time_limits = None
+        self.pausing = None
 
 
 class PlayerState:
