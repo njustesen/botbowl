@@ -42,7 +42,10 @@ def create():
         num_human_players += 1
         awayAgent = Agent(f"Player {num_human_players}", human=True)
 
-    game = api.new_game(home_team_name=data['game']['home_team_name'], away_team_name=data['game']['away_team_name'], home_agent=homeAgent, away_agent=awayAgent)
+    game = api.new_game(home_team_name=data['game']['home_team_name'], 
+                        away_team_name=data['game']['away_team_name'],                        
+                        home_agent=homeAgent, away_agent=awayAgent,
+                        config_name="web.json")
     return json.dumps(game.to_json())
 
 
