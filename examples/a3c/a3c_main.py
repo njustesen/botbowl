@@ -1,7 +1,7 @@
 import gym
 
 from examples.a3c.a3c_agent import CNNPolicy, A3CAgent
-from examples.a3c.a3c_worker_environment import VectorEnvMultiProcess, VectorEnv
+from examples.a3c.a3c_worker_environment import VectorEnvMultiProcess, VectorEnv, VectorMemory, EndOfGameReport
 from ffai import FFAIEnv
 from pytest import set_trace
 from torch.autograd import Variable
@@ -9,30 +9,9 @@ import torch.optim as optim
 from ffai.ai.layers import *
 import torch
 import torch.nn as nn
+import time
 
-# Training configuration
-max_updates = 2000
-num_processes = 6
-learning_rate = 0.001
-gamma = 0.99
-entropy_coef = 0.01
-value_loss_coef = 0.5
-prediction_loss_coeff = 0.1
-max_grad_norm = 0.05
-
-# Environment
-env_name = "FFAI-1-v3"
-
-# Architecture
-num_hidden_nodes = 128
-num_cnn_kernels = [32, 64]
-
-# Pathfinding-assisted paths enabled?
-pathfinding_enabled = True
-
-model_name = env_name
-log_filename = "logs/" + model_name + ".dat"
-
+import a3c_config as conf
 
 # Make directories
 def ensure_dir(file_path):
@@ -41,86 +20,137 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
-ensure_dir("logs/")
-ensure_dir("models/")
-ensure_dir("plots/")
-exp_id = str(uuid.uuid1())
-log_dir = f"logs/{env_name}/"
-model_dir = f"models/{env_name}/"
-plot_dir = f"plots/{env_name}/"
-ensure_dir(log_dir)
-ensure_dir(model_dir)
-ensure_dir(plot_dir)
+def update_agent_policy(ac_agent: CNNPolicy, optimizer, memory: VectorMemory):
+    # ### Evaluate the actions taken ###
+    spatial = Variable(memory.spatial_obs[:memory.step])
+    non_spatial = Variable(memory.non_spatial_obs[:memory.step])
+    non_spatial = non_spatial.view(-1, non_spatial.shape[-1])
+
+    actions = Variable(torch.LongTensor(memory.actions[:memory.step].view(-1, 1)))
+    actions_mask = Variable(memory.action_masks[:memory.step])
+
+    action_log_probs, values, dist_entropy = ac_agent.evaluate_actions(spatial, non_spatial, actions, actions_mask)
+
+    # ### Compute loss and back propagate ###
+    advantages = Variable(memory.returns[:memory.step]) - values
+    value_loss = advantages.pow(2).mean()
+
+    action_loss = -(Variable(advantages.data) * action_log_probs).mean()
+
+    optimizer.zero_grad()
+
+    total_loss = (value_loss * conf.value_loss_coef + action_loss - dist_entropy * conf.entropy_coef)
+    total_loss.backward()
+
+    nn.utils.clip_grad_norm_(ac_agent.parameters(), conf.max_grad_norm)
+
+    optimizer.step()
+
+
+class PrintProgress:
+    def __init__(self):
+
+        self.report_to_print = None
+        self.num_prints = 0
+
+        # Setup column headers
+        d = EndOfGameReport(0, 0)
+        self.column_headers = ["updates, ", "episodes, "]
+        for k in d.get_dict_repr():
+            self.column_headers.append(k + ", ")
+        self.column_headers_lengths = [len(s) for s in self.column_headers]
+
+    def update(self, report):
+        if self.report_to_print is None:
+            self.report_to_print = deepcopy(report)
+        else:
+            self.report_to_print.merge(report)
+
+    def print(self, updates, total_episodes):
+        s = ""
+
+        if self.num_prints % 20 == 0:
+            s += self.print_column_headers() + "\n"
+
+        d = self.report_to_print.get_dict_repr()
+
+        values = [f"{updates}", f"{total_episodes}"]
+        for k in d:
+            values.append(d[k])
+
+        for header_len, value in zip(self.column_headers_lengths, values):
+            extra_space = header_len - len(value)
+            extra_space = extra_space if extra_space > 0 else 0
+            if extra_space > 3:
+                s += " " * (extra_space - 3) + value + " " * 3
+
+        self.report_to_print = None
+        self.num_prints += 1
+        return s
+
+    def print_column_headers(self):
+        return "".join(self.column_headers)
 
 
 def main():
+    ensure_dir("logs/")
+    ensure_dir("models/")
+    exp_id = str(uuid.uuid1())
+    log_dir = f"logs/{conf.env_name}/"
+    model_dir = f"models/{conf.env_name}/"
+    plot_dir = f"plots/{conf.env_name}/"
+    ensure_dir(log_dir)
+    ensure_dir(model_dir)
+    ensure_dir(plot_dir)
 
     # Clear log file
     try:
-        os.remove(log_filename)
+        os.remove(conf.log_filename)
     except OSError:
         pass
 
-    es = [make_env(i) for i in range(num_processes)]
+    es = [make_env(i) for i in range(conf.num_processes)]
 
-    # MODEL
-    ac_agent = CNNPolicy(es[0], hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels)
+    ac_agent = CNNPolicy(es[0], hidden_nodes=conf.num_hidden_nodes, kernels=conf.num_cnn_kernels)
+    optimizer = optim.RMSprop(ac_agent.parameters(), conf.learning_rate)
+    agent = A3CAgent("trainee", env_name=conf.env_name, policy=ac_agent)
 
-    # OPTIMIZER
-    optimizer = optim.RMSprop(ac_agent.parameters(), learning_rate)
+    envs = VectorEnvMultiProcess([es[i] for i in range(conf.num_processes)], agent, 400)
 
-    # Create the agent
-    agent = A3CAgent("trainee", env_name=env_name, policy=ac_agent)
-
-    # send agent to environments
-    envs = VectorEnvMultiProcess([es[i] for i in range(num_processes)], agent, 1000)
-
+    # Setup logging
+    reports = []
+    report_to_print = None
+    total_steps = 0
     updates = 0
     total_episodes = 0
+    start_time = time.time()
+    seconds_between_saves = time.time()
 
-    while updates < max_updates:
-        envs.memory.step = 0  # TODO: This is naughty!
+    printer = PrintProgress()
+
+    while updates < conf.max_updates:
 
         memory, report = envs.step(agent)
+        update_agent_policy(ac_agent, optimizer, memory)
 
-        # ### Evaluate the actions taken ###
-        spatial = Variable(memory.spatial_obs[:memory.step])
-        # spatial = spatial.view(-1, *spatial_obs_space)
-        non_spatial = Variable(memory.non_spatial_obs[:memory.step])
-        non_spatial = non_spatial.view(-1, non_spatial.shape[-1])
-
-        actions = Variable(torch.LongTensor(memory.actions[:memory.step].view(-1, 1)))
-        actions_mask = Variable(memory.action_masks[:memory.step])
-
-        action_log_probs, values, dist_entropy = ac_agent.evaluate_actions(spatial, non_spatial, actions, actions_mask)
-
-        # ### Compute loss and back propagate ###
-        # values = values.view(steps_per_update, num_processes, 1)
-        # action_log_probs = action_log_probs.view(steps_per_update, num_processes, 1)
-
-        advantages = Variable(memory.returns[:memory.step]) - values
-        value_loss = advantages.pow(2).mean()
-
-        action_loss = -(Variable(advantages.data) * action_log_probs).mean()
-
-        optimizer.zero_grad()
-
-        total_loss = (value_loss * value_loss_coef + action_loss - dist_entropy * entropy_coef)
-        total_loss.backward()
-
-        nn.utils.clip_grad_norm_(ac_agent.parameters(), max_grad_norm)
-
-        optimizer.step()
-        agent.policy = ac_agent
-
+        #  Logging, saving and printing
+        printer.update(report)
+        elapsed_time = time.time() - start_time
         updates += 1
         total_episodes += report.episodes
+        total_steps += report.time_steps
+
+        to_log = (report, elapsed_time, updates, total_steps)
+        reports.append(to_log)
+
+        if time.time() - seconds_between_saves > 60:
+            pickle.dump(reports, open("A3c_log_2.p", "wb"))
+            seconds_between_saves = time.time()
 
         if updates % 5 == 0:
-            print(f"Update {updates}/{max_updates},  Episodes={total_episodes}")
-            print(report)
+            print(printer.print(updates, total_episodes))
 
-    # torch.save(ac_agent, "models/" + model_name)
+    pickle.dump(reports, open("A3c_log_2.p", "wb"))
     print("closing workers!")
 
     envs.close()
@@ -128,8 +158,9 @@ def main():
 
 
 def make_env(worker_id):
-    print("Initializing worker", worker_id, "...")
-    env = gym.make(env_name)
+    print(f"Initializing worker {worker_id}, pf={conf.pathfinding_enabled}")
+    env = gym.make(conf.env_name)
+    env.config.pathfinding_enabled = conf.pathfinding_enabled
     return env
 
 
