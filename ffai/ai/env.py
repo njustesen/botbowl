@@ -231,7 +231,7 @@ class FFAIEnv(gym.Env):
             'y': spaces.Discrete(arena.height)
         })
 
-    def step(self, action):
+    def step(self, action, skip_obs=False):
         if type(action['action-type']) is ActionType and action['action-type'] in FFAIEnv.actions:
             action_type = action['action-type']
         else:
@@ -243,9 +243,9 @@ class FFAIEnv(gym.Env):
             position = p
         real_action = Action(action_type=action_type, position=position, player=player)
         self.last_report_idx = len(self.game.state.reports)
-        return self._step(real_action)
+        return self._step(real_action, skip_obs=skip_obs)
 
-    def _step(self, action):
+    def _step(self, action, skip_obs=False):
         self.game.step(action)
         if action.action_type in FFAIEnv.offensive_formation_action_types or action.action_type in FFAIEnv.defensive_formation_action_types:
             self.game.step(Action(ActionType.END_SETUP))
@@ -276,7 +276,11 @@ class FFAIEnv(gym.Env):
             'round': self.game.state.round,
             'ball_progression': progression
         }
-        return self._observation(self.game), reward, self.game.state.game_over, info
+
+        if skip_obs:
+            return None, reward, self.game.state.game_over, info
+        else:
+            return self._observation(self.game), reward, self.game.state.game_over, info
 
     def seed(self, seed=None):
         if seed is None:
