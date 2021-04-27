@@ -1,50 +1,64 @@
-
 import pickle
 from pytest import set_trace
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-results = pickle.load( open("A3c_log_2.p","rb") )
+def summerize_training(name, reports):
+    print(name)
+    total_time = np.array([r.elapsed_time for r in reports]).sum()
+    total_time_steps = np.array([r.time_steps for r in reports]).sum()
+    total_episdoes = np.array([r.episodes for r in reports]).sum()
+    print(f"{total_time_steps} steps in {total_time}. rate={total_time_steps/total_time:.1f}")
+    print(f"episodes = {total_episdoes}")
+    print(f"step per episode = {total_time_steps/total_episdoes:.1f}")
 
+# Config
 rolling_width = 50
 
+x_values = ["time_steps", "elapsed_time"]
+y_values = ["total_reward", "td_rate", "win_rate"]
 
-reports = [r[0] for r in results]
+# Get content of logs.
+log_dir = "logs/FFAI-3-v3/"
+logs = os.listdir(log_dir)
+logs = [os.path.join(log_dir, log) for log in logs]
 
-steps = moving_average(np.cumsum(np.array([r.time_steps for r in reports])), rolling_width)
+num_x_values = len(x_values)
+num_y_values = len(y_values)
 
-win_rate = moving_average(np.array([r.win_rate for r in reports]), rolling_width)
-td_rate = moving_average(np.array([r.own_td/r.episodes for r in reports]), rolling_width)
-reward = moving_average(np.array([r.total_reward/r.episodes for r in reports]), rolling_width)
-memory = moving_average(np.array([r.memory_usage for r in reports])/1000000, rolling_width)
+fig, axs = plt.subplots(num_x_values, num_y_values, figsize=(14, 7))
 
+for log_path in logs:
+    reports = pickle.load(open(log_path, "rb"))
+    name = log_path.split("/")[-1]
+    name = name.split(".")[0]
+    summerize_training(name, reports)
 
-fig, axs = plt.subplots(1, 4, figsize=(4*4, 5))
-axs[0].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-axs[0].plot(steps, win_rate)
-axs[0].set_title('Win rate')
-#axs[0].set_xlim(left=0)
+    for i, x_name in enumerate(x_values):
+        x = moving_average(np.cumsum(np.array([getattr(r, x_name) for r in reports])), rolling_width)
 
-axs[1].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-axs[1].plot(steps, td_rate, label="Learner")
-axs[1].set_title('TD/Episode')
-#axs[1].set_ylim(bottom=0.0)
-#axs[1].set_xlim(left=0)
+        for j, y_name in enumerate( y_values):
+            y = moving_average(np.array([getattr(r, y_name) for r in reports]), rolling_width)
 
-axs[2].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-axs[2].plot(steps, reward)
-axs[2].set_title('Reward')
-#axs[2].set_yticks(np.arange(0, 1.001, step=0.1))
-#axs[2].set_xlim(left=0)
+            ax = axs[i][j]
 
-axs[3].ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-axs[3].plot(steps, memory)
-axs[3].set_title('Memory')
+            ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+            ax.plot(x, y, label=name)
+
+            if j == 0:
+                ax.set_ylabel(x_name)
+            if i == 0:
+                ax.set_title(y_name)
+
+        plt.legend()
 
 fig.tight_layout()
+
+
 plt.show()

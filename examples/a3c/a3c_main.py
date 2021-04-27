@@ -45,7 +45,7 @@ def update_agent_policy(ac_agent: CNNPolicy, optimizer, memory: VectorMemory):
     nn.utils.clip_grad_norm_(ac_agent.parameters(), conf.max_grad_norm)
 
     optimizer.step()
-
+    return value_loss, action_loss
 
 class PrintProgress:
     def __init__(self):
@@ -55,7 +55,7 @@ class PrintProgress:
 
         # Setup column headers
         d = EndOfGameReport(0, 0)
-        self.column_headers = ["updates, ", "episodes, "]
+        self.column_headers = ["updates, "]
         for k in d.get_dict_repr():
             self.column_headers.append(k + ", ")
         self.column_headers_lengths = [len(s) for s in self.column_headers]
@@ -66,7 +66,7 @@ class PrintProgress:
         else:
             self.report_to_print.merge(report)
 
-    def print(self, updates, total_episodes):
+    def print(self, updates):
         s = ""
 
         if self.num_prints % 20 == 0:
@@ -74,7 +74,7 @@ class PrintProgress:
 
         d = self.report_to_print.get_dict_repr()
 
-        values = [f"{updates}", f"{total_episodes}"]
+        values = [f"{updates}"]
         for k in d:
             values.append(d[k])
 
@@ -92,16 +92,12 @@ class PrintProgress:
         return "".join(self.column_headers)
 
 
-def main():
+def main(training_name):
     ensure_dir("logs/")
-    ensure_dir("models/")
-    exp_id = str(uuid.uuid1())
     log_dir = f"logs/{conf.env_name}/"
-    model_dir = f"models/{conf.env_name}/"
-    plot_dir = f"plots/{conf.env_name}/"
     ensure_dir(log_dir)
-    ensure_dir(model_dir)
-    ensure_dir(plot_dir)
+    #exp_id = str(uuid.uuid1())
+    log_path = os.path.join(log_dir, f"{training_name}.p")
 
     # Clear log file
     try:
@@ -123,7 +119,7 @@ def main():
     total_steps = 0
     updates = 0
     total_episodes = 0
-    start_time = time.time()
+    time_last_report = time.time()
     seconds_between_saves = time.time()
 
     printer = PrintProgress()
@@ -131,26 +127,29 @@ def main():
     while updates < conf.max_updates:
 
         memory, report = envs.step(agent)
-        update_agent_policy(ac_agent, optimizer, memory)
+        value_loss, action_loss = update_agent_policy(ac_agent, optimizer, memory)
 
         #  Logging, saving and printing
         printer.update(report)
-        elapsed_time = time.time() - start_time
+        elapsed_time = time.time() - time_last_report
+        time_last_report = time.time()
         updates += 1
-        total_episodes += report.episodes
-        total_steps += report.time_steps
 
-        to_log = (report, elapsed_time, updates, total_steps)
-        reports.append(to_log)
+        report.elapsed_time = elapsed_time
+        report.updates = 1
+        report.value_loss = value_loss
+        report.action_loss = action_loss
+
+        reports.append(report)
 
         if time.time() - seconds_between_saves > 60:
-            pickle.dump(reports, open("A3c_log_2.p", "wb"))
+            pickle.dump(reports, open(log_path, "wb"))
             seconds_between_saves = time.time()
 
         if updates % 5 == 0:
-            print(printer.print(updates, total_episodes))
+            print(printer.print(updates))
 
-    pickle.dump(reports, open("A3c_log_2.p", "wb"))
+    pickle.dump(reports, open(log_path, "wb"))
     print("closing workers!")
 
     envs.close()
@@ -165,4 +164,6 @@ def make_env(worker_id):
 
 
 if __name__ == "__main__":
-    main()
+    main("pathfinding_a3c")
+    conf.pathfinding_enabled = False
+    main("without_pf_a3c")

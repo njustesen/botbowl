@@ -1,10 +1,10 @@
 
 # Environment
-env_name = "FFAI-1-v3"
+env_name = "FFAI-3-v3"
 pathfinding_enabled = True
 
 # Training configuration
-max_updates = 500
+max_updates = 10000
 num_processes = 4
 
 # Optimizer config
