@@ -398,7 +398,7 @@ class FFAIEnv(gym.Env):
 
         return obs
 
-    def reset(self):
+    def reset(self, skip_obs=False):
         self.team_id = self.home_team.team_id
         home_agent = self.actor
         away_agent = self.opp_actor
@@ -418,7 +418,10 @@ class FFAIEnv(gym.Env):
         self.own_team = self.game.get_agent_team(self.actor)
         self.opp_team = self.game.get_agent_team(self.opp_actor)
 
-        return self._observation(self.game)
+        if skip_obs:
+            return
+        else:
+            return self._observation(self.game)
 
     def get_outcomes(self):
         if self.last_report_idx == len(self.game.state.reports):
