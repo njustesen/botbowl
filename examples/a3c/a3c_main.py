@@ -1,8 +1,7 @@
 import gym
 
 from examples.a3c.a3c_agent import CNNPolicy, A3CAgent
-from examples.a3c.a3c_worker_environment import VectorEnvMultiProcess, VectorEnv, VectorMemory, EndOfGameReport
-from ffai import FFAIEnv
+from examples.a3c.a3c_worker_environment import VectorEnvMultiProcess, VectorMemory, EndOfGameReport
 from pytest import set_trace
 from torch.autograd import Variable
 import torch.optim as optim
@@ -12,6 +11,7 @@ import torch.nn as nn
 import time
 
 import a3c_config as conf
+
 
 # Make directories
 def ensure_dir(file_path):
@@ -46,6 +46,7 @@ def update_agent_policy(ac_agent: CNNPolicy, optimizer, memory: VectorMemory):
 
     optimizer.step()
     return value_loss, action_loss
+
 
 class PrintProgress:
     def __init__(self):
@@ -96,8 +97,12 @@ def main(training_name):
     ensure_dir("logs/")
     log_dir = f"logs/{conf.env_name}/"
     ensure_dir(log_dir)
-    #exp_id = str(uuid.uuid1())
     log_path = os.path.join(log_dir, f"{training_name}.p")
+
+    ensure_dir("models/")
+    model_dir = f"models/{conf.env_name}/"
+    ensure_dir(model_dir)
+    model_path = os.path.join(model_dir, f"{training_name}")
 
     # Clear log file
     try:
@@ -109,13 +114,14 @@ def main(training_name):
 
     ac_agent = CNNPolicy(es[0], hidden_nodes=conf.num_hidden_nodes, kernels=conf.num_cnn_kernels)
     optimizer = optim.RMSprop(ac_agent.parameters(), conf.learning_rate)
+    #optimizer = optim.Adam(ac_agent.parameters(), conf.learning_rate)
+
     agent = A3CAgent("trainee", env_name=conf.env_name, policy=ac_agent)
 
-    envs = VectorEnvMultiProcess([es[i] for i in range(conf.num_processes)], agent, 400)
+    envs = VectorEnvMultiProcess(es, agent, conf.min_batch_size, conf.worker_memory_size)
 
     # Setup logging
     reports = []
-    report_to_print = None
     total_steps = 0
     updates = 0
     total_episodes = 0
@@ -124,30 +130,41 @@ def main(training_name):
 
     printer = PrintProgress()
 
-    while updates < conf.max_updates:
+    result_report = EndOfGameReport(empty_report=True)
+
+    while total_steps < conf.max_steps:
 
         memory, report = envs.step(agent)
         value_loss, action_loss = update_agent_policy(ac_agent, optimizer, memory)
-
-        #  Logging, saving and printing
-        printer.update(report)
-        elapsed_time = time.time() - time_last_report
-        time_last_report = time.time()
         updates += 1
 
-        report.elapsed_time = elapsed_time
-        report.updates = 1
-        report.value_loss = value_loss
-        report.action_loss = action_loss
+        #print(f"memory size: {memory.step}")
 
-        reports.append(report)
+        result_report.merge(report)
 
-        if time.time() - seconds_between_saves > 60:
-            pickle.dump(reports, open(log_path, "wb"))
-            seconds_between_saves = time.time()
+        if result_report.episodes > 10:
+            #  Logging, saving and printing
+            printer.update(result_report)
+            elapsed_time = time.time() - time_last_report
+            time_last_report = time.time()
 
-        if updates % 5 == 0:
+            total_steps += result_report.time_steps
+
+            result_report.elapsed_time = elapsed_time
+            result_report.updates = 1
+            result_report.value_loss = value_loss
+            result_report.action_loss = action_loss
+
+            reports.append(result_report)
+
             print(printer.print(updates))
+            result_report = EndOfGameReport(empty_report=True)
+
+            if time.time() - seconds_between_saves > 60*0.5:
+                pickle.dump(reports, open(log_path, "wb"))
+                seconds_between_saves = time.time()
+                torch.save(ac_agent, model_path)
+                print(f"Progress saved at {100*total_steps / conf.max_steps:.0f}")
 
     pickle.dump(reports, open(log_path, "wb"))
     print("closing workers!")
@@ -157,13 +174,14 @@ def main(training_name):
 
 
 def make_env(worker_id):
-    print(f"Initializing worker {worker_id}, pf={conf.pathfinding_enabled}")
+    print(f"Initializing worker {worker_id}, pf={conf.pathfinding_enabled}, env={conf.env_name}")
     env = gym.make(conf.env_name)
     env.config.pathfinding_enabled = conf.pathfinding_enabled
     return env
 
 
 if __name__ == "__main__":
-    main("pathfinding_a3c")
-    conf.pathfinding_enabled = False
-    main("without_pf_a3c")
+    main("a3c_pathfinding_test")
+    #conf.pathfinding_enabled = False
+    #conf.min_batch_size = 150
+    #main("a3c_learn_Adam_200")

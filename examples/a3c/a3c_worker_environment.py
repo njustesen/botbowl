@@ -1,73 +1,27 @@
 import warnings
 from asyncio import sleep
 from itertools import chain
-import os
-from typing import Optional
 
-import psutil
+from typing import Optional
 
 import time
 
 from multiprocessing import Process, Queue
 import torch
 
+from examples.a3c import a3c_config
 from examples.a3c.a3c_agent import RL_Agent
 from examples.a3c.a3c_reward import reward_function
+from examples.a3c.reports import EndOfGameReport
 from ffai import FFAIEnv
 
 warnings.filterwarnings('ignore')
-
-worker_max_steps = 200
-
-
-def get_process_memory_usage():
-    process = psutil.Process(os.getpid())
-    return process.memory_info().rss
-
-
-class EndOfGameReport:
-    def __init__(self, time_steps, reward, game=None):
-        self.time_steps = time_steps
-        self.td_rate = game.state.home_team.state.score if game is not None else 0
-        self.opp_td_rate = game.state.away_team.state.score if game is not None else 0
-        self.total_reward = reward
-        self.episodes = 1
-        self.win_rate = 1.0 if self.td_rate > self.opp_td_rate else 0.5 if self.td_rate == self.opp_td_rate else 0
-        self.memory_usage = get_process_memory_usage()
-
-    def merge(self, other):
-        self.time_steps += other.time_steps
-        self.td_rate = calculate_new_average_rate(self.td_rate, other.td_rate, self.episodes, other.episodes)
-        self.opp_td_rate = calculate_new_average_rate(self.opp_td_rate, other.opp_td_rate, self.episodes, other.episodes)
-        self.total_reward = calculate_new_average_rate(self.total_reward, other.total_reward, self.episodes, other.episodes)
-        self.win_rate = calculate_new_average_rate(self.win_rate, other.win_rate, self.episodes, other.episodes)
-
-        self.memory_usage = calculate_new_average_rate(self.memory_usage, other.memory_usage, self.episodes, other.episodes)
-
-        self.episodes += other.episodes
-
-    def get_dict_repr(self):
-        return {"Win rate": f"{self.win_rate:.2f}",
-                "TD rate": f"{self.td_rate:.2f}",
-                "TD rate opp": f"{self.opp_td_rate:.2f}",
-                "Mean reward": f"{self.total_reward:.3f}"}
-
-    def __repr__(self):
-        s = ""
-        for key, val in self.get_dict_repr().items():
-            s += f"{key}: {val}, "
-
-        return s[:-2]  # Remove trailing colon and blank
-
-
-def calculate_new_average_rate(r1, r2, n1, n2):
-    return (r1*n1 + r2*n2) / (n1+n2)
 
 
 class Memory:
     def __init__(self, size, env):
         self.step = 0
-        self.max_steps = size
+        self.size = size
 
         self.nbr_of_spat_layers = env.get_nbr_of_spat_layers()
         self.layer_width = env.get_layer_width()
@@ -95,8 +49,8 @@ class VectorMemory(Memory):
         steps_to_copy = worker_mem.get_steps_to_copy()
 
         # check that there's space left.
-        if self.max_steps - self.step < steps_to_copy:
-            steps_to_copy = self.max_steps - self.step
+        if self.size - self.step < steps_to_copy:
+            steps_to_copy = self.size - self.step
 
         begin = self.step
         end = self.step + steps_to_copy
@@ -112,7 +66,7 @@ class VectorMemory(Memory):
         self.step += steps_to_copy
 
     def not_full(self):
-        return 0.9 * self.max_steps > self.step
+        return 0.9 * self.size > self.step
 
 
 class WorkerMemory(Memory):
@@ -134,27 +88,27 @@ class WorkerMemory(Memory):
         self.non_spatial_obs[self.step].copy_(non_spatial_obs.squeeze())
 
         self.step += 1
-        if self.step == self.max_steps:
+        if self.step == self.size:
             self.step = 0
             self.looped = True
 
-    def insert_epside_end(self):
-        gamma = 0.99
+    def insert_epside_end(self, estimated_future_reward=0):
+        gamma = a3c_config.gamma
 
         # Compute returns
         if self.looped:
-            order = chain(range(self.step, self.max_steps), range(self.step))
+            order = chain(range(self.step, self.size), range(self.step))
             order = reversed(list(order))
         else:
             order = reversed(range(self.step))
 
-        previous_return = 0
+        previous_return = estimated_future_reward
         for i in order:
             self.returns[i] = self.rewards[i] + gamma * previous_return
             previous_return = self.returns[i]
 
     def get_steps_to_copy(self):
-        return self.max_steps if self.looped else self.step
+        return self.size if self.looped else self.step
 
 
 class AbstractVectorEnv:
@@ -168,26 +122,27 @@ class VectorEnv(AbstractVectorEnv):
     This class is here for debugging purposes. It's easier to analyze the trace of just one process.
     """
 
-    def __init__(self, envs, starting_agent, memory_size):
-        self.envs = envs
-        self.memory = VectorMemory(memory_size, envs[0])
+    def __init__(self, envs, agent, min_batch_size, worker_memory_size):
+
+        self.memory = VectorMemory(min_batch_size + worker_memory_size, envs[0])
+        worker_memories = [WorkerMemory(worker_memory_size, envs[0]) for _ in envs]
+
+        self.runners = [Runner(env, agent, w_mem) for env, w_mem in zip(envs, worker_memories)]
 
     def step(self, agent: RL_Agent) -> (VectorMemory, EndOfGameReport):
-        result_report = None
-        for env in self.envs:
-            worker_mem, report = run_environment_to_done(env, agent)
-            self.memory.insert_worker_memory(worker_mem)
+        result_report = EndOfGameReport(empty_report=True)
 
-            if result_report is None:
-                result_report = report
-            else:
-                result_report.merge(report)
+        for runner in self.runners:
+            runner.agent = agent
+            worker_mem, report = runner.run()
+            self.memory.insert_worker_memory(worker_mem)
+            result_report.merge(report)
 
         return self.memory, result_report
 
 
 class VectorEnvMultiProcess(AbstractVectorEnv):
-    def __init__(self, envs, starting_agent, memory_size):
+    def __init__(self, envs, starting_agent, min_batch_size, worker_memory_size):
         """
         envs: list of FFAI environments to run in subprocesses
         """
@@ -197,30 +152,34 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
         self.ps_message = [Queue() for _ in range(len(envs))]
 
         self.ps = [Process(target=worker, args=(
-            self.results_queue, msg_queue, env, envs.index(env), starting_agent))
+            self.results_queue, msg_queue, env, envs.index(env), starting_agent, worker_memory_size))
                    for (msg_queue, env) in zip(self.ps_message, envs)]
 
         for p in self.ps:
             p.daemon = True  # If the main process crashes, we should not cause things to hang
             p.start()
 
-        self.memory = VectorMemory(memory_size, envs[0])
+        self.memory = VectorMemory(min_batch_size + worker_memory_size, envs[0])
+
+        self.min_batch_size = min_batch_size
+        self.worker_memory_size = worker_memory_size
 
     def step(self, agent) -> (VectorMemory, EndOfGameReport):
+
         self.memory.reset()
         self.update_trainee(agent)
 
-        result_report = None
-        while self.memory.not_full():
+        #print(f"queue size = {self.results_queue.qsize()}")
+
+        result_report = EndOfGameReport(empty_report=True)
+        while self.memory.step < self.min_batch_size:
             data = self.results_queue.get()  # Blocking call
+
             worker_mem = data[0]
             report = data[1]
             self.memory.insert_worker_memory(worker_mem)
 
-            if result_report is None:
-                result_report = report
-            else:
-                result_report.merge(report)
+            result_report.merge(report)
 
         self._send_to_children('pause')
 
@@ -255,75 +214,96 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
         self.close()
 
 
-def run_environment_to_done(env: FFAIEnv, agent: RL_Agent, memory: Optional[WorkerMemory]) -> (
-WorkerMemory, EndOfGameReport):
-    with torch.no_grad():
+class Runner:
+    def __init__(self, env, agent, memory):
+        self.env = env
+        self.agent = agent
+        self.memory = memory
 
-        env.reset()
+        self.episode_steps = 0
+        self.total_reward = 0
 
-        if memory is None:
-            memory = WorkerMemory(worker_max_steps, env)
-        else:
-            memory.reset()
+    def run(self) -> (WorkerMemory, EndOfGameReport):
 
-        steps = 0
-        total_reward = 0
+        self.memory.reset()
+
         done = False
-        while not done:
+        steps = 0
 
-            (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
-            (_, _, done, info) = env.step(action_dict, skip_obs=True)
-            reward_shaped = reward_function(env, info)
-            total_reward += reward_shaped
-            memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
+        while (not done) and steps < self.memory.size:
+
+            (action_dict, action_idx, action_masks, _, spatial_obs, non_spatial_obs) = \
+                self.agent.act_when_training(self.env)
+
+            (_, _, done, info) = self.env.step(action_dict, skip_obs=True)
+
+            reward = reward_function(self.env, info)
+            self.total_reward += reward
+            self.memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward, action_masks)
             steps += 1
 
-            if steps >= 4000:
-                # If we  get stuck or something - reset the environment
-                print("Max. number of steps exceeded! Consider increasing the number.")
-                env.reset()
-                memory.reset()
-                steps = 0
+        self.episode_steps += steps
+
+        if self.episode_steps >= 4000:
+            print("Max. number of steps exceeded! Consider increasing the number.")
+            pass  # Todo
+
+        if done:
+            self.memory.insert_epside_end()
+            result_report = EndOfGameReport(time_steps=self.episode_steps, game=self.env.game,
+                                            reward=self.total_reward)
+            self.reset()
+            return self.memory, result_report
+
+        else:
+            (_, _, _, value, _, _) = self.agent.act_when_training(self.env)
+
+            self.memory.insert_epside_end(value)
+
+            return self.memory, EndOfGameReport(empty_report=True)
+
+    def reset(self):
+        self.episode_steps = 0
+        self.total_reward = 0
+        self.env.reset(skip_obs=True)
 
 
-        memory.insert_epside_end()
-        result_report = EndOfGameReport(time_steps=steps, game=env.game, reward=total_reward)
-
-        return memory, result_report
-
-
-def worker(results_queue, msg_queue, env, worker_id, trainee):
+def worker(results_queue, msg_queue, env, worker_id, agent, worker_memory_size):
     pause = True
     time_of_last_message = time.time()
-    memory = WorkerMemory(worker_max_steps, env)
+    memory = WorkerMemory(worker_memory_size, env)
+    runner = Runner(env, agent, memory)
 
-    while True:
+    env.reset(skip_obs=True)
 
-        # Updates from master process?
-        if not msg_queue.empty():
-            command, data = msg_queue.get()
-            time_of_last_message = time.time()
+    with torch.no_grad():
+        while True:
 
-            if command == 'swap trainee':
-                trainee = data
-                pause = False
-            elif command == 'close':
-                break
-            elif command == 'pause':
-                pause = True
+            # Updates from master process?
+            if not msg_queue.empty():
+                command, data = msg_queue.get()
+                time_of_last_message = time.time()
+
+                if command == 'swap trainee':
+                    runner.agent = data
+                    pause = False
+                elif command == 'close':
+                    break
+                elif command == 'pause':
+                    pause = True
+                else:
+                    raise Exception(f"Unknown command to worker: {command}")
+
+            if pause:
+                sleep(0.005)
             else:
-                raise Exception(f"Unknown command to worker: {command}")
+                memory, report = runner.run()
+                results_queue.put((memory, report))
+                # pause = True
 
-        if pause:
-            sleep(0.005)
-        else:
-            memory, report = run_environment_to_done(env, trainee, memory)
-            results_queue.put((memory, report))
-            del report
-
-        if time.time() - time_of_last_message > 10:
-            print(f"Worker {worker_id} timout!")
-            break
+            if time.time() - time_of_last_message > 10:
+                print(f"Worker {worker_id} timeout!")
+                break
 
     msg_queue.cancel_join_thread()
     results_queue.cancel_join_thread()
