@@ -6,7 +6,7 @@ import torch
 from pytest import set_trace
 
 from examples.a3c.a3c_agent import CNNPolicy, A3CAgent
-from examples.a3c.a3c_worker_environment import WorkerMemory, VectorMemory, Runner, VectorEnvMultiProcess
+from examples.a3c.a3c_worker_environment import WorkerMemory, VectorMemory, Runner, VectorEnvMultiProcess, VectorEnv
 from ffai.ai.bots.random_bot import *
 
 
@@ -28,9 +28,8 @@ def test_worker_memory():
 
     final_value = 10
 
-    worker_memory.insert_epside_end(final_value)
+    worker_memory.calculate_returns(final_value, gamma=0.99)
 
-    assert not worker_memory.looped
     assert all([mem == i for mem, i in zip(worker_memory.actions[:5], range(5))])
 
     assert worker_memory.returns[2] == 2 + 3*0.99 + 4*0.99**2 + final_value*0.99**3
@@ -39,7 +38,7 @@ def test_worker_memory():
     assert all([mem == 0 for mem in worker_memory.returns[5:]])
 
 
-def test_worker_memory_looped():
+def test_worker_memory_multiple_dones():
     env = gym.make("FFAI-1-v3")
     env.reset()
 
@@ -48,23 +47,34 @@ def test_worker_memory_looped():
 
     worker_memory = WorkerMemory(10, env)
 
-    for i in range(15):
+    for i in range(10):
         (action_dict, action_idx, action_masks, value, spatial_obs, non_spatial_obs) = agent.act_when_training(env)
         env.step(action_dict)
         reward_shaped = i
         action_idx = i
         worker_memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
 
-    worker_memory.insert_epside_end()
+        if i == 4:
+            worker_memory.set_done()
 
-    assert worker_memory.looped
-    assert all([mem == i for mem, i in zip(worker_memory.actions, range(10, 15))])
+    worker_memory.calculate_returns(gamma=1)
 
-    assert worker_memory.returns[4] == 14
+    assert worker_memory.returns[0] == 1 + 2 + 3 + 4
+    assert worker_memory.returns[1] == 1 + 2 + 3 + 4
+    assert worker_memory.returns[2] == 2 + 3 + 4
+    assert worker_memory.returns[3] == 3 + 4
+    assert worker_memory.returns[4] == 4
 
-    # 9 + 10 * 0.99 + 11 * 0.99 ** 2 + 12 * 0.99 ** 3 + 13 * 0.99 ** 4 + 14 * 0.99 ** 5
-    assert worker_memory.returns[-1] == sum([reward*0.99**exponent for reward, exponent in zip(range(9, 15), range(0, 6))])
+    assert worker_memory.returns[5] == 5 + 6 + 7 + 8 + 9
+    assert worker_memory.returns[6] == 6 + 7 + 8 + 9
+    assert worker_memory.returns[7] == 7 + 8 + 9
+    assert worker_memory.returns[8] == 8 + 9
+    assert worker_memory.returns[9] == 9
 
+    worker_memory.reset()
+
+    assert worker_memory.step == 0
+    assert len(worker_memory.done_indices) == 0
 
 def test_vector_memory():
     env = gym.make("FFAI-1-v3")
@@ -83,7 +93,7 @@ def test_vector_memory():
             reward_shaped = i*j
             action_idx = i*j
             worker_memory.insert_network_step(spatial_obs, non_spatial_obs, action_idx, reward_shaped, action_masks)
-        worker_memory.insert_epside_end()
+        worker_memory.calculate_returns()
 
         vector_memory.insert_worker_memory(worker_memory)
 
@@ -123,20 +133,36 @@ def test_runner():
 
     done = False
     i = 0
-    report = None
+    reports = []
     while not done:
-        memory, report = runner.run()
-        done = report.episodes > 0
+        memory, rx_reports = runner.run()
+        reports.extend(rx_reports)
+        done = len(reports) > 0
         i += 1
 
+        assert memory.step == mem_size
+
     assert i > 2
-    assert report.episodes == 1
-    assert runner.episode_steps == 0
-    assert runner.total_reward == 0
+    assert reports[0].episodes == 1
 
 
-#def test_simple_vector_environment():
-#    pass
+def test_simple_vector_environment():
+    env_name = "FFAI-1-v3"
+    num_procs = 3
+    es = [gym.make(env_name) for _ in range(num_procs)]
+
+    ac_agent = CNNPolicy(es[0], hidden_nodes=10, kernels=[10, 10])
+    agent = A3CAgent("trainee", env_name=env_name, policy=ac_agent)
+
+    envs = VectorEnv(es, 30, 10)
+
+    completed_episodes = 0
+
+    while completed_episodes < num_procs + 2:
+
+        memory, reports = envs.step(agent)
+        completed_episodes += len(reports)
+
 
 
 def test_multiprocess_vector_environment():
@@ -147,13 +173,14 @@ def test_multiprocess_vector_environment():
     ac_agent = CNNPolicy(es[0], hidden_nodes=10, kernels=[10, 10])
     agent = A3CAgent("trainee", env_name=env_name, policy=ac_agent)
 
-    envs = VectorEnvMultiProcess(es, agent, 30, 10)
+    envs = VectorEnvMultiProcess(es, 30, 10)
 
     completed_episodes = 0
 
     while completed_episodes < num_procs+2:
-        memory, report = envs.step(agent)
-        completed_episodes += report.episodes
+        envs.update_trainee(agent)
+        memory, reports = envs.step(agent)
+        completed_episodes += len(reports)
 
     envs.close()
 

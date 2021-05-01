@@ -114,11 +114,12 @@ def main(training_name):
 
     ac_agent = CNNPolicy(es[0], hidden_nodes=conf.num_hidden_nodes, kernels=conf.num_cnn_kernels)
     optimizer = optim.RMSprop(ac_agent.parameters(), conf.learning_rate)
-    #optimizer = optim.Adam(ac_agent.parameters(), conf.learning_rate)
 
     agent = A3CAgent("trainee", env_name=conf.env_name, policy=ac_agent)
 
-    envs = VectorEnvMultiProcess(es, agent, conf.min_batch_size, conf.worker_memory_size)
+    envs = VectorEnvMultiProcess(es, conf.min_batch_size, conf.worker_memory_size)
+
+    envs.update_trainee(agent)
 
     # Setup logging
     reports = []
@@ -130,35 +131,40 @@ def main(training_name):
 
     printer = PrintProgress()
 
-    result_report = EndOfGameReport(empty_report=True)
+    temporary_stored_reports = []
 
     while total_steps < conf.max_steps:
 
-        memory, report = envs.step(agent)
+        memory, received_reports = envs.step(agent)
         value_loss, action_loss = update_agent_policy(ac_agent, optimizer, memory)
+        envs.update_trainee(agent)
+
         updates += 1
 
-        #print(f"memory size: {memory.step}")
+        temporary_stored_reports.extend(received_reports)
 
-        result_report.merge(report)
-
-        if result_report.episodes > 10:
+        if len(temporary_stored_reports) > 10:
             #  Logging, saving and printing
-            printer.update(result_report)
+
+            report_to_save = temporary_stored_reports[0]
+            for report in temporary_stored_reports[1:]:
+                report_to_save.merge(report)
+
+            printer.update(report_to_save)
             elapsed_time = time.time() - time_last_report
             time_last_report = time.time()
 
-            total_steps += result_report.time_steps
+            total_steps += report_to_save.time_steps
 
-            result_report.elapsed_time = elapsed_time
-            result_report.updates = 1
-            result_report.value_loss = value_loss
-            result_report.action_loss = action_loss
+            report_to_save.elapsed_time = elapsed_time
+            report_to_save.updates = 1
+            report_to_save.value_loss = value_loss
+            report_to_save.action_loss = action_loss
 
-            reports.append(result_report)
+            reports.append(report_to_save)
 
             print(printer.print(updates))
-            result_report = EndOfGameReport(empty_report=True)
+            temporary_stored_reports = []
 
             if time.time() - seconds_between_saves > 60*0.5:
                 pickle.dump(reports, open(log_path, "wb"))
