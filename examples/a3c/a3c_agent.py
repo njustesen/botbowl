@@ -181,35 +181,36 @@ class A3CAgent(RL_Agent):
         return action_dict, actions, action_masks, value, spatial_obs, non_spatial_obs
 
     def act_NN(self, env, obs=None):
-        if obs is None:
-            obs = env.get_observation()
+        with torch.no_grad():
+            if obs is None:
+                obs = env.get_observation()
 
-        # Flip board observation if away team
-        if not self.is_home:
-            obs['board'] = self._flip(obs['board'])
+            # Flip board observation if away team
+            if not self.is_home:
+                obs['board'] = self._flip(obs['board'])
 
-        spatial_obs, non_spatial_obs = self._update_obs(obs)
+            spatial_obs, non_spatial_obs = self._update_obs(obs)
 
-        action_masks = self._compute_action_masks(obs)
-        action_masks = torch.tensor(action_masks, dtype=torch.bool)
+            action_masks = self._compute_action_masks(obs)
+            action_masks = torch.tensor(action_masks, dtype=torch.bool)
 
-        values, actions = self.policy.act(
-            Variable(spatial_obs.unsqueeze(0)),
-            Variable(non_spatial_obs.unsqueeze(0)),
-            Variable(action_masks.unsqueeze(0)))
+            values, actions = self.policy.act(
+                Variable(spatial_obs.unsqueeze(0)),
+                Variable(non_spatial_obs.unsqueeze(0)),
+                Variable(action_masks.unsqueeze(0)))
 
-        values.detach()
-        # Create action from output
-        action = actions[0]
-        value = values[0]
-        value.detach()
-        action_type, x, y = self._compute_action(action.numpy()[0])
+            values.detach()
+            # Create action from output
+            action = actions[0]
+            value = values[0]
+            value.detach()
+            action_type, x, y = self._compute_action(action.numpy()[0])
 
-        # Flip position if playing as away and x>0 (x>0 means it's a positional action)
-        if not self.is_home and x > 0:
-            x = env.game.arena.width - 1 - x
+            # Flip position if playing as away and x>0 (x>0 means it's a positional action)
+            if not self.is_home and x > 0:
+                x = env.game.arena.width - 1 - x
 
-        action_object = {'action-type': action_type, 'x': x, 'y': y}
+            action_object = {'action-type': action_type, 'x': x, 'y': y}
 
         return action_object, actions, action_masks, value, spatial_obs, non_spatial_obs
 

@@ -163,6 +163,7 @@ class VectorEnvMultiProcess(AbstractVectorEnv):
         self.memory.reset()
 
         # print(f"queue size = {self.results_queue.qsize()}")
+        self.update_trainee(agent)
 
         reports = []
         while self.memory.step < self.min_batch_size:
@@ -269,34 +270,33 @@ def worker(results_queue, msg_queue, env, worker_id, worker_memory_size):
 
     runner.reset()
 
-    with torch.no_grad():
-        while True:
+    while True:
 
-            # Updates from master process?
-            if not msg_queue.empty():
-                command, data = msg_queue.get()
-                time_of_last_message = time.time()
+        # Updates from master process?
+        if not msg_queue.empty():
+            command, data = msg_queue.get()
+            time_of_last_message = time.time()
 
-                if command == 'swap trainee':
-                    runner.agent = data
-                    pause = False
-                elif command == 'close':
-                    break
-                elif command == 'pause':
-                    pause = True
-                else:
-                    raise Exception(f"Unknown command to worker: {command}")
-
-            if not pause:
-                memory, reports = runner.run()
-                results_queue.put((memory, reports))
+            if command == 'swap trainee':
+                runner.agent = data
+                pause = False
+            elif command == 'close':
+                break
+            elif command == 'pause':
                 pause = True
-
             else:
-                sleep(0.005)
-                if time.time() - time_of_last_message > 10:
-                    print(f"Worker {worker_id} timeout!")
-                    break
+                raise Exception(f"Unknown command to worker: {command}")
+
+        if not pause:
+            memory, reports = runner.run()
+            results_queue.put((memory, reports))
+            pause = True
+
+        else:
+            sleep(0.005)
+            if time.time() - time_of_last_message > 10:
+                print(f"Worker {worker_id} timeout!")
+                break
 
     msg_queue.cancel_join_thread()
     results_queue.cancel_join_thread()

@@ -1,7 +1,7 @@
 
 # Environment
 env_name = "FFAI-1-v3"
-pathfinding_enabled = True
+pathfinding_enabled = False
 
 # Training configuration
 dict_worker_memory_size = {"FFAI-1-v3": 20,
@@ -9,7 +9,7 @@ dict_worker_memory_size = {"FFAI-1-v3": 20,
                            "FFAI-5-v3": 300,
                            "FFAI-7-v3": 400}
 
-dict_min_batch_size = {"FFAI-1-v3": 160,
+dict_min_batch_size = {"FFAI-1-v3": 159,
                        "FFAI-3-v3": 350,
                        "FFAI-5-v3": 500,
                        "FFAI-7-v3": 500}
