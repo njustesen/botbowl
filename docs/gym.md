@@ -1,10 +1,10 @@
 # Reinforcement Learning I: OpenAI Gym Environment
 This tutorial will introduce you to FFAI's implementations of the [Open AI Gym interface](https://arxiv.org/pdf/1606.01540.pdf) that will allow for easy integration of reinforcement learning algorithms. 
 
-You can run [examples/gym.py](examples/gym.py) to se a random agent play Blood Bowl through the FFAI Gym environment. The rendering is simplified for faster execution and looks like this:
+You can run [examples/gym_example.py](examples/gym_example.py) to se a random agent play Blood Bowl through the FFAI Gym environment. The rendering is simplified for faster execution and looks like this:
 ![FFAI Gym GUI](https://njustesen.github.io/ffai/img/gym.png?raw=true "FFAI Gym GUI FFAI-3")
 
-[examples/gym.py](examples/gym.py) demonstrated how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
+[examples/gym_example.py](examples/gym_example.py) demonstrated how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
 
 Agents receive numerical observations from the FFAI environment at every step and sends back and action with an action type and in some cases a position. Along with the observations, the environment also sends a scalar reward value to the agent. We will describe the structure of the three components: observations, actions, and rewards.
 
@@ -272,6 +272,6 @@ FFAI comes with five environments with various difficulty:
 ![A rendering of __FFAI-3-v2__.](img/gym_3.png?raw=true "A rendering of __FFAI-3-v2__.")
 
 ## Explore the Observation Space
-Try running [examples/gym.py](examples/gym.py) while debugging in your favorite IDE (e.g. [PyCharm](https://www.jetbrains.com/pycharm/)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
+Try running [examples/gym_example.py](examples/gym_example.py) while debugging in your favorite IDE (e.g. [PyCharm](https://www.jetbrains.com/pycharm/)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
 
 In the next tutorial, we will start developing a reinforcement learning agent.
