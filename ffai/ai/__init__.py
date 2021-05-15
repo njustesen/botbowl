@@ -9,6 +9,7 @@ from .competition import *
 from .renderer import *
 from .proc_bot import *
 from .bots import *
+from .env_wrappers import *
 
 ruleset = load_rule_set('BB2016')
 
@@ -16,6 +17,15 @@ ruleset = load_rule_set('BB2016')
 register(
     id='FFAI-v3',
     entry_point='ffai.ai.env:FFAIEnv',
+    kwargs={'config': load_config("gym-11"),
+            'home_team': load_team_by_filename('human', ruleset, board_size=11),
+            'away_team': load_team_by_filename('human', ruleset, board_size=11)
+            }
+)
+
+register(
+    id='FFAI-wrapped-v3',
+    entry_point='ffai.ai.env_wrappers:make_wrapped_env',
     kwargs={'config': load_config("gym-11"),
             'home_team': load_team_by_filename('human', ruleset, board_size=11),
             'away_team': load_team_by_filename('human', ruleset, board_size=11)
