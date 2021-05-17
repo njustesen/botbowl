@@ -301,6 +301,13 @@ class AvailablePositionLayer(FeatureLayer):
 
 class RollProbabilityLayer(FeatureLayer):
 
+    @staticmethod
+    def accumulated_prob_2d_roll(roll_target):
+        """
+        Returns the probability of sum of two D6 rolls to be equal to or greater than roll_target. e.g. 9+ = 0.2777..
+        """
+        return (np.array([36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1])/36)[roll_target]
+
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
         active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
@@ -313,9 +320,13 @@ class RollProbabilityLayer(FeatureLayer):
                         out[action_choice.positions[i].y][action_choice.positions[i].x] = action_choice.paths[i].prob
                     elif i < len(action_choice.rolls):
                         # Convert to chance of succeeding
-                        chance = 1.0
-                        for roll in action_choice.rolls[i]:
-                            chance = chance * ((1+(6-roll)) / 6)
+                        if action_choice.action_type == ActionType.FOUL:
+                            # Use different probability calculation for 2D6 rolls
+                            chance = self.accumulated_prob_2d_roll(action_choice.rolls[0][0])
+                        else:
+                            chance = 1.0
+                            for roll in action_choice.rolls[i]:
+                                chance = chance * ((1+(6-roll)) / 6)
                         out[action_choice.positions[i].y][action_choice.positions[i].x] = chance
         return out
 
@@ -466,28 +477,6 @@ class SkillLayer(FeatureLayer):
         return self.skill.name.replace("_", " ").lower()
 
 
-class MovementLeftLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = (player.get_ma() - player.state.moves) * 0.1
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = (player.get_ma() - player.state.moves) * 0.1
-        return out
-
-    def key(self, game):
-        return None
-
-    def name(self):
-        return "movement left"
-
-
 class BallLayer(FeatureLayer):
 
     def produce(self, game):
@@ -583,7 +572,7 @@ class CrowdLayer(FeatureLayer):
         return "opp crowd"
 
 
-class MovemenLeftLayer(FeatureLayer):
+class MovementLeftLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -592,8 +581,27 @@ class MovemenLeftLayer(FeatureLayer):
             return out
         for player in active_team.players + game.get_opp_team(active_team).players:
             if player.position is not None:
-                out[player.position.y][player.position.x] = (player.get_ma() - player.state.moves) * 0.1
+                out[player.position.y][player.position.x] = max(0, (player.get_ma() - player.state.moves) * 0.1)
         return out
 
     def name(self):
         return "movement left"
+
+
+class GFIsLeftLayer(FeatureLayer):
+
+    def produce(self, game):
+        out = np.zeros((game.arena.height, game.arena.width))
+        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        if active_team is None:
+            return out
+        for player in active_team.players + game.get_opp_team(active_team).players:
+            if player.position is not None:
+                has_sprint = player.has_skill(Skill.SPRINT)
+                out[player.position.y][player.position.x] = \
+                    min(0.3 if has_sprint else 0.2, (player.get_ma() + (3 if has_sprint else 2) - player.state.moves) *0.1)
+        return out
+
+    def name(self):
+        return "gfi left"
+
