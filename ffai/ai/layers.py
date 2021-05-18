@@ -301,12 +301,8 @@ class AvailablePositionLayer(FeatureLayer):
 
 class RollProbabilityLayer(FeatureLayer):
 
-    @staticmethod
-    def accumulated_prob_2d_roll(roll_target):
-        """
-        Returns the probability of sum of two D6 rolls to be equal to or greater than roll_target. e.g. 9+ = 0.2777..
-        """
-        return (np.array([36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1])/36)[roll_target]
+    # The probability of sum of two D6 rolls to be equal to or greater than roll_target. e.g. 9+ = 0.2777..
+    accumulated_prob_2d_roll = (np.array([36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1])/36)
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
@@ -322,7 +318,7 @@ class RollProbabilityLayer(FeatureLayer):
                         # Convert to chance of succeeding
                         if action_choice.action_type == ActionType.FOUL:
                             # Use different probability calculation for 2D6 rolls
-                            chance = self.accumulated_prob_2d_roll(action_choice.rolls[0][0])
+                            chance = self.accumulated_prob_2d_roll[action_choice.rolls[i][0]]
                         else:
                             chance = 1.0
                             for roll in action_choice.rolls[i]:
@@ -597,9 +593,9 @@ class GFIsLeftLayer(FeatureLayer):
             return out
         for player in active_team.players + game.get_opp_team(active_team).players:
             if player.position is not None:
-                has_sprint = player.has_skill(Skill.SPRINT)
+                num_max_gfis = 3 if player.has_skill(Skill.SPRINT) else 2
                 out[player.position.y][player.position.x] = \
-                    min(0.3 if has_sprint else 0.2, (player.get_ma() + (3 if has_sprint else 2) - player.state.moves) *0.1)
+                    min(0.1 * num_max_gfis, (player.get_ma() + num_max_gfis - player.state.moves) * 0.1)
         return out
 
     def name(self):
