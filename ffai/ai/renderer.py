@@ -1,6 +1,6 @@
-import tkinter as tk
+
 import math
-from tkinter import *
+
 from ffai.ai.env import FFAIEnv
 
 
