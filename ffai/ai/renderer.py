@@ -1,6 +1,5 @@
 
 import math
-from tk import *
 from ffai.ai.env import FFAIEnv
 
 

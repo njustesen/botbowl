@@ -12,7 +12,6 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-import tk
 import math
 from copy import deepcopy
 
