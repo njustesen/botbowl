@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='ffai',
-      version="0.2.1",
+      version="0.2.1_dependency_fix",
       include_package_data=True,
       install_requires=[
           'numpy',
