@@ -12,7 +12,6 @@ from ffai.core import Game, load_rule_set, load_arena
 from ffai.ai.bots.random_bot import RandomBot
 from ffai.ai.layers import *
 import uuid
-import tkinter as tk
 import math
 from copy import deepcopy
 
@@ -425,9 +424,9 @@ class FFAIEnv(gym.Env):
     def available_action_types(self):
         if isinstance(self.game.get_procedure(), Setup):
             if self.game.get_kicking_team().team_id == self.team_id:
-                return [FFAIEnv.actions.index(action_type) for action_type in self.defensive_formation_action_types]
+                return [action_type for action_type in self.defensive_formation_action_types]
             else:
-                return [FFAIEnv.actions.index(action_type) for action_type in self.offensive_formation_action_types]
+                return [action_type for action_type in self.offensive_formation_action_types]
         return [action.action_type for action in self.game.state.available_actions if action.action_type in FFAIEnv.actions]
 
     def available_positions(self, action_type):
