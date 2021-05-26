@@ -1227,25 +1227,26 @@ class Formation(Immutable):
 
         positions_used = []
 
-        # setup on scrimmage
+        # first setup on scrimmage
         for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
-                if len(players) == 0:
-                    return actions
-                x = len(self.formation[0])-1
-                tp = self.formation[y][x]
-                if tp == '-' or tp != t:
-                    continue
-                yy = y + 1
-                xx = x + 1 if not home else game.arena.width - x - 2
-                position = game.get_square(xx, yy)
-                if not game.is_scrimmage(position) or position in positions_used:
-                    continue
-                player = self._get_player(players, t)
-                players.remove(player)
-                actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
-                positions_used.append(position)
+                for x in reversed(range(len(self.formation[0]))):
+                    if len(players) == 0:
+                        return actions
+                    tp = self.formation[y][x]
+                    if tp == '-' or tp != t:
+                        continue
+                    yy = y + 1
+                    xx = x + 1 if not home else game.arena.width - x - 2
+                    position = game.get_square(xx, yy)
+                    if not game.is_scrimmage(position) or position in positions_used:
+                        continue
+                    player = self._get_player(players, t)
+                    players.remove(player)
+                    actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
+                    positions_used.append(position)
 
+        # later setup the rest of the field with remaining players
         for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
                 for x in reversed(range(len(self.formation[0]))):
