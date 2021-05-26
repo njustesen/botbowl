@@ -285,10 +285,6 @@ def load_formation(name, directory=None, size=11):
         for line in file_:
             if not line:
                 break
-            row = []
-            for c in line:
-                if c in ['\n']:
-                    continue
-                row.append(c)
+            row = list(line.strip())
             board.append(np.array(row))
     return Formation(name, board)
