@@ -19,7 +19,7 @@ If you want to understand how the competition server works in more detail, take 
 
 ## Submission link
 
-Submit your bot using [this form](https://forms.gle/9X3QQ5pK6JSxiVz89) by July 15, 2021 (anywhere in the world). You need a Google account to submit. If this is an issue for you, contact us on the [https://discord.gg/MTXMuae](Discord server) and we will find a solution.
+Submit your bot using [this form](https://forms.gle/9X3QQ5pK6JSxiVz89) by July 15, 2021 (anywhere in the world). You need a Google account to submit. If this is an issue for you, contact us on the [Discord server](https://discord.gg/MTXMuae) and we will find a solution.
 
 ## Verification
 Within one week after the submission deadline, we will test your bot against the baseline random and contact you to verify that the results are as expected. 
