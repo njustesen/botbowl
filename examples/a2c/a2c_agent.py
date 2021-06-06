@@ -149,22 +149,21 @@ class A2CAgent(Agent):
         """
         Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
         """
-        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
-            actions = []
-            for action_choice in self.env.game.state.available_actions:
-                if action_choice.action_type == ActionType.MOVE:
-                    positions, block_dice, rolls = [], [], []
-                    for i in range(len(action_choice.positions)):
-                        position = action_choice.positions[i]
-                        roll = action_choice.paths[i].rolls[0]
-                        # Only include positions where there are not players
-                        if self.env.game.get_player_at(position) is None:
-                            positions.append(position)
-                            rolls.append(roll)
-                    actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
-                else:
-                    actions.append(action_choice)
-            self.env.game.state.available_actions = actions
+        actions = []
+        for action_choice in self.env.game.state.available_actions:
+            if action_choice.action_type == ActionType.MOVE:
+                positions, block_dice, rolls = [], [], []
+                for i in range(len(action_choice.positions)):
+                    position = action_choice.positions[i]
+                    roll = action_choice.paths[i].rolls[0]
+                    # Only include positions where there are not players
+                    if self.env.game.get_player_at(position) is None:
+                        positions.append(position)
+                        rolls.append(roll)
+                actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
+            else:
+                actions.append(action_choice)
+        self.env.game.state.available_actions = actions
 
     def act(self, game):
 
@@ -175,7 +174,8 @@ class A2CAgent(Agent):
         self.env.game = game
 
         # Filter out pathfinding-assisted move actions
-        self._filter_actions()
+        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
+            self._filter_actions()
 
         # Get observation
         observation = self.env.get_observation()

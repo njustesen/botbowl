@@ -102,13 +102,12 @@ scripted bots in our previous tutorials. In the constructor of our Agent class, 
 model_filename = "my-model"
 class A2CAgent(Agent):
 
-    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True):
+    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True, exclude_pathfinding_moves=True):
         super().__init__(name)
         self.my_team = None
         self.env = self.make_env(env_name)
         self.copy_game = copy_game
-        self.pathfinding_enabled = self.env.game.config.pathfinding_enabled
-
+        self.exclude_pathfinding_moves = exclude_pathfinding_moves
         self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
         self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
         self.board_squares = self.spatial_obs_space[1] * self.spatial_obs_space[2]
