@@ -178,7 +178,7 @@ def test_failed_landing_ball():
     right_stuff.role.skills = []
     right_stuff.extra_skills = [Skill.RIGHT_STUFF]
     right_stuff_position = Square(2, 1)
-    ball = Ball(right_stuff_position)
+    ball = game.get_ball()
     game.put(ball, right_stuff_position)
     ball.is_carried = True
     game.put(right_stuff, right_stuff_position)
@@ -199,7 +199,7 @@ def test_failed_landing_ball():
     assert not ball.is_carried
 
 
-def test_successful_landing():
+def test_successful_landing_with_ball():
     game = get_game_turn()
     team = game.get_agent_team(game.actor)
     game.clear_board()
@@ -213,6 +213,10 @@ def test_successful_landing():
     right_stuff.extra_skills = [Skill.RIGHT_STUFF]
     right_stuff_position = Square(2, 1)
     game.put(right_stuff, right_stuff_position)
+    ball = game.get_ball()
+    game.put(ball, right_stuff_position)
+    ball.is_carried = True
+    assert game.has_ball(right_stuff)
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix(6)  # Accurate pass
     D8.fix(5)  # Forward scatter
@@ -229,8 +233,11 @@ def test_successful_landing():
     assert not game.has_report_of_type(OutcomeType.TURNOVER)
     assert passer.state.used
     assert not right_stuff.state.used
-    assert Square(target_square.x + 3, target_square.y)
+    landing_square = Square(target_square.x + 3, target_square.y)
+    assert right_stuff.position == landing_square
     assert right_stuff.state.up
+    assert ball.is_carried
+    assert ball.position == landing_square
 
 
 def test_successful_landing_endzone():
