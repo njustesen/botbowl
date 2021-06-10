@@ -2171,6 +2171,7 @@ class Land(Procedure):
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_LAND, position=self.player.position, player=self.player, rolls=[self.roll]))
                 if self.game.is_touchdown(self.player):
                     Touchdown(self.game, self.player)
+                # bounce ball if you land on the ball; this will be different in BB2020
                 elif self.game.get_ball_position() == self.player.position and not self.game.has_ball(self.player):
                     Bounce(self.game, self.game.get_ball())
                 return True
