@@ -219,6 +219,7 @@ class PlayerState(Reversible):
         self.used = False
         self.used_skills.clear()
         self.squares_moved.clear()
+        self.has_blocked = False
 
 
 class Agent:

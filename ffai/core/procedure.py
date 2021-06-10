@@ -2460,7 +2460,6 @@ class EndPlayerTurn(Procedure):
         self.game.state.active_player = None
         self.player.state.squares_moved.clear()
         self.game.state.player_action_type = None
-        self.player.state.has_blocked = False
         return True
 
 
@@ -2909,6 +2908,8 @@ class BlockAction(Procedure):
         super().__init__(game)
         self.player = player
         self.can_undo = True
+        self.second_frenzy = False
+        self.defender = None
 
     def start(self):
         self.game.report(Outcome(OutcomeType.BLOCK_ACTION_STARTED, player=self.player))
@@ -2928,24 +2929,35 @@ class BlockAction(Procedure):
 
         defender = self.game.get_player_at(action.position)
 
-        EndPlayerTurn(self.game, self.player)
-
         # Stab
         if action.action_type == ActionType.STAB:
+            EndPlayerTurn(self.game, self.player)
             Stab(self.game, self.player, defender)
             return True
 
-        # Frenzy block
-        if self.player.has_skill(Skill.FRENZY):
-            # TODO: Second block can also be a stab
-            Block(self.game, self.player, defender, frenzy_block=True)
-
         # Regular block
-        Block(self.game, self.player, defender)
+        if not self.player.has_skill(Skill.FRENZY):
+            Block(self.game, self.player, defender)
+            return False
 
+        # Frenzy block
+        if not self.second_frenzy:
+            self.second_frenzy = True
+            self.defender = defender
+            Block(self.game, self.player, defender, frenzy_block=True)
+            return False
+
+        # second Frenzy block
+        EndPlayerTurn(self.game, self.player)
+        Block(self.game, self.player, defender)
         return True
 
     def available_actions(self):
+        if self.second_frenzy:
+            self.player.state.has_blocked = False
+            actions = self.game.get_block_actions(self.player, blitz=False, defender=self.defender)
+            if actions:
+                return actions
         actions = self.game.get_block_actions(self.player, blitz=False)
         actions.append(ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team))
         if self.can_undo:
