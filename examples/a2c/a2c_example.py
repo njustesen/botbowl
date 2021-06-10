@@ -45,6 +45,7 @@ num_cnn_kernels = [32, 64]
 
 # Pathfinding-assisted paths enabled?
 pathfinding_enabled = False
+# When using A2CAgent, remember to set exclude_pathfinding_moves = False if you train with pathfinding_enabled = True
 
 
 # Make directories
