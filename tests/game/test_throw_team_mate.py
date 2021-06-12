@@ -111,11 +111,13 @@ def test_successfull_land_on_ball():
     D8.fix(5)  # Forward scatter
     D8.fix(5)  # Forward scatter
     D6.fix(6)  # Land
+    D6.fix(6)  # potential pickup ball
     game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
     assert right_stuff.state.in_air
     target_square = Square(5, 5)
     ball = game.get_ball()
     game.move(ball, Square(8, 5))
+    ball.is_carried = False  # touchback might give the ball to some player and makes it carried
     game.step(Action(ActionType.THROW_TEAM_MATE, player=passer, position=target_square))
     assert game.has_report_of_type(OutcomeType.INACCURATE_PASS)  # Always inaccurate
     assert not game.has_report_of_type(OutcomeType.TURNOVER)
