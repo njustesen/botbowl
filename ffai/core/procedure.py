@@ -1926,15 +1926,18 @@ class GFI(Procedure):
         self.reroll = None
         self.roll = None
 
+    def start(self): 
+        self.reset_roll() 
+        
+    def reset_roll(self) 
+        self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.GFI_ROLL)
+        self.roll.target = 2
+        self.roll.modifiers = 1 if self.game.state.weather == WeatherType.BLIZZARD else 0
+    
     def step(self, action):
 
         # If player hasn't rolled
-        if self.roll is None:
-
-            # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.GFI_ROLL)
-            self.roll.target = 2
-            self.roll.modifiers = 1 if self.game.state.weather == WeatherType.BLIZZARD else 0
+        if self.roll.is_rolled:
 
             if self.roll.is_d6_success():
 
@@ -1955,7 +1958,7 @@ class GFI(Procedure):
 
         # If reroll used
         if self.reroll.use_reroll:
-            self.roll = None
+            self.reset_roll() 
             self.reroll = None
             return False
 

@@ -564,7 +564,7 @@ class DiceRoll(Reversible):
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
         super().__init__()
         self.dice = dice
-        self.sum = 0
+        self._sum = None 
         self.d68 = d68
         self.target = target
         self.modifiers = modifiers
@@ -573,14 +573,7 @@ class DiceRoll(Reversible):
         self.target_lower = target_lower
         self.highest_succeed = highest_succeed
         self.lowest_fail = lowest_fail
-        # Roll dice
-        for d in self.dice:
-            if not isinstance(d, BBDie):
-                if d68 and isinstance(d, D6):
-                    self.sum += d.get_value() * 10
-                else:
-                    self.sum += d.get_value()
-
+        
     def to_json(self):
         dice = []
         for die in self.dice:
@@ -599,6 +592,24 @@ class DiceRoll(Reversible):
             'lowest_fail': self.lowest_fail
         }
 
+    @property
+    def is_rolled(self): 
+        return any([d.is_rolled for d in self.dice])
+    
+    @property
+    def sum(self): 
+        if self._sum is None:        
+            self._sum = 0 
+            for d in self.dice:
+                if not isinstance(d, BBDie):
+                    if d68 and isinstance(d, D6):
+                        self.sum += d.get_value() * 10
+                    else:
+                        self.sum += d.get_value()
+        
+        return self._sum 
+        
+        
     def modified_target(self):
         if self.target is not None:
             return max(1*len(self.dice), min(6*len(self.dice), self.target - self.modifiers))
@@ -696,12 +707,20 @@ class D6(Die, Immutable):
             raise ValueError("Fixed result of D6 must be between 1 and 6")
 
     def __init__(self, rnd):
-        if len(D6.FixedRolls) > 0:
-            self.value = D6.FixedRolls.pop(0)
-        else:
-            self.value = rnd.randint(1, 7)
+        self.value = None 
+        self.rnd = rnd 
 
+    @property
+    def is_rolled(self)
+        return self.value not is None 
+    
     def get_value(self):
+        if self.value is None: 
+            if len(D6.FixedRolls) > 0:
+                self.value = D6.FixedRolls.pop(0)
+            else:
+                self.value = rnd.randint(1, 7)
+
         return self.value
 
     def to_json(self):
