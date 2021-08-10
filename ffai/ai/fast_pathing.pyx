@@ -4,7 +4,10 @@ import cython
 cimport cython
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
+
 from libcpp.map cimport map as mapcpp
+#from libcpp.functional.less cimport less
+from cython.operator import dereference, postincrement
 
 # import Path class? Because reversable
 
@@ -13,11 +16,10 @@ cdef struct Square:
     int x
     int y
 
+ctypedef unsigned int Reroll_State
 
-cdef int TRR = 0
-cdef int DODGE = 1
-cdef int SURE_FEET = 2
-cdef int SURE_HANDS = 3
+ctypedef mapcpp[Reroll_State, float] Rr_state_map
+ctypedef mapcpp[Reroll_State, float].iterator Rr_state_map_iter
 
 
 cdef struct Node:
@@ -26,75 +28,92 @@ cdef struct Node:
     int moves_left, gfis_left, foul_roll, handoff_roll, block_dice
     float euclidean_distance, prob
     vector[int] rolls
-    #dict rr_states
-
-#cdef inline int hash_rr_states(
+    Rr_state_map rr_states
 
 
-cdef Node create_node(Node* parent,
-                 Square* position,
-                 int moves_left,
-                 int gfis_left,
-                 float euclidean_distance,
-                 dict rr_states=None,
-                 int block_dice=-1,
-                 int foul_roll=-1,
-                 int handoff_roll=-1):
+cdef Node create_default_node(Node* parent, Square* position, int moves_left, int gfis_left,
+                             float euclidean_distance, int block_dice=-1, int foul_roll=-1, int handoff_roll=-1):
+    cdef Node self
 
     cdef vector[int] rolls
-    cdef float prob = 1.0
-    cdef Node self
-    cdef mapcpp[(int, int),float] mattias
-
-    if parent is not NULL:
-        prob = parent.prob
 
     self.parent = parent
     self.position = position
     self.moves_left = moves_left
     self.gfis_left = gfis_left
     self.euclidean_distance = euclidean_distance
-    self.prob = prob
     self.foul_roll = foul_roll
     self.handoff_roll = handoff_roll
     self.rolls = rolls
     self.block_dice = block_dice
-    #self.rr_states = ???
+    return self
 
 
-    #self.rr_states = rr_states if rr_states is not None else parent.rr_states
+cdef Node create_root_node(Square* position, int moves_left, int gfis_left,
+                            float euclidean_distance, Rr_state_map rr_states):
+
+    cdef Node self = create_default_node(NULL, position, moves_left, gfis_left, euclidean_distance)
+    self.prob = 1.0
+    self.rr_states = rr_states
 
     return self
 
-cdef _apply_roll(self, float p, int skill_rr, int team_rr):
+cdef Node create_node(Node* parent, Square* position, int moves_left, int gfis_left,
+                      float euclidean_distance, int block_dice=-1, int foul_roll=-1, int handoff_roll=-1):
 
-    cdef dict new_states = {}
+    cdef Node self = create_default_node(parent, position, moves_left, gfis_left, euclidean_distance, block_dice, foul_roll, handoff_roll)
+    self.prob = parent.prob
+    self.rr_states = parent.rr_states
+
+    return self
+
+
+cdef void _apply_roll(Node* self, float p, int skill_rr, int team_rr):
+
+    cdef Rr_state_map new_states
+    cdef Rr_state_map_iter it = self.rr_states.begin()
     cdef float p_success
-    for state, prev_p in self.rr_states.items():
+
+    cdef Reroll_State state
+    cdef float prev_p
+
+    while it != self.rr_states.end():
+        state = dereference(it).first
+        prev_p = dereference(it).second
+
         p_success = prev_p * p
-        if state in new_states:
+        if new_states.find(state) != new_states.end(): # state in new_states
             new_states[state] += p_success
         else:
             new_states[state] = prev_p * p
-        if skill_rr is not None and state[skill_rr]:
-            self._add_fail_state(new_states, state, prev_p, p, skill_rr)
-        elif state[team_rr]:
-            self._add_fail_state(new_states, state, prev_p, p, team_rr)
-    '''
-    # Merge new states with previous states
-    for rr_state, rr_state_p in new_rr_states.items():
-        if rr_state in self.rr_states:
-            self.rr_states[rr_state] += rr_state_p
-        else:
-            self.rr_states[rr_state] = rr_state_p
-    '''
+
+        if skill_rr != 0 and (state & skill_rr):
+            _add_fail_state(&new_states, state, prev_p, p, skill_rr)
+        elif (state & team_rr):
+            _add_fail_state(&new_states, state, prev_p, p, team_rr)
+
+        postincrement(it)
+
     # Merge with self.rr_state
     self.rr_states = new_states
-    self.prob = sum(self.rr_states.values())
+
+    #sum(self.rr_states.values())
+    self.prob = 0
+    it = self.rr_states.begin()
+    while it != self.rr_states.end():
+        self.prob += dereference(it).second
+        postincrement(it)
+
+cdef _add_fail_state(Rr_state_map * new_states, Reroll_State prev_state, float prev_state_p, float p, int index):
+    cdef Reroll_State fail_state = prev_state ^ index
+    cdef float fail_state_p = prev_state_p * (1 - p) * p
+    if new_states.find(fail_state) != new_states.end():
+        dereference(new_states)[fail_state] += fail_state_p
+    else:
+        dereference(new_states)[fail_state] = fail_state_p
+
 
 """
-cpdef _add_fail_state(self, dict new_states, dict prev_state, float prev_state_p, float p, int index)
-
 cpdef apply_gfi(self)
 
 cpdef apply_dodge(self, int target)
@@ -126,7 +145,7 @@ cdef class Pathfinder:
     cdef public object risky_set
     cdef public object target_found
 
-    cdef get_path(self, target):
+    def get_path(self, target):
 
     cdef get_paths(self, target=None):
 
