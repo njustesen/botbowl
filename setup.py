@@ -1,7 +1,11 @@
 from setuptools import setup, find_packages
+from Cython.Build import cythonize
+
+import Cython.Compiler.Options
+Cython.Compiler.Options.annotate = True
 
 setup(name='ffai',
-      version="0.3.0",
+      version="0.3.1_cython",
       include_package_data=True,
       install_requires=[
           'numpy',
@@ -13,9 +17,10 @@ setup(name='ffai',
           'stopit',
           'requests',
           'pytest',
-          'torch',
-          'torchvision',
           'matplotlib'
       ],
-      packages=find_packages()
+      packages=find_packages(),
+      ext_modules=cythonize(["ffai/ai/fast_pathing.pyx"], annotate=True),
+      zip_safe=False
 )
+
