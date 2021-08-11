@@ -5,6 +5,7 @@ cimport cython
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
 
+
 from libcpp.map cimport map as mapcpp
 #from libcpp.functional.less cimport less
 from cython.operator import dereference, postincrement
@@ -21,6 +22,11 @@ ctypedef unsigned int Reroll_State
 ctypedef mapcpp[Reroll_State, float] Rr_state_map
 ctypedef mapcpp[Reroll_State, float].iterator Rr_state_map_iter
 
+cdef Reroll_State NO_RR = 0
+cdef Reroll_State TRR = 1
+cdef Reroll_State DODGE = 2
+cdef Reroll_State SURE_FEET = 4
+cdef Reroll_State SURE_HANDS = 8
 
 cdef struct Node:
     Node* parent
@@ -113,38 +119,79 @@ cdef _add_fail_state(Rr_state_map * new_states, Reroll_State prev_state, float p
         dereference(new_states)[fail_state] = fail_state_p
 
 
-"""
-cpdef apply_gfi(self)
+cdef apply_gfi(Node * self):
+    self.rolls.push_back(2)
+    _apply_roll(self, 5.0 / 6.0, SURE_FEET, TRR)
 
-cpdef apply_dodge(self, int target)
 
-cpdef apply_pickup(self, int target)
+cdef apply_dodge(Node * self, int target):
+    self.rolls.push_back(target)
+    _apply_roll(self, (7 - target) / 6.0, SURE_FEET, TRR)
 
-cpdef apply_handoff(self, int target)
+cdef apply_pickup(Node * self, int target):
+    self.rolls.push_back(target)
+    _apply_roll(self, (7 - target) / 6.0, SURE_HANDS, TRR)
 
-cpdef apply_foul(self, int target)
+cdef apply_handoff(Node * self, int target):
+    self.rolls.push_back(target)
 
-cpdef apply_stand_up(self, int target)
+cdef apply_foul(Node * self, int target):
+    self.rolls.push_back(target)
+
+cdef apply_stand_up(Node * self, int target):
+    self.rolls.push_back(target)
+    _apply_roll(self, (7 - target) / 6.0, NO_RR, TRR)
+
+
+cdef Square DIRECTIONS[8]
+DIRECTIONS[0].x = -1; DIRECTIONS[0].y = -1
+DIRECTIONS[1].x = -1; DIRECTIONS[1].y = 0
+DIRECTIONS[2].x = -1; DIRECTIONS[2].y = 1
+DIRECTIONS[3].x = 0; DIRECTIONS[3].y = -1
+DIRECTIONS[4].x = 0; DIRECTIONS[4].y = 1
+DIRECTIONS[5].x = 1; DIRECTIONS[5].y = -1
+DIRECTIONS[6].x = 1; DIRECTIONS[6].y = 0
+DIRECTIONS[7].x = 1; DIRECTIONS[7].y = 1
 
 
 cdef class Pathfinder:
     cdef public object game
     cdef public object player
-    cdef public object trr
-    cdef public object directly_to_adjacent
-    cdef public object can_block
-    cdef public object can_handoff
-    cdef public object can_foul
-    cdef public object ma
-    cdef public object gfis
-    cdef public object locked_nodes
-    cdef public object nodes
-    cdef public object tzones
-    cdef public object current_prob
-    cdef public object open_set
-    cdef public object risky_set
-    cdef public object target_found
+    cdef object trr
+    cdef object directly_to_adjacent
+    cdef object can_block
+    cdef object can_handoff
+    cdef object can_foul
+    cdef object ma
+    cdef object gfis
+    cdef Node* locked_nodes[17][28] # initalized as NULL by default
+    cdef Node* nodes[17][28] # initalized as NULL by default
+    cdef int tzones[17][28]
+    cdef object current_prob
+    cdef object open_set
+    cdef object risky_set
+    cdef object target_found
 
+    def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
+        self.game = game
+        self.player = player
+        self.trr = trr
+        self.directly_to_adjacent = directly_to_adjacent
+        self.can_block = can_block
+        self.can_handoff = can_handoff
+        self.can_foul = can_foul
+        self.ma = player.get_ma() - player.state.moves
+        # self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+        self.current_prob = 1
+        # self.open_set = PriorityQueue()
+        self.risky_sets = {}
+        self.target_found = False
+        for p in game.get_players_on_pitch():
+            if p.team != player.team and p.has_tackle_zone():
+                for square in game.get_adjacent_squares(p.position):
+                    self.tzones[square.y][square.x] += 1
+
+"""
     def get_path(self, target):
 
     cdef get_paths(self, target=None):
