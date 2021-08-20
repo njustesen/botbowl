@@ -91,7 +91,7 @@ Congratulations to MimicBot by Nicola Pezzotti for winning Bot Bowl III and the 
 
 The second place goes to GrodBot by Peter Moore, and the 3rd Place to Dryad by Jonas Busk.
 
-![Bot Bowl III Results](img/botbowl-iii-results.png?raw=true "Bot Bowl III Results")
+![Bot Bowl III Results](img/bot-bowl-iii-results.png?raw=true "Bot Bowl III Results")
 
 The replays can be downloaded [here](https://drive.google.com/file/d/1Oz7nrBRTCwHIiqJDYF7m6j9kvMdpdSDl/view?usp=sharing) and are compatible with [FFAI v0.3.1](https://github.com/njustesen/ffai/releases/tag/v0.3.1).
 
