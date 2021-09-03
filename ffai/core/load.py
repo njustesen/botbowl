@@ -280,17 +280,11 @@ def load_formation(name, directory=None, size=11):
     else:
         path = get_data_path('formations/' + str(size) + "/" + name)
     board = []
-    file = open(path, 'r')
     name = name.replace(".txt", "").replace("off_", "").replace("def_", "").title()
-    while True:
-        line = file.readline()
-        if not line:
-            break
-        row = []
-        for c in line:
-            if c in ['\n']:
-                continue
-            row.append(c)
-        board.append(np.array(row))
-    file.close()
+    with open(path, 'r') as file_:
+        for line in file_:
+            if not line:
+                break
+            row = list(line.strip())
+            board.append(np.array(row))
     return Formation(name, board)
