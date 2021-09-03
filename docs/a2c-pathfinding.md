@@ -59,3 +59,7 @@ We also noticed that the CPU usage were only 10-30% on each core on our training
 An asynchronous variant, such as A3C or something more modern, could improve the training speed a lot!
 
 Maybe one day we will post a tutorial where we try this out but for now, we leave this as a challenge for you.
+
+# Running on the full game
+If you manage to train an agent on the full game using pathfinding and want to play against it, or submit it to a competition, then use the A2CAgent as described in [**Reinforcement Learning III: The Full Board**](a2c-full.md). 
+It is important that you set exclude_pathfinding_moves = False in the A2CAgent constructor if you want the agent to use the pathfinding-assisted moves.

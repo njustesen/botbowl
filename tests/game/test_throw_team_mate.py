@@ -430,3 +430,82 @@ def test_ttm_distance():
     squares, distances = game.get_pass_distances(passer, right_stuff)
     for distance in distances:
         assert distance == PassDistance.QUICK_PASS or distance == PassDistance.SHORT_PASS
+
+
+def test_throw_teammate_while_having_ball():
+    # passer has the ball and has throw team mate
+    # after selecting START_PASS he should be either throw the ball or pick up
+    # a teammate, if he picks up the teammate he should only be allowed to
+    # throw the teammate.
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.skills = []
+    passer.role.ag = 2
+    passer.extra_skills = [Skill.THROW_TEAM_MATE]
+    game.put(passer, Square(1, 1))
+    ball = game.get_ball()
+    ball.position = passer.position
+    ball.is_carried = True
+    right_stuff = team.players[1]
+    right_stuff.role.skills = []
+    right_stuff.extra_skills = [Skill.RIGHT_STUFF]
+    right_stuff_position = Square(2, 1)
+    game.put(right_stuff, right_stuff_position)
+    game.step(Action(ActionType.START_PASS, player=passer))
+    D6.fix(6)  # Accurate pass
+    D8.fix(5)  # Forward scatter
+    D8.fix(5)  # Forward scatter
+    D8.fix(5)  # Forward scatter
+    D6.fix(6)  # Land
+    game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
+    assert right_stuff.state.in_air
+    assert not (ActionType.PASS in [aa.action_type for aa in game.state.available_actions])
+    # throw teammate
+    target_square = Square(5, 5)
+    game.step(Action(ActionType.THROW_TEAM_MATE, player=passer, position=target_square))
+    assert game.has_report_of_type(OutcomeType.INACCURATE_PASS)  # Always inaccurate
+    assert not game.has_report_of_type(OutcomeType.TURNOVER)
+    assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LAND)
+    assert not game.has_report_of_type(OutcomeType.TURNOVER)
+    assert passer.state.used
+    assert not right_stuff.state.used
+    assert Square(target_square.x + 3, target_square.y)
+    assert right_stuff.state.up
+    assert ball.position == passer.position
+    assert ball.is_carried == True
+
+
+def test_throw_ball_no_pickup():
+    # passer has the ball and has throw team mate
+    # after selecting START_PASS he should be either throw the ball or pick up
+    # a teammate, if he picks up the teammate he should only be allowed to
+    # throw the teammate.
+    game = get_game_turn()
+    team = game.get_agent_team(game.actor)
+    game.clear_board()
+    passer = team.players[0]
+    passer.role.skills = []
+    passer.role.ag = 2
+    passer.extra_skills = [Skill.THROW_TEAM_MATE]
+    game.put(passer, Square(1, 1))
+    ball = game.get_ball()
+    ball.position = passer.position
+    ball.is_carried = True
+    right_stuff = team.players[1]
+    right_stuff.role.skills = []
+    right_stuff.extra_skills = [Skill.RIGHT_STUFF]
+    right_stuff_position = Square(2, 1)
+    game.put(right_stuff, right_stuff_position)
+    catcher = team.players[3]
+    catcher.role.skills = []
+    catcher.role.ag = 3
+    game.put(catcher, Square(3, 3))
+    game.step(Action(ActionType.START_PASS, player=passer))
+    D6.fix(6)  # Accurate pass
+    D6.fix(6)  # Successful catch
+    game.step(Action(ActionType.PASS, player=passer, position=catcher.position))
+    assert not (ActionType.PICKUP_TEAM_MATE in [aa.action_type for aa in game.state.available_actions])
+    assert ball.position == catcher.position
+    assert ball.is_carried == True

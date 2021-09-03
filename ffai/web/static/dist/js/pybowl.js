@@ -1241,9 +1241,9 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                 return "2nd half";
             }
             if (team != null && team === $scope.game.state.home_team){
-                return $scope.game.state.home_team.state.turn + " / 8";
+                return $scope.game.state.home_team.state.turn + " / " + $scope.game.rounds;
             } else if (team != null && team !== $scope.game.state.home_team){
-                return $scope.game.state.away_team.state.turn + " / 8";
+                return $scope.game.state.away_team.state.turn + " / " + $scope.game.rounds;
             }
             return "";
         };

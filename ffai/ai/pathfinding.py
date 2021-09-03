@@ -178,9 +178,6 @@ class Pathfinder:
         gfis_used = 0 if ma >= 0 else -ma
         self.gfis = 3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
 
-        if self.ma + self.gfis <= 0:
-            return []
-
         can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(Skill.SURE_HANDS)
@@ -260,7 +257,7 @@ class Pathfinder:
 
         out_of_moves = False
         if node.moves_left + node.gfis_left == 0:
-            if not self.can_handoff:
+            if not self.can_handoff and not self.can_foul:
                 return
             out_of_moves = True
 
