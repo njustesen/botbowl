@@ -2822,7 +2822,7 @@ class PassAction(MoveAction):
                 actions.extend(pass_actions)
 
         # Pass actions
-        if self.game.has_ball(self.player):
+        if self.game.has_ball(self.player) and self.picked_up_teammate is None:
             piece = self.game.get_ball_at(self.player.position)
             pass_actions = self.game.get_pass_actions(self.player, piece, dump_off=self.dump_off)
             actions.extend(pass_actions)
