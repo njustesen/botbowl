@@ -53,7 +53,8 @@ class Game:
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
             'time_limits': self.config.time_limits.to_json(),
-            'active_other_player_id': self.get_other_active_player_id()
+            'active_other_player_id': self.get_other_active_player_id(),
+            'rounds': self.config.rounds,
         }
 
     def enable_forward_model(self):

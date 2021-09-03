@@ -209,3 +209,37 @@ def test_all_blitz_paths_two():
     blitz_paths = [path for path in paths if path.block_dice is not None]
     assert len(blitz_paths) == 2
 
+
+def test_handoff_after_gfi():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    player.state.moves = 8
+    game.put(player, Square(1, 1))
+    other_player = game.get_reserves(game.state.away_team)[1]
+    game.put(other_player, Square(2, 2))
+    pathfinder = Pathfinder(game,
+                            player,
+                            can_handoff=True)
+    paths = pathfinder.get_paths()
+    assert len(paths) == 1
+    assert len(paths[0].steps) == 1
+    assert paths[0].steps[0] == other_player.position
+
+
+def test_foul_after_gfi():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    player.state.moves = 8
+    game.put(player, Square(1, 1))
+    opp_player = game.get_reserves(game.state.home_team)[0]
+    opp_player.state.up = False
+    game.put(opp_player, Square(2, 2))
+    pathfinder = Pathfinder(game,
+                            player,
+                            can_foul=True)
+    paths = pathfinder.get_paths()
+    assert len(paths) == 1
+    assert len(paths[0].steps) == 1
+    assert paths[0].steps[0] == opp_player.position
