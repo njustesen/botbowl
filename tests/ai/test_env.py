@@ -13,6 +13,7 @@ def test_observation_ranges():
 
     for _ in range(10):
         obs = env.reset()
+
         done = False
         while not done:
             for layer_name, array in obs['board'].items():
