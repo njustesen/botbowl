@@ -1,6 +1,7 @@
 # 2020 ruleset feature list
 
-The purpose of this document gather the delta between the 2016 and 2020 rules, and showing the progress towards an implementation of the 2020 ruleset.  
+The purpose of this document gather a summary of the delta between the 2016 and 2020 rules, and showing the progress 
+towards an implementation of the 2020 ruleset. The text below might not be perfect, check the rulebook before coding!    
 
 ## Terminology 
 The 2020 rules coins a few new terms which are not rules but helps explain the rules.
@@ -12,21 +13,39 @@ The 2020 rules coins a few new terms which are not rules but helps explain the r
 | Rush          | Rename of GFI |
 | Deviate       | Moving the ball D6 squares in direction determined by a D8 (e.g. kickoff)   |
 | Scatter       | Move ball three squares in direction determined by three subsequent D8 (e.g. inaccurate pass)|
-| Bounce        | Move ball one square in direction determined by D8 (e.g. failing catch/pickup)  |
+| Bounce        | Move ball one square in direction determined by D8 (e.g. failed catch/pickup)  |
 | Stalling      | Player can score with full certainty but chooses not to |
 
 
 
-## Pregame 
+## Prayers to Nuffle
+For every 50k in Team Value difference the underdog coach gets one roll (D16) on the Prayers to Nuffle table. This in addition to Petty Cash. This is also a kickoff result.   
 
-| Thing             | Implemented | Has Test(s) | Change  |
-|-------------------|-------------|-----------|-------|
-| Fan factor        | No          | No       |  |
-| Prayers to Nuffle | No          | No       | All new, see implementation status of each prayer below |
+| Prayer                        | Implemented   | Has Test(s) | 
+|-------------------------------|---------------|-----------|
+| 1 - Treacherou Trapdoor       |  No           |  No    |
+| 2 - Friends with the Ref      |  No           |  No    |
+| 3 - Stiletto                  |  No           |  No    |
+| 4 - Iron Man                  |  No           |  No    |
+| 5 - Knuckle Duster            |  No           |  No    |
+| 6 - Bad Habits                |  No           |  No    |
+| 7 - Greasy Cleats             |  No           |  No    |
+| 8 - Blessed Statue of Nuffle  |  No           |  No    |
+| 9 - Moles under the Pitch     |  No           |  No    |
+| 10 - Perfect Passing          |  No           |  No    |
+| 11 - Fan Interaction          |  No           |  No    |
+| 12 - Necessary Violence       |  No           |  No    |
+| 13 - Fouling Frenzy           |  No           |  No    |
+| 14 - Throw a Rock             |  No           |  No    |
+| 15 - Under Scrutiny           |  No           |  No    |
+| 16 - Intensive Training       |  No           |  No    |
+
+
 
 
 ## Kickoff event table 
-2020 rules introduces the term _marked_/_open_ for a player that is/isn't  in an opponent's tacklezone. The terms are used below   
+
+Fan Factor is used instead of Fame in some places. 
 
 | Feature                | Implemented | Has Test(s) | Change  |
 |------------------------|-------------|-----------|-------|
@@ -45,7 +64,7 @@ The 2020 rules coins a few new terms which are not rules but helps explain the r
 
 
 ## Skills 
-
+'Jump' refers to the action of Jumping over Prone players which all players can do now.  
 
 ### Removed skills 
 Skills that are completely removed are: Piling On, 
@@ -67,8 +86,8 @@ Skills that are completely removed are: Piling On,
 |Sure Feet          | No          | No          | same |
 
 ### General
-| Skill             | Implemented | Has Test(s) | Change  |
-|-------------------|-------------|-------------|-------|
+| Skill            | Implemented | Has Test(s) | Change  |
+|------------------|-------------|-------------|-------|
 |Block             | No          | No           | same |
 |Dauntless         | No          | No           | same |
 |Dirty player (+1) | No          | No           | same |
@@ -83,8 +102,8 @@ Skills that are completely removed are: Piling On,
 |Wrestle           | No          | No           | same |
 
 ### Mutations
-| Skill             | Implemented | Has Test(s) | Change  |
-|-------------------|-------------|-------------|-------|
+| Skill              | Implemented | Has Test(s) | Change  |
+|--------------------|-------------|-------------|-------|
 |Big Hand            | No         | No          | same |
 |Claws               | No         | No          | doesn't stack with Mightly blow |
 |Disturbing Presence | No         | No          | same |
@@ -99,8 +118,8 @@ Skills that are completely removed are: Piling On,
 |Very Long Legs      | No         | No          | negative modifers for Jump and Leap (if player has skill) reduce by 1, to minimum of -1, Immune to Cloud Burster |
 
 ### Passing
-| Skill             | Implemented | Has Test(s) | Change  |
-|-------------------|-------------|-------------|-------|
+| Skill          | Implemented | Has Test(s) | Change  |
+|----------------|-------------|-------------|-------|
 |Accurate        | No             | No          | Only quick pass and short pass |
 |Connoneer       | No             | No          | as Accurate but on Long pass and Long Bomb |
 |Cloud Burster   | No             | No          | New: choose if opposing coach shall re-roll a successful Interfere when throwing Long or Long Bomb  |
@@ -117,19 +136,19 @@ Skills that are completely removed are: Piling On,
 
 ### Strength
 | Skill             | Implemented | Has Test(s) | Change  |
-|-------------------|-------------|-----------|-------|
-|Arm Bar            | No          | No        | new |
-|Brawler            | No          | No        | new |
-|Break Tackle       | No          | No        | +2 on dodge if ST>4 else +1 once per turn  |
-|Grab               | No          | No        | same |
-|Guard              | No          | No        | works on fouls too |
-|Juggernaut         | No          | No        | same |
-|Mighty Blow +1     | No          | No        | doesn't work passively (e.g. attacker down), +X |
-|Multiple Block     | No          | No        | same |
-|Pile Driver        | No          | No        | As piling on but is evaluate as a foul |
-|Stand Firm         | No          | No        | same |
-|Strong Arm         | No          | No        | Only applicable for Throw Team-mate |
-|Thick Skull        | No          | No        | same |
+|-------------------|-------------|-------------|-------|
+|Arm Bar            | No          | No          | new |
+|Brawler            | No          | No          | new |
+|Break Tackle       | No          | No          | +2 on dodge if ST>4 else +1 once per turn  |
+|Grab               | No          | No          | same |
+|Guard              | No          | No          | works on fouls too |
+|Juggernaut         | No          | No          | same |
+|Mighty Blow +1     | No          | No          | doesn't work passively (e.g. attacker down), +X |
+|Multiple Block     | No          | No          | same |
+|Pile Driver        | No          | No          | As piling on but is evaluate as a foul |
+|Stand Firm         | No          | No          | same |
+|Strong Arm         | No          | No          | Only applicable for Throw Team-mate |
+|Thick Skull        | No          | No          | same |
 
 ### Traits
 | Skill             | Implemented | Has Test(s) | Change  |
@@ -165,7 +184,6 @@ Skills that are completely removed are: Piling On,
 
 
 ## Passing
-Passing has changed, a lot! 
 
 | Feature                | Implemented | Has Test(s) | Change  |
 |------------------------|-------------|-------------|-------|
@@ -177,52 +195,53 @@ Passing has changed, a lot!
 
 
 ## Other feature changes
+Fame is removed and replaced with a similar 'Fan Factor' 
+
 
 | Feature                 | Implemented | Has Test(s) | Change  |
-|-------------------------|-------------|-------------|-------|
-|Team re-rolls            | No          | No          | Multiple team re-rolls can be used per turn |
-|Player characteristic    | No          | No          | AG and AV is now e.g. 3+ instead of 4 |
-|Passing characteristic   | No          | No          | new |
-|Sweltering heat          | No          | No          | D3 players, randomly selected |
-|Jump over prone players  | No          | No          | New  |
+|-------------------------|-------------|-------------|---------|
+| Fan factor              | No          | No          | D3 + nbr of Dedicated Fans the team has |
+| Team re-rolls           | No          | No          | Multiple team re-rolls can be used per turn |
+| Player characteristic   | No          | No          | AG and AV is now e.g. 3+ instead of 4 |
+| Passing characteristic  | No          | No          | new |
+| Sweltering heat         | No          | No          | D3 players, randomly selected |
+| Jump over prone players | No          | No          | New  |
 
 
 
 
-## Races (TODO!!)
+## Races 
 
 All races have changed. This table shows what is working. 
 
-| Race                   | Missing positions       | Missing skills                     | Have icons    |
-|------------------------|-------------------------|------------------------------------|----------------
-| **Amazon**        |                         |                                    | YES           |
-| **Bretonnia**     |                         |                                    | YES           |
-| **Chaos**         |                         |                                    | YES           |
-| **Chaos Dwarf**   |                         |                                    | YES           |
-| **Dark Elf**      |                         |                                    | YES           |
-| Dwarf Slayer      |                         |                                    | NO            |
-| **Elven Union**   |                         |                                    | YES           |
-| Goblin            | Pogoer, Fanatic, Looney, Bomma, Doom Diver, 'Ooligan        | Bombardier, Secret Weapon, Chainsaw, Ball & Chain, Swoop, Fan Favorite | SOME?      |
-| Halfling          | Treeman                 | Timmm-ber! | YES     |
-| **High Elf**      |                         |                                    | YES              |
-| **Human**         |                         |                                    | YES           |
-| Human Nobility    |                         |                                    | NO            |
-| **Khemri**        |                         |                                    | YES           |
-| Khorne            |                         |                                    | NO           |  
-| **Lizardmen**     |                         |                                    | YES           |
-| Necromantic       |                         |                                    | NO           |
-| **Norse**         |                         |                                    | YES        |
-| **Nurgle***       |                         |                                    | NO            |
-| **Orc**           |                         |                                    | YES           |
-| Ogre              | Snotling, Ogre          | Titchy,                            | YES           |
-| **Skaven**        |                         |                                    | YES           |
-| Savage Orc        |                         |                                    | NO            |
-| Skaven: Pestilent Vermin | Novitiates, Pox-flingers, Poison-keepers | Bombardier, Secret Weapon  | NO        |
-| **Undead**        |                         |                                    | YES
-| **Vampire**       |                         |                                    | YES
-| **Wood Elf**      |                         |                                    | YES              |
-| Chaos Renegades   | Goblin Renegade, Orc Renegade, Skaven Renegade, Dark Elf Renegade, Chaos Troll, Chaos Ogre | Animosity | MAYBE?
-| Slann             |                         |                                    | NO              |         
-| Underworld        | Warpstone Troll, Underworld Goblins, Skaven Linemen, Skaven Throwers, Skaven Blitzers | Animosity | MAYBE?              |         
+| Race             | Missing positions       | Missing skills                     | Have icons    |
+|------------------|-------------------------|------------------------------------|----------------
+| Amazon             |                         |                                    | YES    |
+| Black Orc          |                         |                                    | NO   |
+| Chaos Dwarf        |                         |                                    | YES    |
+| Chaos Choosen      |                         |                                    | YES    |
+| Chaos Renegades    |                         |                                    | Maybe? |
+| Dark Elf           |                         |                                    | YES    |
+| Dwarf              |                         |                                    | NO     |
+| Elven Union        |                         |                                    | YES    |
+| Goblin             |                         |                                    | Some?  |
+| Halfling           |                         |                                    | YES    |
+| High Elf           |                         |                                    | YES    |
+| Human**            |                         |                                    | YES    |
+| Imperial Nobility  |                         |                                    | NO     |
+| Tomb Kings         |                         |                                    | YES    |
+| Lizardmen          |                         |                                    | YES    |
+| Necromantic        |                         |                                    | NO     |
+| Norse              |                         |                                    | YES    |
+| Nurgle*            |                         |                                    | NO     |
+| Ogre               |                         |                                    | YES    |
+| Old World Alliance |                         |                                    | NO    |
+| Orc                |                         |                                    | YES    |
+| Shambling Undead   |                         |                                    | YES    |
+| Skaven             |                         |                                    | YES    |
+| Snotling           |                         |                                    | No    |
+| Vampire            |                         |                                    | YES    |
+| Underworld Denizens|                         |                                    | Maybe? |         
+| Wood Elf           |                         |                                    | YES   | 
 
 * Nurgle's Rot needs to be implemented in the post-game sequence
