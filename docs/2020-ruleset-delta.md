@@ -3,6 +3,11 @@
 The purpose of this document gather a summary of the delta between the 2016 and 2020 rules, and showing the progress 
 towards an implementation of the 2020 ruleset. The text below might not be perfect, check the rulebook before coding!    
 
+Passing implementation status
+- [ ] Pass rolls
+- [ ] New modifiers 
+- [x] Interfere 
+
 ## Terminology 
 The 2020 rules coins a few new terms which are not rules but helps explain the rules.
 
