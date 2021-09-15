@@ -3,10 +3,6 @@
 The purpose of this document gather a summary of the delta between the 2016 and 2020 rules, and showing the progress 
 towards an implementation of the 2020 ruleset. The text below might not be perfect, check the rulebook before coding!    
 
-Passing implementation status
-- [ ] Pass rolls
-- [ ] New modifiers 
-- [x] Interfere 
 
 ## Terminology 
 The 2020 rules coins a few new terms which are not rules but helps explain the rules.
@@ -28,11 +24,11 @@ For every 50k in Team Value difference the underdog coach gets one roll (D16) on
 
 | Prayer                        | Implemented   | Has Test(s) | 
 |-------------------------------|---------------|-----------|
-| 1 - Treacherou Trapdoor       |  No           |  No    |
-| 2 - Friends with the Ref      |  No           |  No    |
-| 3 - Stiletto                  |  No           |  No    |
-| 4 - Iron Man                  |  No           |  No    |
-| 5 - Knuckle Duster            |  No           |  No    |
+| 1 - Treacherou Trapdoor       |  :x:           |  No    |
+| 2 - Friends with the Ref      |  :x:           |  No    |
+| 3 - Stiletto                  |  :x:           |  No    |
+| 4 - Iron Man                  |  :x:           |  No    |
+| 5 - Knuckle Duster            |  :x:           |  No    |
 | 6 - Bad Habits                |  No           |  No    |
 | 7 - Greasy Cleats             |  No           |  No    |
 | 8 - Blessed Statue of Nuffle  |  No           |  No    |
@@ -54,7 +50,7 @@ Fan Factor is used instead of Fame in some places.
 
 | Feature                | Implemented | Has Test(s) | Change  |
 |------------------------|-------------|-----------|-------|
-| 2 - Get the ref        | N/A         | No       | Same |
+| 2 - Get the ref        | ✔️         | ❌        | Same |
 | 3 - Time out           | No          | No       | (old Riot) Kicking team's turn marker on 6,7,8 then substract one turn, else add one.  |
 | 4 - Solid defence      | No          | No       | (old Perfect Defence) Limited to D3+3 players  |
 | 5 - High Kick          | N/A         | Yes        | Same |
