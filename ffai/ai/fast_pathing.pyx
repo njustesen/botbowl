@@ -12,6 +12,9 @@ from libcpp.map cimport map as mapcpp
 #from libcpp.functional.less cimport less
 from cython.operator import dereference, postincrement
 
+from libcpp.memory cimport shared_ptr
+ctypedef shared_ptr[Node] Node_ptr
+
 # import Path class? Because reversable
 
 
