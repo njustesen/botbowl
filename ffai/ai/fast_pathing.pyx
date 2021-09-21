@@ -13,175 +13,26 @@ from libcpp.map cimport map as mapcpp
 from cython.operator import dereference, postincrement
 
 from libcpp.memory cimport shared_ptr
+
+from pathing_node cimport Node, Square
+ctypedef shared_ptr[Node] NodePtr
+
+from libcpp.memory cimport shared_ptr
 ctypedef shared_ptr[Node] Node_ptr
 
 # import Path class? Because reversable
 
-
-class Path:
-
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
-        super().__init__()
-        self.steps = steps
-        self.prob = prob
-        self.rolls = rolls
-        self.block_dice = block_dice
-        self.handoff_roll = handoff_roll
-        self.foul_roll = foul_roll
-
-    def __len__(self) -> int:
-        return len(self.steps)
-
-    def get_last_step(self) -> 'Square':
-        return self.steps[-1]
-
-    def is_empty(self) -> bool:
-        return len(self) == 0
-
-    def compare(self, other, path=""):
-        return compare_object(self, other, path)
-
-
-
-cdef struct Square:
-    int x
-    int y
-
-cpdef object ffai_Square(Square * sq):
+"""
+cpdef object ffai_Square(Square sq):
     return model.Square(sq.x, sq.y)
+
 
 cpdef Square from_ffai_Square(object sq):
     cdef Square c_square
     c_square.x = sq.x
     c_square.y = sq.y
     return c_square
-
-
-ctypedef unsigned int Reroll_State
-
-ctypedef mapcpp[Reroll_State, float] Rr_state_map
-ctypedef mapcpp[Reroll_State, float].iterator Rr_state_map_iter
-
-cdef Reroll_State NO_RR = 0
-cdef Reroll_State TRR = 1
-cdef Reroll_State DODGE = 2
-cdef Reroll_State SURE_FEET = 4
-cdef Reroll_State SURE_HANDS = 8
-
-cdef struct Node:
-    Node* parent
-    Square* position
-    int moves_left, gfis_left, foul_roll, handoff_roll, block_dice
-    float euclidean_distance, prob
-    vector[int] rolls
-    Rr_state_map rr_states
-
-
-cdef Node create_default_node(Node* parent, Square* position, int moves_left, int gfis_left,
-                             float euclidean_distance, int block_dice=-1, int foul_roll=-1, int handoff_roll=-1):
-    cdef Node self
-
-    cdef vector[int] rolls
-
-    self.parent = parent
-    self.position = position
-    self.moves_left = moves_left
-    self.gfis_left = gfis_left
-    self.euclidean_distance = euclidean_distance
-    self.foul_roll = foul_roll
-    self.handoff_roll = handoff_roll
-    self.rolls = rolls
-    self.block_dice = block_dice
-    return self
-
-
-cdef Node create_root_node(Square* position, int moves_left, int gfis_left,
-                            float euclidean_distance, Rr_state_map rr_states):
-
-    cdef Node self = create_default_node(NULL, position, moves_left, gfis_left, euclidean_distance)
-    self.prob = 1.0
-    self.rr_states = rr_states
-
-    return self
-
-cdef Node create_node(Node* parent, Square* position, int moves_left, int gfis_left,
-                      float euclidean_distance, int block_dice=-1, int foul_roll=-1, int handoff_roll=-1):
-
-    cdef Node self = create_default_node(parent, position, moves_left, gfis_left, euclidean_distance, block_dice, foul_roll, handoff_roll)
-    self.prob = parent.prob
-    self.rr_states = parent.rr_states
-
-    return self
-
-
-cdef void _apply_roll(Node* self, float p, int skill_rr, int team_rr):
-
-    cdef Rr_state_map new_states
-    cdef Rr_state_map_iter it = self.rr_states.begin()
-    cdef float p_success
-
-    cdef Reroll_State state
-    cdef float prev_p
-
-    while it != self.rr_states.end():
-        state = dereference(it).first
-        prev_p = dereference(it).second
-
-        p_success = prev_p * p
-        if new_states.find(state) != new_states.end(): # state in new_states
-            new_states[state] += p_success
-        else:
-            new_states[state] = prev_p * p
-
-        if skill_rr != 0 and (state & skill_rr):
-            _add_fail_state(&new_states, state, prev_p, p, skill_rr)
-        elif (state & team_rr):
-            _add_fail_state(&new_states, state, prev_p, p, team_rr)
-
-        postincrement(it)
-
-    # Merge with self.rr_state
-    self.rr_states = new_states
-
-    #sum(self.rr_states.values())
-    self.prob = 0
-    it = self.rr_states.begin()
-    while it != self.rr_states.end():
-        self.prob += dereference(it).second
-        postincrement(it)
-
-cdef _add_fail_state(Rr_state_map * new_states, Reroll_State prev_state, float prev_state_p, float p, int index):
-    cdef Reroll_State fail_state = prev_state ^ index
-    cdef float fail_state_p = prev_state_p * (1 - p) * p
-    if new_states.find(fail_state) != new_states.end():
-        dereference(new_states)[fail_state] += fail_state_p
-    else:
-        dereference(new_states)[fail_state] = fail_state_p
-
-
-cdef apply_gfi(Node * self):
-    self.rolls.push_back(2)
-    _apply_roll(self, 5.0 / 6.0, SURE_FEET, TRR)
-
-
-cdef apply_dodge(Node * self, int target):
-    self.rolls.push_back(target)
-    _apply_roll(self, (7 - target) / 6.0, SURE_FEET, TRR)
-
-cdef apply_pickup(Node * self, int target):
-    self.rolls.push_back(target)
-    _apply_roll(self, (7 - target) / 6.0, SURE_HANDS, TRR)
-
-cdef apply_handoff(Node * self, int target):
-    self.rolls.push_back(target)
-
-cdef apply_foul(Node * self, int target):
-    self.rolls.push_back(target)
-
-cdef apply_stand_up(Node * self, int target):
-    self.rolls.push_back(target)
-    _apply_roll(self, (7 - target) / 6.0, NO_RR, TRR)
-
+"""
 
 cdef Square DIRECTIONS[8]
 DIRECTIONS[0].x = -1; DIRECTIONS[0].y = -1
@@ -204,11 +55,11 @@ cdef class Pathfinder:
     cdef object can_foul
     cdef object ma
     cdef object gfis
-    cdef Node* locked_nodes[17][28] # initalized as NULL by default
-    cdef Node* nodes[17][28] # initalized as NULL by default
+    cdef NodePtr locked_nodes[17][28] # initalized as NULL by default
+    cdef NodePtr nodes[17][28] # initalized as NULL by default
     cdef int tzones[17][28]
     cdef object current_prob
-    cdef priority_queue[Node] open_set
+    cdef priority_queue[NodePtr] open_set
     cdef object risky_set #dict
     cdef bint target_found
 
@@ -231,7 +82,7 @@ cdef class Pathfinder:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
-
+"""
     cdef get_path(self, target):
         paths = self.get_paths(target)
         if len(paths) > 0:
@@ -534,13 +385,12 @@ cdef class Pathfinder:
 
     cdef _collect_paths(self, target=None):
         cdef Node* node
-        """
         if type(target) == Square:
             node = self.locked_nodes[target.y][target.x]
             if node is not NULL:
                 return [self._collect_path(node)]
             return []
-        """
+
         paths = []
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
@@ -572,3 +422,4 @@ cdef class Pathfinder:
 
 
 #cpdef get_all_paths(...)
+"""
