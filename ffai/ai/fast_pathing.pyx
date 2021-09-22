@@ -46,22 +46,21 @@ DIRECTIONS[7].x = 1; DIRECTIONS[7].y = 1
 
 
 cdef class Pathfinder:
-    cdef public object game
-    cdef public object player
-    cdef object trr
-    cdef object directly_to_adjacent
-    cdef object can_block
-    cdef object can_handoff
-    cdef object can_foul
-    cdef object ma
-    cdef object gfis
-    cdef NodePtr locked_nodes[17][28] # initalized as NULL by default
-    cdef NodePtr nodes[17][28] # initalized as NULL by default
+    cdef object game
+    cdef object player
+    cdef bint trr
+    cdef bint directly_to_adjacent
+    cdef bint can_block
+    cdef bint can_handoff
+    cdef bint can_foul
+    cdef int ma
+    cdef int gfis
+    cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
+    cdef NodePtr nodes[17][28] # initalized as empty pointers
     cdef int tzones[17][28]
-    cdef object current_prob
+    cdef double current_prob
     cdef priority_queue[NodePtr] open_set
-    cdef object risky_set #dict
-    cdef bint target_found
+    cdef map[double, NodePtr] risky_set #dict
 
     def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
@@ -74,9 +73,11 @@ cdef class Pathfinder:
         self.ma = player.get_ma() - player.state.moves
         # self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
         self.current_prob = 1
-        # self.open_set = PriorityQueue()
-        self.risky_sets = {}
-        self.target_found = False
+        
+        # Doesn't need initialization? 
+        self.open_set = priority_queue[Node]() # self.open_set = PriorityQueue()
+        self.risky_sets = map[double, NodePtr]()  # self.risky_sets = {}
+        
         for p in game.get_players_on_pitch():
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
@@ -116,7 +117,7 @@ cdef class Pathfinder:
         self._expansion(target)
         self._clear()
 
-        while not self.target_found and len(self.risky_sets) > 0:
+        while len(self.risky_sets) > 0:
             self._prepare_nodes()
             self._expansion(target)
             self._clear()
@@ -165,19 +166,7 @@ cdef class Pathfinder:
         return min(6, max(2, target))
 
     def _expand(self, Node * node, target=None):
-        if target is not None:
-            # TODO: handoff?
-            if type(target) == Square and target.distance(node.position) > node.moves_left + node.gfis_left:
-                return
-            if type(target) == int and abs(target - node.position.x) > node.moves_left + node.gfis_left:
-                return
-            if type(target) == Square and node.position == target:
-                self.target_found = True
-                return
-            if type(target) == int and node.position.x == target:
-                self.target_found = True
-                return
-
+        
         if node.block_dice is not None or node.handoff_roll is not None:
             return
 
