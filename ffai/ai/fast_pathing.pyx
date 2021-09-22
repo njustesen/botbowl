@@ -76,7 +76,7 @@ cdef class Pathfinder:
         
         # Doesn't need initialization? 
         self.open_set = priority_queue[Node]() # self.open_set = PriorityQueue()
-        self.risky_sets = map[double, NodePtr]()  # self.risky_sets = {}
+        self.risky_sets = cppmap[double, vector[NodePtr]]()  # self.risky_sets = {}
         
         for p in game.get_players_on_pitch():
             if p.team != player.team and p.has_tackle_zone():
