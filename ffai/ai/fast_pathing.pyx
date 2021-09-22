@@ -49,7 +49,6 @@ cdef class Pathfinder:
     cdef object game
     cdef object player
     cdef bint trr
-    cdef bint directly_to_adjacent
     cdef bint can_block
     cdef bint can_handoff
     cdef bint can_foul
@@ -57,22 +56,23 @@ cdef class Pathfinder:
     cdef int gfis
     cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
     cdef NodePtr nodes[17][28] # initalized as empty pointers
-    cdef int tzones[17][28]
+    cdef int tzones[17][28] # init as zero
     cdef double current_prob
     cdef priority_queue[NodePtr] open_set
     cdef map[double, NodePtr] risky_set #dict
 
-    def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
+    def __init__(self, game, player, trr=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
         self.player = player
+        # todo, assert no skills that aren't handled: stunty, twitchy, etc...
+
         self.trr = trr
-        self.directly_to_adjacent = directly_to_adjacent
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
         self.ma = player.get_ma() - player.state.moves
         # self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
-        self.current_prob = 1
+        self.current_prob = 1.0
         
         # Doesn't need initialization? 
         self.open_set = priority_queue[Node]() # self.open_set = PriorityQueue()
@@ -87,15 +87,16 @@ cdef class Pathfinder:
 
     cdef get_paths(self):
         cdef Square start_square
-        cdef Node node
-        ma = self.player.get_ma() - self.player.state.moves
+        cdef NodePtr node
+        cdef int ma = self.player.get_ma() - self.player.state.moves
+
+        cdef int gfis_used = 0 if ma >= 0 else -ma
+
         self.ma = max(0, ma)
-        gfis_used = 0 if ma >= 0 else -ma
         self.gfis = 2-gfis_used #3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
 
         start_square.x = self.player.position.x
         start_square.y = self.player.position.y
-
 
         if self.ma + self.gfis <= 0:
             return []
@@ -103,12 +104,14 @@ cdef class Pathfinder:
         can_dodge = self.player.has_skill(table.Skill.DODGE) and table.Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(table.Skill.SURE_FEET) and table.Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(table.Skill.SURE_HANDS)
-        rr_states = {(self.trr, can_dodge, can_sure_feet, can_sure_hands): 1}
-        node = create_root_node(&start_square, self.ma, self.gfis, euclidean_distance=0, rr_states=rr_states)
+
+        # Create root node
+        node = NodePtr(new Node(&start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands))
+
         if not self.player.state.up:
             node = self._expand_stand_up(node)
             self.nodes[node.position.y][node.position.x] = node
-        self.open_set.put((0, node))
+        self.open_set.push(node)
         self._expansion()
         self._clear()
 
@@ -119,53 +122,33 @@ cdef class Pathfinder:
 
         return self._collect_paths()
 
-    cdef _get_pickup_target(self, to_pos):
-        zones_to = self.tzones[to_pos.y][to_pos.x]
-        modifiers = 1
-        if not self.player.has_skill(Skill.BIG_HAND):
-            modifiers -= int(zones_to)
+    cdef int _get_pickup_target(self, to_pos):
+        cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
+        cdef int modifiers = 1 - int(zones_to)
+        cdef int target
         if self.game.state.weather == WeatherType.POURING_RAIN:
-            if not self.player.has_skill(Skill.BIG_HAND):
-                modifiers -= 1
-        if self.player.has_skill(Skill.EXTRA_ARMS):
-            modifiers += 1
+            modifiers -= 1
         target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
-    cdef _get_handoff_target(self, catcher):
-        modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
-        target = Rules.agility_table[catcher.get_ag()] - modifiers
+    cdef int _get_handoff_target(self, object catcher):
+        cdef int modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
+        cdef int target = Rules.agility_table[catcher.get_ag()] - modifiers
         return min(6, max(2, target))
 
-    cdef _get_dodge_target(self, from_pos, to_pos):
-        zones_from = self.tzones[from_pos.y][from_pos.x]
-        if zones_from == 0:
-            return None
-        zones_to = int(self.tzones[to_pos.y][to_pos.x])
-        modifiers = 1
-
-        ignore_opp_mods = False
-        if self.player.has_skill(Skill.STUNTY):
-            modifiers = 1
-            ignore_opp_mods = True
-        if self.player.has_skill(Skill.TITCHY):
-            modifiers += 1
-            ignore_opp_mods = True
-        if self.player.has_skill(Skill.TWO_HEADS):
-            modifiers += 1
-
-        if not ignore_opp_mods:
-            modifiers -= zones_to
-
-        target = Rules.agility_table[self.player.get_ag()] - modifiers
+    cdef int _get_dodge_target(self, from_pos, to_pos):
+        cdef int modifiers = 1 - int(self.tzones[to_pos.y][to_pos.x])
+        cdef int target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
-    def _expand(self, Node * node):
-        
+    cdef void _expand(self, NodePtr node):
+        cdef bint out_of_moves = False
+        cdef NodePtr next_node
+        cdef double rounded_p
+
         if node.block_dice is not None or node.handoff_roll is not None:
             return
 
-        out_of_moves = False
         if node.moves_left + node.gfis_left == 0:
             if not self.can_handoff:
                 return
@@ -179,10 +162,10 @@ cdef class Pathfinder:
             if rounded_p < self.current_prob:
                 self._add_risky_move(rounded_p, next_node)
             else:
-                self.open_set.put((next_node.euclidean_distance, next_node))
+                self.open_set.push(next_node)
                 self.nodes[next_node.position.y][next_node.position.x] = next_node
 
-    cdef _expand_node(self, Node * node, direction, out_of_moves=False):
+    cdef _expand_node(self, NodePtr node, direction, out_of_moves=False):
         euclidean_distance = node.euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.euclidean_distance + 1.41421
         to_pos = self.game.state.pitch.squares[node.position.y + direction.y][node.position.x + direction.x]
         if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
@@ -200,9 +183,9 @@ cdef class Pathfinder:
             return self._expand_move_node(node, euclidean_distance, to_pos)
         return None
 
-    def _expand_move_node(self, Node * node, euclidean_distance, to_pos):
-        cdef Node* best_node = self.nodes[to_pos.y][to_pos.x]
-        cdef Node* best_before = self.locked_nodes[to_pos.y][to_pos.x]
+    def _expand_move_node(self, NodePtr node, euclidean_distance, to_pos):
+        cdef NodePtr best_node = self.nodes[to_pos.y][to_pos.x]
+        cdef NodePtr best_before = self.locked_nodes[to_pos.y][to_pos.x]
         cdef bint gfi = node.moves_left == 0
         moves_left_next = max(0, node.moves_left - 1)
         gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
@@ -226,7 +209,7 @@ cdef class Pathfinder:
             return None
         return next_node
 
-    cdef _expand_foul_node(self,Node * node, to_pos, player_at):
+    cdef _expand_foul_node(self, NodePtr node, to_pos, player_at):
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
@@ -239,7 +222,7 @@ cdef class Pathfinder:
             return None
         return next_node
 
-    cdef _expand_handoff_node(self, Node * node, to_pos):
+    cdef _expand_handoff_node(self, NodePtr node, to_pos):
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         player_at = self.game.get_player_at(to_pos)
@@ -252,7 +235,7 @@ cdef class Pathfinder:
             return None
         return next_node
 
-    cdef _expand_block_node(self, Node * node, euclidean_distance, to_pos, player_at):
+    cdef _expand_block_node(self, NodePtr node, euclidean_distance, to_pos, player_at):
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position,
@@ -269,12 +252,12 @@ cdef class Pathfinder:
             return None
         return next_node
 
-    cdef _add_risky_move(self, prob, Node * node):
+    cdef _add_risky_move(self, prob, NodePtr node):
         if prob not in self.risky_sets:
             self.risky_sets[prob] = []
         self.risky_sets[prob].append(node)
 
-    cdef _expand_stand_up(self, Node * node):
+    cdef _expand_stand_up(self, NodePtr node):
         if self.player.has_skill(table.Skill.JUMP_UP):
             return Node(node, self.player.position, self.ma, self.gfis, euclidean_distance=0)
         elif self.ma < 3:
@@ -285,11 +268,8 @@ cdef class Pathfinder:
         next_node = Node(node, self.player.position, self.ma - 3, self.gfis, euclidean_distance=0)
         return next_node
 
-    cdef Node * _best(self, Node * a, Node *b):
-        if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
-            return a
-        if self.directly_to_adjacent and b.position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
-            return b
+    cdef NodePtr _best(self, NodePtr a, NodePtr b):
+
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         block = a.block_dice is not None
@@ -316,11 +296,7 @@ cdef class Pathfinder:
             return b
         return NULL
 
-    cdef Node * _dominant(self, Node * a, Node *b):
-        if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
-            return a
-        if self.directly_to_adjacent and b.position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
-            return b
+    cdef NodePtr _dominant(self, NodePtr a, NodePtr b):
         a_moves_left = a.moves_left + a.gfis_left
         b_moves_left = b.moves_left + b.gfis_left
         # TODO: Write out as above
@@ -331,8 +307,8 @@ cdef class Pathfinder:
         return NULL
 
     cdef _clear(self):
-        cdef Node* node
-        cdef Node* before
+        cdef NodePtr node
+        cdef NodePtr before
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
                 node = self.nodes[y][x]
@@ -341,12 +317,12 @@ cdef class Pathfinder:
                     if before is NULL or self._best(node, before) == node:
                         self.locked_nodes[y][x] = node
                     self.nodes[y][x] = NULL
-        self.open_set = PriorityQueue()
+        self.open_set = priority_queue[NodePtr]()
 
     cdef _prepare_nodes(self):
-        cdef Node* node
-        cdef Node* existing_node
-        cdef Node* best_before
+        cdef NodePtr node
+        cdef NodePtr existing_node
+        cdef NodePtr best_before
 
         if len(self.risky_sets) > 0:
             probs = sorted(self.risky_sets.keys())
@@ -357,7 +333,7 @@ cdef class Pathfinder:
                     continue
                 existing_node = self.nodes[node.position.y][node.position.x]
                 if existing_node is NULL or self._best(existing_node, node) == node:
-                    self.open_set.push((node.euclidean_distance, node))
+                    self.open_set.push(node)
                     self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
 
@@ -368,7 +344,7 @@ cdef class Pathfinder:
             self._expand(best_node)
 
     cdef _collect_paths(self):
-        cdef Node* node
+        cdef NodePtr node
 
         paths = []
         for y in range(self.game.arena.height):
@@ -380,7 +356,7 @@ cdef class Pathfinder:
                     paths.append(self._collect_path(node))
         return paths
 
-    cdef _collect_path(self, Node * node):
+    cdef _collect_path(self, NodePtr node):
         prob = node.prob
         steps = [ ffai_Square(node.position) ]
         rolls = [node.rolls]
@@ -396,7 +372,6 @@ cdef class Pathfinder:
         rolls = list(reversed(rolls))[1:]
         return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
-
+"""
 
 #cpdef get_all_paths(...)
-"""
