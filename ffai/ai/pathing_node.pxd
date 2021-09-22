@@ -11,6 +11,7 @@ cdef extern from "pathing_node.h" namespace "node_ns":
         Square() except +
         Square(int, int) except +
         int x,y
+    bint operator ==(Square, Square)
 
     #using rr_used = std::tuple < bool, bool, bool, bool >;
     #using rr_state = std::map < rr_used, double >;

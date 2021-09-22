@@ -6,6 +6,9 @@ namespace node_ns {
 
     Square::Square(): x(0), y(0) {}
     Square::Square(int x, int y) : x(x), y(y) {}
+    bool operator==(const Square& n1, const Square& n2){
+        return n1.x == n2.x && n1.y == n2.y;
+    }
 
     Node::Node() {}
 

@@ -14,6 +14,7 @@ namespace node_ns {
             Square();
             Square(int, int);
     };
+    bool operator==(const Square& n1, const Square& n2);
 
     const int NO_SKILL_REROLL = -1;
     const int TRR = 0;
