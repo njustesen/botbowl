@@ -35,4 +35,5 @@ cdef extern from "pathing_node.h" namespace "node_ns":
         void apply_stand_up(int)
 
     bint operator <(Node, Node)
+    bint operator <(shared_ptr[Node], shared_ptr[Node])
 

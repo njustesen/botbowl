@@ -60,6 +60,8 @@ namespace node_ns {
             void apply_stand_up(int target);
     };
     bool operator<(const Node& n1, const Node& n2);
+    bool operator<(const node_ptr& n1, const node_ptr& n2);
+
 
 }
 
