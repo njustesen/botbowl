@@ -84,13 +84,8 @@ cdef class Pathfinder:
                     self.tzones[square.y][square.x] += 1
 
 """
-    cdef get_path(self, target):
-        paths = self.get_paths(target)
-        if len(paths) > 0:
-            return paths[0]
-        return None
 
-    cdef get_paths(self, target=None):
+    cdef get_paths(self):
         cdef Square start_square
         cdef Node node
         ma = self.player.get_ma() - self.player.state.moves
@@ -114,15 +109,15 @@ cdef class Pathfinder:
             node = self._expand_stand_up(node)
             self.nodes[node.position.y][node.position.x] = node
         self.open_set.put((0, node))
-        self._expansion(target)
+        self._expansion()
         self._clear()
 
         while len(self.risky_sets) > 0:
             self._prepare_nodes()
-            self._expansion(target)
+            self._expansion()
             self._clear()
 
-        return self._collect_paths(target)
+        return self._collect_paths()
 
     cdef _get_pickup_target(self, to_pos):
         zones_to = self.tzones[to_pos.y][to_pos.x]
@@ -165,7 +160,7 @@ cdef class Pathfinder:
         target = Rules.agility_table[self.player.get_ag()] - modifiers
         return min(6, max(2, target))
 
-    def _expand(self, Node * node, target=None):
+    def _expand(self, Node * node):
         
         if node.block_dice is not None or node.handoff_roll is not None:
             return
@@ -366,26 +361,19 @@ cdef class Pathfinder:
                     self.nodes[node.position.y][node.position.x] = node
             del self.risky_sets[probs[-1]]
 
-    cdef _expansion(self, target=None):
+    cdef _expansion(self):
         cdef Node best_node
         while not self.open_set.empty():
             best_node = self.open_set.top()
-            self._expand(best_node, target)
+            self._expand(best_node)
 
-    cdef _collect_paths(self, target=None):
+    cdef _collect_paths(self):
         cdef Node* node
-        if type(target) == Square:
-            node = self.locked_nodes[target.y][target.x]
-            if node is not NULL:
-                return [self._collect_path(node)]
-            return []
 
         paths = []
         for y in range(self.game.arena.height):
             for x in range(self.game.arena.width):
                 if self.player.position.x == x and self.player.position.y == y:
-                    continue
-                if type(target) == int and not target == x:
                     continue
                 node = self.locked_nodes[y][x]
                 if node is not NULL:
