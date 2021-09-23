@@ -9,6 +9,13 @@ namespace node_ns {
     bool operator==(const Square& n1, const Square& n2){
         return n1.x == n2.x && n1.y == n2.y;
     }
+    Square operator+(const Square& n1, const Square& n2){
+        return Square(n1.x+n2.x, n1.y+n2.y);
+    }
+    Square operator-(const Square& n1, const Square& n2){
+        return Square(n1.x-n2.x, n1.y-n2.y);
+    }
+
 
     Node::Node() {}
 
