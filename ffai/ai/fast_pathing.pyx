@@ -378,9 +378,9 @@ cdef class Pathfinder:
         a_moves_left = a.get().moves_left + a.get().gfis_left
         b_moves_left = b.get().moves_left + b.get().gfis_left
         # TODO: Write out as above
-        if a.get().prob > b.get().prob and (a.get().foul_roll is None or a.get().foul_roll <= b.get().foul_roll) and (a.get().block_dice is None or a.get().block_dice >= b.get().block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.get().euclidean_distance < b.get().euclidean_distance)):
+        if a.get().prob > b.get().prob and (a.get().foul_roll==0 or a.get().foul_roll <= b.get().foul_roll) and (a.get().block_dice==0 or a.get().block_dice >= b.get().block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.get().euclidean_distance < b.get().euclidean_distance)):
             return a
-        if b.get().prob > a.get().prob and (b.get().foul_roll is None or b.get().foul_roll <= a.get().foul_roll) and (b.get().block_dice is None or b.get().block_dice >= a.get().block_dice) and (b_moves_left > a_moves_left or (b_moves_left == a_moves_left and b.get().euclidean_distance < a.get().euclidean_distance)):
+        if b.get().prob > a.get().prob and (b.get().foul_roll==0 or b.get().foul_roll <= a.get().foul_roll) and (b.get().block_dice==0 or b.get().block_dice >= a.get().block_dice) and (b_moves_left > a_moves_left or (b_moves_left == a_moves_left and b.get().euclidean_distance < a.get().euclidean_distance)):
             return b
         return NodePtr()
 

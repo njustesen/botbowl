@@ -14,11 +14,13 @@ game.put(opp_player, Square(3,4))
 
 
 #pather = slow_pf.Pathfinder(game, player)
-pather = pf.Pathfinder(game, player)
-paths = pather.get_paths()
+
 
 slow_pather = slow_pf.Pathfinder(game, player)
 slow_paths = slow_pather.get_paths()
+
+pather = pf.Pathfinder(game, player)
+paths = pather.get_paths()
 
 def create_string(pathss):
     s = []
