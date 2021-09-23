@@ -34,8 +34,8 @@ namespace node_ns {
 
     class Node {
         public:
-            node_ptr parent;
-            Square position;
+            const node_ptr parent;
+            const Square position;
             int moves_left, gfis_left, foul_roll, handoff_roll, block_dice;
             double euclidean_distance, prob;
             std::vector<int> rolls;
