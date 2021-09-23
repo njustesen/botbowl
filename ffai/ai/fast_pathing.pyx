@@ -206,7 +206,6 @@ cdef class Pathfinder:
             rounded_p = round(next_node.get().prob, 6)
             if rounded_p < self.current_prob:
                 self._add_risky_move(rounded_p, next_node)
-                pass
             else:
                 self.open_set.push(next_node)
                 self.nodes[next_node.get().position.y][next_node.get().position.x] = next_node
@@ -326,9 +325,7 @@ cdef class Pathfinder:
 
 
     cdef void _add_risky_move(self, double prob, NodePtr node):
-        if self.risky_sets.find(prob) != self.risky_sets.end(): #todo: this if-statement can probably be removed.
-            self.risky_sets[prob] = vector[NodePtr]()
-        self.risky_sets[prob].push_back(node)
+        self.risky_sets[prob].push_back(node) #if 'prob' is not a key, it's init with default constructor
 
 
     cdef NodePtr _expand_stand_up(self, NodePtr node):
@@ -432,6 +429,7 @@ cdef class Pathfinder:
         cdef NodePtr best_node
         while not self.open_set.empty():
             best_node = self.open_set.top()
+            self.open_set.pop()
             self._expand(best_node)
 
 
