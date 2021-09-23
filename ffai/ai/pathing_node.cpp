@@ -22,7 +22,8 @@ namespace node_ns {
     //root node constructor
     Node::Node(Square position, int moves_left, int gfis_left, double euclidean_distance, bool trr, bool dodge, bool sure_feet, bool sure_hands)
          : position(position), moves_left(moves_left), gfis_left(gfis_left),
-         euclidean_distance(euclidean_distance)
+         euclidean_distance(euclidean_distance),
+         foul_roll(0), handoff_roll(0), block_dice(0)
     {
         // self.prob = parent.prob if parent is not None else 1
         // self.rr_states = rr_states if rr_states is not None else parent.rr_states
@@ -46,7 +47,8 @@ namespace node_ns {
     // non-root node with block dice
     Node::Node(node_ptr parent, Square position, int moves_left, int gfis_left, double euclidean_distance, int block_dice)
         : parent(parent), position(position), moves_left(moves_left), gfis_left(gfis_left),
-         euclidean_distance(euclidean_distance), block_dice(block_dice)
+         euclidean_distance(euclidean_distance), block_dice(block_dice),
+         foul_roll(0), handoff_roll(0)
     {
         prob = parent->prob;
         rr_states = parent->rr_states;
@@ -55,7 +57,8 @@ namespace node_ns {
     // non-root node without block dice
     Node::Node(node_ptr parent, Square position, int moves_left, int gfis_left, double euclidean_distance)
         : parent(parent), position(position), moves_left(moves_left), gfis_left(gfis_left),
-         euclidean_distance(euclidean_distance)
+         euclidean_distance(euclidean_distance),
+         foul_roll(0), handoff_roll(0), block_dice(0)
     {
         prob = parent->prob;
         rr_states = parent->rr_states;
