@@ -16,7 +16,7 @@ from cython.operator import dereference, postincrement
 
 from libcpp.memory cimport shared_ptr
 
-from pathing_node cimport Node, Square
+from .pathing_node cimport Node, Square
 ctypedef shared_ptr[Node] NodePtr
 
 
@@ -64,6 +64,7 @@ cdef class Pathfinder:
     cdef int ma
     cdef int gfis
     cdef int player_ag
+    cdef int pitch_width, pitch_height
     cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
     cdef NodePtr nodes[17][28] # initalized as empty pointers
     cdef int tzones[17][28] # init as zero
@@ -73,8 +74,10 @@ cdef class Pathfinder:
 
     def __init__(self, game, player, trr=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
-        self.player = player
-        # todo, assert no skills that aren't handled: stunty, twitchy, etc...
+        self.pitch_width = self.game.arena.width - 1
+        self.pitch_height = game.arena.height -1
+
+        self.player = player # todo, assert no skills that aren't handled: stunty, twitchy, etc...
 
         self.trr = trr
         self.can_block = can_block
@@ -143,6 +146,7 @@ cdef class Pathfinder:
         target = agi_table[self.player_ag] - modifiers
         return min(6, max(2, target))
 
+
     cdef int _get_handoff_target(self, object catcher):
         cdef int modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
         cdef int target = agi_table[catcher.get_ag()] - modifiers
@@ -163,7 +167,6 @@ cdef class Pathfinder:
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
             return
 
-
         if node.get().moves_left + node.get().gfis_left == 0:
             if not self.can_handoff:
                 return
@@ -181,35 +184,29 @@ cdef class Pathfinder:
                 self.open_set.push(next_node)
                 self.nodes[next_node.get().position.y][next_node.get().position.x] = next_node
 
-
-
     cdef NodePtr _expand_node(self, NodePtr node, Square direction, bint out_of_moves=False):
         cdef:
             NodePtr np
             double euclidean_distance
-
+            Square to_pos
 
         euclidean_distance = node.get().euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.get().euclidean_distance + 1.41421
-        to_pos = self.game.state.pitch.squares[node.get().position.y + direction.y][node.get().position.x + direction.x]
-        if not (1 <= to_pos.x < self.game.arena.width - 1 and 1 <= to_pos.y < self.game.arena.height - 1):
+        to_pos = node.get().position + direction #self.game.state.pitch.squares[node.get().position.y + direction.y][node.get().position.x + direction.x]
+        if self.out_of_bounds(to_pos):
             return NodePtr()
-        player_at = self.game.get_player_at(to_pos)
+        player_at = self.game.get_player_at( to_ffai_Square( to_pos))
 
-
-
-       # if player_at is not None:
-       #     if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
-       #         return self._expand_handoff_node(node, to_pos)
-       #     elif player_at.team != self.player.team and self.can_block and player_at.state.up:
-       #         return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
-       #     elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
-       #         return self._expand_foul_node(node, to_pos, player_at)
-       #     return NodePtr()
+        if player_at is not None:
+            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
+                return self._expand_handoff_node(node, to_pos)
+            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
+                return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
+            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
+                return self._expand_foul_node(node, to_pos, player_at)
+            return NodePtr()
         if not out_of_moves:
-            return self._expand_move_node(node, euclidean_distance, from_ffai_Square(to_pos))
+            return self._expand_move_node(node, euclidean_distance, to_pos)
         return NodePtr()
-
-
 
     cdef NodePtr _expand_move_node(self, NodePtr node, double euclidean_distance, Square to_pos):
         cdef:
@@ -232,89 +229,96 @@ cdef class Pathfinder:
                 return NodePtr()
         next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
         if gfi:
-            node.get().apply_gfi()
-        if self.tzones[node.get().position.y][node.get().position.x] > 0:
-            target = self._get_dodge_target(node.get().position, to_pos)
-            node.get().apply_dodge(target)
+            next_node.get().apply_gfi()
+        if self.tzones[next_node.get().position.y][next_node.get().position.x] > 0:
+            target = self._get_dodge_target(next_node.get().position, to_pos)
+            next_node.get().apply_dodge(target)
         if from_ffai_Square(self.game.get_ball_position()) == to_pos:
             target = self._get_pickup_target(to_pos)
-            node.get().apply_pickup(target)
+            next_node.get().apply_pickup(target)
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
             return NodePtr()
         return next_node
 
-    """
-
-    cdef NodePtr _expand_foul_node(self, NodePtr node, to_pos, player_at):
+    cdef NodePtr _expand_foul_node(self, NodePtr node, Square to_pos, object player_at):
         cdef:
             NodePtr best_node, best_before, next_node
             int target, assists_from, assists_to
+
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        assists_from, assists_to = self.game.num_assists_at(self.player, player_at, node.position, foul=True)
+        assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_ffai_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-        next_node = Node(node, to_pos, 0, 0, node.euclidean_distance)
+        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance) )
         node.get().apply_foul(target)
-        if best_node is not None and self._best(next_node, best_node) == best_node:
-            return None
-        if best_before is not None and self._dominant(next_node, best_before) == best_before:
-            return None
+        if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
+            return NodePtr()
+        if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
+            return NodePtr()
         return next_node
 
-    cdef NodePtr _expand_handoff_node(self, NodePtr node, to_pos):
+    cdef NodePtr _expand_handoff_node(self, NodePtr node, Square to_pos):
         cdef:
             NodePtr best_node, best_before, next_node
             int target
+            object player_at
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        player_at = self.game.get_player_at(to_pos)
-        next_node = Node(node, to_pos, 0, 0, node.euclidean_distance)
+        player_at = self.game.get_player_at( to_ffai_Square(to_pos))
+
+        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
         target = self._get_handoff_target(player_at)
-        node.get().apply_handoff(target)
-        if best_node is not None and self._best(next_node, best_node) == best_node:
-            return None
-        if best_before is not None and self._dominant(next_node, best_before) == best_before:
-            return None
+        next_node.get().apply_handoff(target)
+        if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
+            return NodePtr()
+        if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
+            return NodePtr()
         return next_node
 
-    cdef NodePtr _expand_block_node(self, NodePtr node, euclidean_distance, to_pos, player_at):
+    cdef NodePtr _expand_block_node(self, NodePtr node, double euclidean_distance, Square to_pos, object player_at):
+        cdef:
+            NodePtr best_node, best_before, next_node
+            int target, moves_left_next, gfis_left_next, block_dice
+            bint gfi
+
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at, position=node.position,
-                                                 blitz=True)
-        gfi = node.moves_left == 0
-        moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
-        gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
-        next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice=block_dice)
+        block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at,
+                                                 position= to_ffai_Square( node.get().position), blitz=True)
+        gfi = node.get().moves_left == 0
+        moves_left_next = node.get().moves_left - 1 if not gfi else node.get().moves_left
+        gfis_left_next = node.get().gfis_left - 1 if gfi else node.get().gfis_left
+        next_node = NodePtr( new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice))
         if gfi:
             node.get().apply_gfi()
-        if best_node is not None and self._best(next_node, best_node) == best_node:
-            return None
-        if best_before is not None and self._dominant(next_node, best_before) == best_before:
-            return None
+        if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
+            return NodePtr()
+        if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
+            return NodePtr()
         return next_node
 
-    """
 
     cdef void _add_risky_move(self, double prob, NodePtr node):
         if self.risky_sets.find(prob) != self.risky_sets.end(): #todo: this if-statement can probably be removed.
             self.risky_sets[prob] = vector[NodePtr]()
         self.risky_sets[prob].push_back(node)
 
-    """
 
     cdef NodePtr _expand_stand_up(self, NodePtr node):
+        cdef:
+            int target
+            NodePtr next_node
+
         if self.player.has_skill(table.Skill.JUMP_UP):
-            return Node(node, self.player.position, self.ma, self.gfis, euclidean_distance=0)
+            return NodePtr (new Node(node, from_ffai_Square(self.player.position), self.ma, self.gfis, 0))
         elif self.ma < 3:
             target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
-            next_node = Node(node, from_ffai_Square(self.player.position), 0, self.gfis, euclidean_distance=0)
+            next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), 0, self.gfis, 0))
             node.get().apply_stand_up(target)
             return next_node
-        next_node = Node(node, self.player.position, self.ma - 3, self.gfis, euclidean_distance=0)
+        next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), self.ma - 3, self.gfis, 0))
         return next_node
 
-    """
 
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
         cdef:
@@ -356,45 +360,59 @@ cdef class Pathfinder:
             return b
         return NodePtr()
 
-    """
+    cdef bint out_of_bounds(self, Square sq):
+        return not (1 <= sq.x < self.pitch_width and 1 <= sq.y < self.pitch_height)
 
-    cdef _clear(self):
-        cdef NodePtr node
-        cdef NodePtr before
-        for y in range(self.game.arena.height):
-            for x in range(self.game.arena.width):
+
+    cdef void _clear(self):
+        cdef:
+            NodePtr node, before
+
+        for y in range(17):
+            for x in range(28):
                 node = self.nodes[y][x]
-                if node is not NULL:
+                if node.use_count()>0:
                     before = self.locked_nodes[y][x]
-                    if before is NULL or self._best(node, before) == node:
+                    if before.use_count() == 0 or self._best(node, before) == node:
                         self.locked_nodes[y][x] = node
-                    self.nodes[y][x] = NULL
+                    self.nodes[y][x] = NodePtr()
         self.open_set = priority_queue[NodePtr]()
 
-    cdef _prepare_nodes(self):
-        cdef NodePtr node
-        cdef NodePtr existing_node
-        cdef NodePtr best_before
 
-        if len(self.risky_sets) > 0:
-            probs = sorted(self.risky_sets.keys())
-            self.current_prob = probs[-1]
-            for node in self.risky_sets[probs[-1]]:
-                best_before = self.locked_nodes[node.position.y][node.position.x]
-                if best_before is not NULL and self._dominant(best_before, node) == best_before:
+
+    cdef void _prepare_nodes(self):
+        cdef:
+            NodePtr node, existing_node, best_before
+
+        if not self.risky_sets.empty():
+
+            # get highest probability in risky_sets
+            self.current_prob = dereference(self.risky_sets.rbegin()).first
+
+            for node in self.risky_sets[self.current_prob]:
+                best_before = self.locked_nodes[node.get().position.y][node.get().position.x]
+
+                if best_before.use_count()>0 and self._dominant(best_before, node) == best_before:
                     continue
-                existing_node = self.nodes[node.position.y][node.position.x]
-                if existing_node is NULL or self._best(existing_node, node) == node:
-                    self.open_set.push(node)
-                    self.nodes[node.position.y][node.position.x] = node
-            del self.risky_sets[probs[-1]]
+                existing_node = self.nodes[node.get().position.y][node.get().position.x]
 
-    cdef _expansion(self):
-        cdef Node best_node
+                if existing_node.use_count() == 0 or self._best(existing_node, node) == node:
+                    self.open_set.push(node)
+                    self.nodes[node.get().position.y][node.get().position.x] = node
+            self.risky_sets.erase(self.current_prob)
+
+
+
+
+
+    cdef void _expansion(self):
+        cdef NodePtr best_node
         while not self.open_set.empty():
             best_node = self.open_set.top()
             self._expand(best_node)
 
+
+"""
     cdef object _collect_paths(self):
         cdef NodePtr node
 
