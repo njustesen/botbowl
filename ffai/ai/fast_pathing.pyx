@@ -7,6 +7,8 @@ from libcpp.queue cimport priority_queue
 
 import ffai.core.table as table
 import ffai.core.model as model
+from ffai.core.forward_model import Reversible
+from ffai.core.util import compare_object
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
@@ -54,6 +56,30 @@ agi_table[9] = 1
 agi_table[10] = 1
 
 
+class Path(Reversible):
+
+    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
+        super().__init__()
+        self.steps = steps
+        self.prob = prob
+        self.rolls = rolls
+        self.block_dice = block_dice
+        self.handoff_roll = handoff_roll
+        self.foul_roll = foul_roll
+
+    def __len__(self) -> int:
+        return len(self.steps)
+
+    def get_last_step(self) -> 'Square':
+        return self.steps[-1]
+
+    def is_empty(self) -> bool:
+        return len(self) == 0
+
+    def compare(self, other, path=""):
+        return compare_object(self, other, path)
+
+
 cdef class Pathfinder:
     cdef public object game
     cdef public object player
@@ -97,20 +123,21 @@ cdef class Pathfinder:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
-    """
 
-    cdef get_paths(self):
-        cdef Square start_square
-        cdef NodePtr node
-        cdef int ma = self.player.get_ma() - self.player.state.moves
+    cpdef object get_paths(self):
+        cdef:
+            Square start_square
+            NodePtr node
+            int ma, gfis_used
+            bint can_dodge, can_sure_feet, can_sure_hands
 
-        cdef int gfis_used = 0 if ma >= 0 else -ma
+        ma = self.player.get_ma() - self.player.state.moves
+        gfis_used = 0 if ma >= 0 else -ma
 
         self.ma = max(0, ma)
         self.gfis = 2-gfis_used #3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
 
-        start_square.x = self.player.position.x
-        start_square.y = self.player.position.y
+        start_square = from_ffai_Square(self.player.position)
 
         if self.ma + self.gfis <= 0:
             return []
@@ -120,22 +147,22 @@ cdef class Pathfinder:
         can_sure_hands = self.player.has_skill(table.Skill.SURE_HANDS)
 
         # Create root node
-        node = NodePtr(new Node(&start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands))
+        node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands))
 
         if not self.player.state.up:
             node = self._expand_stand_up(node)
-            self.nodes[node.position.y][node.position.x] = node
+            self.nodes[node.get().position.y][node.get().position.x] = node
         self.open_set.push(node)
         self._expansion()
         self._clear()
 
-        while len(self.risky_sets) > 0:
+        while not self.risky_sets.empty():
             self._prepare_nodes()
             self._expansion()
             self._clear()
 
         return self._collect_paths()
-    """
+
 
     cdef int _get_pickup_target(self, Square to_pos):
         cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
@@ -401,10 +428,6 @@ cdef class Pathfinder:
                     self.nodes[node.get().position.y][node.get().position.x] = node
             self.risky_sets.erase(self.current_prob)
 
-
-
-
-
     cdef void _expansion(self):
         cdef NodePtr best_node
         while not self.open_set.empty():
@@ -412,36 +435,39 @@ cdef class Pathfinder:
             self._expand(best_node)
 
 
-"""
     cdef object _collect_paths(self):
-        cdef NodePtr node
-
+        cdef:
+            NodePtr node
+            list paths
         paths = []
-        for y in range(self.game.arena.height):
-            for x in range(self.game.arena.width):
+        for y in range(17):
+            for x in range(28):
                 if self.player.position.x == x and self.player.position.y == y:
                     continue
                 node = self.locked_nodes[y][x]
-                if node is not NULL:
+                if node.use_count()> 0:
                     paths.append(self._collect_path(node))
         return paths
 
     cdef object _collect_path(self, NodePtr node):
-        prob = node.prob
-        steps = [ ffai_Square(node.position) ]
-        rolls = [node.rolls]
-        block_dice = node.block_dice
-        foul_roll = node.foul_roll
-        handoff_roll = node.handoff_roll
-        node = node.parent
-        while node is not NULL:
-            steps.append( ffai_Square(node.position) )
-            rolls.append(node.rolls)
-            node = node.parent
+        cdef:
+            double prob
+            list steps, rolls
+            int block_dice, foul_roll, handoff_roll
+
+
+        prob = node.get().prob
+        steps = [ to_ffai_Square(node.get().position) ]
+        rolls = [node.get().rolls]
+        block_dice = node.get().block_dice
+        foul_roll = node.get().foul_roll
+        handoff_roll = node.get().handoff_roll
+        node = node.get().parent
+        while node.use_count() > 0:
+            steps.append( to_ffai_Square(node.get().position) )
+            rolls.append(node.get().rolls)
+            node = node.get().parent
         steps = list(reversed(steps))[1:]
         rolls = list(reversed(rolls))[1:]
         return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
-"""
-
-#cpdef get_all_paths(...)

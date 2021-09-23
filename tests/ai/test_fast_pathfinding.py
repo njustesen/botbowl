@@ -14,5 +14,9 @@ def test_all_paths():
     position = Square(1, 1)
     game.put(player, position)
     pather = pf.Pathfinder(game, player)
+    print("starting get_paths()")
+    paths = pather.get_paths()
+
+    print("finished get_paths()")
 
     print("hello!")
