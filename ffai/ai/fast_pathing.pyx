@@ -1,10 +1,5 @@
 # distutils: language=c++
 
-import cython
-cimport cython
-
-from libcpp.queue cimport priority_queue
-
 import ffai.core.table as table
 import ffai.core.model as model
 from ffai.core.forward_model import Reversible
@@ -12,17 +7,15 @@ from ffai.core.util import compare_object
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
-
-#from libcpp.functional.less cimport less
-from cython.operator import dereference, postincrement
-
+from libcpp.queue cimport priority_queue
 from libcpp.memory cimport shared_ptr
+
+import cython
+cimport cython
+from cython.operator import dereference
 
 from .pathing_node cimport Node, Square
 ctypedef shared_ptr[Node] NodePtr
-
-
-# import Path class? Because reversable
 
 
 cdef object to_ffai_Square(Square sq):
@@ -30,7 +23,6 @@ cdef object to_ffai_Square(Square sq):
 
 cdef Square from_ffai_Square(object sq):
     return Square(sq.x, sq.y)
-
 
 cdef Square DIRECTIONS[8]
 DIRECTIONS[0].x = -1; DIRECTIONS[0].y = -1
@@ -81,22 +73,15 @@ class Path(Reversible):
 
 
 cdef class Pathfinder:
-    cdef public object game
-    cdef public object player
-    cdef bint trr
-    cdef bint can_block
-    cdef bint can_handoff
-    cdef bint can_foul
-    cdef int ma
-    cdef int gfis
-    cdef int player_ag
-    cdef int pitch_width, pitch_height
+    cdef public object game, player
+    cdef bint trr, can_block, can_handoff, can_foul
+    cdef int ma, gfis, player_ag, pitch_width, pitch_height
+    cdef double current_prob
+    cdef int tzones[17][28] # init as zero
     cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
     cdef NodePtr nodes[17][28] # initalized as empty pointers
-    cdef int tzones[17][28] # init as zero
-    cdef double current_prob
     cdef priority_queue[NodePtr] open_set
-    cdef mapcpp[double, vector[NodePtr]] risky_sets #dict
+    cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
     def __init__(self, game, player, trr=False, can_block=False, can_handoff=False, can_foul=False):
         self.game = game
@@ -113,11 +98,7 @@ cdef class Pathfinder:
         self.player_ag = self.player.get_ag()
         self.gfis = 2
         self.current_prob = 1.0
-        
-        # Doesn't need initialization? 
-        #self.open_set = priority_queue[Node]() # self.open_set = PriorityQueue()
-        #self.risky_sets = map[double, vector[NodePtr]]()  # self.risky_sets = {}
-        
+                
         for p in game.get_players_on_pitch():
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
@@ -198,7 +179,7 @@ cdef class Pathfinder:
             next_node = self._expand_node(node, direction, out_of_moves=out_of_moves)
             if next_node.use_count() == 0:
                 continue
-            rounded_p = round(next_node.get().prob, 6)
+            rounded_p = round(next_node.get().prob, 6) #todo: use c library for round
             if rounded_p < self.current_prob:
                 self.risky_sets[prob].push_back(node) #add risky move. if 'prob' is not a key, it's inited with default constructor 
             else:
@@ -213,7 +194,7 @@ cdef class Pathfinder:
 
         euclidean_distance = node.get().euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.get().euclidean_distance + 1.41421
         to_pos = node.get().position + direction #self.game.state.pitch.squares[node.get().position.y + direction.y][node.get().position.x + direction.x]
-        if self.out_of_bounds(to_pos):
+        if not (1 <= to_pos.x < self.pitch_width and 1 <= to_pos.y < self.pitch_height): 
             return NodePtr()
         player_at = self.game.get_player_at( to_ffai_Square( to_pos))
 
@@ -373,9 +354,6 @@ cdef class Pathfinder:
             return b
         return NodePtr()
 
-    cdef bint out_of_bounds(self, Square sq):
-        return not (1 <= sq.x < self.pitch_width and 1 <= sq.y < self.pitch_height)
-
     cdef void _clear(self):
         cdef NodePtr node, before
 
@@ -434,9 +412,9 @@ cdef class Pathfinder:
         prob = node.get().prob
         steps = [ to_ffai_Square(node.get().position) ]
         rolls = [node.get().rolls]
-        block_dice = node.get().block_dice
-        foul_roll = node.get().foul_roll
-        handoff_roll = node.get().handoff_roll
+        block_dice = node.get().block_dice if node.get().block_dice != 0 else None 
+        foul_roll = node.get().foul_roll if node.get().foul_roll != 0 else None 
+        handoff_roll = node.get().handoff_roll if node.get().handoff_roll != 0 else None 
         node = node.get().parent
         while node.use_count() > 0:
             steps.append( to_ffai_Square(node.get().position) )
