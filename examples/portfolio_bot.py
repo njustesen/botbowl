@@ -77,6 +77,51 @@ class StandUpScript(Script):
         return actions
 
 
+class MarkBallCarrier(Script):
+
+    def plan(self, game: Game, team: Team) -> List[Action]:
+        actions = []
+        ball_carrier = game.get_ball_carrier()
+        if ball_carrier is not None and ball_carrier.team != team:
+            players = self.unmarked_players(game, team)
+            players = sorted(players, key=lambda x: self._marker_value(x), reverse=True)
+            for player in players:
+                paths = pf.get_all_paths(game, player)
+                for path in paths:
+                    if path.prob == 1 and path.steps[-1].distance(ball_carrier.position) == 1:
+                        actions.append(Action(ActionType.START_MOVE, player=player))
+                        actions.append(Action(ActionType.MOVE, position=path.steps[-1]))
+        return actions
+
+    def _marker_value(self, player):
+        value = 0
+        if player.has_skill(Skill.BLOCK):
+            value -= 1
+        return value
+
+
+class BlitzBallCarrier(Script):
+
+    def plan(self, game: Game, team: Team) -> List[Action]:
+        actions = []
+        ball_carrier = game.get_ball_carrier()
+        if ball_carrier is not None and ball_carrier.team != team:
+            players = self.unmarked_players(game, team)
+            players = sorted(players, key=lambda x: self._blitzer_value(x), reverse=True)
+            for player in players:
+                path = pf.get_safest_path(game, player, ball_carrier.position, blitz=True)
+                if path is not None and path.prob == 1 and path.steps[-1].distance(ball_carrier.position) == 1:
+                    actions.append(Action(ActionType.START_MOVE, player=player))
+                    actions.append(Action(ActionType.MOVE, position=path.steps[-1]))
+        return actions
+
+    def _blitzer_value(self, player):
+        value = player.get_st() + player.get_av() / 3
+        if player.has_skill(Skill.BLOCK):
+            value -= 1
+        return value
+
+
 class TouchdownScript(Script):
 
     def plan(self, game: Game, team: Team) -> List[Action]:
@@ -442,6 +487,8 @@ class PortfolioBot(ProcBot):
             AssistScript(),
             AssistScript(defensive=True),
             SafeBlockScript(),
+            MarkBallCarrier(),
+            BlitzBallCarrier(),
             BlitzScript(),
             HandoffTouchdownScript(),
             EndzoneScript(),
@@ -861,7 +908,7 @@ if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
     config = ffai.load_config("bot-bowl-iii")
-    #config = ffai.load_config("gym-1")
+    #config = ffai.load_config("gym-3")
     config.competition_mode = False
     config.pathfinding_enabled = True
     # config = get_config("gym-7.json")
