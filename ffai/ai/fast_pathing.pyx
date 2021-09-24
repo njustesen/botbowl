@@ -123,7 +123,6 @@ cdef class Pathfinder:
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
 
-
     cpdef object get_paths(self):
         cdef:
             Square start_square
@@ -163,7 +162,6 @@ cdef class Pathfinder:
 
         return self._collect_paths()
 
-
     cdef int _get_pickup_target(self, Square to_pos):
         cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
         cdef int modifiers = 1 - int(zones_to)
@@ -172,7 +170,6 @@ cdef class Pathfinder:
             modifiers -= 1
         target = agi_table[self.player_ag] - modifiers
         return min(6, max(2, target))
-
 
     cdef int _get_handoff_target(self, object catcher):
         cdef int modifiers = self.game.get_catch_modifiers(catcher, handoff=True)
@@ -184,8 +181,6 @@ cdef class Pathfinder:
         cdef int target = agi_table[self.player_ag] - modifiers
         return min(6, max(2, target))
 
-
-
     cdef void _expand(self, NodePtr node):
         cdef bint out_of_moves = False
         cdef NodePtr next_node
@@ -195,7 +190,7 @@ cdef class Pathfinder:
             return
 
         if node.get().moves_left + node.get().gfis_left == 0:
-            if not self.can_handoff:
+            if not self.can_handoff and not self.can_foul:
                 return
             out_of_moves = True
 
@@ -205,7 +200,7 @@ cdef class Pathfinder:
                 continue
             rounded_p = round(next_node.get().prob, 6)
             if rounded_p < self.current_prob:
-                self._add_risky_move(rounded_p, next_node)
+                self.risky_sets[prob].push_back(node) #add risky move. if 'prob' is not a key, it's inited with default constructor 
             else:
                 self.open_set.push(next_node)
                 self.nodes[next_node.get().position.y][next_node.get().position.x] = next_node
@@ -323,11 +318,6 @@ cdef class Pathfinder:
             return NodePtr()
         return next_node
 
-
-    cdef void _add_risky_move(self, double prob, NodePtr node):
-        self.risky_sets[prob].push_back(node) #if 'prob' is not a key, it's init with default constructor
-
-
     cdef NodePtr _expand_stand_up(self, NodePtr node):
         cdef:
             int target
@@ -342,7 +332,6 @@ cdef class Pathfinder:
             return next_node
         next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), self.ma - 3, self.gfis, 0))
         return next_node
-
 
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
         cdef:
@@ -387,10 +376,8 @@ cdef class Pathfinder:
     cdef bint out_of_bounds(self, Square sq):
         return not (1 <= sq.x < self.pitch_width and 1 <= sq.y < self.pitch_height)
 
-
     cdef void _clear(self):
-        cdef:
-            NodePtr node, before
+        cdef NodePtr node, before
 
         for y in range(17):
             for x in range(28):
@@ -402,24 +389,16 @@ cdef class Pathfinder:
                     self.nodes[y][x] = NodePtr()
         self.open_set = priority_queue[NodePtr]()
 
-
-
     cdef void _prepare_nodes(self):
-        cdef:
-            NodePtr node, existing_node, best_before
+        cdef NodePtr node, existing_node, best_before
 
         if not self.risky_sets.empty():
-
-            # get highest probability in risky_sets
-            self.current_prob = dereference(self.risky_sets.rbegin()).first
-
+            self.current_prob = dereference(self.risky_sets.rbegin()).first # get highest probability in risky_sets
             for node in self.risky_sets[self.current_prob]:
                 best_before = self.locked_nodes[node.get().position.y][node.get().position.x]
-
                 if best_before.use_count()>0 and self._dominant(best_before, node) == best_before:
                     continue
                 existing_node = self.nodes[node.get().position.y][node.get().position.x]
-
                 if existing_node.use_count() == 0 or self._best(existing_node, node) == node:
                     self.open_set.push(node)
                     self.nodes[node.get().position.y][node.get().position.x] = node
@@ -431,7 +410,6 @@ cdef class Pathfinder:
             best_node = self.open_set.top()
             self.open_set.pop()
             self._expand(best_node)
-
 
     cdef object _collect_paths(self):
         cdef:
@@ -452,7 +430,6 @@ cdef class Pathfinder:
             double prob
             list steps, rolls
             int block_dice, foul_roll, handoff_roll
-
 
         prob = node.get().prob
         steps = [ to_ffai_Square(node.get().position) ]
