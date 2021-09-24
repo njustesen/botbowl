@@ -1,6 +1,8 @@
 ![Bot Bowl III](img/botbowl-iii.png?raw=true "Bot Bowl III")
 
-Bot Bowl III is the third AI competition in Blood Bowl and is set to happen (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). Submit your bot by **July 15** to participate in the competition and have chance at winning one of the prestigious prizes.
+Bot Bowl III was the third AI competition in Blood Bowl and and happened (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). 
+
+**See the results** further down on this page or watch [the announcement](https://youtu.be/A_7tgr3r5IA) from the Conference of Games.
 
 # Format
 Bot Bowl III will have the same format as last year while the framework offers a few new features that will empower bot developers. 
@@ -64,9 +66,32 @@ It works by tracking changes to non-immutable properties in the game state. Such
 
 Check out our tutorials on [how to use the forward model](forward-model.md) and [how to implement a search-based bot](search-based.md).
 
-# Get Started
-If you are completely new to bot development for Blood Bowl, there are plenty of detailed [tutorials](tutorials.md) to get started.
-Please also join the [Fantasy Football AI Discord server](https://discord.gg/MTXMuae) for news, discussions, and assistance if you get stuck.
+# Participants
 
-# Submit to Bot Bowl III
-Submission details can be seen [here](submit.md).
+The following bots were submitted to Bot Bowl III.
+
+## Dryad
+This bot uses a forward model and monte carlo tree search with a simple heuristic reward function to select actions. This bot is still work in progress and a proof of concept. It currently shows promising results on small games with 3 to 5 players, but more work is needed to make it effective on the full game. 
+
+## GrodBot
+A scripted bot that won Bot Bowl I and became 2nd at Bot Bowl II.
+
+## Grootbot
+A deep reinforcement learning bot trained using the tutorials for the 1v1 variant of Blood Bowl. This bot was, unfourtunately, not able to compete in Bot Bowl III as it remains incompatable with the 11v11 varaint that is being used. 
+
+## Goteboy
+Goteboy has been trained in the [SEED RL framework](https://github.com/google-research/seed_rl) using the [R2D2](https://openreview.net/pdf?id=r1lyTjAqYX) training algorithm with exception for the recurrent layer to reduce the memory requirments. Goteboy’s pre-training consists of a progressive curriculum learning similar to that of Gotebot that won the ML prize at Bot Bowl II. This bot is still work in progress but will hopefully return stronger next year.
+
+## MimicBot
+A deep-learning based actor-critic model with channel-wise attention that was trained by first imitating a scriptes bot and then improved with reinforcement-learning. Some scripted rules were added ontop of the neural network.
+
+# Results
+
+Congratulations to MimicBot by Nicola Pezzotti for winning Bot Bowl III and the Machine Learning prize!
+
+The second place goes to GrodBot by Peter Moore, and the 3rd Place to Dryad by Jonas Busk.
+
+![Bot Bowl III Results](img/bot-bowl-iii-results.png?raw=true "Bot Bowl III Results")
+
+The replays can be downloaded [here](https://drive.google.com/file/d/1Oz7nrBRTCwHIiqJDYF7m6j9kvMdpdSDl/view?usp=sharing) and are compatible with [FFAI v0.3.1](https://github.com/njustesen/ffai/releases/tag/v0.3.1).
+

@@ -21,7 +21,6 @@ class Game:
         self.game_id = game_id
         self.home_agent = home_agent
         self.away_agent = away_agent
-        self.actor = None
         self.arena = load_arena(config.arena) if arena is None else arena
         self.config = config
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
@@ -53,7 +52,8 @@ class Game:
             'can_away_team_use_reroll': self.can_use_reroll(self.state.away_team),
             'actor_id': self.actor.agent_id if self.actor is not None else None,
             'time_limits': self.config.time_limits.to_json(),
-            'active_other_player_id': self.get_other_active_player_id()
+            'active_other_player_id': self.get_other_active_player_id(),
+            'rounds': self.config.rounds,
         }
 
     def enable_forward_model(self):
@@ -80,6 +80,13 @@ class Game:
         assert self.trajectory.enabled
         self.trajectory.revert(to_step)
 
+    @property
+    def actor(self):
+        if len(self.state.available_actions) > 0:
+            return self.get_team_agent(self.state.available_actions[0].team)
+        else:
+            return None
+
     def init(self):
         """
         Initialized the Game. The START_GAME action must still be called after this if humans are in the game.
@@ -87,12 +94,8 @@ class Game:
         EndGame(self)
         Pregame(self)
         if not self.away_agent.human:
-            self.actor = self.away_agent
             self.away_agent.new_game(self, self.state.away_team)
-            self.actor = None
         if not self.home_agent.human:
-            self.actor = self.home_agent
-            self.actor = None
             self.home_agent.new_game(self, self.state.home_team)
         self.set_available_actions()
         # Record state
@@ -558,12 +561,6 @@ class Game:
         list.
         """
         self.state.available_actions = self.state.stack.peek().available_actions()
-        self.actor = None
-        if len(self.state.available_actions) > 0:
-            if self.state.available_actions[0].team == self.state.home_team:
-                self.actor = self.home_agent
-            elif self.state.available_actions[0].team == self.state.away_team:
-                self.actor = self.away_agent
  
     def report(self, outcome):
         """
@@ -1464,8 +1461,6 @@ class Game:
         Replaces the home agent safely.
         :param agent:
         """
-        if self.actor.agent_id == self.home_agent.agent_id:
-            self.actor = agent
         self.home_agent = agent
 
     def replace_away_agent(self, agent):
@@ -1473,8 +1468,6 @@ class Game:
         Replaces the away agent safely.
         :param agent:
         """
-        if self.actor.agent_id == self.away_agent.agent_id:
-            self.actor = agent
         self.away_agent = agent
 
     def has_report_of_type(self, outcome_type, last=None):
