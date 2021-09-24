@@ -48,6 +48,9 @@ class Node:
     SURE_FEET = 2
     SURE_HANDS = 3
 
+    def __lt__(self, other):
+        return self.euclidean_distance < other.euclidean_distance
+
     def __init__(self,
                  parent,
                  position,
@@ -57,7 +60,10 @@ class Node:
                  rr_states=None,
                  block_dice=None,
                  foul_roll=None,
-                 handoff_roll=None):
+                 handoff_roll=None,
+                 can_foul=False,
+                 can_block=False,
+                 can_handoff=False):
         self.parent = parent
         self.position = position
         self.moves_left = moves_left
@@ -69,9 +75,14 @@ class Node:
         self.rolls = []
         self.block_dice = block_dice
         self.rr_states = rr_states if rr_states is not None else parent.rr_states
-
-    def __lt__(self, other):
-        return self.euclidean_distance < other.euclidean_distance
+        if parent is not None:
+            self.can_foul = parent.can_foul
+            self.can_block = parent.can_block
+            self.can_handoff = parent.can_handoff
+        else:
+            self.can_foul = can_foul
+            self.can_block = can_block
+            self.can_handoff = can_handoff
 
     def _apply_roll(self, p, skill_rr, team_rr):
         # Find new states
@@ -123,9 +134,11 @@ class Node:
 
     def apply_handoff(self, target):
         self.handoff_roll = target
+        self.can_handoff = False
 
     def apply_foul(self, target):
         self.foul_roll = target
+        self.can_foul = False
 
     def apply_stand_up(self, target):
         self.rolls.append(target)
@@ -182,7 +195,10 @@ class Pathfinder:
         can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(Skill.SURE_HANDS)
         rr_states = {(self.trr, can_dodge, can_sure_feet, can_sure_hands): 1}
-        node = Node(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, rr_states=rr_states)
+        node = Node(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, rr_states=rr_states,
+                    can_foul=self.can_foul,
+                    can_handoff=self.can_handoff,
+                    can_block=self.can_block)
         if not self.player.state.up:
             node = self._expand_stand_up(node)
             self.nodes[node.position.y][node.position.x] = node
@@ -257,7 +273,7 @@ class Pathfinder:
 
         out_of_moves = False
         if node.moves_left + node.gfis_left == 0:
-            if not self.can_handoff and not self.can_foul:
+            if not node.can_handoff and not node.can_foul:
                 return
             out_of_moves = True
 
@@ -279,11 +295,11 @@ class Pathfinder:
             return None
         player_at = self.game.get_player_at(to_pos)
         if player_at is not None:
-            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
+            if player_at.team == self.player.team and node.can_handoff and player_at.can_catch():
                 return self._expand_handoff_node(node, to_pos)
-            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
+            elif player_at.team != self.player.team and node.can_block and player_at.state.up:
                 return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
-            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
+            elif player_at.team != self.player.team and node.can_foul and not player_at.state.up:
                 return self._expand_foul_node(node, to_pos, player_at)
             return None
         if not out_of_moves:
@@ -350,7 +366,8 @@ class Pathfinder:
         gfi = node.moves_left == 0
         moves_left_next = node.moves_left - 1 if not gfi else node.moves_left
         gfis_left_next = node.gfis_left - 1 if gfi else node.gfis_left
-        next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice=block_dice)
+        next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice=block_dice,
+                         can_block=False)
         if gfi:
             next_node.apply_gfi()
         if best_node is not None and self._best(next_node, best_node) == best_node:
