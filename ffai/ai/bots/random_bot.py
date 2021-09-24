@@ -7,7 +7,6 @@ This module contains a random bot that takes random actions.
 """
 import numpy as np
 from ffai.core.model import Agent, ActionType, Action
-from ffai.ai.registry import register_bot
 
 
 class RandomBot(Agent):

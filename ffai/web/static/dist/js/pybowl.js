@@ -1587,6 +1587,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
     }
 ]);
+
 appDirectives.directive('displayMessage', function() {
 	return {
 		restrict: 'E',
