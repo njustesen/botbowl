@@ -181,7 +181,7 @@ cdef class Pathfinder:
                 continue
             rounded_p = round(next_node.get().prob, 6) #todo: use c library for round
             if rounded_p < self.current_prob:
-                self.risky_sets[prob].push_back(node) #add risky move. if 'prob' is not a key, it's inited with default constructor 
+                self.risky_sets[rounded_p].push_back(next_node) #add risky move. if 'prob' is not a key, it's inited with default constructor
             else:
                 self.open_set.push(next_node)
                 self.nodes[next_node.get().position.y][next_node.get().position.x] = next_node
@@ -407,7 +407,7 @@ cdef class Pathfinder:
         cdef:
             double prob
             list steps, rolls
-            int block_dice, foul_roll, handoff_roll
+            #int block_dice, foul_roll, handoff_roll
 
         prob = node.get().prob
         steps = [ to_ffai_Square(node.get().position) ]
