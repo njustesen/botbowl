@@ -9,6 +9,7 @@ from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
 from libcpp.memory cimport shared_ptr
+#from libc.math cimport round
 
 import cython
 cimport cython
@@ -73,20 +74,30 @@ class Path(Reversible):
 
 
 cdef class Pathfinder:
-    cdef public object game, player
+    cdef public object game, player, players_on_pitch
     cdef bint trr, can_block, can_handoff, can_foul
     cdef int ma, gfis, player_ag, pitch_width, pitch_height
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
+    cdef Square ball_pos, start_pos
     cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
     cdef NodePtr nodes[17][28] # initalized as empty pointers
     cdef priority_queue[NodePtr] open_set
     cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
     def __init__(self, game, player, trr=False, can_block=False, can_handoff=False, can_foul=False):
+
+        self.players_on_pitch = game.state.pitch.board.flatten()
+
         self.game = game
         self.pitch_width = self.game.arena.width - 1
         self.pitch_height = game.arena.height -1
+        self.start_pos = from_ffai_Square( player.position )
+        ball = self.game.get_ball_position()
+        if ball is not None:
+            self.ball_pos = from_ffai_Square(ball)
+        else:
+            self.ball_pos = Square(-1, -1)
 
         self.player = player # todo, assert no skills that aren't handled: stunty, twitchy, etc...
 
@@ -145,7 +156,7 @@ cdef class Pathfinder:
 
     cdef int _get_pickup_target(self, Square to_pos):
         cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
-        cdef int modifiers = 1 - int(zones_to)
+        cdef int modifiers = 1 - zones_to
         cdef int target
         if self.game.state.weather == table.WeatherType.POURING_RAIN:
             modifiers -= 1
@@ -179,7 +190,9 @@ cdef class Pathfinder:
             next_node = self._expand_node(node, direction, out_of_moves=out_of_moves)
             if next_node.use_count() == 0:
                 continue
-            rounded_p = round(next_node.get().prob, 6) #todo: use c library for round
+            rounded_p = next_node.get().prob
+            #rounded_p = round(next_node.get().prob, 6)
+
             if rounded_p < self.current_prob:
                 self.risky_sets[rounded_p].push_back(next_node) #add risky move. if 'prob' is not a key, it's inited with default constructor
             else:
@@ -196,7 +209,8 @@ cdef class Pathfinder:
         to_pos = node.get().position + direction #self.game.state.pitch.squares[node.get().position.y + direction.y][node.get().position.x + direction.x]
         if not (1 <= to_pos.x < self.pitch_width and 1 <= to_pos.y < self.pitch_height): 
             return NodePtr()
-        player_at = self.game.get_player_at( to_ffai_Square( to_pos))
+        #player_at = self.game.get_player_at( to_ffai_Square( to_pos))
+        player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
 
         if player_at is not None:
             if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
@@ -232,10 +246,10 @@ cdef class Pathfinder:
         next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
         if gfi:
             next_node.get().apply_gfi()
-        if self.tzones[next_node.get().position.y][next_node.get().position.x] > 0:
-            target = self._get_dodge_target(next_node.get().position, to_pos)
+        if self.tzones[node.get().position.y][node.get().position.x] > 0:
+            target = self._get_dodge_target(node.get().position, to_pos)
             next_node.get().apply_dodge(target)
-        if from_ffai_Square(self.game.get_ball_position()) == to_pos:
+        if to_pos == self.ball_pos:
             target = self._get_pickup_target(to_pos)
             next_node.get().apply_pickup(target)
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
@@ -311,13 +325,19 @@ cdef class Pathfinder:
             next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), 0, self.gfis, 0))
             node.get().apply_stand_up(target)
             return next_node
-        next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), self.ma - 3, self.gfis, 0))
+        next_node = NodePtr (new Node(node, self.start_pos, self.ma - 3, self.gfis, 0))
         return next_node
 
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
         cdef:
             int a_moves_left, b_moves_left
             bint block, foul
+
+        if a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
+            return a
+        if b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
+            return b
+
         a_moves_left = a.get().moves_left + a.get().gfis_left
         b_moves_left = b.get().moves_left + b.get().gfis_left
         block = a.get().block_dice != 0
@@ -345,6 +365,11 @@ cdef class Pathfinder:
         return NodePtr()
 
     cdef NodePtr _dominant(self, NodePtr a, NodePtr b):
+        if a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
+            return a
+        if b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
+            return b
+
         a_moves_left = a.get().moves_left + a.get().gfis_left
         b_moves_left = b.get().moves_left + b.get().gfis_left
         # TODO: Write out as above
@@ -396,7 +421,7 @@ cdef class Pathfinder:
         paths = []
         for y in range(17):
             for x in range(28):
-                if self.player.position.x == x and self.player.position.y == y:
+                if self.start_pos.x == x and self.start_pos.y == y:
                     continue
                 node = self.locked_nodes[y][x]
                 if node.use_count()> 0:
