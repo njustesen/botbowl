@@ -11,6 +11,7 @@ cdef extern from "pathing_node.h" namespace "node_ns":
         Square() except +
         Square(int, int) except +
         int x,y
+        int distance(Square)
     bint operator ==(Square, Square)
     Square operator +(Square, Square)
     Square operator -(Square, Square)

@@ -13,6 +13,7 @@ namespace node_ns {
             int x, y;
             Square();
             Square(int, int);
+            int distance(Square);
     };
     bool operator==(const Square& n1, const Square& n2);
     Square operator+(const Square& n1, const Square& n2);
@@ -35,7 +36,7 @@ namespace node_ns {
     class Node {
         public:
             const node_ptr parent;
-            const Square position;
+            Square position;
             int moves_left, gfis_left, foul_roll, handoff_roll, block_dice;
             double euclidean_distance, prob;
             std::vector<int> rolls;
@@ -63,6 +64,10 @@ namespace node_ns {
             void apply_foul(int target);
             void apply_stand_up(int target);
     };
+
+    //const node_ptr & dominant_node(const node_ptr &, const node_ptr &, const Square &);
+    //const node_ptr & best_node(const node_ptr &, const node_ptr &, const Square &);
+
     bool operator<(const Node& n1, const Node& n2);
     bool operator<(const node_ptr& n1, const node_ptr& n2);
 

@@ -6,6 +6,10 @@ namespace node_ns {
 
     Square::Square(): x(0), y(0) {}
     Square::Square(int x, int y) : x(x), y(y) {}
+    int Square::distance(Square other){
+        return std::max(abs(other.x - x), abs(other.y - y));
+    }
+
     bool operator==(const Square& n1, const Square& n2){
         return n1.x == n2.x && n1.y == n2.y;
     }
@@ -127,5 +131,54 @@ namespace node_ns {
     bool operator<(const node_ptr& n1, const node_ptr& n2){
         return n1->euclidean_distance < n2->euclidean_distance;
     }
+
+    /*
+    const node_ptr & dominant_node(const node_ptr & a, const node_ptr & b, const Square & start_pos){
+        if (a->position.distance(start_pos) == 1 && a->moves_left > b->moves_left)
+            return a;
+        if (b->position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
+            return b
+        a_moves_left = a.moves_left + a.gfis_left
+        b_moves_left = b.moves_left + b.gfis_left
+        # TODO: Write out as above
+        if a.prob > b.prob and (a.foul_roll is None or a.foul_roll <= b.foul_roll) and (a.block_dice is None or a.block_dice >= b.block_dice) and (a_moves_left > b_moves_left or (a_moves_left == b_moves_left and a.euclidean_distance < b.euclidean_distance)):
+            return a
+        if b.prob > a.prob and (b.foul_roll is None or b.foul_roll <= a.foul_roll) and (b.block_dice is None or b.block_dice >= a.block_dice) and (b_moves_left > a_moves_left or (b_moves_left == a_moves_left and b.euclidean_distance < a.euclidean_distance)):
+            return b
+        return None
+    }
+
+    const node_ptr & best_node(const node_ptr & a, const node_ptr & b, const Square & start_pos){
+        if self.directly_to_adjacent and a.position.distance(self.player.position) == 1 and a.moves_left > b.moves_left:
+            return a
+        if self.directly_to_adjacent and b.position.distance(self.player.position) == 1 and b.moves_left > a.moves_left:
+            return b
+        a_moves_left = a.moves_left + a.gfis_left
+        b_moves_left = b.moves_left + b.gfis_left
+        block = a.block_dice is not None
+        foul = a.foul_roll is not None
+        if a.prob > b.prob:
+            return a
+        if b.prob > a.prob:
+            return b
+        if foul and a.foul_roll < b.foul_roll:
+            return a
+        if foul and b.foul_roll < a.foul_roll:
+            return b
+        if block and a.block_dice > b.block_dice:
+            return a
+        if block and b.block_dice > a.block_dice:
+            return b
+        if a_moves_left > b_moves_left:
+            return a
+        if b_moves_left > a_moves_left:
+            return b
+        if a.euclidean_distance < b.euclidean_distance:
+            return a
+        if b.euclidean_distance < a.euclidean_distance:
+            return b
+        return None
+    }
+    */
 
 }
