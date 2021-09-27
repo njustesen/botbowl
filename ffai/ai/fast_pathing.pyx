@@ -26,14 +26,14 @@ cdef Square from_ffai_Square(object sq):
     return Square(sq.x, sq.y)
 
 cdef Square DIRECTIONS[8]
-DIRECTIONS[0].x = -1; DIRECTIONS[0].y = -1
-DIRECTIONS[1].x = -1; DIRECTIONS[1].y = 0
-DIRECTIONS[2].x = -1; DIRECTIONS[2].y = 1
-DIRECTIONS[3].x = 0; DIRECTIONS[3].y = -1
-DIRECTIONS[4].x = 0; DIRECTIONS[4].y = 1
-DIRECTIONS[5].x = 1; DIRECTIONS[5].y = -1
-DIRECTIONS[6].x = 1; DIRECTIONS[6].y = 0
-DIRECTIONS[7].x = 1; DIRECTIONS[7].y = 1
+DIRECTIONS[0] = Square(-1,-1)
+DIRECTIONS[1] = Square(-1, 0)
+DIRECTIONS[2] = Square(-1, 1)
+DIRECTIONS[3] = Square( 0,-1)
+DIRECTIONS[4] = Square( 0, 1)
+DIRECTIONS[5] = Square( 1,-1)
+DIRECTIONS[6] = Square( 1, 0)
+DIRECTIONS[7] = Square( 1, 1)
 
 cdef int agi_table[11] 
 agi_table[0] = 6
@@ -191,7 +191,6 @@ cdef class Pathfinder:
             if next_node.use_count() == 0:
                 continue
             rounded_p = next_node.get().prob
-            #rounded_p = round(next_node.get().prob, 6)
 
             if rounded_p < self.current_prob:
                 self.risky_sets[rounded_p].push_back(next_node) #add risky move. if 'prob' is not a key, it's inited with default constructor
@@ -205,19 +204,18 @@ cdef class Pathfinder:
             double euclidean_distance
             Square to_pos
 
-        euclidean_distance = node.get().euclidean_distance + 1 if direction.x == 0 or direction.y == 0 else node.get().euclidean_distance + 1.41421
-        to_pos = node.get().position + direction #self.game.state.pitch.squares[node.get().position.y + direction.y][node.get().position.x + direction.x]
+        euclidean_distance = node.get().euclidean_distance + 1.0 if direction.x == 0 or direction.y == 0 else node.get().euclidean_distance + 1.41421
+        to_pos = node.get().position + direction
         if not (1 <= to_pos.x < self.pitch_width and 1 <= to_pos.y < self.pitch_height): 
             return NodePtr()
-        #player_at = self.game.get_player_at( to_ffai_Square( to_pos))
         player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
 
         if player_at is not None:
-            if player_at.team == self.player.team and self.can_handoff and player_at.can_catch():
+            if self.can_handoff and player_at.team == self.player.team and player_at.can_catch():
                 return self._expand_handoff_node(node, to_pos)
-            elif player_at.team != self.player.team and self.can_block and player_at.state.up:
+            elif self.can_block and player_at.team != self.player.team and player_at.state.up:
                 return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
-            elif player_at.team != self.player.team and self.can_foul and not player_at.state.up:
+            elif self.can_foul and player_at.team != self.player.team and not player_at.state.up:
                 return self._expand_foul_node(node, to_pos, player_at)
             return NodePtr()
         if not out_of_moves:
@@ -239,10 +237,12 @@ cdef class Pathfinder:
         total_moves_left = moves_left_next + gfis_left_next
         if best_node.use_count()>0:
             best_total_moves_left = best_node.get().moves_left + best_node.get().gfis_left
-            if total_moves_left < best_total_moves_left:
+            if total_moves_left <= best_total_moves_left:
                 return NodePtr()
-            if total_moves_left == best_total_moves_left and euclidean_distance > best_node.get().euclidean_distance:
-                return NodePtr()
+
+            # removing this is makes for more ugly paths. But it's a speed improvement!
+            #if total_moves_left == best_total_moves_left and euclidean_distance >= best_node.get().euclidean_distance:
+            #    return NodePtr()
         next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
         if gfi:
             next_node.get().apply_gfi()
@@ -280,7 +280,7 @@ cdef class Pathfinder:
             object player_at
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        player_at = self.game.get_player_at( to_ffai_Square(to_pos))
+        player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
 
         next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
         target = self._get_handoff_target(player_at)
@@ -333,27 +333,32 @@ cdef class Pathfinder:
             int a_moves_left, b_moves_left
             bint block, foul
 
+        # Directly to adjescent
         if a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
             return a
         if b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
             return b
 
-        a_moves_left = a.get().moves_left + a.get().gfis_left
-        b_moves_left = b.get().moves_left + b.get().gfis_left
-        block = a.get().block_dice != 0
-        foul = a.get().foul_roll != 0
         if a.get().prob > b.get().prob:
             return a
         if b.get().prob > a.get().prob:
             return b
+
+        foul = a.get().foul_roll != 0
         if foul and a.get().foul_roll < b.get().foul_roll:
             return a
         if foul and b.get().foul_roll < a.get().foul_roll:
             return b
+
+        block = a.get().block_dice != 0
         if block and a.get().block_dice > b.get().block_dice:
             return a
         if block and b.get().block_dice > a.get().block_dice:
             return b
+
+        a_moves_left = a.get().moves_left + a.get().gfis_left
+        b_moves_left = b.get().moves_left + b.get().gfis_left
+
         if a_moves_left > b_moves_left:
             return a
         if b_moves_left > a_moves_left:
@@ -448,4 +453,3 @@ cdef class Pathfinder:
         steps = list(reversed(steps))[1:]
         rolls = list(reversed(rolls))[1:]
         return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
-
