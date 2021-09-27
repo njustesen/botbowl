@@ -301,7 +301,7 @@ class Pathfinder:
             best_total_moves_left = best_node.moves_left + best_node.gfis_left
             if total_moves_left < best_total_moves_left:
                 return None
-            if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
+            if total_moves_left == best_total_moves_left and euclidean_distance >= best_node.euclidean_distance:
                 return None
         next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
