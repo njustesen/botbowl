@@ -161,8 +161,6 @@ cdef class Pathfinder:
         # Create root node
         node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff))
 
-        #print(f"node.can_handoff = {node.get().can_handoff}")
-
         if not self.player.state.up:
             node = self._expand_stand_up(node)
             self.nodes[node.get().position.y][node.get().position.x] = node
@@ -197,7 +195,7 @@ cdef class Pathfinder:
         return min(6, max(2, target))
 
     cdef void _expand(self, NodePtr node):
-        cdef bint out_of_moves = False
+        cdef bint out_of_moves = node.get().moves_left + node.get().gfis_left == 0
         cdef NodePtr next_node
         cdef double rounded_p
 
@@ -213,17 +211,14 @@ cdef class Pathfinder:
                 self.target_found = True
                 return
 
-
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
             return
 
-        if node.get().moves_left + node.get().gfis_left == 0:
-            if not node.get().can_handoff and not node.get().can_foul:
-                return
-            out_of_moves = True
+        if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):
+            return
 
         for direction in DIRECTIONS:
-            next_node = self._expand_node(node, direction, out_of_moves=out_of_moves)
+            next_node = self._expand_node(node, direction, out_of_moves)
             if next_node.use_count() == 0:
                 continue
             rounded_p = next_node.get().prob
@@ -234,9 +229,8 @@ cdef class Pathfinder:
                 self.open_set.push(next_node)
                 self.nodes[next_node.get().position.y][next_node.get().position.x] = next_node
 
-    cdef NodePtr _expand_node(self, NodePtr node, Square direction, bint out_of_moves=False):
+    cdef NodePtr _expand_node(self, NodePtr node, Square direction, bint out_of_moves):
         cdef:
-            NodePtr np
             double euclidean_distance
             Square to_pos
 
@@ -302,7 +296,8 @@ cdef class Pathfinder:
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_ffai_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
         next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance) )
-        node.get().apply_foul(target)
+        next_node.get().apply_foul(target)
+
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
             return NodePtr()
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
@@ -321,6 +316,7 @@ cdef class Pathfinder:
         next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
         target = self._get_handoff_target(player_at)
         next_node.get().apply_handoff(target)
+
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
             return NodePtr()
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
@@ -341,6 +337,8 @@ cdef class Pathfinder:
         moves_left_next = node.get().moves_left - 1 if not gfi else node.get().moves_left
         gfis_left_next = node.get().gfis_left - 1 if gfi else node.get().gfis_left
         next_node = NodePtr( new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice))
+        next_node.get().can_block = False
+
         if gfi:
             node.get().apply_gfi()
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
