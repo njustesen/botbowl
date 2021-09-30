@@ -38,6 +38,7 @@ namespace node_ns {
             const node_ptr parent;
             Square position;
             int moves_left, gfis_left, foul_roll, handoff_roll, block_dice;
+            bool can_foul, can_block, can_handoff;
             double euclidean_distance, prob;
             std::vector<int> rolls;
             rr_state rr_states;
@@ -45,7 +46,7 @@ namespace node_ns {
             Node();
 
             //root node constructor
-            Node(Square position, int moves_left, int gfis_left, double euclidean_distance, bool trr, bool dodge, bool sure_feet, bool sure_hands);
+            Node(Square position, int moves_left, int gfis_left, double euclidean_distance, bool trr, bool dodge, bool sure_feet, bool sure_hands, bool can_foul, bool can_block, bool can_handoff);
 
             // non-root node with block dice
             Node(node_ptr parent, Square position, int moves_left, int gfis_left, double euclidean_distance, int block_dice);

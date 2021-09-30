@@ -4,6 +4,7 @@ import ffai.core.table as table
 import ffai.core.model as model
 from ffai.core.forward_model import Reversible
 from ffai.core.util import compare_object
+import copy
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
@@ -75,17 +76,19 @@ class Path(Reversible):
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
-    cdef bint trr, can_block, can_handoff, can_foul
+    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent
     cdef int ma, gfis, player_ag, pitch_width, pitch_height
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
+    cdef Square target_square
+    cdef int target_x
     cdef NodePtr locked_nodes[17][28] # initalized as empty pointers
     cdef NodePtr nodes[17][28] # initalized as empty pointers
     cdef priority_queue[NodePtr] open_set
     cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
-    def __init__(self, game, player, trr=False, can_block=False, can_handoff=False, can_foul=False):
+    def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
 
         self.players_on_pitch = game.state.pitch.board.flatten()
 
@@ -99,12 +102,18 @@ cdef class Pathfinder:
         else:
             self.ball_pos = Square(-1, -1)
 
+        self.has_target = False
+        self.target_is_int = False
+        self.target_is_square = False
+        self.target_found = False
+
         self.player = player # todo, assert no skills that aren't handled: stunty, twitchy, etc...
 
         self.trr = trr
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
+        self.directly_to_adjacent = directly_to_adjacent
         self.ma = player.get_ma() - player.state.moves
         self.player_ag = self.player.get_ag()
         self.gfis = 2
@@ -114,6 +123,21 @@ cdef class Pathfinder:
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
+
+    cpdef get_path(self, object target):
+        if type(target) == model.Square:
+            self.target_square = from_ffai_Square(target)
+            self.target_is_square = True
+            self.has_target = True
+        elif type(target) == int:
+            self.target_x = int(target)
+            self.target_is_int = True
+            self.has_target = True
+
+        paths = self.get_paths()
+        if len(paths) > 0:
+            return paths[0]
+        return None
 
     cpdef object get_paths(self):
         cdef:
@@ -130,15 +154,14 @@ cdef class Pathfinder:
 
         start_square = from_ffai_Square(self.player.position)
 
-        if self.ma + self.gfis <= 0:
-            return []
-
         can_dodge = self.player.has_skill(table.Skill.DODGE) and table.Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(table.Skill.SURE_FEET) and table.Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(table.Skill.SURE_HANDS)
 
         # Create root node
-        node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands))
+        node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff))
+
+        #print(f"node.can_handoff = {node.get().can_handoff}")
 
         if not self.player.state.up:
             node = self._expand_stand_up(node)
@@ -147,7 +170,7 @@ cdef class Pathfinder:
         self._expansion()
         self._clear()
 
-        while not self.risky_sets.empty():
+        while (not self.target_found) and (not self.risky_sets.empty() ):
             self._prepare_nodes()
             self._expansion()
             self._clear()
@@ -178,11 +201,24 @@ cdef class Pathfinder:
         cdef NodePtr next_node
         cdef double rounded_p
 
+        if self.has_target:
+            if self.target_is_square and self.target_square.distance(node.get().position) > node.get().moves_left + node.get().gfis_left:
+                return
+            if self.target_is_int and abs(self.target_x - node.get().position.x) > node.get().moves_left + node.get().gfis_left:
+                return
+            if self.target_is_square and node.get().position == self.target_square:
+                self.target_found = True
+                return
+            if self.target_is_int and node.get().position.x == self.target_x:
+                self.target_found = True
+                return
+
+
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
             return
 
         if node.get().moves_left + node.get().gfis_left == 0:
-            if not self.can_handoff and not self.can_foul:
+            if not node.get().can_handoff and not node.get().can_foul:
                 return
             out_of_moves = True
 
@@ -211,11 +247,11 @@ cdef class Pathfinder:
         player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
 
         if player_at is not None:
-            if self.can_handoff and player_at.team == self.player.team and player_at.can_catch():
+            if node.get().can_handoff and player_at.team == self.player.team and player_at.can_catch():
                 return self._expand_handoff_node(node, to_pos)
-            elif self.can_block and player_at.team != self.player.team and player_at.state.up:
+            elif node.get().can_block and player_at.team != self.player.team and player_at.state.up:
                 return self._expand_block_node(node, euclidean_distance, to_pos, player_at)
-            elif self.can_foul and player_at.team != self.player.team and not player_at.state.up:
+            elif node.get().can_foul and player_at.team != self.player.team and not player_at.state.up:
                 return self._expand_foul_node(node, to_pos, player_at)
             return NodePtr()
         if not out_of_moves:
@@ -334,9 +370,9 @@ cdef class Pathfinder:
             bint block, foul
 
         # Directly to adjescent
-        if a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
+        if self.directly_to_adjacent and a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
             return a
-        if b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
+        if self.directly_to_adjacent and b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
             return b
 
         if a.get().prob > b.get().prob:
@@ -370,9 +406,9 @@ cdef class Pathfinder:
         return NodePtr()
 
     cdef NodePtr _dominant(self, NodePtr a, NodePtr b):
-        if a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
+        if self.directly_to_adjacent and a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
             return a
-        if b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
+        if self.directly_to_adjacent and b.get().position.distance( self.start_pos ) == 1 and b.get().moves_left > a.get().moves_left:
             return b
 
         a_moves_left = a.get().moves_left + a.get().gfis_left
@@ -423,6 +459,13 @@ cdef class Pathfinder:
         cdef:
             NodePtr node
             list paths
+
+        if self.target_is_square:
+            node = self.locked_nodes[self.target_square.y][self.target_square.x]
+            if node.use_count()>0:
+                return [self._collect_path(node)]
+            return []
+
         paths = []
         for y in range(17):
             for x in range(28):
@@ -453,3 +496,91 @@ cdef class Pathfinder:
         steps = list(reversed(steps))[1:]
         rolls = list(reversed(rolls))[1:]
         return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
+
+
+def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
+    """
+    :param game:
+    :param player: the player to move
+    :param position: the location to move to
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.
+    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to the
+    given position and the probability of success.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    can_handoff = game.is_handoff_available() and game.get_ball_carrier() == player
+    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz, can_handoff=can_handoff)
+    path = finder.get_path(target=position)
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+    return path
+
+
+def get_safest_path_to_endzone(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None):
+    """
+    :param game:
+    :param player:
+    :param from_position: position to start movement from. If None, it will start from the player's current position.
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.´
+    :return: a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
+    a position in the opponent endzone.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    x = game.get_opp_endzone_x(player.team)
+    finder = Pathfinder(game, player, trr=allow_team_reroll)
+    path = finder.get_path(target=x)
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+    return path
+
+
+def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None, blitz=False):
+    """
+    :param game:
+    :param player: the player to move
+    :param from_position: position to start movement from. If None, it will start from the player's current position.
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.
+    :param blitz: only finds blitz moves if True.
+    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
+    a position that is adjacent to the other player and the probability of success.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz)
+    paths = finder.get_paths()
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+
+    return paths
+
+
+def _alter_state(game, player, from_position, moves_used):
+    orig_player, orig_ball = None, None
+    if from_position is not None or moves_used is not None:
+        orig_player = copy.deepcopy(player)
+        orig_ball = copy.deepcopy(game.get_ball())
+    # Move player if another starting position is used
+    if from_position is not None:
+        assert game.get_player_at(from_position) is None or game.get_player_at(from_position) == player
+        game.move(player, from_position)
+        if from_position == game.get_ball_position() and game.get_ball().on_ground:
+            game.get_ball().carried = True
+    if moves_used != None:
+        assert moves_used >= 0
+        player.state.moves = moves_used
+        if moves_used > 0:
+            player.state.up = True
+    return orig_player, orig_ball
+
+
+def _reset_state(game, player, orig_player, orig_ball):
+    if orig_player is not None:
+        game.move(player, orig_player.position)
+        player.state = orig_player.state
+    if orig_ball is not None:
+        game.ball = orig_ball

@@ -23,9 +23,10 @@ namespace node_ns {
 
     //root node constructor
     Node::Node(Square position, int moves_left, int gfis_left, double euclidean_distance,
-                bool trr, bool dodge, bool sure_feet, bool sure_hands)
+                bool trr, bool dodge, bool sure_feet, bool sure_hands, bool can_foul, bool can_block, bool can_handoff)
          : position(position), moves_left(moves_left), gfis_left(gfis_left), foul_roll(0),
-         handoff_roll(0), block_dice(0), euclidean_distance(euclidean_distance), prob(1.0)
+         handoff_roll(0), block_dice(0), can_foul(can_foul), can_block(can_block), can_handoff(can_handoff),
+         euclidean_distance(euclidean_distance), prob(1.0)
     {
         rr_used key;
         key[TRR] = trr;
@@ -39,13 +40,14 @@ namespace node_ns {
     Node::Node(node_ptr parent, Square position, int moves_left, int gfis_left,
                 double euclidean_distance, int block_dice)
         : parent(parent), position(position), moves_left(moves_left), gfis_left(gfis_left),
-        foul_roll(0), handoff_roll(0), block_dice(block_dice), euclidean_distance(euclidean_distance),
+        foul_roll(0), handoff_roll(0), block_dice(block_dice), can_foul(parent->can_foul), can_block(parent->can_block), can_handoff(parent->can_handoff),
+        euclidean_distance(euclidean_distance),
         prob(parent->prob), rr_states(parent->rr_states)
     {}
 
     // non-root node without block dice
     Node::Node(node_ptr parent, Square position, int moves_left, int gfis_left, double euclidean_distance)
-        : parent(parent), position(position), moves_left(moves_left), gfis_left(gfis_left), foul_roll(0), handoff_roll(0), block_dice(0),
+        : parent(parent), position(position), moves_left(moves_left), gfis_left(gfis_left), foul_roll(0), handoff_roll(0), block_dice(0), can_foul(parent->can_foul), can_block(parent->can_block), can_handoff(parent->can_handoff),
          euclidean_distance(euclidean_distance), prob(parent->prob), rr_states(parent->rr_states)
     {}
 
@@ -94,9 +96,11 @@ namespace node_ns {
     }
     void Node::apply_handoff(int target){
         handoff_roll = target;
+        can_handoff = false;
     }
     void Node::apply_foul(int target){
         foul_roll = target;
+        can_foul = false;
     }
     void Node::apply_stand_up(int target){
         rolls.push_back(target);

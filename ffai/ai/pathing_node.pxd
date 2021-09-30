@@ -20,13 +20,14 @@ cdef extern from "pathing_node.h" namespace "node_ns":
 
     cdef cppclass Node:
         int moves_left, gfis_left, foul_roll, handoff_roll, block_dice
+        bint can_foul, can_block, can_handoff;
         double euclidean_distance, prob
         Square position
         shared_ptr[Node] parent
         vector[int] rolls
 
         Node() except +
-        Node(Square, int, int, double, bint, bint, bint, bint) except +  #root node constructor
+        Node(Square, int, int, double, bint, bint, bint, bint, bint, bint, bint) except +  #root node constructor
         Node(shared_ptr[Node], Square, int, int, double, int) except +   # non-root node with block dice
         Node(shared_ptr[Node], Square, int, int, double) except +        # non-root node without block dice
 
