@@ -1,8 +1,8 @@
-from tests.util import *
+from tests.util import Square, get_game_turn, Skill
 import pytest
-#import ffai.ai.pathfinding as pf
-import ffai.ai.pathfinding as pf
 
+import ffai.ai.pathfinding as pf
+#import ffai.ai.fast_pathing as pf
 
 PROP_PRECISION = 0.000000001
 
@@ -228,7 +228,7 @@ def test_handoff_after_gfi():
     game.put(player, Square(1, 1))
     other_player = game.get_reserves(game.state.away_team)[1]
     game.put(other_player, Square(2, 2))
-    pathfinder = Pathfinder(game,
+    pathfinder = pf.Pathfinder(game,
                             player,
                             can_handoff=True)
     paths = pathfinder.get_paths()
@@ -246,7 +246,7 @@ def test_foul_after_gfi():
     opp_player = game.get_reserves(game.state.home_team)[0]
     opp_player.state.up = False
     game.put(opp_player, Square(2, 2))
-    pathfinder = Pathfinder(game,
+    pathfinder = pf.Pathfinder(game,
                             player,
                             can_foul=True)
     paths = pathfinder.get_paths()
@@ -260,16 +260,18 @@ def test_foul():
     player = game.get_reserves(game.state.away_team)[0]
     player.role.ma = 1
     game.put(player, Square(1, 1))
+
     opp_player_1 = game.get_reserves(game.state.home_team)[0]
     opp_player_1.state.up = False
     opp_position_1 = Square(1, 2)
     game.put(opp_player_1, opp_position_1)
+
     opp_player_2 = game.get_reserves(game.state.home_team)[1]
     opp_player_2.state.up = False
     opp_position_2 = Square(1, 3)
     game.put(opp_player_2, opp_position_2)
 
-    pathfinder = Pathfinder(game,
+    pathfinder = pf.Pathfinder(game,
                             player,
                             directly_to_adjacent=True,
                             can_foul=True,
