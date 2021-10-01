@@ -172,3 +172,16 @@ def assert_game_states(g1, g2, equal):
         assert len(errors) == 0
     elif len(errors) == 0 and not equal:
         raise AssertionError("Expected not equal game states")
+
+
+def test_actor_correctly_reset():
+    game = get_game()
+    root = game.get_step()
+    actor1 = game.actor
+
+    while game.actor == actor1:
+        game.step(get_random_action(game))
+
+    game.revert(root)
+    assert game.actor == actor1
+

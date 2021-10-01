@@ -201,7 +201,8 @@ class FFAIEnv(gym.Env):
             STLayer(),
             AGLayer(),
             AVLayer(),
-            MovemenLeftLayer(),
+            MovementLeftLayer(),
+            GFIsLeftLayer(),
             BallLayer(),
             OwnHalfLayer(),
             OwnTouchdownLayer(),
@@ -337,7 +338,7 @@ class FFAIEnv(gym.Env):
         obs['state']['own babes'] = active_team.state.babes / 4.0 if active_team is not None else 0.0
         obs['state']['own apothecaries'] = 0.0 if active_team is None else active_team.state.apothecaries / 2
         obs['state']['own reroll available'] = 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
-        obs['state']['own fame'] = active_team.state.fame if active_team is not None else 0.0
+        obs['state']['own fame'] = active_team.state.fame/2 if active_team is not None else 0.0
 
         obs['state']['opp score'] = opp_team.state.score / 16.0 if opp_team is not None else 0.0
         obs['state']['opp turns'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
@@ -349,7 +350,7 @@ class FFAIEnv(gym.Env):
         obs['state']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
         obs['state']['opp apothecaries'] = 0.0 if opp_team is None else active_team.state.apothecaries / 2
         obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
-        obs['state']['opp fame'] = opp_team.state.fame if opp_team is not None else 0.0
+        obs['state']['opp fame'] = opp_team.state.fame/2 if opp_team is not None else 0.0
 
         obs['state']['is blitz available'] = 1.0 if game.is_blitz_available() else 0.0
         obs['state']['is pass available'] = 1.0 if game.is_pass_available() else 0.0

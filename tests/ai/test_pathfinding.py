@@ -93,6 +93,16 @@ def test_get_safest_path(skills_and_rerolls):
                         assert path.prob == p
 
 
+def test_invalid_path():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.home_team)[0]
+    position = Square(1, 1)
+    game.put(player, position)
+    target_a = Square(12, 12)
+    path = pf.get_safest_path(game, player, target_a)
+    assert path is None
+
+
 def test_avoid_path():
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -243,3 +253,68 @@ def test_foul_after_gfi():
     assert len(paths) == 1
     assert len(paths[0].steps) == 1
     assert paths[0].steps[0] == opp_player.position
+
+
+def test_foul():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 1
+    game.put(player, Square(1, 1))
+    opp_player_1 = game.get_reserves(game.state.home_team)[0]
+    opp_player_1.state.up = False
+    opp_position_1 = Square(1, 2)
+    game.put(opp_player_1, opp_position_1)
+    opp_player_2 = game.get_reserves(game.state.home_team)[1]
+    opp_player_2.state.up = False
+    opp_position_2 = Square(1, 3)
+    game.put(opp_player_2, opp_position_2)
+
+    pathfinder = Pathfinder(game,
+                            player,
+                            directly_to_adjacent=True,
+                            can_foul=True,
+                            trr=False)
+    paths = pathfinder.get_paths()
+    total_fouls = 0
+    for path in paths:
+        fouls = 0
+        for step in path.steps:
+            if step in [opp_position_1, opp_position_2]:
+                fouls += 1
+                assert step == path.steps[-1]
+        assert fouls <= 1
+        total_fouls += fouls
+    assert total_fouls == 2
+
+
+def test_handoff():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 1
+    game.move(game.get_ball(), player.position)
+    game.put(player, Square(1, 1))
+    game.get_ball().is_carried = True
+    teammate_1 = game.get_reserves(game.state.away_team)[1]
+    teammate_position_1 = Square(1, 2)
+    game.put(teammate_1, teammate_position_1)
+    teammate_2 = game.get_reserves(game.state.away_team)[2]
+    teammate_position_2 = Square(1, 3)
+    game.put(teammate_2, teammate_position_2)
+
+    pathfinder = Pathfinder(game,
+                            player,
+                            directly_to_adjacent=True,
+                            can_handoff=True,
+                            trr=False)
+
+    paths = pathfinder.get_paths()
+    total_handoffs = 0
+    for path in paths:
+        handoffs = 0
+        for step in path.steps:
+            if step in [teammate_position_1, teammate_position_2]:
+                handoffs += 1
+                assert step == path.steps[-1]
+        assert handoffs <= 1
+        total_handoffs += handoffs
+    assert total_handoffs == 2
