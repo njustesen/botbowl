@@ -3538,16 +3538,16 @@ class Setup(Procedure):
                          positions=positions),
             ActionChoice(ActionType.END_SETUP, team=self.team)
         ]
-        if not self.reorganize:
-            for formation in self.formations:
-                if formation.name == "Wedge":
-                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=self.team))
-                if formation.name == "Line":
-                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=self.team))
-                if formation.name == "Spread":
-                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=self.team))
-                if formation.name == "Zone":
-                    aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=self.team))
+
+        for formation in self.formations:
+            if formation.name == "Wedge":
+                aa.append(ActionChoice(ActionType.SETUP_FORMATION_WEDGE, team=self.team))
+            if formation.name == "Line":
+                aa.append(ActionChoice(ActionType.SETUP_FORMATION_LINE, team=self.team))
+            if formation.name == "Spread":
+                aa.append(ActionChoice(ActionType.SETUP_FORMATION_SPREAD, team=self.team))
+            if formation.name == "Zone":
+                aa.append(ActionChoice(ActionType.SETUP_FORMATION_ZONE, team=self.team))
 
         return aa
 
