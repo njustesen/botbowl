@@ -128,7 +128,7 @@ A race is supported if all positions can be used and all their starting skills a
 | Side Step         | YES         | NO        |
 | Sneaky Git        | YES         | NO        |
 | Sprint            | YES         | NO        |
-| Stab              | YES         | NO        |
+| Stab              | YES         | YES        |
 | Stakes            | YES         | NO        |
 | Stand Firm        | YES         | NO        |
 | **Strip Ball**    | YES         | YES       |
