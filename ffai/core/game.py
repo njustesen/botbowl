@@ -2439,7 +2439,7 @@ class Game:
                                         block_dice=block_dice,
                                         rolls=rolls))
             if player.has_skill(Skill.STAB):
-                rolls = [roll + [stab_rolls[i]] for i, roll in enumerate(rolls)]
+                rolls = [roll + stab_rolls[i] for i, roll in enumerate(rolls)]
                 actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, rolls=rolls))
 
         return actions

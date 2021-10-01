@@ -261,7 +261,6 @@ class Stab(Procedure):
 
     def end(self):
         self.attacker.state.has_blocked = True
-        EndPlayerTurn(self.game, self.attacker)
 
     def step(self, action):
         # GfI
