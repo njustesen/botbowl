@@ -682,6 +682,16 @@ class MyScriptedBot(ProcBot):
         return Action(ActionType.USE_SKILL)
         # return Action(ActionType.DONT_USE_SKILL)
 
+    def use_bribe(self, game):
+        return Action(ActionType.USE_BRIBE)
+
+    def blood_lust_block_or_move(self, game):
+        return Action(ActionType.START_BLOCK)
+
+    def eat_thrall(self, game):
+        position = game.get_available_actions()[0].positions[0]
+        return Action(ActionType.SELECT_PLAYER, position)
+
     def end_game(self, game):
         """
         Called when a game endw.

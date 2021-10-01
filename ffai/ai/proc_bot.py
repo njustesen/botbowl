@@ -77,6 +77,10 @@ class ProcBot(Agent):
             return self.apothecary(game)
         if isinstance(proc, Interception):
             return self.interception(game)
+        if isinstance(proc, BloodLustBlockOrMove):
+            return self.blood_lust_block_or_move(game)
+        if isinstance(proc, EatThrall):
+            return self.eat_thrall(game)
 
         raise Exception("Unknown procedure")
 
@@ -140,30 +144,6 @@ class ProcBot(Agent):
     def apothecary(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
-    def move_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def block_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def blitz_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def handoff_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def pass_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def foul_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def throw_bomb_action(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
-    def catch(self, game):
-        raise NotImplementedError("This method must be overridden by non-human subclasses")
-
     def interception(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
@@ -176,4 +156,8 @@ class ProcBot(Agent):
     def pickup(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
 
+    def blood_lust_block_or_move(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
 
+    def eat_thrall(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
