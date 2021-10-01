@@ -114,6 +114,8 @@ class MyScriptedBot(ProcBot):
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.GFI:
             return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.BloodLust:
+            return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Block:
             attacker = context.attacker
             attackers_down = 0
@@ -127,6 +129,7 @@ class MyScriptedBot(ProcBot):
             if attackers_down == len(context.roll.dice) and context.favor != self.opp_team:
                 return Action(ActionType.USE_REROLL)
             return Action(ActionType.DONT_USE_REROLL)
+        return Action(ActionType.DONT_USE_REROLL)
 
     def place_ball(self, game):
         """
