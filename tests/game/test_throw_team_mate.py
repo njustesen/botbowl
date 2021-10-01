@@ -23,7 +23,13 @@ def test_pickup_teammate_no_right_stuff():
     game.step(Action(ActionType.START_PASS, player=passer))
     D6.fix(1)  # Cause fumble
     D6.fix(6)  # Land
-    game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
+
+    ok = False
+    try:
+        game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
+    except GameActionIllegal:
+        ok = True
+    assert ok
     assert not right_stuff.state.in_air
 
 

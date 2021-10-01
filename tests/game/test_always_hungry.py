@@ -49,7 +49,6 @@ def test_failed_always_hungry_escaped():
     D6.fix(6)  # Land
     game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
     game.step(Action(ActionType.DONT_USE_REROLL))
-    game.step(Action(ActionType.DONT_USE_REROLL))
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_ESCAPE_BEING_EATEN)
     assert game.has_report_of_type(OutcomeType.SUCCESSFUL_LAND)
     assert not game.has_report_of_type(OutcomeType.TURNOVER)

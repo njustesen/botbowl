@@ -147,6 +147,13 @@ def test_two_leaps():
     assert player.state.moves == 2
     to = Square(player.position.x + 2, player.position.y)
     D6.fix(4)
-    game.step(Action(ActionType.LEAP, player=player, position=to))
+
+    ok = False
+    try:
+        game.step(Action(ActionType.LEAP, player=player, position=to))
+    except GameActionIllegal:
+        ok = True
+
+    assert ok
     assert player.position != to  # Leap did not happen
     assert player.state.moves == 2  # Leap did not happen
