@@ -1,5 +1,16 @@
 # distutils: language=c++
 
+"""
+==========================
+Author: Mattias Bermell
+Year: 2021
+==========================
+This module contains the pathfinding algorithm implemented in cython
+which compiles to a much fast module. The algorithm is intended to generate
+the exact same result as the python implementation.
+"""
+
+
 import ffai.core.table as table
 import ffai.core.model as model
 from ffai.core.forward_model import Reversible
