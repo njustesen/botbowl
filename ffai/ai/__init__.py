@@ -5,6 +5,7 @@ from .env import FFAIEnv
 from .layers import *
 from .registry import *
 from .pathfinding import *
+from .fast_pathing import *
 from .competition import *
 from .renderer import *
 from .proc_bot import *
