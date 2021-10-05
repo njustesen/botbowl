@@ -287,3 +287,38 @@ def test_foul():
         assert fouls <= 1
         total_fouls += fouls
     assert total_fouls == 2
+
+
+
+def test_handoff():
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 1
+    game.move(game.get_ball(), player.position)
+    game.put(player, Square(1, 1))
+    game.get_ball().is_carried = True
+    teammate_1 = game.get_reserves(game.state.away_team)[1]
+    teammate_position_1 = Square(1, 2)
+    game.put(teammate_1, teammate_position_1)
+    teammate_2 = game.get_reserves(game.state.away_team)[2]
+    teammate_position_2 = Square(1, 3)
+    game.put(teammate_2, teammate_position_2)
+
+    pathfinder = Pathfinder(game,
+                            player,
+                            directly_to_adjacent=True,
+                            can_handoff=True,
+                            trr=False)
+
+    paths = pathfinder.get_paths()
+    total_handoffs = 0
+    for path in paths:
+        handoffs = 0
+        for step in path.steps:
+            if step in [teammate_position_1, teammate_position_2]:
+                handoffs += 1
+                assert step == path.steps[-1]
+        assert handoffs <= 1
+        total_handoffs += handoffs
+    assert total_handoffs == 2
+
