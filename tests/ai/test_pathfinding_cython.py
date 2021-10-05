@@ -1,7 +1,7 @@
 from tests.util import Square, get_game_turn, Skill
 import pytest
 
-import ffai.ai.pathfinding as pf
+import ffai.ai.fast_pathing as pf
 
 PROP_PRECISION = 0.000000001
 
