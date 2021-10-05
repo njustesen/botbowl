@@ -8,11 +8,13 @@ responsible for an isolated part of the game. Procedures are added to a stack, a
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 from abc import abstractmethod, ABCMeta
-from collections.abc import Iterable
 
-from pytest import set_trace
+# Try to import the cython compiled pathfinding,
+try:
+    from ffai.ai.fast_pathing import Pathfinder
+except ImportError:
+    from ffai.ai.pathfinding import Pathfinder
 
-from ffai.ai.pathfinding import Pathfinder
 from ffai.core.model import *
 from ffai.core.table import *
 import time
