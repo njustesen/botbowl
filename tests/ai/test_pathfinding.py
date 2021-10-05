@@ -289,6 +289,7 @@ def test_foul():
     assert total_fouls == 2
 
 
+
 def test_handoff():
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -320,3 +321,4 @@ def test_handoff():
         assert handoffs <= 1
         total_handoffs += handoffs
     assert total_handoffs == 2
+
