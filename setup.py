@@ -37,3 +37,5 @@ if cython_exists:
 
 setup(**kwargs)
 
+if cython_exists:
+    print("\nYou've compiled FFAI with cython. The compiled files are available in the build/ directory.")
