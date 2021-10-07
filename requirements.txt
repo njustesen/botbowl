@@ -5,7 +5,6 @@ chardet==3.0.4
 Click==7.0
 cloudpickle==1.2.2
 -e git+https://github.com/njustesen/ffai.git@71383a54e36a165b6e52aafe00c2e6846336148c#egg=ffai
-git+https://github.com/cython/cython.git
 Flask==1.1.1
 future==0.18.2
 gym==0.15.4

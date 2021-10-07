@@ -4,8 +4,12 @@ from ffai.core.load import *
 from .env import FFAIEnv
 from .layers import *
 from .registry import *
-from .pathfinding import *
-from .fast_pathing import *
+
+try:
+    from .fast_pathing import *
+except ImportError:
+    from .pathfinding import *
+
 from .competition import *
 from .renderer import *
 from .proc_bot import *
