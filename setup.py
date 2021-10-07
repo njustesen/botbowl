@@ -39,3 +39,6 @@ setup(**kwargs)
 
 if cython_exists:
     print("\nYou've compiled FFAI with cython. The compiled files are available in the build/ directory.")
+else:
+    print("You've built FFAI without cython. If you plan to use FFAI for reinforcement learning with "
+          "pathfinding enabled then consider compiling with cython. Check docs/installation.md for details.")
