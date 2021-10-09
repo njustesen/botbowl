@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+import os, shutil
 
 try:
     from Cython.Build import cythonize
@@ -38,7 +39,17 @@ if cython_exists:
 setup(**kwargs)
 
 if cython_exists:
-    print("\nYou've compiled FFAI with cython. The compiled files are available in the build/ directory.")
+    # Grab all '.so'-files and copy into source folders
+    for root, dirs, files in os.walk('./build/'):
+        for file in files:
+            if file.endswith('.so'):
+                so_file = f"{root}/{file}"
+                to_file = "./ffai/" + root.split('/ffai/')[1] + "/" + str(file)
+                print(f"copying '{so_file}' -> '{to_file}'")
+                shutil.copyfile(so_file, to_file)
+
+    print("\nYou've built FFAI with cython.")
+
 else:
-    print("You've built FFAI without cython. If you plan to use FFAI for reinforcement learning with "
-          "pathfinding enabled then consider compiling with cython. Check docs/installation.md for details.")
+    print("You've built FFAI without cython compilation. Check docs/installation.md for details.")
+
