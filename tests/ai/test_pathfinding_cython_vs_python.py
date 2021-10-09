@@ -2,7 +2,7 @@ from tests.util import *
 
 import ffai.ai.fast_pathing as fast_pf
 import ffai.ai.pathfinding as slow_pf
-
+import os
 
 
 def test_that_cython_and_python_test_files_are_equal():
@@ -14,6 +14,12 @@ def test_that_cython_and_python_test_files_are_equal():
 
     python_test_file = "test_pathfinding.py"
     cython_test_file = "test_pathfinding_cython.py"
+
+    if os.getcwd().split("/")[-1] == "ffai":
+        python_test_file = "tests/ai/" + python_test_file
+        cython_test_file = "tests/ai/" + cython_test_file
+
+    assert os.path.isfile(python_test_file) and os.path.isfile(cython_test_file)
 
     i = 1
     with open(cython_test_file, "r") as cython_file, open(python_test_file, "r") as python_file:
