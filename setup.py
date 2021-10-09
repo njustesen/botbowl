@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-import os, shutil
+import os, shutil, platform
 
 try:
     from Cython.Build import cythonize
@@ -10,6 +10,7 @@ except ImportError:
     cython_exists = False
 
 files_to_compile = ["ffai/ai/fast_pathing.pyx"]
+compiled_file_type = ".pyd" if platform.system() == "Windows" else ".so"
 
 install_requires_packages = [
           'numpy',
@@ -40,14 +41,17 @@ setup(**kwargs)
 
 if cython_exists:
     # Grab all '.so'-files and copy into source folders
+    copied_files = 0
     for root, dirs, files in os.walk('./build/'):
         for file in files:
-            if file.endswith('.so'):
+            if file.endswith(compiled_file_type):
                 so_file = f"{root}/{file}"
                 to_file = "./ffai/" + root.split('/ffai/')[1] + "/" + str(file)
                 print(f"copying '{so_file}' -> '{to_file}'")
                 shutil.copyfile(so_file, to_file)
+                copied_files += 1
 
+    assert copied_files == len(files_to_compile), f"Compiled with strange result, didn't copy corrent amount of files!"
     print("\nYou've built FFAI with cython.")
 
 else:
