@@ -10,7 +10,7 @@ from ffai.core.load import *
 from ffai.core.procedure import *
 from ffai.core.forward_model import Trajectory, MovementStep
 
-class GameActionIllegal(Exception):
+class InvalidActionError(Exception):
     pass
 
 class Game:
@@ -345,7 +345,7 @@ class Game:
 
         # If no action and action is required
         if action is None and len(self.state.available_actions) > 0:
-            raise GameActionIllegal("None action is not allowed when actions are available")
+            raise InvalidActionError("None action is not allowed when actions are available")
 
         # If action but it's not available
         if action is not None:
@@ -354,16 +354,16 @@ class Game:
                     # Consider this as a None action
                     action = None
                 else:
-                    raise GameActionIllegal("CONTINUE action is not allowed when actions are available")
+                    raise InvalidActionError("CONTINUE action is not allowed when actions are available")
 
             else:
                 # Only allowed actions
                 if not self._is_action_allowed(action):
 
                     if type(action) is Action:
-                        raise GameActionIllegal(f"Action not allowed {action.to_json() if action is not None else 'None'}")
+                        raise InvalidActionError(f"Action not allowed {action.to_json() if action is not None else 'None'}")
                     else:
-                        raise GameActionIllegal(f"Action not allowed {action}")
+                        raise InvalidActionError(f"Action not allowed {action}")
 
 
         # Run proc
