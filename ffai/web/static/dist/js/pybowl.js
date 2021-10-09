@@ -239,7 +239,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.getActionType = function getActionType(square){
-            if ($scope.special_action_selected !== null) {
+            if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) >= 0) {
                 return $scope.special_action_selected.action_type;
             } else {
                 return square.action_type;
@@ -534,7 +534,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.main_action = null;
             $scope.blocked = false;
             $scope.special_action_selected = null;
-            $scope.available_paths = [];
+            $scope.available_paths = {};
             for (let idx in $scope.game.state.available_actions){
                 let action = $scope.game.state.available_actions[idx];
                 if (action.disabled){
@@ -544,8 +544,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     $scope.main_action = action;
                     // If an available player is selected
                     if (action.player_ids.length === 0 || ($scope.selectedPlayer() != null && action.player_ids.indexOf($scope.selectedPlayer().player_id) >= 0) || action.player_ids.length === 1){
-                        if (action.action_type === "MOVE" && action.hasOwnProperty('paths')){
-                            $scope.available_paths = action.paths;
+                        if (action.hasOwnProperty('paths')){
+                             $scope.available_paths[action.action_type] = action.paths;
                         }
                         if (action.action_type === "BLOCK") {
                             $scope.available_block_positions = action.positions;
@@ -709,8 +709,8 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             // Move squares
             for (let i in $scope.available_move_positions) {
                 let path = null;
-                if ($scope.available_paths.length > i){
-                    path = $scope.available_paths[i];
+                if ($scope.available_paths["MOVE"].length > i){
+                    path = $scope.available_paths["MOVE"][i];
                 }
                 let pos = $scope.available_move_positions[i];
                 $scope.local_state.board[pos.y][pos.x].path = path;
@@ -723,7 +723,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Block squares
             for (let i in $scope.available_block_positions) {
+                let path = null;
+                if ($scope.available_paths["BLOCK"].length > i){
+                    path = $scope.available_paths["BLOCK"][i];
+                }
                 let position = $scope.available_block_positions[i];
+                $scope.local_state.board[position.y][position.x].path = path;
                 $scope.local_state.board[position.y][position.x].available = true;
                 $scope.local_state.board[position.y][position.x].action_type = "BLOCK";
                 if ($scope.available_block_dice.length > i){
@@ -736,7 +741,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Foul squares
             for (let i in $scope.available_foul_positions) {
+                let path = null;
+                if ($scope.available_paths["FOUL"].length > i){
+                    path = $scope.available_paths["FOUL"][i];
+                }
                 let position = $scope.available_foul_positions[i];
+                $scope.local_state.board[position.y][position.x].path = path;
                 $scope.local_state.board[position.y][position.x].available = true;
                 $scope.local_state.board[position.y][position.x].action_type = "FOUL";
                 $scope.local_state.board[position.y][position.x].available_foul_position = true;
@@ -744,7 +754,12 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
             // Hand-off squares
             for (let i in $scope.available_handoff_positions) {
+                let path = null;
+                if ($scope.available_paths["HANDOFF"].length > i){
+                    path = $scope.available_paths["HANDOFF"][i];
+                }
                 let position = $scope.available_handoff_positions[i];
+                $scope.local_state.board[position.y][position.x].path = path;
                 $scope.local_state.board[position.y][position.x].available = true;
                 $scope.local_state.board[position.y][position.x].action_type = "HANDOFF";
                 if ($scope.available_dodge_rolls.length > i){
@@ -1160,9 +1175,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             } else {
                 $scope.hover_player = null;
             }
-            if ($scope.available_paths.length > 0){
-                $scope.resetPaths();
-            }
+            $scope.resetPaths();
             if (square.path !== null){
                 $scope.refreshPaths(square.path);
             }
@@ -1587,6 +1600,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
     }
 ]);
+
 appDirectives.directive('displayMessage', function() {
 	return {
 		restrict: 'E',

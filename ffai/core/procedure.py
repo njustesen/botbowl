@@ -350,11 +350,6 @@ class Block(Procedure):
 
     def step(self, action):
 
-        # Jump up
-        if not self.attacker.state.up:
-            JumpUpToBlock(self.game, self.attacker)
-            return False
-
         # GfI
         if self.gfi:
             self.gfi = False
@@ -471,6 +466,7 @@ class Block(Procedure):
                     self.game.add_secondary_clock(self.favor)
                 self.reroll = None
                 return False
+
         return self.handle_block_die(action.action_type)
 
     def handle_block_die(self, action_type):
@@ -2402,6 +2398,7 @@ class StandUp(Procedure):
                 self.reroll = Reroll(self.game, self.player, self)
                 return False
         elif not self.roll_required:
+            self.game.report(Outcome(OutcomeType.STAND_UP, player=self.player))
             self.player.state.up = True
             return True
 
@@ -2494,8 +2491,7 @@ class JumpUpToBlock(Procedure):
             self.roll = None
             self.reroll = None
             return False
-        else:
-            EndPlayerTurn(self.game, self.player)
+        EndPlayerTurn(self.game, self.player)
         return True
 
 
@@ -2631,14 +2627,7 @@ class MoveAction(Procedure):
             if self.steps is not None and len(self.steps) == 0:
                 self.steps = None
 
-            moves = 3
-            if self.player.has_skill(Skill.JUMP_UP):
-                moves = 0
-                self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
-            StandUp(self.game, self.player)
-            self.player.state.moves += min(self.player.get_ma(), moves)
-            for i in range(moves):
-                self.player.state.squares_moved.append(self.player.position)
+            self._stand_up()
             return False
 
         if action.action_type == ActionType.LEAP:
@@ -2657,7 +2646,7 @@ class MoveAction(Procedure):
             HypnoticGaze(self.game, self.player, target_opponent)
             return True
 
-        if self.game.config.pathfinding_enabled:
+        if not self.game.is_quick_snap() and self.game.config.pathfinding_enabled:
 
             # Start new path?
             if self.steps is None:
@@ -2672,6 +2661,16 @@ class MoveAction(Procedure):
         self._move(action.position)
 
         return False
+
+    def _stand_up(self):
+        moves = 3
+        if self.player.has_skill(Skill.JUMP_UP):
+            moves = 0
+            self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
+        StandUp(self.game, self.player)
+        self.player.state.moves += min(self.player.get_ma(), moves)
+        for i in range(moves):
+            self.player.state.squares_moved.append(self.player.position)
 
     def _move(self, position):
         gfi = self.player.state.moves + 1 > self.player.get_ma()
@@ -2773,6 +2772,8 @@ class HandoffAction(MoveAction):
             self.game.unuse_handoff_action()
             return super().step(action)
 
+        self.can_undo = False
+
         if action.action_type is ActionType.HANDOFF:
             if self.player.position.distance(action.position) == 1:
                 EndPlayerTurn(self.game, self.player)
@@ -2780,7 +2781,7 @@ class HandoffAction(MoveAction):
                 assert ball is not None
                 Handoff(self.game, ball, self.player, action.position,
                         self.game.get_player_at(action.position))
-            return True
+                return True
         
         return super().step(action)
 
@@ -2817,6 +2818,8 @@ class PassAction(MoveAction):
         if action.action_type is ActionType.UNDO:
             self.game.unuse_pass_action()
             return super().step(action)
+
+        self.can_undo = False
 
         if action.action_type is ActionType.PASS:
             pass_distance = self.game.get_pass_distance(self.player.position, action.position)
@@ -2924,6 +2927,8 @@ class FoulAction(MoveAction):
             self.game.unuse_foul_action()
             return super().step(action)
 
+        self.can_undo = False
+
         if action.action_type == ActionType.FOUL:
             if self.player.position.distance(action.position) == 1:
                 player_to = self.game.get_player_at(action.position)
@@ -2974,16 +2979,20 @@ class BlockAction(Procedure):
 
         # Stab
         if action.action_type == ActionType.STAB:
+
             Stab(self.game, self.player, defender)
-            return True
 
-        # Frenzy block
-        if self.player.has_skill(Skill.FRENZY):
-            # TODO: Second block can also be a stab
-            Block(self.game, self.player, defender, frenzy_block=True)
+        if action.action_type == ActionType.BLOCK:
 
-        # Regular block
-        Block(self.game, self.player, defender)
+            if self.player.has_skill(Skill.FRENZY):
+                # TODO: Second block can also be a stab?
+                Block(self.game, self.player, defender, frenzy_block=True)
+
+            # Regular block
+            Block(self.game, self.player, defender)
+
+        if not self.player.state.up:
+            JumpUpToBlock(self.game, self.player)
 
         return True
 
@@ -3021,6 +3030,8 @@ class BlitzAction(MoveAction):
             self.game.unuse_blitz_action()
             return super().step(action)
 
+        self.can_undo = False
+
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
             return True
@@ -3030,12 +3041,14 @@ class BlitzAction(MoveAction):
                 defender = self.game.get_player_at(action.position)
                 move_needed = 1
                 if not self.player.state.up:
-                    move_needed += 3 if self.player.has_skill(Skill.JUMP_UP) else 0
+                    move_needed += 0 if self.player.has_skill(Skill.JUMP_UP) else 3
+                else:
+                    self.player.state.moves += move_needed
+
                 gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
                 gfi = self.player.state.moves + move_needed > self.player.get_ma()
                 gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
                 frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
-                self.player.state.moves += move_needed
 
                 if action.action_type == ActionType.BLOCK:
                     # Frenzy second block
@@ -3044,9 +3057,15 @@ class BlitzAction(MoveAction):
                         Block(self.game, self.player, defender, blitz=True, gfi=gfi_frenzy, frenzy_block=True)
                     # Regular block
                     Block(self.game, self.player, defender, blitz=True, gfi=gfi)
+                    if not self.player.state.up:
+                        self._stand_up()
+                    return False
                 elif action.action_type == ActionType.STAB:
+                    EndPlayerTurn(self.game, self.player)
                     Stab(self.game, self.player, defender, blitz=True, gfi=gfi)
-                return False
+                    if not self.player.state.up:
+                        self._stand_up()
+                    return True
 
         return super().step(action)
 
