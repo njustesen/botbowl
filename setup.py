@@ -21,7 +21,7 @@ install_requires_packages = [
           'python-interface',
           'stopit',
           'requests',
-          'Cython',
+          'Cython >= 3.0.0',
           'pytest',
           'matplotlib'
 ]
