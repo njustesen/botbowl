@@ -533,7 +533,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             $scope.available_select_rolls = [];
             $scope.main_action = null;
             $scope.blocked = false;
-            $scope.special_action_selected = null;
             $scope.available_paths = {};
             for (let idx in $scope.game.state.available_actions){
                 let action = $scope.game.state.available_actions[idx];
@@ -776,6 +775,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         $scope.local_state.board[pos.y][pos.x].special_rolls[action] = $scope.special_rolls[action][j];
                     }
                 }
+            }
+            // Reset special action to null if not available
+            if ($scope.game.state.available_actions.length > 0 && ($scope.special_action_selected == null || $scope.special_actions.indexOf($scope.special_action_selected.action_type) < 0)){
+                $scope.special_action_selected = null;
             }
         };
 

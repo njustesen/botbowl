@@ -724,6 +724,10 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     }
                 }
             }
+            // Reset special action to null if not available
+            if ($scope.game.state.available_actions.length > 0 && ($scope.special_action_selected == null || $scope.special_actions.indexOf($scope.special_action_selected.action_type) < 0)){
+                $scope.special_action_selected = null;
+            }
         };
 
         $scope.getTile = function(x, y){
