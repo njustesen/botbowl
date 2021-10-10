@@ -2710,7 +2710,7 @@ class MoveAction(Procedure):
                 if action_type == ActionType.HANDOFF:
                     rolls = [path.handoff_roll for path in action_paths]
                 elif action_type == ActionType.FOUL:
-                    rolls = [path.handoff_roll for path in action_paths]
+                    rolls = [path.foul_roll for path in action_paths]
                 actions.append(ActionChoice(action_type=action_type, team=self.player.team, positions=positions,
                                             paths=action_paths, block_dice=block_dice, rolls=rolls))
         return actions
@@ -2782,7 +2782,8 @@ class HandoffAction(MoveAction):
                 Handoff(self.game, ball, self.player, action.position,
                         self.game.get_player_at(action.position))
                 return True
-        
+
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
@@ -2936,6 +2937,7 @@ class FoulAction(MoveAction):
                 Foul(self.game, self.player, player_to)
                 return True
 
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
@@ -3067,6 +3069,7 @@ class BlitzAction(MoveAction):
                         self._stand_up()
                     return True
 
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
