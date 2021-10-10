@@ -2390,7 +2390,7 @@ class Game:
                                         positions=positions, rolls=d6_rolls))
         return actions
 
-    def get_block_actions(self, player, blitz=False):
+    def get_block_actions(self, player, blitz=False, defender=None):
 
         if player.state.has_blocked:
             return []
@@ -2421,6 +2421,8 @@ class Game:
         block_dice = []
         stab_rolls = []
         for player_to in self.get_adjacent_opponents(player, down=False):
+            if defender and not defender == player_to:
+                continue
             block_positions.append(player_to.position)
             dice = self.num_block_dice(attacker=player, defender=player_to,
                                        blitz=blitz,
@@ -2439,7 +2441,7 @@ class Game:
                                         block_dice=block_dice,
                                         rolls=rolls))
             if player.has_skill(Skill.STAB):
-                rolls = [roll + stab_rolls[i] for i, roll in enumerate(rolls)]
+                rolls = [roll + [stab_rolls[i]] for i, roll in enumerate(rolls)]
                 actions.append(ActionChoice(ActionType.STAB, team=player.team, positions=block_positions, rolls=rolls))
 
         return actions
