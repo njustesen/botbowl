@@ -179,6 +179,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
         };
 
         $scope.getBlockDice = function getBlockRoll(square){
+            return square.block_dice;
             if ($scope.special_action_selected !== null && square.special_actions.indexOf($scope.special_action_selected.action_type) > -1) {
                 return 0;
             } else {
@@ -1138,7 +1139,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                     if ($scope.local_state.board[y][x].path !== null) {
                         $scope.local_state.board[y][x].rolls = [];
                         $scope.local_state.board[y][x].on_path = false;
-                        $scope.local_state.board[y][x].block_dice = 0;
+                        //$scope.local_state.board[y][x].block_dice = 0;
                         $scope.local_state.board[y][x].foul_roll = null;
                         $scope.local_state.board[y][x].handoff_roll = null;
                     }
