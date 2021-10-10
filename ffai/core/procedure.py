@@ -4369,7 +4369,7 @@ class EatThrall(Procedure):
         self.player.state.blood_lust = False
         
     def available_actions(self): 
-        if len(self.victim_pos)>0: 
+        if len(self.victim_pos) > 0:
             return [ActionChoice(ActionType.SELECT_PLAYER, positions=self.victim_pos, team=self.player.team)] 
         else: 
             return [] 
