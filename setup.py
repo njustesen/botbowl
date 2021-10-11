@@ -1,13 +1,12 @@
 from setuptools import setup, find_packages
 import os, shutil, platform
+import sysconfig
 
-try:
+can_compile = 'CXX' in sysconfig.get_config_vars()
+if can_compile:
     from Cython.Build import cythonize
     import Cython.Compiler.Options
     Cython.Compiler.Options.annotate = True
-    cython_exists = True
-except ImportError:
-    cython_exists = False
 
 files_to_compile = ["ffai/ai/fast_pathing.pyx"]
 compiled_file_type = ".pyd" if platform.system() == "Windows" else ".so"
@@ -35,12 +34,14 @@ kwargs = {
     'zip_safe': False
 }
 
-if cython_exists:
+
+if can_compile:
     kwargs['ext_modules'] = cythonize(files_to_compile, annotate=True)
 
 setup(**kwargs)
 
-if cython_exists:
+
+if can_compile:
     # Grab all '.so'-files and copy into source folders
     copied_files = 0
     for root, dirs, files in os.walk('./build/'):
