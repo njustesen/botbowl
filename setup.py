@@ -43,7 +43,7 @@ if cython_exists and 'CXX' in sysconfig.get_config_vars():
 setup(**kwargs)
 
 
-if can_compile:
+if cython_exists and 'CXX' in sysconfig.get_config_vars():
     # Grab all '.so'-files and copy into source folders
     copied_files = 0
     for root, dirs, files in os.walk('./build/'):
