@@ -354,8 +354,9 @@ class Game:
                     # Consider this as a None action
                     action = None
                 else:
-                    raise InvalidActionError("CONTINUE action is not allowed when actions are available")
-
+                    if self.config.debug_mode:
+                        print("CONTINUE action is not allowed when actions are available")
+                    return True  # Game needs user input
             else:
                 # Only allowed actions
                 if not self._is_action_allowed(action):
