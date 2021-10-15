@@ -1,4 +1,3 @@
-
 from timeit import timeit
 from tests.util import get_game_turn
 import ffai.ai.pathfinding as python_pathfinding
@@ -20,8 +19,8 @@ def benchmark_cython_pathfinding():
     cython_time = timeit("get_paths_of_all_players(cython_pathfinding)",number=2, globals=scope)
     python_time = timeit("get_paths_of_all_players(python_pathfinding)",number=2, globals=scope)
 
-    print(f"{cython_time=}")
-    print(f"{python_time=}")
+    print(f"cython_time = {cython_time}")
+    print(f"python_time = {python_time}")
 
 if __name__ == "__main__":
     benchmark_cython_pathfinding()
