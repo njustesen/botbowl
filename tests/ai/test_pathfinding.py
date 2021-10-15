@@ -2,7 +2,11 @@ from tests.util import Square, get_game_turn, Skill
 import pytest
 
 import ffai.ai.pathfinding as python_pathfinding
-import ffai.ai.fast_pathing as cython_pathfinding
+
+try:
+    import ffai.ai.fast_pathing as cython_pathfinding
+except ImportError:
+    cython_pathfinding = None
 
 PROP_PRECISION = 0.000000001
 
