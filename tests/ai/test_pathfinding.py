@@ -1,14 +1,15 @@
 from tests.util import Square, get_game_turn, Skill
 import pytest
 
-import ffai.ai.pathfinding as python_pathfinding
+import ffai.core.pathfinding.python_pathfinding as python_pathfinding
 
 try:
-    import ffai.ai.fast_pathing as cython_pathfinding
+    import ffai.core.pathfinding.fast_pathing as cython_pathfinding
 except ImportError:
     cython_pathfinding = None
 
 PROP_PRECISION = 0.000000001
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_neighbors(pf):
@@ -21,6 +22,7 @@ def test_neighbors(pf):
         assert len(path) == 1 and path.steps[0] == neighbor
         assert path.prob == 1.0
 
+
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_out_of_bounds(pf):
     game = get_game_turn(empty=True)
@@ -31,6 +33,7 @@ def test_out_of_bounds(pf):
         if game.is_out_of_bounds(neighbor):
             path = pf.get_safest_path(game, player, neighbor)
             assert path is None
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_gfi(pf):
@@ -52,6 +55,7 @@ skills_and_rerolls_perms = [
     (False, True),
     (False, False)
 ]
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 @pytest.mark.parametrize("skills_and_rerolls", skills_and_rerolls_perms)
@@ -80,9 +84,9 @@ def test_get_safest_path(skills_and_rerolls, pf):
                         p_reroll_one = (p * (1 - p) * p)
                         p_reroll_both = (1 - p) * p * (1 - p) * p
                         if reroll and not skill or not reroll and skill:
-                            p = p_clean + p_reroll_one*2
+                            p = p_clean + p_reroll_one * 2
                         elif reroll and skill:
-                            p = p_clean + p_reroll_one*2 + p_reroll_both
+                            p = p_clean + p_reroll_one * 2 + p_reroll_both
                         else:
                             p = p_clean
                         assert path is not None
@@ -97,6 +101,7 @@ def test_get_safest_path(skills_and_rerolls, pf):
                         p = 1.0
                         assert path.prob == p
 
+
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_invalid_path(pf):
     game = get_game_turn(empty=True)
@@ -106,6 +111,7 @@ def test_invalid_path(pf):
     target_a = Square(12, 12)
     path = pf.get_safest_path(game, player, target_a)
     assert path is None
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_avoid_path(pf):
@@ -121,6 +127,7 @@ def test_avoid_path(pf):
     assert path is not None
     assert len(path.steps) == 6
     assert path.prob == 1.0
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 @pytest.mark.parametrize("sure_feet", [True, False])
@@ -142,7 +149,7 @@ def test_sure_feet_over_ag4_dodge(sure_feet, pf):
     if sure_feet:
         assert len(path.steps) == 5
         p = (5 / 6)
-        assert path.prob == p + (1-p)*p
+        assert path.prob == p + (1 - p) * p
     else:
         assert len(path.steps) == 4
         p = (5 / 6)
@@ -162,7 +169,7 @@ def test_dodge_needed_path_long(pf):
     path = pf.get_safest_path(game, player, position=target_a)
     assert path is not None
     assert len(path.steps) == 8
-    assert path.prob == (4 / 6)*(5 / 6)*(5 / 6)
+    assert path.prob == (4 / 6) * (5 / 6) * (5 / 6)
 
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
@@ -176,6 +183,7 @@ def test_path_to_endzone_home(pf):
     assert path is not None
     assert len(path) == 3
 
+
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_path_to_endzone_away(pf):
     game = get_game_turn(empty=True)
@@ -187,6 +195,7 @@ def test_path_to_endzone_away(pf):
     assert path is not None
     assert len(path) == 3
 
+
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_all_paths(pf):
     game = get_game_turn(empty=True)
@@ -197,6 +206,7 @@ def test_all_paths(pf):
     paths = pf.get_all_paths(game, player)
     assert paths is not None
     assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_all_blitz_paths(pf):
@@ -238,8 +248,8 @@ def test_handoff_after_gfi(pf):
     other_player = game.get_reserves(game.state.away_team)[1]
     game.put(other_player, Square(2, 2))
     pathfinder = pf.Pathfinder(game,
-                            player,
-                            can_handoff=True)
+                               player,
+                               can_handoff=True)
     paths = pathfinder.get_paths()
     assert len(paths) == 1
     assert len(paths[0].steps) == 1
@@ -257,12 +267,13 @@ def test_foul_after_gfi(pf):
     opp_player.state.up = False
     game.put(opp_player, Square(2, 2))
     pathfinder = pf.Pathfinder(game,
-                            player,
-                            can_foul=True)
+                               player,
+                               can_foul=True)
     paths = pathfinder.get_paths()
     assert len(paths) == 1
     assert len(paths[0].steps) == 1
     assert paths[0].steps[0] == opp_player.position
+
 
 @pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
 def test_foul(pf):
@@ -282,10 +293,10 @@ def test_foul(pf):
     game.put(opp_player_2, opp_position_2)
 
     pathfinder = pf.Pathfinder(game,
-                            player,
-                            directly_to_adjacent=True,
-                            can_foul=True,
-                            trr=False)
+                               player,
+                               directly_to_adjacent=True,
+                               can_foul=True,
+                               trr=False)
     paths = pathfinder.get_paths()
     total_fouls = 0
     for path in paths:
@@ -315,10 +326,10 @@ def test_handoff(pf):
     game.put(teammate_2, teammate_position_2)
 
     pathfinder = pf.Pathfinder(game,
-                            player,
-                            directly_to_adjacent=True,
-                            can_handoff=True,
-                            trr=False)
+                               player,
+                               directly_to_adjacent=True,
+                               can_handoff=True,
+                               trr=False)
 
     paths = pathfinder.get_paths()
     total_handoffs = 0
@@ -348,11 +359,11 @@ def test_compare_cython_python_paths():
     position = Square(7, 7)
     game.put(player, position)
 
-    for sq in [Square(8,8), Square(5,7), Square(8,5)]:
+    for sq in [Square(8, 8), Square(5, 7), Square(8, 5)]:
         opp_player = game.get_reserves(game.state.home_team)[0]
         game.put(opp_player, sq)
 
-    game.move(game.get_ball(), Square(9,9))
+    game.move(game.get_ball(), Square(9, 9))
     game.get_ball().is_carried = False
 
     fast_paths = cython_pathfinding.Pathfinder(game, player, trr=True).get_paths()
@@ -371,6 +382,6 @@ def test_compare_cython_python_paths():
         assert slow_s == fast_s
 
         # Uncomment this when debugging. And comment the assertion above
-        #if slow_s != fast_s:
+        # if slow_s != fast_s:
         #    print(f"slow = {slow_s} \n {create_path_string(slow_path)}")
         #    print(f"fast = {fast_s} \n {create_path_string(fast_path)}")

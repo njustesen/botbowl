@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import ffai
-from ffai import Action, ActionType, Square, BBDieResult, Skill, PassDistance, Tile, Rules, Formation, ProcBot
-import ffai.ai.pathfinding as pf
+from ffai import Action, ActionType, Square, BBDieResult, Skill, Formation, ProcBot
+import ffai.core.pathfinding as pf
 import time
 
 
