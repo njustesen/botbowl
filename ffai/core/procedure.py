@@ -349,11 +349,6 @@ class Block(Procedure):
 
     def step(self, action):
 
-        # Jump up
-        if not self.attacker.state.up:
-            JumpUpToBlock(self.game, self.attacker)
-            return False
-
         # GfI
         if self.gfi:
             self.gfi = False
@@ -470,6 +465,7 @@ class Block(Procedure):
                     self.game.add_secondary_clock(self.favor)
                 self.reroll = None
                 return False
+
         return self.handle_block_die(action.action_type)
 
     def handle_block_die(self, action_type):
@@ -2401,6 +2397,7 @@ class StandUp(Procedure):
                 self.reroll = Reroll(self.game, self.player, self)
                 return False
         elif not self.roll_required:
+            self.game.report(Outcome(OutcomeType.STAND_UP, player=self.player))
             self.player.state.up = True
             return True
 
@@ -2493,8 +2490,7 @@ class JumpUpToBlock(Procedure):
             self.roll = None
             self.reroll = None
             return False
-        else:
-            EndPlayerTurn(self.game, self.player)
+        EndPlayerTurn(self.game, self.player)
         return True
 
 
@@ -2593,6 +2589,7 @@ class MoveAction(Procedure):
         self.player_action_type = player_action_type
         self.paths = {}
         self.steps = None
+        self.orig_action_type = None
         self.can_undo = self.game.get_team_agent(player.team).human
 
     def start(self):
@@ -2602,8 +2599,8 @@ class MoveAction(Procedure):
 
     def step(self, action):
 
+        # Follow the selected path
         if action is None:
-            # Follow the selected path
             pos = self.steps.pop(0)
             if pos == self.player.position:
                 action = Action(ActionType.STAND_UP)
@@ -2629,14 +2626,7 @@ class MoveAction(Procedure):
             if self.steps is not None and len(self.steps) == 0:
                 self.steps = None
 
-            moves = 3
-            if self.player.has_skill(Skill.JUMP_UP):
-                moves = 0
-                self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
-            StandUp(self.game, self.player)
-            self.player.state.moves += min(self.player.get_ma(), moves)
-            for i in range(moves):
-                self.player.state.squares_moved.append(self.player.position)
+            self._stand_up()
             return False
 
         if action.action_type == ActionType.LEAP:
@@ -2648,32 +2638,81 @@ class MoveAction(Procedure):
             self.player.state.moves += distance
             return False
 
-        if action.action_type == ActionType.MOVE:
-
-            # Start new path?
-            if self.steps is None and len(self.paths) > 0:
-                self.steps = self.paths[action.position].steps
-                return False
-
-            # if this is the last step in a path
-            if self.steps is not None and len(self.steps) == 0:
-                self.steps = None
-
-            gfi = self.player.state.moves + 1 > self.player.get_ma()
-            dodge = self.game.num_tackle_zones_in(self.player) > 0
-            if self.game.is_quick_snap() or self.player.has_skill(Skill.BALL_AND_CHAIN):
-                dodge = False
-            Move(self.game, self.player, action.position, gfi, dodge)
-            self.player.state.squares_moved.append(action.position)
-            self.player.state.moves += 1
-            return False
-
         if action.action_type == ActionType.HYPNOTIC_GAZE and self.player_action_type == PlayerActionType.MOVE:
 
             EndPlayerTurn(self.game, self.player)
             target_opponent = self.game.get_player_at(action.position)
             HypnoticGaze(self.game, self.player, target_opponent)
             return True
+
+        if not self.game.is_quick_snap() and self.game.config.pathfinding_enabled:
+
+            # Start new path?
+            if self.steps is None:
+                self.steps = self.paths[action.position].steps
+                self.orig_action_type = action.action_type
+                return False
+
+            # if this is the last step in a path
+            if self.steps is not None and len(self.steps) == 0:
+                self.steps = None
+
+        self._move(action.position)
+
+        return False
+
+    def _stand_up(self):
+        moves = 3
+        if self.player.has_skill(Skill.JUMP_UP):
+            moves = 0
+            self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.JUMP_UP, player=self.player))
+        StandUp(self.game, self.player)
+        self.player.state.moves += min(self.player.get_ma(), moves)
+        for i in range(moves):
+            self.player.state.squares_moved.append(self.player.position)
+
+    def _move(self, position):
+        gfi = self.player.state.moves + 1 > self.player.get_ma()
+        if self.game.is_quick_snap() or self.player.has_skill(Skill.BALL_AND_CHAIN):
+            dodge = False
+        else:
+            dodge = self.game.num_tackle_zones_in(self.player) > 0
+        Move(self.game, self.player, position, gfi, dodge)
+        self.player.state.squares_moved.append(position)
+        self.player.state.moves += 1
+
+    def _get_actions_from_paths(self, paths):
+        paths_by_type = {
+            ActionType.MOVE: [],
+            ActionType.BLOCK: [],
+            ActionType.STAB: [],
+            ActionType.HANDOFF: [],
+            ActionType.FOUL: []
+        }
+        for path in paths:
+            if path.block_dice:
+                paths_by_type[ActionType.BLOCK].append(path)
+                if self.player.has_skill(Skill.STAB):
+                    paths_by_type[ActionType.STAB].append(path)
+            elif path.handoff_roll:
+                paths_by_type[ActionType.HANDOFF].append(path)
+            elif path.foul_roll:
+                paths_by_type[ActionType.FOUL].append(path)
+            else:
+                paths_by_type[ActionType.MOVE].append(path)
+        actions = []
+        for action_type, action_paths in paths_by_type.items():
+            if len(action_paths) > 0:
+                positions = [path.steps[-1] for path in action_paths]
+                block_dice = [path.block_dice for path in action_paths]
+                rolls = []
+                if action_type == ActionType.HANDOFF:
+                    rolls = [path.handoff_roll for path in action_paths]
+                elif action_type == ActionType.FOUL:
+                    rolls = [path.foul_roll for path in action_paths]
+                actions.append(ActionChoice(action_type=action_type, team=self.player.team, positions=positions,
+                                            paths=action_paths, block_dice=block_dice, rolls=rolls))
+        return actions
 
     def available_actions(self):
         if self.steps is not None and len(self.steps) > 0:
@@ -2695,10 +2734,8 @@ class MoveAction(Procedure):
                                     can_foul=can_foul,
                                     trr=False)
             paths = pathfinder.get_paths()
-            if len(paths) > 0:
-                positions = [path.steps[-1] for path in paths]
-                actions.append(ActionChoice(ActionType.MOVE, self.player.team, positions=positions, paths=paths))
             self.paths = {path.steps[-1]: path for path in paths}
+            actions += self._get_actions_from_paths(paths)
         actions += self.game.get_stand_up_actions(self.player)
         actions += self.game.get_leap_actions(self.player)
         if self.player.has_skill(Skill.HYPNOTIC_GAZE) and self.player_action_type == PlayerActionType.MOVE:
@@ -2734,14 +2771,18 @@ class HandoffAction(MoveAction):
             self.game.unuse_handoff_action()
             return super().step(action)
 
+        self.can_undo = False
+
         if action.action_type is ActionType.HANDOFF:
-            EndPlayerTurn(self.game, self.player)
-            ball = self.game.get_ball_at(self.player.position)
-            assert ball is not None
-            Handoff(self.game, ball, self.player, action.position,
-                    self.game.get_player_at(action.position))
-            return True
-        
+            if self.player.position.distance(action.position) == 1:
+                EndPlayerTurn(self.game, self.player)
+                ball = self.game.get_ball_at(self.player.position)
+                assert ball is not None
+                Handoff(self.game, ball, self.player, action.position,
+                        self.game.get_player_at(action.position))
+                return True
+
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
@@ -2777,6 +2818,8 @@ class PassAction(MoveAction):
         if action.action_type is ActionType.UNDO:
             self.game.unuse_pass_action()
             return super().step(action)
+
+        self.can_undo = False
 
         if action.action_type is ActionType.PASS:
             pass_distance = self.game.get_pass_distance(self.player.position, action.position)
@@ -2876,6 +2919,7 @@ class FoulAction(MoveAction):
             player_at = self.game.get_player_at(self.steps[0])
             if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
+            # Last step is a foul action
             action = Action(ActionType.FOUL, position=self.steps.pop(0))
             self.steps = None
 
@@ -2883,12 +2927,16 @@ class FoulAction(MoveAction):
             self.game.unuse_foul_action()
             return super().step(action)
 
-        if action.action_type == ActionType.FOUL:
-            player_to = self.game.get_player_at(action.position)
-            EndPlayerTurn(self.game, self.player)
-            Foul(self.game, self.player, player_to)
-            return True
+        self.can_undo = False
 
+        if action.action_type == ActionType.FOUL:
+            if self.player.position.distance(action.position) == 1:
+                player_to = self.game.get_player_at(action.position)
+                EndPlayerTurn(self.game, self.player)
+                Foul(self.game, self.player, player_to)
+                return True
+
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
@@ -2932,16 +2980,20 @@ class BlockAction(Procedure):
 
         # Stab
         if action.action_type == ActionType.STAB:
+
             Stab(self.game, self.player, defender)
-            return True
 
-        # Frenzy block
-        if self.player.has_skill(Skill.FRENZY):
-            # TODO: Second block can also be a stab
-            Block(self.game, self.player, defender, frenzy_block=True)
+        if action.action_type == ActionType.BLOCK:
 
-        # Regular block
-        Block(self.game, self.player, defender)
+            if self.player.has_skill(Skill.FRENZY):
+                # TODO: Second block can also be a stab?
+                Block(self.game, self.player, defender, frenzy_block=True)
+
+            # Regular block
+            Block(self.game, self.player, defender)
+
+        if not self.player.state.up:
+            JumpUpToBlock(self.game, self.player)
 
         return True
 
@@ -2971,40 +3023,52 @@ class BlitzAction(MoveAction):
             player_at = self.game.get_player_at(self.steps[0])
             if player_at is None or (player_at == self.player and not player_at.state.up):
                 return super().step(action)
-            # Last path step is a block action
-            action = Action(ActionType.BLOCK, position=self.steps.pop(0))
+            # Last path step is a block or stab action
+            action = Action(self.orig_action_type, position=self.steps.pop(0))
             self.steps = None
 
         if action.action_type is ActionType.UNDO:
             self.game.unuse_blitz_action()
             return super().step(action)
 
+        self.can_undo = False
+
         if action.action_type == ActionType.END_PLAYER_TURN:
             EndPlayerTurn(self.game, self.player)
             return True
 
         if action.action_type == ActionType.BLOCK or action.action_type == ActionType.STAB:
-            defender = self.game.get_player_at(action.position)
-            move_needed = 1
-            if not self.player.state.up:
-                move_needed += 3 if self.player.has_skill(Skill.JUMP_UP) else 0
-            gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
-            gfi = self.player.state.moves + move_needed > self.player.get_ma()
-            gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
-            frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
-            self.player.state.moves += move_needed
+            if self.player.position.distance(action.position) == 1:
+                defender = self.game.get_player_at(action.position)
+                move_needed = 1
+                if not self.player.state.up:
+                    move_needed += 0 if self.player.has_skill(Skill.JUMP_UP) else 3
+                else:
+                    self.player.state.moves += move_needed
 
-            if action.action_type == ActionType.BLOCK:
-                # Frenzy second block
-                if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
-                    # TODO: Option to block or stab: add second block inside block?
-                    Block(self.game, self.player, defender, blitz=True, gfi=gfi_frenzy, frenzy_block=True)
+                gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
+                gfi = self.player.state.moves + move_needed > self.player.get_ma()
+                gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
+                frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
 
-                # Regular block
-                Block(self.game, self.player, defender, blitz=True, gfi=gfi)
-            elif action.action_type == ActionType.STAB:
-                Stab(self.game, self.player, defender, blitz=True, gfi=gfi)
+                if action.action_type == ActionType.BLOCK:
+                    # Frenzy second block
+                    if self.player.has_skill(Skill.FRENZY) and frenzy_allowed:
+                        # TODO: Option to block or stab: add second block inside block?
+                        Block(self.game, self.player, defender, blitz=True, gfi=gfi_frenzy, frenzy_block=True)
+                    # Regular block
+                    Block(self.game, self.player, defender, blitz=True, gfi=gfi)
+                    if not self.player.state.up:
+                        self._stand_up()
+                    return False
+                elif action.action_type == ActionType.STAB:
+                    EndPlayerTurn(self.game, self.player)
+                    Stab(self.game, self.player, defender, blitz=True, gfi=gfi)
+                    if not self.player.state.up:
+                        self._stand_up()
+                    return True
 
+        # It's a move action
         return super().step(action)
 
     def available_actions(self):
