@@ -4,7 +4,7 @@ import pytest
 import ffai.core.pathfinding.python_pathfinding as python_pathfinding
 
 try:
-    import ffai.core.pathfinding.fast_pathing as cython_pathfinding
+    import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
 except ImportError:
     cython_pathfinding = None
 
