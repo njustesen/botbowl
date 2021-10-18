@@ -387,6 +387,6 @@ def test_compare_cython_python_paths():
         assert python_str == cython_str
 
         # Uncomment this when debugging. And comment the assertion above
-        # if slow_s != fast_s:
-        #    print(f"slow = {slow_s} \n {create_path_string(slow_path)}")
-        #    print(f"fast = {fast_s} \n {create_path_string(fast_path)}")
+        # if python_str != cython_str:
+        #    print(f"slow = {python_str} \n {create_path_string(python_str)}")
+        #    print(f"fast = {cython_str} \n {create_path_string(cython_str)}")
