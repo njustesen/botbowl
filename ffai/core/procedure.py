@@ -10,10 +10,7 @@ before other procedures are run. Procedures can add other procedures to the stac
 from abc import abstractmethod, ABCMeta
 
 # Try to import the cython compiled pathfinding,
-try:
-    from ffai.ai.fast_pathing import Pathfinder
-except ImportError:
-    from ffai.ai.pathfinding import Pathfinder
+from ffai.core.pathfinding import Pathfinder
 
 from ffai.core.model import *
 from ffai.core.table import *

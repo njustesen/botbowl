@@ -10,7 +10,7 @@ try:
 except ImportError:
     compile_available = False
     
-files_to_compile = ["ffai/ai/fast_pathing.pyx"]
+files_to_compile = ["ffai/core/pathfinding/cython_pathfinding.pyx"]
 
 install_requires_packages = [
           'numpy',

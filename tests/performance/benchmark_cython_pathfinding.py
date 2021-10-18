@@ -1,7 +1,7 @@
 from timeit import timeit
 from tests.util import get_game_turn
-import ffai.ai.pathfinding as python_pathfinding
-import ffai.ai.fast_pathing as cython_pathfinding
+import ffai.core.pathfinding.python_pathfinding as python_pathfinding
+import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
 
 
 def benchmark_cython_pathfinding():
