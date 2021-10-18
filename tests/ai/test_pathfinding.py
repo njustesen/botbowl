@@ -192,7 +192,55 @@ def test_all_paths():
     assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
 
 
-def test_all_blitz_paths():
+def test_blitz_action_type_is_block():
+    game = get_game_turn()
+    game.config.pathfinding_enabled = True
+    team = game.get_agent_team(game.actor)
+    player = game.get_players_on_pitch(team=team)[0]
+    player.role.ma = 16
+    game.step(Action(ActionType.START_BLITZ, player=player))
+    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 11
+
+
+def test_handoff_action_type_is_handoff():
+    game = get_game_turn()
+    game.config.pathfinding_enabled = True
+    team = game.get_agent_team(game.actor)
+    player = game.get_players_on_pitch(team=team)[0]
+    game.move(game.get_ball(), player.position)
+    game.get_ball().is_carried = True
+    player.role.ma = 16
+    game.step(Action(ActionType.START_HANDOFF, player=player))
+    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.HANDOFF]) == 10
+
+
+def test_handoff_action_type_is_foul():
+    game = get_game_turn()
+    game.config.pathfinding_enabled = True
+    team = game.get_agent_team(game.actor)
+    player = game.get_players_on_pitch(team=team)[0]
+    game.move(game.get_ball(), player.position)
+    game.get_ball().carried = True
+    player.role.ma = 16
+    for opp_player in game.get_players_on_pitch(team=game.get_opp_team(team)):
+        opp_player.state.up = False
+    game.step(Action(ActionType.START_FOUL, player=player))
+    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.FOUL]) == 11
+
+
+def test_blitz_action_type_is_block_with_stab():
+    game = get_game_turn()
+    game.config.pathfinding_enabled = True
+    team = game.get_agent_team(game.actor)
+    player = game.get_players_on_pitch(team=team)[0]
+    player.role.ma = 16
+    player.role.skills = [Skill.STAB]
+    game.step(Action(ActionType.START_BLITZ, player=player))
+    assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 1
+    assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.STAB]) == 1
+
+
+def test_all_blitz_paths_one():
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
     player.role.ma = 6

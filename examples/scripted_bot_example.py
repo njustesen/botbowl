@@ -255,7 +255,7 @@ class MyScriptedBot(ProcBot):
                 # Hand-off if high probability or last turn
                 if handoff_path is not None and (handoff_p >= 0.7 or self.my_team.state.turn == 8):
                     self.actions = [Action(ActionType.START_HANDOFF, player=ball_carrier),
-                                    Action(ActionType.MOVE, handoff_path.steps[-1])]
+                                    Action(ActionType.HANDOFF, handoff_path.steps[-1])]
                     return
 
             #print("2.3 Move safely towards the endzone")
@@ -406,7 +406,7 @@ class MyScriptedBot(ProcBot):
                                 best_blitz_path = path
             if best_blitz_attacker is not None and best_blitz_score >= 1.25:
                 self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
-                self.actions.append(Action(ActionType.MOVE, position=best_blitz_path.steps[-1]))
+                self.actions.append(Action(ActionType.BLOCK, position=best_blitz_path.steps[-1]))
                 #print(f"Blitz with {best_blitz_attacker.role.name}, score={best_blitz_score}")
                 return
 
