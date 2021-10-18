@@ -1,6 +1,9 @@
 from tests.util import Square, get_game_turn, Skill, Action, ActionType
 import pytest
+import unittest.mock
 import numpy as np
+import ffai.core.procedure
+
 import ffai.core.pathfinding.python_pathfinding as python_pathfinding
 pathfinding_modules_to_test = [python_pathfinding]
 
@@ -212,55 +215,77 @@ def test_all_paths(pf):
     assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
 
 
-def test_blitz_action_type_is_block():
-    game = get_game_turn()
-    game.config.pathfinding_enabled = True
-    team = game.get_agent_team(game.actor)
-    player = game.get_players_on_pitch(team=team)[0]
-    player.role.ma = 16
-    game.step(Action(ActionType.START_BLITZ, player=player))
-    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 11
+def test_that_unittest_mock_patch_works():
+    """
+    This test makes sure that unittest.mock.patch works as expected in other tests.
+    """
+    with unittest.mock.patch('ffai.core.procedure.Pathfinder', None):
+        game = get_game_turn()
+        game.config.pathfinding_enabled = True
+        team = game.get_agent_team(game.actor)
+        player = game.get_players_on_pitch(team=team)[0]
+        with pytest.raises(TypeError):
+            game.step(Action(ActionType.START_MOVE, player=player))
 
 
-def test_handoff_action_type_is_handoff():
-    game = get_game_turn()
-    game.config.pathfinding_enabled = True
-    team = game.get_agent_team(game.actor)
-    player = game.get_players_on_pitch(team=team)[0]
-    game.move(game.get_ball(), player.position)
-    game.get_ball().is_carried = True
-    player.role.ma = 16
-    game.step(Action(ActionType.START_HANDOFF, player=player))
-    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.HANDOFF]) == 10
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_blitz_action_type_is_block(pf):
+    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+        game = get_game_turn()
+        game.config.pathfinding_enabled = True
+        team = game.get_agent_team(game.actor)
+        player = game.get_players_on_pitch(team=team)[0]
+        player.role.ma = 16
+        game.step(Action(ActionType.START_BLITZ, player=player))
+        assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 11
 
 
-def test_handoff_action_type_is_foul():
-    game = get_game_turn()
-    game.config.pathfinding_enabled = True
-    team = game.get_agent_team(game.actor)
-    player = game.get_players_on_pitch(team=team)[0]
-    game.move(game.get_ball(), player.position)
-    game.get_ball().carried = True
-    player.role.ma = 16
-    for opp_player in game.get_players_on_pitch(team=game.get_opp_team(team)):
-        opp_player.state.up = False
-    game.step(Action(ActionType.START_FOUL, player=player))
-    assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.FOUL]) == 11
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_handoff_action_type_is_handoff(pf):
+    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+        game = get_game_turn()
+        game.config.pathfinding_enabled = True
+        team = game.get_agent_team(game.actor)
+        player = game.get_players_on_pitch(team=team)[0]
+        game.move(game.get_ball(), player.position)
+        game.get_ball().is_carried = True
+        player.role.ma = 16
+        game.step(Action(ActionType.START_HANDOFF, player=player))
+        assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.HANDOFF]) == 10
 
 
-def test_blitz_action_type_is_block_with_stab():
-    game = get_game_turn()
-    game.config.pathfinding_enabled = True
-    team = game.get_agent_team(game.actor)
-    player = game.get_players_on_pitch(team=team)[0]
-    player.role.ma = 16
-    player.role.skills = [Skill.STAB]
-    game.step(Action(ActionType.START_BLITZ, player=player))
-    assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 1
-    assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.STAB]) == 1
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_handoff_action_type_is_foul(pf):
+    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+        game = get_game_turn()
+        game.config.pathfinding_enabled = True
+        team = game.get_agent_team(game.actor)
+        player = game.get_players_on_pitch(team=team)[0]
+        game.move(game.get_ball(), player.position)
+        game.get_ball().carried = True
+        player.role.ma = 16
+        for opp_player in game.get_players_on_pitch(team=game.get_opp_team(team)):
+            opp_player.state.up = False
+        game.step(Action(ActionType.START_FOUL, player=player))
+        assert np.sum([len(action.positions) for action in game.get_available_actions() if action.action_type == ActionType.FOUL]) == 11
 
 
-def test_all_blitz_paths_one():
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_blitz_action_type_is_block_with_stab(pf):
+    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+        game = get_game_turn()
+        game.config.pathfinding_enabled = True
+        team = game.get_agent_team(game.actor)
+        player = game.get_players_on_pitch(team=team)[0]
+        player.role.ma = 16
+        player.role.skills = [Skill.STAB]
+        game.step(Action(ActionType.START_BLITZ, player=player))
+        assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.BLOCK]) == 1
+        assert len([action.action_type for action in game.get_available_actions() if action.action_type == ActionType.STAB]) == 1
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_all_blitz_paths_one(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
     player.role.ma = 6
@@ -397,8 +422,8 @@ def test_handoff(pf):
 
 def test_compare_cython_python_paths():
     """
-    This test compares paths calculated by cython and python. They should be same
-    However, it does not compare every individual step, only destination, probability and path length.
+    This test compares paths calculated by cython and python. They should be same.
+    It only compares destination, probability and number of steps, not each individual step.
     """
     assert hasattr(cython_pathfinding, 'Pathfinder'), 'Cython pathfinding was not imported'
     game = get_game_turn(empty=True)
