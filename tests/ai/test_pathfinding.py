@@ -2,16 +2,20 @@ from tests.util import Square, get_game_turn, Skill
 import pytest
 
 import ffai.core.pathfinding.python_pathfinding as python_pathfinding
+pathfinding_modules_to_test = [python_pathfinding]
 
+# We only test the cython pathfindng module if it exists. Otherwise half of the tests fail.
+# This way only test_compare_cython_python_paths() fails because it explicitly uses cython pf module.
 try:
     import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
+    pathfinding_modules_to_test.append(cython_pathfinding)
 except ImportError:
-    cython_pathfinding = None
+    cython_pathfinding = None #this will make the cython vs. python compare test fail.
 
 PROP_PRECISION = 0.000000001
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_neighbors(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -23,7 +27,7 @@ def test_neighbors(pf):
         assert path.prob == 1.0
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_out_of_bounds(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -35,7 +39,7 @@ def test_out_of_bounds(pf):
             assert path is None
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_gfi(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -57,7 +61,7 @@ skills_and_rerolls_perms = [
 ]
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 @pytest.mark.parametrize("skills_and_rerolls", skills_and_rerolls_perms)
 def test_get_safest_path(skills_and_rerolls, pf):
     game = get_game_turn(empty=True)
@@ -102,7 +106,7 @@ def test_get_safest_path(skills_and_rerolls, pf):
                         assert path.prob == p
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_invalid_path(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -113,7 +117,7 @@ def test_invalid_path(pf):
     assert path is None
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_avoid_path(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -129,7 +133,7 @@ def test_avoid_path(pf):
     assert path.prob == 1.0
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 @pytest.mark.parametrize("sure_feet", [True, False])
 def test_sure_feet_over_ag4_dodge(sure_feet, pf):
     game = get_game_turn(empty=True)
@@ -156,7 +160,7 @@ def test_sure_feet_over_ag4_dodge(sure_feet, pf):
         assert path.prob == p
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_dodge_needed_path_long(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -172,7 +176,7 @@ def test_dodge_needed_path_long(pf):
     assert path.prob == (4 / 6) * (5 / 6) * (5 / 6)
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_path_to_endzone_home(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.home_team)[0]
@@ -184,7 +188,7 @@ def test_path_to_endzone_home(pf):
     assert len(path) == 3
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_path_to_endzone_away(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -196,7 +200,7 @@ def test_path_to_endzone_away(pf):
     assert len(path) == 3
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_all_paths(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -208,7 +212,7 @@ def test_all_paths(pf):
     assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_all_blitz_paths(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -222,7 +226,7 @@ def test_all_blitz_paths(pf):
     assert len(blitz_paths) == 1
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_all_blitz_paths_two(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -238,7 +242,7 @@ def test_all_blitz_paths_two(pf):
     assert len(blitz_paths) == 2
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_after_gfi(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -256,7 +260,7 @@ def test_handoff_after_gfi(pf):
     assert paths[0].steps[0] == other_player.position
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_foul_after_gfi(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -275,7 +279,7 @@ def test_foul_after_gfi(pf):
     assert paths[0].steps[0] == opp_player.position
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_foul(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -310,7 +314,7 @@ def test_foul(pf):
     assert total_fouls == 2
 
 
-@pytest.mark.parametrize("pf", [python_pathfinding, cython_pathfinding])
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
@@ -349,6 +353,7 @@ def test_compare_cython_python_paths():
     This test compares paths calculated by cython and python. They should be same
     However, it does not compare every individual step, only destination, probability and path length.
     """
+    assert hasattr(cython_pathfinding, 'Pathfinder'), 'Cython pathfinding was not imported'
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
 
@@ -366,8 +371,8 @@ def test_compare_cython_python_paths():
     game.move(game.get_ball(), Square(9, 9))
     game.get_ball().is_carried = False
 
-    fast_paths = cython_pathfinding.Pathfinder(game, player, trr=True).get_paths()
-    slow_paths = python_pathfinding.Pathfinder(game, player, directly_to_adjacent=True, trr=True).get_paths()
+    cython_paths = cython_pathfinding.Pathfinder(game, player, trr=True).get_paths()
+    python_paths = python_pathfinding.Pathfinder(game, player, directly_to_adjacent=True, trr=True).get_paths()
 
     def create_path_str_to_compare(path):
         return f"({path.steps[-1].x}, {path.steps[-1].y}) p={path.prob:.5f} len={len(path.steps)}"
@@ -376,10 +381,10 @@ def test_compare_cython_python_paths():
         """ Only used for debugging, see below """
         return "->".join([f"({step.x}, {step.y})" for step in path.steps]) + f"rolls={path.rolls}"
 
-    for slow_path, fast_path in zip(slow_paths, fast_paths):
-        slow_s = create_path_str_to_compare(slow_path)
-        fast_s = create_path_str_to_compare(fast_path)
-        assert slow_s == fast_s
+    for python_path, cython_path in zip(python_paths, cython_paths):
+        python_str = create_path_str_to_compare(python_path)
+        cython_str = create_path_str_to_compare(cython_path)
+        assert python_str == cython_str
 
         # Uncomment this when debugging. And comment the assertion above
         # if slow_s != fast_s:
