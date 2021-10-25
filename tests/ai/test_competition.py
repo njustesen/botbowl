@@ -25,3 +25,5 @@ def test_illegal_actions(capsys):
     comp.run()
 
     out, err = capsys.readouterr()
+    assert err == ""
+    assert out.find("Action not allowed {'action_type': 'USE_APOTHECARY'") >= 0

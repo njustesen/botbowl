@@ -525,7 +525,13 @@ class Game:
             if clock.team == t:
                 return clock.get_seconds_left()
         return None
-        
+
+    def is_started(self):
+        """
+        Returns true if the game is started else false.
+        """
+        return (not self.state.game_over) and len(self.state.stack.items) > 0
+
     def get_team_agent(self, team):
         """
         :param team:

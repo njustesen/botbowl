@@ -161,22 +161,20 @@ class Competition:
             self._run_game(game)
 
             print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
-            #except Exception as e:
-            #    crashed = True
-            #    print(e)
-            #    print("Game crashed:")
+
             result = GameResult(game, crashed=crashed)
             results.append(result)
         self.results = CompetitionResults(self.agent_a.name, self.agent_b.name, results)
 
     def _run_game(self, game):
-        init_finished = False
         while not game.state.game_over:
             try:
-                if init_finished:
-                    game.step(game._forced_action())
-                else:
-                    init_finished = True
+                if not game.is_started():
                     game.init()
+                elif game.get_seconds_left() > 0:
+                    action = game.actor.act(game)  # Allow actor to try again
+                    game.step(action)
+                else:
+                    game.step(game._forced_action())
             except InvalidActionError as e:
                 print(e)
