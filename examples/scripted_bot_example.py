@@ -114,6 +114,8 @@ class MyScriptedBot(ProcBot):
             return Action(ActionType.USE_REROLL)
         if type(context) == ffai.GFI:
             return Action(ActionType.USE_REROLL)
+        if type(context) == ffai.BloodLust:
+            return Action(ActionType.USE_REROLL)
         if type(context) == ffai.Block:
             attacker = context.attacker
             attackers_down = 0
@@ -127,6 +129,7 @@ class MyScriptedBot(ProcBot):
             if attackers_down == len(context.roll.dice) and context.favor != self.opp_team:
                 return Action(ActionType.USE_REROLL)
             return Action(ActionType.DONT_USE_REROLL)
+        return Action(ActionType.DONT_USE_REROLL)
 
     def place_ball(self, game):
         """
@@ -252,7 +255,7 @@ class MyScriptedBot(ProcBot):
                 # Hand-off if high probability or last turn
                 if handoff_path is not None and (handoff_p >= 0.7 or self.my_team.state.turn == 8):
                     self.actions = [Action(ActionType.START_HANDOFF, player=ball_carrier),
-                                    Action(ActionType.MOVE, handoff_path.steps[-1])]
+                                    Action(ActionType.HANDOFF, handoff_path.steps[-1])]
                     return
 
             #print("2.3 Move safely towards the endzone")
@@ -403,7 +406,7 @@ class MyScriptedBot(ProcBot):
                                 best_blitz_path = path
             if best_blitz_attacker is not None and best_blitz_score >= 1.25:
                 self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
-                self.actions.append(Action(ActionType.MOVE, position=best_blitz_path.steps[-1]))
+                self.actions.append(Action(ActionType.BLOCK, position=best_blitz_path.steps[-1]))
                 #print(f"Blitz with {best_blitz_attacker.role.name}, score={best_blitz_score}")
                 return
 
@@ -681,6 +684,16 @@ class MyScriptedBot(ProcBot):
     def use_pro(self, game):
         return Action(ActionType.USE_SKILL)
         # return Action(ActionType.DONT_USE_SKILL)
+
+    def use_bribe(self, game):
+        return Action(ActionType.USE_BRIBE)
+
+    def blood_lust_block_or_move(self, game):
+        return Action(ActionType.START_BLOCK)
+
+    def eat_thrall(self, game):
+        position = game.get_available_actions()[0].positions[0]
+        return Action(ActionType.SELECT_PLAYER, position)
 
     def end_game(self, game):
         """
