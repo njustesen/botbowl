@@ -21,10 +21,9 @@ def test_pickup_teammate_no_right_stuff():
     right_stuff_position = Square(2, 1)
     game.put(right_stuff, right_stuff_position)
     game.step(Action(ActionType.START_PASS, player=passer))
-    D6.fix(1)  # Cause fumble
-    D6.fix(6)  # Land
-    game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
-    assert not right_stuff.state.in_air
+
+    with pytest.raises(InvalidActionError):
+        game.step(Action(ActionType.PICKUP_TEAM_MATE, player=passer, position=right_stuff.position))
 
 
 def test_failed_pickup_teammate():
