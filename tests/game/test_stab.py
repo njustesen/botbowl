@@ -28,6 +28,7 @@ def test_stab_blitz():
     stabber = team.players[0]
     stabber.role.skills = [Skill.STAB]
     defender = other_team.players[0]
+    defender.role.skills = []
     game.put(stabber, Square(1, 1))
     game.put(defender, Square(3, 3))
     game.step(Action(ActionType.START_BLITZ, player=stabber))

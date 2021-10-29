@@ -5,6 +5,7 @@ from .init_crash_bot import *
 from .just_in_time_bot import *
 from .manipulator_bot import *
 from .violator_bot import *
+from .illegal_action_bot import *
 
 
 # Register bot(s)

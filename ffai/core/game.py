@@ -10,6 +10,8 @@ from ffai.core.load import *
 from ffai.core.procedure import *
 from ffai.core.forward_model import Trajectory, MovementStep
 
+class InvalidActionError(Exception):
+    pass
 
 class Game:
 
@@ -343,9 +345,7 @@ class Game:
 
         # If no action and action is required
         if action is None and len(self.state.available_actions) > 0:
-            if self.config.debug_mode:
-                print("None action is not allowed when actions are available")
-            return True  # Game needs user input
+            raise InvalidActionError("None action is not allowed when actions are available")
 
         # If action but it's not available
         if action is not None:
@@ -360,12 +360,12 @@ class Game:
             else:
                 # Only allowed actions
                 if not self._is_action_allowed(action):
-                    if self.config.debug_mode:
-                        if type(action) is Action:
-                            print(f"Action not allowed {action.to_json() if action is not None else 'None'}")
-                        else:
-                            print(f"Action not allowed {action}")
-                    return True  # Game needs valid user input
+
+                    if type(action) is Action:
+                        raise InvalidActionError(f"Action not allowed {action.to_json() if action is not None else 'None'}")
+                    else:
+                        raise InvalidActionError(f"Action not allowed {action}")
+
 
         # Run proc
         if self.config.debug_mode:
@@ -525,7 +525,13 @@ class Game:
             if clock.team == t:
                 return clock.get_seconds_left()
         return None
-        
+
+    def is_started(self):
+        """
+        Returns true if the game is started else false.
+        """
+        return (not self.state.game_over) and len(self.state.stack.items) > 0
+
     def get_team_agent(self, team):
         """
         :param team:

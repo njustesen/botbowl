@@ -58,7 +58,7 @@ def test_perfect_defence():
     team = game.get_agent_team(game.actor)
     assert team == game.get_kicking_team()
     for action_choice in game.state.available_actions:
-        assert action_choice.action_type in [ActionType.END_SETUP, ActionType.PLACE_PLAYER]
+        assert action_choice.action_type in [ActionType.END_SETUP, ActionType.PLACE_PLAYER, ActionType.SETUP_FORMATION_SPREAD, ActionType.SETUP_FORMATION_ZONE]
         for player in action_choice.players:
             assert player in game.get_players_on_pitch(team)
             square = Square(player.position.x, player.position.y)
@@ -208,7 +208,6 @@ def test_quick_snap():
                         if action_choice.action_type == ActionType.MOVE:
                             assert len(action_choice.positions) == len(adjacent_squares)
                             game.step(Action(ActionType.MOVE, player=player, position=action_choice.positions[0]))
-                            game.step(Action(ActionType.END_PLAYER_TURN, player=player))
     game.step(Action(ActionType.END_TURN))
 
 

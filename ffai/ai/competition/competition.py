@@ -7,7 +7,7 @@ This module contains a competition class to handle a competition between two bot
 """
 import numpy as np
 from ffai.core.table import CasualtyType
-from ffai.core import Game
+from ffai.core import Game, InvalidActionError
 from ffai.core import load_arena, load_rule_set
 
 
@@ -158,13 +158,23 @@ class Competition:
             home_team = self.team_a if i % 2 == 0 else self.team_b
             away_team = self.team_b if i % 2 == 0 else self.team_a
             game = Game(i, home_team, away_team, home_agent, away_agent, self.config, arena=self.arena, ruleset=self.ruleset, record=self.record)
-            #try:
-            game.init()
+            self._run_game(game)
+
             print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
-            #except Exception as e:
-            #    crashed = True
-            #    print(e)
-            #    print("Game crashed:")
+
             result = GameResult(game, crashed=crashed)
             results.append(result)
         self.results = CompetitionResults(self.agent_a.name, self.agent_b.name, results)
+
+    def _run_game(self, game):
+        while not game.state.game_over:
+            try:
+                if not game.is_started():
+                    game.init()
+                elif game.get_seconds_left() > 0:
+                    action = game.actor.act(game)  # Allow actor to try again
+                    game.step(action)
+                else:
+                    game.step(game._forced_action())
+            except InvalidActionError as e:
+                print(e)
