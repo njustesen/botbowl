@@ -2,9 +2,9 @@
 
 import gym
 import numpy as np
-import ffai
+import botbowl
 from multiprocessing import Process, Pipe
-import ffai
+import botbowl
 
 
 def worker(remote, parent_remote, env):
@@ -73,10 +73,10 @@ def worker(remote, parent_remote, env):
 
 if __name__ == "__main__":
 
-    renderer = ffai.Renderer()
+    renderer = botbowl.Renderer()
 
     nenvs = 8
-    envs = [gym.make("FFAI-1-v3") for _ in range(nenvs)]
+    envs = [gym.make("botbowl-1-v3") for _ in range(nenvs)]
     for i in range(len(envs)):
         envs[i].seed()
 

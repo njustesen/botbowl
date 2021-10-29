@@ -50,7 +50,7 @@ To swap the opponent policy, our worker process needs to handle the swap command
 ```python
 def worker(remote, parent_remote, env, worker_id):
     ...
-    next_opp = ffai.make_bot('random')
+    next_opp = botbowl.make_bot('random')
     while True:
         command, data = remote.recv()
         if command == 'step':
@@ -95,7 +95,7 @@ if selfplay and all_steps >= selfplay_next_swap:
 
 ## Results
 
-We try running [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py) on the 1v1 variant ```FFAI-1-v2``` with the default self-play from above.
+We try running [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) on the 1v1 variant ```botbowl-1-v2``` with the default self-play from above.
 Additionally, we set ```num_steps=5000000```.
 
 The results are quite interesting. We see that the agent's touchdown rate (blue line) gets beyond that when it trained against a random agent (~12 vs ~7.5). 
@@ -103,7 +103,7 @@ This is most likely because we now have two scoring agents; the best strategy is
 the ball possession quickly switches side making it easier to score a lot of touchdowns. This is something we also see in Blood Bowl 
 when agile teams, such as Skaven, play against each other, where the score typically reach something like 4-4 (which is a lot on the full board).
 
-![Self-play on FFAI-1-v2](img/FFAI-1-v2_selfplay.png?raw=true "Self-play on FFAI-1-v2")
+![Self-play on botbowl-1-v2](img/botbowl-1-v2_selfplay.png?raw=true "Self-play on botbowl-1-v2")
 
 The Touchdown plot also shows the opponent's touchdowns in red. It is noticeable that the red and blue lines doesn't meet. Since the agents 
 should see the board in the exact same way, because we simply mirror it, they should be equally good if the agent reaches the optimal strategy. 

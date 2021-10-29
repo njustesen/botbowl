@@ -1,5 +1,5 @@
-import ffai
-from ffai.core import Action, Agent
+import botbowl
+from botbowl.core import Action, Agent
 import numpy as np
 from copy import deepcopy
 import random
@@ -23,7 +23,7 @@ class Node:
         return np.average(self.evaluations)
 
 
-class SearchBot(ffai.Agent):
+class SearchBot(botbowl.Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -42,7 +42,7 @@ class SearchBot(ffai.Agent):
         root_step = game_copy.get_step()
         root_node = Node()
         for action_choice in game_copy.get_available_actions():
-            if action_choice.action_type == ffai.ActionType.PLACE_PLAYER:
+            if action_choice.action_type == botbowl.ActionType.PLACE_PLAYER:
                 continue
             for player in action_choice.players:
                 root_node.children.append(Node(Action(action_choice.action_type, player=player), parent=root_node))
@@ -78,23 +78,23 @@ class SearchBot(ffai.Agent):
 
 
 # Register the bot to the framework
-ffai.register_bot('search-bot', SearchBot)
+botbowl.register_bot('search-bot', SearchBot)
 
 # Load configurations, rules, arena and teams
-config = ffai.load_config("bot-bowl-iii")
-ruleset = ffai.load_rule_set(config.ruleset)
-arena = ffai.load_arena(config.arena)
-home = ffai.load_team_by_filename("human", ruleset)
-away = ffai.load_team_by_filename("human", ruleset)
+config = botbowl.load_config("bot-bowl-iii")
+ruleset = botbowl.load_rule_set(config.ruleset)
+arena = botbowl.load_arena(config.arena)
+home = botbowl.load_team_by_filename("human", ruleset)
+away = botbowl.load_team_by_filename("human", ruleset)
 config.competition_mode = False
 config.debug_mode = False
 config.fast_mode = True
 config.pathfinding_enabled = False
 
 # Play a game
-bot_a = ffai.make_bot("search-bot")
-bot_b = ffai.make_bot("search-bot")
-game = ffai.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
+bot_a = botbowl.make_bot("search-bot")
+bot_b = botbowl.make_bot("search-bot")
+game = botbowl.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
 print("Starting game")
 game.init()
 print("Game is over")

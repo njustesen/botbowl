@@ -1,5 +1,5 @@
-from ffai.ai.registry import make_bot
-from ffai.core.game import *
+from botbowl.ai.registry import make_bot
+from botbowl.core.game import *
 
 
 def test_team():

@@ -1,14 +1,14 @@
 import pytest
-from ffai.core.game import *
+from botbowl.core.game import *
 from unittest.mock import *
 import numpy as np
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_armour_with_mighty_blow(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 4+5 = 9 -> not broken without MB
@@ -27,12 +27,12 @@ def test_armour_with_mighty_blow(mock_game):
         assert isinstance(proc, Injury)
         assert proc.mighty_blow_used == True # indicate MB can't be used in Injury roll
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_armour_broken_with_mighty_blow_unused(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 5+5 = 10 -> broken without MB
@@ -51,12 +51,12 @@ def test_armour_broken_with_mighty_blow_unused(mock_game):
         assert isinstance(proc, Injury)
         assert proc.mighty_blow_used == False # indicate MB can be used in Injury roll
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_armour_no_break(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 4+5 = 9 -> not broken without MB

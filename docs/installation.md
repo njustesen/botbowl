@@ -1,33 +1,33 @@
 # Installation
-FFAI is a pip-installable python package. We recommend installing with [Anaconda](https://docs.anaconda.com/anaconda/install/) but it is not a requirement. 
+botbowl is a pip-installable python package. We recommend installing with [Anaconda](https://docs.anaconda.com/anaconda/install/) but it is not a requirement. 
 
 ## Python version
-FFAI currently works with python 3.6 and 3.7.
+botbowl currently works with python 3.6 and 3.7.
 Verify your python version with 
 ```
 python --version
 ```
 If you just installed Anaconda, create and activate a new environment. 
 ```
-conda create --name ffai python=3.7
-conda activate ffai
+conda create --name botbowl python=3.7
+conda activate botbowl
 ```
 
 ## Installation with pip
 ```
-pip install git+https://github.com/njustesen/ffai
+pip install git+https://github.com/njustesen/botbowl
 ```
 Or, use ```pip3``` if your pip points to a python 2 installation.
 
-Alternatively, if you want to run our examples or develop on FFAI, you can clone the repository and install it locally.
+Alternatively, if you want to run our examples or develop on botbowl, you can clone the repository and install it locally.
 ```
-git clone https://github.com/njustesen/ffai
-cd ffai
+git clone https://github.com/njustesen/botbowl
+cd botbowl
 pip install -e .
 ```
 To test the installation, run the following:
 ```
-python -c "import ffai"
+python -c "import botbowl"
 ```
 This should not produce an import error.
 

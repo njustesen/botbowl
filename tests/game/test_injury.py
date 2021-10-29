@@ -1,14 +1,14 @@
 import pytest
-from ffai.core.game import *
+from botbowl.core.game import *
 from unittest.mock import *
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_default_stunned(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 3+4 = 7 => Stunned
@@ -26,12 +26,12 @@ def test_injury_default_stunned(mock_game):
         proc = stack.peek()
         assert isinstance(proc, Injury)
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_default_casualty(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 3+6 = 9 => KO
@@ -50,12 +50,12 @@ def test_injury_default_casualty(mock_game):
         assert isinstance(proc, KnockOut)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_with_mighty_blow(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 3+4 = 7 => Stunned
@@ -74,12 +74,12 @@ def test_injury_with_mighty_blow(mock_game):
         assert isinstance(proc, KnockOut)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_with_mighty_blow_used(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 3+4 = 7 => Stunned
@@ -98,12 +98,12 @@ def test_injury_with_mighty_blow_used(mock_game):
         assert isinstance(proc, Injury)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_stunned_with_stunty(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack    
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value=stack
 
         # fix the dice rolls - 3+4 = 7 => KO for stunty
@@ -122,12 +122,12 @@ def test_injury_stunned_with_stunty(mock_game):
         assert isinstance(proc, KnockOut)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_ko_with_stunty(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value = stack
 
         # fix the dice rolls - 3+6 = 9 => CAS for stunty
@@ -146,12 +146,12 @@ def test_injury_ko_with_stunty(mock_game):
         assert isinstance(proc, Casualty)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_ko_with_thick_skull(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value = stack
 
         # fix the dice rolls - 4+4 = 8 => stunned for Thick skull
@@ -170,12 +170,12 @@ def test_injury_ko_with_thick_skull(mock_game):
         assert isinstance(proc, Injury)
 
 
-@patch("ffai.core.game.Game")
+@patch("botbowl.core.game.Game")
 def test_injury_cas_with_thick_skull(mock_game):
     # patch the mock game proc stack
     stack = Stack()
     mock_game.state.stack = stack
-    with patch("ffai.core.util.Stack", new_callable=PropertyMock) as a:
+    with patch("botbowl.core.util.Stack", new_callable=PropertyMock) as a:
         a.return_value = stack
 
         # fix the dice rolls - 5+5 = 10 => no effect for Thick skull

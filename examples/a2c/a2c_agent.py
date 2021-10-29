@@ -1,10 +1,10 @@
 import os
 import gym
-from ffai import FFAIEnv
+from botbowl import BotBowlEnv
 from torch.autograd import Variable
 import torch.optim as optim
 from multiprocessing import Process, Pipe
-from ffai.ai.layers import *
+from botbowl.ai.layers import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,7 +13,7 @@ import sys
 
 # Architecture
 model_name = '585f6180-7f54-11eb-918b-acde48001122'
-env_name = 'FFAI-v3'
+env_name = 'botbowl-v3'
 model_filename = f"models/{env_name}/{model_name}.nn"
 log_filename = f"logs/{env_name}/{env_name}.dat"
 
@@ -122,9 +122,9 @@ class A2CAgent(Agent):
         self.non_spatial_obs_space = self.env.observation_space.spaces['state'].shape[0] + \
                                 self.env.observation_space.spaces['procedures'].shape[0] + \
                                 self.env.observation_space.spaces['available-action-types'].shape[0]
-        self.non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+        self.non_spatial_action_types = BotBowlEnv.simple_action_types + BotBowlEnv.defensive_formation_action_types + BotBowlEnv.offensive_formation_action_types
         self.num_non_spatial_action_types = len(self.non_spatial_action_types)
-        self.spatial_action_types = FFAIEnv.positional_action_types
+        self.spatial_action_types = BotBowlEnv.positional_action_types
         self.num_spatial_action_types = len(self.spatial_action_types)
         self.num_spatial_actions = self.num_spatial_action_types * self.spatial_obs_space[1] * self.spatial_obs_space[2]
         self.action_space = self.num_non_spatial_action_types + self.num_spatial_actions
@@ -169,7 +169,7 @@ class A2CAgent(Agent):
 
         if self.end_setup:
             self.end_setup = False
-            return ffai.Action(ActionType.END_SETUP)
+            return botbowl.Action(ActionType.END_SETUP)
 
         self.env.game = game
 
@@ -199,13 +199,13 @@ class A2CAgent(Agent):
         action = actions[0]
         value = values[0]
         action_type, x, y = self._compute_action(action.numpy()[0])
-        position = Square(x, y) if action_type in FFAIEnv.positional_action_types else None
+        position = Square(x, y) if action_type in BotBowlEnv.positional_action_types else None
 
         # Flip position
         if not self.is_home and position is not None:
             position = Square(game.arena.width - 1 - position.x, position.y)
 
-        action = ffai.Action(action_type, position=position, player=None)
+        action = botbowl.Action(action_type, position=position, player=None)
 
         # Let's just end the setup right after picking a formation
         if action_type.name.lower().startswith('setup'):
@@ -283,10 +283,10 @@ class A2CAgent(Agent):
 
 
 # Register the bot to the framework
-ffai.register_bot('my-a2c-bot', A2CAgent)
+botbowl.register_bot('my-a2c-bot', A2CAgent)
 
 '''
-import ffai.web.server as server
+import botbowl.web.server as server
 
 if __name__ == "__main__":
     server.start_server(debug=True, use_reloader=False)
@@ -295,13 +295,13 @@ if __name__ == "__main__":
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl-iii")
     config.competition_mode = False
     config.pathfinding_enabled = False
-    ruleset = ffai.load_rule_set(config.ruleset)
-    arena = ffai.load_arena(config.arena)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
     config.competition_mode = False
     config.debug_mode = False
 
@@ -316,12 +316,12 @@ if __name__ == "__main__":
     for i in range(n):
 
         if is_home:
-            away_agent = ffai.make_bot('random')
-            home_agent = ffai.make_bot('my-a2c-bot')
+            away_agent = botbowl.make_bot('random')
+            home_agent = botbowl.make_bot('my-a2c-bot')
         else:
-            away_agent = ffai.make_bot('my-a2c-bot')
-            home_agent = ffai.make_bot("random")
-        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+            away_agent = botbowl.make_bot('my-a2c-bot')
+            home_agent = botbowl.make_bot("random")
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))

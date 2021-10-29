@@ -1,16 +1,16 @@
 docs:
 
 - pagetitle: About
-  url: /ffai/
+  url: /botbowl/
 
 - pagetitle: Bot Bowl I
-  url: /ffai/bot-bowl-i
+  url: /botbowl/bot-bowl-i
 
 - pagetitle: Bot Bowl II
-  url: /ffai/bot-bowl-ii
+  url: /botbowl/bot-bowl-ii
 
 - pagetitle: Bot Bowl III
-  url: /ffai/bot-bowl-iii
+  url: /botbowl/bot-bowl-iii
 
 - pagetitle: Tutorials
-  url: /ffai/tutorials
+  url: /botbowl/tutorials

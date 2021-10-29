@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 import random
 
 from copy import deepcopy
-from ffai.ai.registry import make_bot
+from botbowl.ai.registry import make_bot
 
 
 import cProfile

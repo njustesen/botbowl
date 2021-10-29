@@ -8,14 +8,14 @@ modify the run.py script so that it imports your own bot. Simply replace the lin
 In your bot script, make sure your bot is registered with a suitable name for your bot:
 ```python
 # Register the bot to the framework
-ffai.register_bot('my-random-bot', MyRandomBot)
+botbowl.register_bot('my-random-bot', MyRandomBot)
 ```
 
 In Bot Bowl II, every bot plays a number of games against each other bot. During each series of ten games, the two competing bots will 
 be instantiated just once, play the ten games of the series, and finally shut down. Before each new game in the series, the ```new_game()``` method is called and at the end of each game, ```end_game()``` is called. 
 This allows you to easily adapt your strategy based on the game result without having to save and load files but it also means that if you bot crashes, it will stay unresponsive for the rest of the series. You are free to implement your own error handling if you believe your bot has a chance to crash.
 
-If you want to understand how the competition server works in more detail, take a look at the [competition example](https://github.com/njustesen/ffai/blob/master/examples/competition_example.py). I would recommend running your bot in this competition setting before submitting.
+If you want to understand how the competition server works in more detail, take a look at the [competition example](https://github.com/njustesen/botbowl/blob/master/examples/competition_example.py). I would recommend running your bot in this competition setting before submitting.
 
 ## Submission link
 

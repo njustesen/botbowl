@@ -1,6 +1,6 @@
 import pytest
-from ffai.core.model import D3, D6, D8, BBDie
-from ffai.core.table import BBDieResult
+from botbowl.core.model import D3, D6, D8, BBDie
+from botbowl.core.table import BBDieResult
 import numpy as np
 
 

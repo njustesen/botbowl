@@ -8,7 +8,7 @@ def test_observation_ranges():
         indices = (array_ == value_).nonzero()
         return [x[0] for x in indices]
 
-    env = gym.make("FFAI-v3")
+    env = gym.make("botbowl-v3")
     rnd = np.random.RandomState(np.random.randint(0, 2 ** 16))
 
     for _ in range(10):

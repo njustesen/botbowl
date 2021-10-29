@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
-setup(name='ffai',
-      version="0.3.2",
+setup(name='botbowl',
+      version="0.4.0",
       include_package_data=True,
       install_requires=[
           'numpy',

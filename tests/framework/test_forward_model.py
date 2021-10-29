@@ -4,11 +4,11 @@ from random import random
 from tests.util import *
 import pytest
 from copy import deepcopy
-from ffai.core.table import *
-from ffai.core.util import *
-from ffai.core.forward_model import *
+from botbowl.core.table import *
+from botbowl.core.util import *
+from botbowl.core.forward_model import *
 
-from ffai.ai.registry import make_bot
+from botbowl.ai.registry import make_bot
 
 
 def test_deepcopy_of_game_is_correct():
@@ -156,11 +156,11 @@ def get_game(fast_mode=True, human_agents=True):
 def get_random_action(game):
     while True:
         action_choice = game.rnd.choice(game.state.available_actions)
-        if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
+        if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
             break
     position = game.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
     player = game.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
-    return ffai.Action(action_choice.action_type, position=position, player=player)
+    return botbowl.Action(action_choice.action_type, position=position, player=player)
 
 
 def assert_game_states(g1, g2, equal):

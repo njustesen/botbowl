@@ -48,10 +48,10 @@ The characters in the syntax means:
 - **x**: Prioritize players with __Block__ and avoid __Pass__/__Catch__ players.
 
 ## The Formation class
-FFAI comes with an implementation of a Formation class with a constructor that takes a 2D array of strings, similar to the syntax above. 
+botbowl comes with an implementation of a Formation class with a constructor that takes a 2D array of strings, similar to the syntax above. 
 
 Its ```actions(self, game, team)``` function will then return a list of actions to execute the described setup formation. 
-FFAI also has a loader if you prefer to write formations in a text file exactly as above. Load a formation from a file like 
+botbowl also has a loader if you prefer to write formations in a text file exactly as above. Load a formation from a file like 
 this:
 
 ````python
@@ -59,7 +59,7 @@ formation = load_formation(filename, directory=directory_path)
 actions = formation.actions(game, my_team)
 ````
 
-FFAI also comes with two offensive and two defensive formations that you can use out of the box like this:
+botbowl also comes with two offensive and two defensive formations that you can use out of the box like this:
 
 ````python
 off_formation_line = load_formation("off_line")
@@ -67,7 +67,7 @@ def_formation_wedge = load_formation("off_wedge")
 def_formation_spread = load_formation("def_spread")
 def_formation_spread = load_formation("def_spread")
 ````
-Notice, that if no directory is specified, the default location inside FFAI is used.
+Notice, that if no directory is specified, the default location inside botbowl is used.
 
 ## Custom formations
 Our scripted bot from the previous tutorial we will use a fixed offensive and a fixed defensive formation:

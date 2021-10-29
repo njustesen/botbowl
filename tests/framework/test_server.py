@@ -1,5 +1,5 @@
 import pytest
-import ffai.web.server as server
+import botbowl.web.server as server
 import requests
 from multiprocessing import Process, Queue
 import time

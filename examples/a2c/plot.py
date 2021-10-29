@@ -1,17 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-plot_name = "FFAI-1"
+plot_name = "botbowl-1"
 exp_id_nopf = '7f556c38-7853-11eb-b93b-faffc23fefdb.dat'
 exp_id_pf = '129055f2-7846-11eb-a07b-faffc23fefdb.dat'
 window_size = 2
 
-plot_name = "FFAI-3"
+plot_name = "botbowl-3"
 exp_id_nopf = '48ed35ea-79b7-11eb-ba58-19faed4b7487.dat'
 exp_id_pf = '4cd8c832-794d-11eb-b2ed-19faed4b7487.dat'
 window_size = 20
 
-#plot_name = "FFAI-5"
+#plot_name = "botbowl-5"
 #exp_id_nopf = 'f1e2354e-79d8-11eb-bb13-19faed4b7487.dat'
 #exp_id_pf = '70310ce8-7a80-11eb-8061-19faed4b7487.dat'
 #window_size = 100

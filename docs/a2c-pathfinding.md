@@ -1,13 +1,13 @@
 # Reinforcement Learning V: Pathfinding Assistance
 
-The new pathfinding-assisted move actions in FFAI allow bots to move players to any reachable square on the board. 
+The new pathfinding-assisted move actions in botbowl allow bots to move players to any reachable square on the board. 
 When activating a player action other than the block actions, safe paths will be computed for all the reachable squares. 
 Each path will have a probability of success associated to it, or a number of block dice if the path ends with a block action 
 during a blitz move. Similarly, the catch roll target is given for handoff moves.
 
 # Enabling Pathfinding Assistance
 
-The pathfinding-assisted move actions are disabled by default in the FFAI gym environments but can be enabled by calling:
+The pathfinding-assisted move actions are disabled by default in the botbowl gym environments but can be enabled by calling:
 
 ```python
 env.config.pathfinding_enabled = True
@@ -31,13 +31,13 @@ environment to be slower while the agent may spent fewer actions every episode.
 Simply run examples/a2c_example.py with ```env.config.pathfinding_enabled = True``` to train the agent.
 
 # Results
-As an experiment, we have trained agents for the 1-player, 3-player, and 5-player variants in FFAI, with and without pathfinding assistance enabled to test the difference.
+As an experiment, we have trained agents for the 1-player, 3-player, and 5-player variants in botbowl, with and without pathfinding assistance enabled to test the difference.
 
-![FFAI-1 with pathfinding](img/FFAI-1-pf.png?raw=true "FFAI-1 with pathfinding")
+![botbowl-1 with pathfinding](img/botbowl-1-pf.png?raw=true "botbowl-1 with pathfinding")
 
-![FFAI-3 with pathfinding](img/FFAI-3-pf.png?raw=true "FFAI-3 with pathfinding")
+![botbowl-3 with pathfinding](img/botbowl-3-pf.png?raw=true "botbowl-3 with pathfinding")
 
-![FFAI-5 with pathfinding](img/FFAI-5-pf.png?raw=true "FFAI-5 with pathfinding")
+![botbowl-5 with pathfinding](img/botbowl-5-pf.png?raw=true "botbowl-5 with pathfinding")
 
 Interestingly, our agents with pathfinding assistance enabled did were not more data efficient than the agents without.
 Maybe our intuition was wrong, or maybe we were missing important information in the feature layers, or something else.
@@ -48,11 +48,11 @@ We challenge you to find better ways to use the pathfinding assistance in RL.
 
 We forgot to time the experiments, but the effect of having pathfinding-assistance enabled were roughly this:
 
-- FFAI-1-v3 (1-player): A few times slower
-- FFAI-3-v3 (3-players): ~5 times slower
-- FFAI-5-v3 (5-players): ~10 times slower
+- botbowl-1-v3 (1-player): A few times slower
+- botbowl-3-v3 (3-players): ~5 times slower
+- botbowl-5-v3 (5-players): ~10 times slower
 
-It took two weeks to run the FFAI-5-v3 experiment to the end with pathfinding-assistance enabled. 
+It took two weeks to run the botbowl-5-v3 experiment to the end with pathfinding-assistance enabled. 
 This is obviously a big step back, but there we found a big opportunity for improvement. 
 Since the A2C training algorithm takes synchronous steps in all its parallel environments, and only some of them will be at a point where it is computing paths, several envrionment processes are idle for a long period of time (perhaps something like 100 ms.).
 We also noticed that the CPU usage were only 10-30% on each core on our training instance. 

@@ -1,5 +1,5 @@
 import pytest
-from ffai.core.load import *
+from botbowl.core.load import *
 
 
 def test_rule_loader():
@@ -18,7 +18,7 @@ def test_rule_loader():
 def test_config_loader():
     config_gym11 = load_config("gym-11")
     config_bot_bowl_ii = load_config("bot-bowl-ii")
-    assert config_gym11.name == "FFAI"
+    assert config_gym11.name == "botbowl"
     assert config_bot_bowl_ii.name == "Bot Bowl II"
     assert config_gym11.roster_size == 16
     assert config_bot_bowl_ii.roster_size == 16

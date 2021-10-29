@@ -2,19 +2,19 @@
 
 import gym
 import numpy as np
-import ffai
+import botbowl
 
 
 if __name__ == "__main__":
 
     # Create environment
-    # env = gym.make("FFAI-v3")
+    # env = gym.make("botbowl-v3")
 
     # Smaller variants
-    # env = gym.make("FFAI-7-v3")
-    # env = gym.make("FFAI-5-v3")
-    # env = gym.make("FFAI-3-v3")
-    env = gym.make("FFAI-1-v3")
+    # env = gym.make("botbowl-7-v3")
+    # env = gym.make("botbowl-5-v3")
+    # env = gym.make("botbowl-3-v3")
+    env = gym.make("botbowl-1-v3")
 
     # env.config.pathfinding_enabled = True
 

@@ -1,8 +1,8 @@
 # Scripted Bots II: Pathfinding and Probabilities
 
 In this tutorial, we will walk you through the code of a fully-fledged bot that is able to consistently beat the random bot
-from the previous tutorial. To achieve this, we will make heavy use of the pathfinding and probability features of FFAI.
-There will be plenty things to improve on after this tutorial while some intelligent behaviors will emerge. The complete code of the scripted bot that we will describe is in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py).
+from the previous tutorial. To achieve this, we will make heavy use of the pathfinding and probability features of botbowl.
+There will be plenty things to improve on after this tutorial while some intelligent behaviors will emerge. The complete code of the scripted bot that we will describe is in [https://github.com/njustesen/botbowl/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py).
 
 ## Architecture
 We will use the procedure-based bot that was introduced in the previous tutorial. This will allow us to implement simple rules for most of the procedures so we can focus on the few procedures that require important planning and decision-making. The
@@ -75,7 +75,7 @@ if td_path is not None and td_path.prob >= 0.7:
     return
 ```
 
-First, we use the pathfinding module (ffai.ai.pathfinding) to get the safest (and then shortest) path for the ball carrier to the opponent's endzone. If ```pf.get_safest_scoring_path(game, ball_carrier)``` returns ```None```, then no path was found, which
+First, we use the pathfinding module (botbowl.ai.pathfinding) to get the safest (and then shortest) path for the ball carrier to the opponent's endzone. If ```pf.get_safest_scoring_path(game, ball_carrier)``` returns ```None```, then no path was found, which
 means that either the path is blocked or the player doesn't have enough moves left. If a path was found, the Path instance
 will have a probability of success in [0,1] and a list of steps. Here, we decide to move the ball carrier to the endzone if the probability of success is at least 0.7 (70%). This is absolutely not a perfect heuristic, especially because we haven't
 yet checked if we can make any blitzes to clear the path for a safer option. Nevertheless, we will settle for this simple
@@ -169,14 +169,14 @@ if attacker is not None and p_self_up > 0.94 and block_p_fumble_self == 0:
 ```
 
 Without describing in detail how ```self._get_safest_block(game)``` works (it is pretty straightforward), is useful to know
-that it makes use of FFAI's ```game.get_block_probs(attacker, defender)```, that returns a tuple contains four probabilites:
+that it makes use of botbowl's ```game.get_block_probs(attacker, defender)```, that returns a tuple contains four probabilites:
 1) the probability of the attacker being knocked down, 2) the probability of the defender being knocked down, 3) the probability of the attacker to fumble the ball, and 4) the probability of the defender to fumble the ball. This function
 makes use of lower-level functions such as ```game.num_block_dice(attacker, defender)``` and ```game.get_push_squares(attacker, defender)``` to check for __crowd surfing__.
 Notice, that the use of team-rerolls is not included in the calculation of the probabilities. 
 
 ## 4. Pickup the ball
 
-If the ball is on the ground we should pick it up! We first iterate all unused players on the field to see if they are in reach of the ball. We use FFAI's function
+If the ball is on the ground we should pick it up! We first iterate all unused players on the field to see if they are in reach of the ball. We use botbowl's function
 ```game.get_pickup_prob(player, game.get_ball_position(), allow_team_reroll=True)``` to compute the probability for the player
 to pick up the ball. This function includes the option to compute the probability using team re-rolls, which we use in this case.
 We then multiply the pick-up probability with the probability of success for moving to the ball. If there is more than 33% chance
@@ -449,11 +449,11 @@ If none of the other parts resulted in an action, we should just end the turn.
 ## Evaluation
 
 This bot wins consistently against the random baseline from the previous tutorial. In 10 games, this bot won all of them with an average of 3.5 touchdowns per game. To run this evaluation yourself,
-uncomment the code at the end of [examples/scripted_bot_example.py](https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py) and run it.
+uncomment the code at the end of [examples/scripted_bot_example.py](https://github.com/njustesen/botbowl/blob/master/examples/scripted_bot_example.py) and run it.
 
 ## Next steps
 
-While this bot is good against the random baseline, it can easily be exploited by smarter bots or by human players. Try a game against it to identify its weaknesses and  see if you can improve it. You can run the web server to play against the bot by running the python script in [https://github.com/njustesen/ffai/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py). Remember to comment out the evaluation part of the code if you have activated it.
+While this bot is good against the random baseline, it can easily be exploited by smarter bots or by human players. Try a game against it to identify its weaknesses and  see if you can improve it. You can run the web server to play against the bot by running the python script in [https://github.com/njustesen/botbowl/blob/master/examples/scripted_bot_example.py](examples/scripted_bot_example.py). Remember to comment out the evaluation part of the code if you have activated it.
 
 Some ideas for improvement:
 - Passing actions

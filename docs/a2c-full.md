@@ -1,6 +1,6 @@
 # Reinforcement Learning III: The Full Board
 
-In the previous tutorial we learned how to apply the reinforcement learning (RL) algorithm A2C to FFAI's gym environments, however, only on the 
+In the previous tutorial we learned how to apply the reinforcement learning (RL) algorithm A2C to botbowl's gym environments, however, only on the 
 variants with smaller board sizes. In this tutorial, we will first describe our attempt to apply the same approach to the variant with 
 the full board size, where the bot doesn't learn much within 100M steps. After that, we apply a trick that increases the difficulty of the task 
 as the agent learns.
@@ -20,7 +20,7 @@ Before running the training, the number of hidden nodes in the fully-connected l
 However, I would suspect that the whole model would need even more parameters (also in the convolutional layers) to play the full game well. 
 This experiment took me an entire week to run on my desktop machine.
 
-![A2C on FFAI-v2](img/FFAI-v2.png?raw=true "A2C on FFAI-v2")
+![A2C on botbowl-v2](img/botbowl-v2.png?raw=true "A2C on botbowl-v2")
 
 The rewards do increase as it learns to make a few blocks and avoid making risky dodges, while it is far from learning how to score consistently. 
 It is, however, very slowly learning to find the endzone with an average TD rate per game of ~0.02 (sorry for the really bad rendering of the plot). 
@@ -38,7 +38,7 @@ We keep the normal board structure but increase the width of the endzone such th
 the width of the endzone gets smaller and of course only for the learning agent, not the opponent. Hopefully, we can then reach the maximum difficulty such that the agent learns to score 
 on the 1-square wide endzone as in the real game.
 
-In the [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py), you can enable this feature by setting ```ppcg = True```.
+In the [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py), you can enable this feature by setting ```ppcg = True```.
 What it does is simply to run the ```Touchdown()``` procedure directly in the game when the agent has the ball while within a certain distance of the endzone.
 The is done on the worker process:
 
@@ -84,17 +84,17 @@ Here, we use ```dif_delta = 0.01```. Note, that if ````ppcg = False```` we alway
 
 Let's see how the results are, again using _just_ 100M training steps.
 
-![A2C on FFAI-v2 with PPCG](img/FFAI-ppcg-v2.png?raw=true "A2C on FFAI-v2 with PPCG")
+![A2C on botbowl-v2 with PPCG](img/botbowl-ppcg-v2.png?raw=true "A2C on botbowl-v2 with PPCG")
 
 We see that the difficulty reaches ~1 as we had hoped. Unfortunately, the win rate only reaches around 80%. This is, however, a really nice start.
 
 ## Watch it Play
 
-At the moment, the policy is just a neural network with some code around it so that it works for the gym environments but not the rest of the FFAI framework. 
+At the moment, the policy is just a neural network with some code around it so that it works for the gym environments but not the rest of the botbowl framework. 
 Additionally, the bot was only trained to play as the home team and would not know how to play on the other side of the field. Let's fix these things so we can watch 
 our agent play, and even play against it. The code that will be presented can also be used to submit your own neural network based bot to the Bot Bowl competition.
 
-The [examples/a2c/a2c_agent.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
+The [examples/a2c/a2c_agent.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
 scripted bots in our previous tutorials. In the constructor of our Agent class, we load in our neural network policy.
 
 ```python
@@ -115,9 +115,9 @@ class A2CAgent(Agent):
         self.non_spatial_obs_space = self.env.observation_space.spaces['state'].shape[0] + \
                                 self.env.observation_space.spaces['procedures'].shape[0] + \
                                 self.env.observation_space.spaces['available-action-types'].shape[0]
-        self.non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+        self.non_spatial_action_types = botbowlEnv.simple_action_types + botbowlEnv.defensive_formation_action_types + botbowlEnv.offensive_formation_action_types
         self.num_non_spatial_action_types = len(self.non_spatial_action_types)
-        self.spatial_action_types = FFAIEnv.positional_action_types
+        self.spatial_action_types = botbowlEnv.positional_action_types
         self.num_spatial_action_types = len(self.spatial_action_types)
         self.num_spatial_actions = self.num_spatial_action_types * self.spatial_obs_space[1] * self.spatial_obs_space[2]
         self.action_space = self.num_non_spatial_action_types + self.num_spatial_actions
@@ -131,7 +131,7 @@ class A2CAgent(Agent):
 ```
 
 The env_name argument is particularly important as it should be the environment name that the model was trained on. 
-If the model was trained on ```FFAI-11-v2``` (where pathfinding is disabled)  use that environment name when instantiating A2CAgent. 
+If the model was trained on ```botbowl-11-v2``` (where pathfinding is disabled)  use that environment name when instantiating A2CAgent. 
 The agent can still play in games with pathfinding enabled. It will do this by excluding pathfinding-assisted move actions later.
 
 In the agent's ```act()``` implementation, we will steal a bit of code from our training loop that calls our neural network. 
@@ -169,7 +169,7 @@ the opposite side of the board.
 
         if self.end_setup:
             self.end_setup = False
-            return ffai.Action(ActionType.END_SETUP)
+            return botbowl.Action(ActionType.END_SETUP)
         
         # Update the game in our gym environment
         self.env.game = deepcopy(game) if self.copy_game else game
@@ -200,13 +200,13 @@ the opposite side of the board.
         action = actions[0]
         value = values[0]
         action_type, x, y = self._compute_action(action.numpy()[0])
-        position = Square(x, y) if action_type in FFAIEnv.positional_action_types else None
+        position = Square(x, y) if action_type in botbowlEnv.positional_action_types else None
 
         # Flip position
         if not self.is_home and position is not None:
             position = Square(game.arena.width - 1 - position.x, position.y)
 
-        action = ffai.Action(action_type, position=position, player=None)
+        action = botbowl.Action(action_type, position=position, player=None)
 
         # Let's just end the setup right after picking a formation
         if action_type.name.lower().startswith('setup'):

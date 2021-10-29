@@ -1,8 +1,8 @@
 # Features
 
-FFAI currently supports the following features.
+botbowl currently supports the following features.
 The purpose of this document is to have an overview of the road map for the project and to easily allow developers to 
-identify missing features. If you want to help developing FFAI, the easiest way to get started is to implement or write 
+identify missing features. If you want to help developing botbowl, the easiest way to get started is to implement or write 
 a test for a skill.
 
 ## Game Modes
@@ -24,7 +24,7 @@ a test for a skill.
 | **OBBLM**          | NO          | NO          |
 | **FUMBBL**         | NO          | NO          |
 
-We are actively working towards and integration between FFAI and OBBLM.
+We are actively working towards and integration between botbowl and OBBLM.
 
 ## Races
 
@@ -186,7 +186,7 @@ A race is supported if all positions can be used and all their starting skills a
 | 5. Special Play Cards     | NO          | NO          |
 | 6. Prepare for Next Match | NO          | NO          |
 
-Some of these steps should be done in a league manager rather than in FFAI if humans are playing.
+Some of these steps should be done in a league manager rather than in botbowl if humans are playing.
 
 ## Coaching Staff
 | Staff                     | Implemented | Has Test(s) |

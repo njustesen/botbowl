@@ -1,5 +1,5 @@
-from ffai.core.game import *
-from ffai.ai.bots.random_bot import *
+from botbowl.core.game import *
+from botbowl.ai.bots.random_bot import *
 from copy import deepcopy
 
 game_turn_empty = {}

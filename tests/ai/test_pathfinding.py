@@ -1,7 +1,7 @@
 from tests.util import *
 import pytest
-#import ffai.ai.pathfinding as pf
-import ffai.ai.pathfinding as pf
+#import botbowl.ai.pathfinding as pf
+import botbowl.ai.pathfinding as pf
 
 
 PROP_PRECISION = 0.000000001
