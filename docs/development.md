@@ -6,9 +6,12 @@ Please join our Discord channel to discuss the development of FFAI [FFAI Discord
 ## Install for development
 You can install FFAI with pip using the -e option inorder to test your modifcations:
 ```
+git clone https://github.com/njustesen/ffai
+cd ffai
+python setup.py build
 pip install -e .
 ```
-Run the above command from the root of the repository.
+Run the above command from the root of the repository. The third line `python setup.py build` will compile with cython, see [installation.md](docs/installation.md) for more info. 
 
 ## Run tests
 Install pytest and run the unit and integration tests in [tests/](../tests) by running:

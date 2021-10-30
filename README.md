@@ -25,7 +25,7 @@ Then run:
 ```
 pip install git+https://github.com/njustesen/ffai
 ```
-Here's a more [detailed guide](docs/installation.md) on how to set up FFAI.
+If python detects a C++ compiler in your system it compile the pathfinding algorithm which makes it faster. If you used `git clone` you have to manually compile. Here's a more [detailed guide](docs/installation.md) on how to set up FFAI.   
 
 ## Tutorials
 Head over to our [tutorials](docs/tutorials.md) to learn about how to use FFAI.
