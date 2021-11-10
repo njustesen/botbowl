@@ -278,7 +278,6 @@ class Stab(Procedure):
         if self.roll.is_d6_success():
             KnockDown(self.game, player=self.defender, armor_roll=False, inflictor=self.attacker)
         self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker, rolls=[self.roll]))
-        # Can Stab be re-rolled?
         return True
 
 
