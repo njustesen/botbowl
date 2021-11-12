@@ -1,4 +1,4 @@
-# botbowl: 
+# botbowl
 botbowl is a python package that includes a framework for playing and developing bots for Blood Bowl. Our aim is to develop a bot that can beat the best humans at the game. 
 
 ![botbowl](docs/img/ffai.png?raw=true "botbowl")
