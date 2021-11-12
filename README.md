@@ -1,7 +1,7 @@
-# botbowl: Fantasy Football AI
+# botbowl: 
 botbowl is a python package that includes a framework for playing and developing bots for Blood Bowl. Our aim is to develop a bot that can beat the best humans at the game. 
 
-![botbowl](docs/img/botbowl.png?raw=true "botbowl")
+![botbowl](docs/img/ffai.png?raw=true "botbowl")
 
 Please cite our paper if you use botbowl in your publications.
 ```
@@ -16,8 +16,8 @@ Please cite our paper if you use botbowl in your publications.
 
 Read more about the challenges and achievements in [Papers.md](docs/papers.md)
 
-## Bot Bowl
-Bot Bowl is an AI competition using the Bot Bowl framework. Go read all about the results of [Bot Bowl III](docs/bot-bowl-iii.md).
+## Bot Bowl - the compitition
+Bot Bowl is an AI competition using the Bot Bowl framework. Go read all about the results of [Bot Bowl III](docs/bot-bowl-iii.md). Not to be confused with 'botbowl' which refers to the module/repo. 
 
 ## Installation
 [Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
