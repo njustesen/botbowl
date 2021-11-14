@@ -4,13 +4,13 @@ import unittest.mock
 import numpy as np
 import botbowl.core.procedure
 
-import ffai.core.pathfinding.python_pathfinding as python_pathfinding
+import botbowl.core.pathfinding.python_pathfinding as python_pathfinding
 pathfinding_modules_to_test = [python_pathfinding]
 
 # We only test the cython pathfindng module if it exists. Otherwise half of the tests fail.
 # This way only test_compare_cython_python_paths() fails because it explicitly uses cython pf module.
 try:
-    import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
+    import botbowl.core.pathfinding.cython_pathfinding as cython_pathfinding
     pathfinding_modules_to_test.append(cython_pathfinding)
 except ImportError:
     cython_pathfinding = None  # this will make the cython vs. python compare test fail.
@@ -219,7 +219,7 @@ def test_that_unittest_mock_patch_works():
     """
     This test makes sure that unittest.mock.patch works as expected in other tests.
     """
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', None):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', None):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -230,7 +230,7 @@ def test_that_unittest_mock_patch_works():
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_blitz_action_type_is_block(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -242,7 +242,7 @@ def test_blitz_action_type_is_block(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_action_type_is_handoff(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -256,7 +256,7 @@ def test_handoff_action_type_is_handoff(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_action_type_is_foul(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -272,7 +272,7 @@ def test_handoff_action_type_is_foul(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_blitz_action_type_is_block_with_stab(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)

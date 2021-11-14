@@ -5,7 +5,7 @@
 Currently, the framework has one cython module in `cython_pathfinding`. 
 It implements same interface its python counterpart `python_pathfinding` but is about ten times faster. 
 
-To make getting started with the framework as easily as possible, no compiled moduled should be *required* to use ffai because it requires a C/C++ compiler.
+To make getting started with the framework as easily as possible, no compiled moduled should be *required* to use botbowl because it requires a C/C++ compiler.
 So all cython modules shall have a python counterparts. If you want to write a new cython module this the suggested way workflow: 
  1. Write tests that fail. 
  2. Write python code that passes the tests.

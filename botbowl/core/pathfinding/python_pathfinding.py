@@ -3,15 +3,15 @@
 Author: Niels Justesen
 Year: 2020
 ==========================
-This module contains pathfinding functionalities for FFAI.
+This module contains pathfinding functionalities for botbowl.
 """
 
 from typing import Optional, List
-from ffai.core.table import Rules
-from ffai.core.model import Player, Square, D6
-from ffai.core.forward_model import Reversible
-from ffai.core.util import compare_object
-from ffai.core.table import Skill, WeatherType, Tile
+from botbowl.core.table import Rules
+from botbowl.core.model import Player, Square, D6
+from botbowl.core.forward_model import Reversible
+from botbowl.core.util import compare_object
+from botbowl.core.table import Skill, WeatherType, Tile
 import copy
 import numpy as np
 from queue import PriorityQueue

@@ -10,7 +10,7 @@ try:
 except ImportError:
     compile_available = False
     
-files_to_compile = ["ffai/core/pathfinding/cython_pathfinding.pyx"]
+files_to_compile = ["botbowl/core/pathfinding/cython_pathfinding.pyx"]
 
 install_requires_packages = [
           'numpy',
@@ -27,8 +27,8 @@ install_requires_packages = [
 ]
 
 kwargs = {
-    'name': 'ffai',
-    'version': '0.3.2',
+    'name': 'botbowl',
+    'version': '0.4.0',
     'include_package_data': True,
     'install_requires': install_requires_packages,
     'packages': find_packages(),
@@ -48,7 +48,7 @@ if compile_available:
         for file in files:
             if file.endswith(compiled_file_type):
                 from_file = f"{root}/{file}"
-                to_file = "./ffai/" + root.split('/ffai/')[1] + "/" + str(file)
+                to_file = "./botbowl/" + root.split('/botbowl/')[1] + "/" + str(file)
                 print(f"copying '{from_file}' -> '{to_file}'")
                 shutil.copyfile(from_file, to_file)
                 copied_files += 1
@@ -56,6 +56,6 @@ if compile_available:
     #assert copied_files == len(files_to_compile), f"Wrong number if files copied. " \
     #                                              f"Supposed to copy {len(files_to_compile)} files " \
     #                                              f"but {copied_files} was copied. Probably a bug!"
-    print("\nYou've built FFAI with cython.")
+    print("\nYou've built botbowl with cython.")
 else:
-    print("You've built FFAI without cython compilation. Check docs/installation.md for details.")
+    print("You've built botbowl without cython compilation. Check docs/installation.md for details.")

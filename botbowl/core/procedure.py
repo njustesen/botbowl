@@ -9,7 +9,7 @@ before other procedures are run. Procedures can add other procedures to the stac
 """
 from abc import abstractmethod, ABCMeta
 
-from ffai.core.pathfinding import Pathfinder
+from botbowl.core.pathfinding import Pathfinder
 
 from botbowl.core.model import *
 from botbowl.core.table import *

@@ -11,10 +11,10 @@ the exact same result as the python implementation.
 """
 
 
-import ffai.core.table as table
-import ffai.core.model as model
-from ffai.core.forward_model import Reversible
-from ffai.core.util import compare_object
+import botbowl.core.table as table
+import botbowl.core.model as model
+from botbowl.core.forward_model import Reversible
+from botbowl.core.util import compare_object
 import copy
 
 from libcpp.map cimport map as mapcpp
@@ -31,10 +31,10 @@ from .pathing_node cimport Node, Square
 ctypedef shared_ptr[Node] NodePtr
 
 
-cdef object to_ffai_Square(Square sq):
+cdef object to_botbowl_Square(Square sq):
     return model.Square(sq.x, sq.y)
 
-cdef Square from_ffai_Square(object sq):
+cdef Square from_botbowl_Square(object sq):
     return Square(sq.x, sq.y)
 
 cdef Square DIRECTIONS[8]
@@ -106,10 +106,10 @@ cdef class Pathfinder:
         self.game = game
         self.pitch_width = self.game.arena.width - 1
         self.pitch_height = game.arena.height -1
-        self.start_pos = from_ffai_Square( player.position )
+        self.start_pos = from_botbowl_Square( player.position )
         ball = self.game.get_ball_position()
         if ball is not None:
-            self.ball_pos = from_ffai_Square(ball)
+            self.ball_pos = from_botbowl_Square(ball)
         else:
             self.ball_pos = Square(-1, -1)
 
@@ -137,7 +137,7 @@ cdef class Pathfinder:
 
     cpdef get_path(self, object target):
         if type(target) == model.Square:
-            self.target_square = from_ffai_Square(target)
+            self.target_square = from_botbowl_Square(target)
             self.target_is_square = True
             self.has_target = True
         elif type(target) == int:
@@ -163,7 +163,7 @@ cdef class Pathfinder:
         self.ma = max(0, ma)
         self.gfis = 2-gfis_used #3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
 
-        start_square = from_ffai_Square(self.player.position)
+        start_square = from_botbowl_Square(self.player.position)
 
         can_dodge = self.player.has_skill(table.Skill.DODGE) and table.Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(table.Skill.SURE_FEET) and table.Skill.SURE_FEET not in self.player.state.used_skills
@@ -304,7 +304,7 @@ cdef class Pathfinder:
 
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_ffai_Square(node.get().position), foul=True)
+        assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_botbowl_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
         next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance) )
         next_node.get().apply_foul(target)
@@ -343,7 +343,7 @@ cdef class Pathfinder:
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         block_dice = self.game.num_block_dice_at(attacker=self.player, defender=player_at,
-                                                 position= to_ffai_Square( node.get().position), blitz=True)
+                                                 position= to_botbowl_Square( node.get().position), blitz=True)
         gfi = node.get().moves_left == 0
         moves_left_next = node.get().moves_left - 1 if not gfi else node.get().moves_left
         gfis_left_next = node.get().gfis_left - 1 if gfi else node.get().gfis_left
@@ -364,10 +364,10 @@ cdef class Pathfinder:
             NodePtr next_node
 
         if self.player.has_skill(table.Skill.JUMP_UP):
-            return NodePtr (new Node(node, from_ffai_Square(self.player.position), self.ma, self.gfis, 0))
+            return NodePtr (new Node(node, from_botbowl_Square(self.player.position), self.ma, self.gfis, 0))
         elif self.ma < 3:
             target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
-            next_node = NodePtr (new Node(node, from_ffai_Square(self.player.position), 0, self.gfis, 0))
+            next_node = NodePtr (new Node(node, from_botbowl_Square(self.player.position), 0, self.gfis, 0))
             node.get().apply_stand_up(target)
             return next_node
         next_node = NodePtr (new Node(node, self.start_pos, self.ma - 3, self.gfis, 0))
@@ -492,14 +492,14 @@ cdef class Pathfinder:
             #int block_dice, foul_roll, handoff_roll
 
         prob = node.get().prob
-        steps = [ to_ffai_Square(node.get().position) ]
+        steps = [ to_botbowl_Square(node.get().position) ]
         rolls = [node.get().rolls]
         block_dice = node.get().block_dice if node.get().block_dice != 0 else None 
         foul_roll = node.get().foul_roll if node.get().foul_roll != 0 else None 
         handoff_roll = node.get().handoff_roll if node.get().handoff_roll != 0 else None 
         node = node.get().parent
         while node.use_count() > 0:
-            steps.append( to_ffai_Square(node.get().position) )
+            steps.append( to_botbowl_Square(node.get().position) )
             rolls.append(node.get().rolls)
             node = node.get().parent
         steps = list(reversed(steps))[1:]

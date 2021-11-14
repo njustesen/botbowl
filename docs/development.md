@@ -6,8 +6,8 @@ Please join our Discord channel to discuss the development of botbowl [botbowl D
 ## Install for development
 You can install botbowl with pip using the -e option inorder to test your modifcations:
 ```
-git clone https://github.com/njustesen/ffai
-cd ffai
+git clone https://github.com/njustesen/botbowl
+cd botbowl
 python setup.py build
 pip install -e .
 ```
