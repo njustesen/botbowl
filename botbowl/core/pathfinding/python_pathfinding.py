@@ -3,15 +3,15 @@
 Author: Niels Justesen
 Year: 2020
 ==========================
-This module contains pathfinding functionalities for botbowl.
+This module contains pathfinding functionalities for FFAI.
 """
 
 from typing import Optional, List
-from botbowl.core.table import Rules
-from botbowl.core.model import Player, Square, D6
-from botbowl.core.forward_model import Reversible
-from botbowl.core.util import compare_object
-from botbowl.core.table import Skill, WeatherType, Tile
+from ffai.core.table import Rules
+from ffai.core.model import Player, Square, D6
+from ffai.core.forward_model import Reversible
+from ffai.core.util import compare_object
+from ffai.core.table import Skill, WeatherType, Tile
 import copy
 import numpy as np
 from queue import PriorityQueue
@@ -317,7 +317,7 @@ class Pathfinder:
             best_total_moves_left = best_node.moves_left + best_node.gfis_left
             if total_moves_left < best_total_moves_left:
                 return None
-            if total_moves_left == best_total_moves_left and euclidean_distance > best_node.euclidean_distance:
+            if total_moves_left == best_total_moves_left and euclidean_distance >= best_node.euclidean_distance:
                 return None
         next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:

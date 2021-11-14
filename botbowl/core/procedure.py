@@ -8,11 +8,9 @@ responsible for an isolated part of the game. Procedures are added to a stack, a
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
 from abc import abstractmethod, ABCMeta
-from collections.abc import Iterable
 
-from pytest import set_trace
+from ffai.core.pathfinding import Pathfinder
 
-from botbowl.ai.pathfinding import Pathfinder
 from botbowl.core.model import *
 from botbowl.core.table import *
 import time
@@ -279,7 +277,6 @@ class Stab(Procedure):
         if self.roll.is_d6_success():
             KnockDown(self.game, player=self.defender, armor_roll=False, inflictor=self.attacker)
         self.game.report(Outcome(OutcomeType.SKILL_USED, skill=Skill.STAB, player=self.attacker, rolls=[self.roll]))
-        # Can Stab be re-rolled?
         return True
 
 

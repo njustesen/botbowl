@@ -438,13 +438,14 @@ class Pitch(Reversible):
         super().__init__(ignored_keys=["board", "squares"])
         self.balls = []
         self.bomb = None
-        self.board = []
+        #self.board = []
+        self.board = np.full((height, width), None)
         self.squares = []
         for y in range(height):
-            self.board.append([])
+        #    self.board.append([])
             self.squares.append([])
             for x in range(width):
-                self.board[y].append(None)
+        #        self.board[y].append(None)
                 self.squares[y].append(Square(x, y))
         self.height = len(self.board)
         self.width = len(self.board[0])

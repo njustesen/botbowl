@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import botbowl
-from botbowl import Action, ActionType, Square, BBDieResult, Skill, PassDistance, Tile, Rules, Formation, ProcBot
-import botbowl.ai.pathfinding as pf
+from botbowl import Action, ActionType, Square, BBDieResult, Skill, Formation, ProcBot
+import botbowl.core.pathfinding as pf
 import time
 
 
