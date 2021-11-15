@@ -6,22 +6,20 @@ Author: Mattias Bermell
 Year: 2021
 ==========================
 This module contains the pathfinding algorithm implemented in cython
-which compiles to a much fast module. The algorithm is intended to generate
+which compiles to a faster module. The algorithm is intended to generate
 the exact same result as the python implementation.
 """
-
 
 import botbowl.core.table as table
 import botbowl.core.model as model
 import botbowl.core.forward_model as forward_model
-from botbowl.core.util import compare_object
+from .python_pathfinding import get_safest_path, get_safest_path_to_endzone, get_all_paths
 import copy
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
 from libcpp.memory cimport shared_ptr
-#from libc.math cimport round
 
 import cython
 cimport cython
@@ -99,9 +97,10 @@ cdef class Path:
     def is_empty(self):
         return self.final_node.use_count() == 0
 
-    cpdef void _collect_path(self):
+    cdef void _collect_path(self):
         cdef NodePtr node = self.final_node
-        steps, rolls = [], []
+        cdef list steps = []
+        cdef list rolls = []
 
         while node.get().parent.use_count() > 0:
             steps.append( to_botbowl_Square(node.get().position) )
@@ -111,7 +110,7 @@ cdef class Path:
         self._rolls = list(reversed(rolls))
 
     def __reduce__(self):
-        # Need custom __reduce__ because built in can't handle c++ objects
+        # Need custom reduce() because built in reduce() can't handle the c++ objects
         def recreate_self():
             path = Path()
             path._steps = self._steps
@@ -131,7 +130,7 @@ cdef class Path:
                 self.handoff_roll == other.handoff_roll and \
                 self.foul_roll == other.foul_roll
 
-
+# Make the forward model treat Path as an immutable type.
 forward_model.immutable_types.add(Path)
 
 cdef class Pathfinder:
@@ -538,92 +537,3 @@ cdef class Pathfinder:
                     path.set_node(node)
                     paths.append(path)
         return paths
-
-
-
-def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
-    """
-    :param game:
-    :param player: the player to move
-    :param position: the location to move to
-    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
-    :param allow_team_reroll: allow team rerolls to be used.
-    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to the
-    given position and the probability of success.
-    """
-    if from_position is not None and num_moves_used != 0:
-        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    can_handoff = game.is_handoff_available() and game.get_ball_carrier() == player
-    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz, can_handoff=can_handoff)
-    path = finder.get_path(target=position)
-    if from_position is not None and num_moves_used != 0:
-        _reset_state(game, player, orig_player, orig_ball)
-    return path
-
-
-def get_safest_path_to_endzone(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None):
-    """
-    :param game:
-    :param player:
-    :param from_position: position to start movement from. If None, it will start from the player's current position.
-    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
-    :param allow_team_reroll: allow team rerolls to be used.´
-    :return: a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
-    a position in the opponent endzone.
-    """
-    if from_position is not None and num_moves_used != 0:
-        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    x = game.get_opp_endzone_x(player.team)
-    finder = Pathfinder(game, player, trr=allow_team_reroll)
-    path = finder.get_path(target=x)
-    if from_position is not None and num_moves_used != 0:
-        _reset_state(game, player, orig_player, orig_ball)
-    return path
-
-
-def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None, blitz=False):
-    """
-    :param game:
-    :param player: the player to move
-    :param from_position: position to start movement from. If None, it will start from the player's current position.
-    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
-    :param allow_team_reroll: allow team rerolls to be used.
-    :param blitz: only finds blitz moves if True.
-    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
-    a position that is adjacent to the other player and the probability of success.
-    """
-    if from_position is not None and num_moves_used != 0:
-        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz)
-    paths = finder.get_paths()
-    if from_position is not None and num_moves_used != 0:
-        _reset_state(game, player, orig_player, orig_ball)
-
-    return paths
-
-
-def _alter_state(game, player, from_position, moves_used):
-    orig_player, orig_ball = None, None
-    if from_position is not None or moves_used is not None:
-        orig_player = copy.deepcopy(player)
-        orig_ball = copy.deepcopy(game.get_ball())
-    # Move player if another starting position is used
-    if from_position is not None:
-        assert game.get_player_at(from_position) is None or game.get_player_at(from_position) == player
-        game.move(player, from_position)
-        if from_position == game.get_ball_position() and game.get_ball().on_ground:
-            game.get_ball().carried = True
-    if moves_used != None:
-        assert moves_used >= 0
-        player.state.moves = moves_used
-        if moves_used > 0:
-            player.state.up = True
-    return orig_player, orig_ball
-
-
-def _reset_state(game, player, orig_player, orig_ball):
-    if orig_player is not None:
-        game.move(player, orig_player.position)
-        player.state = orig_player.state
-    if orig_ball is not None:
-        game.ball = orig_ball
