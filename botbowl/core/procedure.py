@@ -2701,7 +2701,7 @@ class MoveAction(Procedure):
         actions = []
         for action_type, action_paths in paths_by_type.items():
             if len(action_paths) > 0:
-                positions = [path.steps[-1] for path in action_paths]
+                positions = [path.get_last_step() for path in action_paths]
                 block_dice = [path.block_dice for path in action_paths]
                 rolls = []
                 if action_type == ActionType.HANDOFF:
@@ -2732,7 +2732,7 @@ class MoveAction(Procedure):
                                     can_foul=can_foul,
                                     trr=False)
             paths = pathfinder.get_paths()
-            self.paths = {path.steps[-1]: path for path in paths}
+            self.paths = {path.get_last_step(): path for path in paths}
             actions += self._get_actions_from_paths(paths)
         actions += self.game.get_stand_up_actions(self.player)
         actions += self.game.get_leap_actions(self.player)

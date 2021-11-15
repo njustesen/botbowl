@@ -13,7 +13,7 @@ the exact same result as the python implementation.
 
 import botbowl.core.table as table
 import botbowl.core.model as model
-from botbowl.core.forward_model import Reversible
+import botbowl.core.forward_model as forward_model
 from botbowl.core.util import compare_object
 import copy
 
@@ -61,29 +61,78 @@ agi_table[9] = 1
 agi_table[10] = 1
 
 
-class Path(Reversible):
+cdef class Path:
+    cdef:
+        NodePtr final_node
+        public object _steps, _rolls
+        public double prob
+        public object block_dice, handoff_roll, foul_roll
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
-        super().__init__()
-        self.steps = steps
-        self.prob = prob
-        self.rolls = rolls
-        self.block_dice = block_dice
-        self.handoff_roll = handoff_roll
-        self.foul_roll = foul_roll
+    cdef void set_node(self, NodePtr n):
+        self.final_node = n
+        self.prob = n.get().prob
+        self.block_dice = None if n.get().block_dice == 0 else n.get().block_dice
+        self.handoff_roll = None if n.get().handoff_roll == 0 else n.get().handoff_roll
+        self.foul_roll = None if n.get().foul_roll == 0 else n.get().foul_roll
+
+    cpdef object get_last_step(self):
+        if self._steps is None:
+            return to_botbowl_Square( self.final_node.get().position )
+        else:
+            return self._steps[-1]
+
+    @property
+    def steps(self):
+        if self._steps is None:
+            self._collect_path()
+        return self._steps
+
+    @property
+    def rolls(self):
+        if self._rolls is None:
+            self._collect_path()
+        return self._rolls
 
     def __len__(self) -> int:
         return len(self.steps)
 
-    def get_last_step(self) -> 'Square':
-        return self.steps[-1]
+    def is_empty(self):
+        return self.final_node.use_count() == 0
 
-    def is_empty(self) -> bool:
-        return len(self) == 0
+    cpdef void _collect_path(self):
+        cdef NodePtr node = self.final_node
+        steps, rolls = [], []
 
-    def compare(self, other, path=""):
-        return compare_object(self, other, path)
+        while node.get().parent.use_count() > 0:
+            steps.append( to_botbowl_Square(node.get().position) )
+            rolls.append(node.get().rolls)
+            node = node.get().parent
+        self._steps = list(reversed(steps))
+        self._rolls = list(reversed(rolls))
 
+    def __reduce__(self):
+        # Need custom __reduce__ because built in can't handle c++ objects
+        def recreate_self():
+            path = Path()
+            path._steps = self._steps
+            path._rolls = self._rolls
+            path.block_dice = self.block_dice
+            path.foul_roll = self.foul_roll
+            path.handoff_roll = self.handoff_roll
+            path.prob = self.prob
+            return path
+        return recreate_self, ()
+
+    def __eq__(self, other):
+        return  self.prob == other.prob and \
+                self.steps == other.steps and \
+                self.rolls == other.rolls and \
+                self.block_dice == other.block_dice and \
+                self.handoff_roll == other.handoff_roll and \
+                self.foul_roll == other.foul_roll
+
+
+forward_model.immutable_types.add(Path)
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
@@ -467,12 +516,15 @@ cdef class Pathfinder:
     cdef object _collect_paths(self):
         cdef:
             NodePtr node
+            Path path
             list paths
 
         if self.target_is_square:
             node = self.locked_nodes[self.target_square.y][self.target_square.x]
             if node.use_count()>0:
-                return [self._collect_path(node)]
+                path = Path()
+                path.set_node(node)
+                return [path]
             return []
 
         paths = []
@@ -482,29 +534,11 @@ cdef class Pathfinder:
                     continue
                 node = self.locked_nodes[y][x]
                 if node.use_count()> 0:
-                    paths.append(self._collect_path(node))
+                    path = Path()
+                    path.set_node(node)
+                    paths.append(path)
         return paths
 
-    cdef object _collect_path(self, NodePtr node):
-        cdef:
-            double prob
-            list steps, rolls
-            #int block_dice, foul_roll, handoff_roll
-
-        prob = node.get().prob
-        steps = [ to_botbowl_Square(node.get().position) ]
-        rolls = [node.get().rolls]
-        block_dice = node.get().block_dice if node.get().block_dice != 0 else None 
-        foul_roll = node.get().foul_roll if node.get().foul_roll != 0 else None 
-        handoff_roll = node.get().handoff_roll if node.get().handoff_roll != 0 else None 
-        node = node.get().parent
-        while node.use_count() > 0:
-            steps.append( to_botbowl_Square(node.get().position) )
-            rolls.append(node.get().rolls)
-            node = node.get().parent
-        steps = list(reversed(steps))[1:]
-        rolls = list(reversed(rolls))[1:]
-        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
 
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
