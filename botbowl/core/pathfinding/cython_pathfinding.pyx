@@ -13,7 +13,7 @@ the exact same result as the python implementation.
 import botbowl.core.table as table
 import botbowl.core.model as model
 import botbowl.core.forward_model as forward_model
-from .python_pathfinding import get_safest_path, get_safest_path_to_endzone, get_all_paths
+from .python_pathfinding import _alter_state, _reset_state
 import copy
 
 from libcpp.map cimport map as mapcpp
@@ -537,3 +537,64 @@ cdef class Pathfinder:
                     path.set_node(node)
                     paths.append(path)
         return paths
+
+
+def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
+    """
+    :param game:
+    :param player: the player to move
+    :param position: the location to move to
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.
+    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to the
+    given position and the probability of success.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    can_handoff = game.is_handoff_available() and game.get_ball_carrier() == player
+    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz, can_handoff=can_handoff)
+    path = finder.get_path(target=position)
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+    return path
+
+
+def get_safest_path_to_endzone(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None):
+    """
+    :param game:
+    :param player:
+    :param from_position: position to start movement from. If None, it will start from the player's current position.
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.´
+    :return: a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
+    a position in the opponent endzone.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    x = game.get_opp_endzone_x(player.team)
+    finder = Pathfinder(game, player, trr=allow_team_reroll)
+    path = finder.get_path(target=x)
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+    return path
+
+
+def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num_moves_used=None, blitz=False):
+    """
+    :param game:
+    :param player: the player to move
+    :param from_position: position to start movement from. If None, it will start from the player's current position.
+    :param num_moves_used: the number of moves already used by the player. If None, it will use the player's current number of used moves.
+    :param allow_team_reroll: allow team rerolls to be used.
+    :param blitz: only finds blitz moves if True.
+    :return a path containing the list of squares that forms the safest (and thereafter shortest) path for the given player to
+    a position that is adjacent to the other player and the probability of success.
+    """
+    if from_position is not None and num_moves_used != 0:
+        orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
+    finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz)
+    paths = finder.get_paths()
+    if from_position is not None and num_moves_used != 0:
+        _reset_state(game, player, orig_player, orig_ball)
+
+    return paths
