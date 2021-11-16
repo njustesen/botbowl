@@ -462,3 +462,16 @@ def test_compare_cython_python_paths():
         # if python_str != cython_str:
         #    print(f"slow = {python_str} \n {create_path_string(python_str)}")
         #    print(f"fast = {cython_str} \n {create_path_string(cython_str)}")
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_straight_paths(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    game.put(player, Square(7, 7))
+    paths = pf.get_all_paths(game, player)
+
+    for path in paths:
+        if path.get_last_step().x == 7:
+            assert all(step.x==7 for step in path.steps)
+        if path.get_last_step().y == 7:
+            assert all(step.y == 7 for step in path.steps)
