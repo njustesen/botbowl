@@ -329,9 +329,6 @@ cdef class Pathfinder:
             if total_moves_left <= best_total_moves_left:
                 return NodePtr()
 
-            # removing this is makes for more ugly paths. But it's a speed improvement!
-            #if total_moves_left == best_total_moves_left and euclidean_distance >= best_node.get().euclidean_distance:
-            #    return NodePtr()
         next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
         if gfi:
             next_node.get().apply_gfi()
