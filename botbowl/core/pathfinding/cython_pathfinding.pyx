@@ -133,6 +133,11 @@ cdef class Path:
 # Make the forward model treat Path as an immutable type.
 forward_model.immutable_types.add(Path)
 
+cdef Path create_path(NodePtr node):
+    cdef Path path = Path()
+    path.set_node(node)
+    return path
+
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
     cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent
@@ -421,7 +426,6 @@ cdef class Pathfinder:
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
         cdef:
             int a_moves_left, b_moves_left
-            bint block, foul
 
         # Directly to adjescent
         if self.directly_to_adjacent and a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
@@ -434,17 +438,17 @@ cdef class Pathfinder:
         if b.get().prob > a.get().prob:
             return b
 
-        foul = a.get().foul_roll != 0
-        if foul and a.get().foul_roll < b.get().foul_roll:
-            return a
-        if foul and b.get().foul_roll < a.get().foul_roll:
-            return b
+        if a.get().foul_roll != 0:
+            if a.get().foul_roll < b.get().foul_roll:
+                return a
+            if b.get().foul_roll < a.get().foul_roll:
+                return b
 
-        block = a.get().block_dice != 0
-        if block and a.get().block_dice > b.get().block_dice:
-            return a
-        if block and b.get().block_dice > a.get().block_dice:
-            return b
+        if a.get().block_dice != 0:
+            if a.get().block_dice > b.get().block_dice:
+                return a
+            if b.get().block_dice > a.get().block_dice:
+                return b
 
         a_moves_left = a.get().moves_left + a.get().gfis_left
         b_moves_left = b.get().moves_left + b.get().gfis_left
@@ -518,9 +522,7 @@ cdef class Pathfinder:
         if self.target_is_square:
             node = self.locked_nodes[self.target_square.y][self.target_square.x]
             if node.use_count()>0:
-                path = Path()
-                path.set_node(node)
-                return [path]
+                return [create_path(node)]
             return []
 
         paths = []
@@ -530,9 +532,7 @@ cdef class Pathfinder:
                     continue
                 node = self.locked_nodes[y][x]
                 if node.use_count()> 0:
-                    path = Path()
-                    path.set_node(node)
-                    paths.append(path)
+                    paths.append(create_path(node))
         return paths
 
 
