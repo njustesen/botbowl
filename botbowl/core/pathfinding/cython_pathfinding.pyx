@@ -257,6 +257,11 @@ cdef class Pathfinder:
         cdef bint out_of_moves = node.get().moves_left + node.get().gfis_left == 0
         cdef NodePtr next_node
         cdef double rounded_p
+        cdef Node * parent = <Node *> node.get().parent.get()
+        cdef Square to_square
+
+        if node.get().parent.use_count() == 0:
+            parent = NULL
 
         if self.has_target:
             if self.target_is_square and self.target_square.distance(node.get().position) > node.get().moves_left + node.get().gfis_left:
@@ -277,8 +282,14 @@ cdef class Pathfinder:
             return
 
         for direction in DIRECTIONS:
-            if node.get().parent.use_count() > 0:
-                if node.get().parent.get().position == direction + node.get().position:
+            if parent is not NULL:
+                to_square = direction + node.get().position
+                if parent.position == to_square:
+                    continue
+
+                if parent.position.distance(to_square) < 2 and \
+                        (self.tzones[to_square.y][to_square.x] == 0 or \
+                        self.tzones[parent.position.y][parent.position.x] == 0 ):
                     continue
 
             next_node = self._expand_node(node, direction, out_of_moves)
