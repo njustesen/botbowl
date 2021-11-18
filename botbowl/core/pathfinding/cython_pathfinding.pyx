@@ -140,8 +140,8 @@ cdef Path create_path(NodePtr node):
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
-    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent
-    cdef int ma, gfis, player_ag, pitch_width, pitch_height
+    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -171,16 +171,15 @@ cdef class Pathfinder:
         self.target_is_square = False
         self.target_found = False
 
-        self.player = player # todo, assert no skills that aren't handled: stunty, twitchy, etc...
+        self.player = player # todo, assert no skills that aren't handled: twitchy, two_heads, break_tackle, etc..
 
         self.trr = trr
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
+        self.is_stunty = player.has_skill(table.Skill.STUNTY)
         self.directly_to_adjacent = directly_to_adjacent
-        self.ma = player.get_ma() - player.state.moves
-        self.player_ag = self.player.get_ag()
-        self.gfis = 2
+        self.dodge_target = agi_table[self.player.get_ag()] - 1
         self.current_prob = 1.0
                 
         for p in game.get_players_on_pitch():
@@ -214,7 +213,7 @@ cdef class Pathfinder:
         gfis_used = 0 if ma >= 0 else -ma
 
         self.ma = max(0, ma)
-        self.gfis = 2-gfis_used #3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
+        self.gfis = 3-gfis_used if self.player.has_skill(table.Skill.SPRINT) else 2-gfis_used
 
         start_square = from_botbowl_Square(self.player.position)
 
@@ -240,12 +239,9 @@ cdef class Pathfinder:
         return self._collect_paths()
 
     cdef int _get_pickup_target(self, Square to_pos):
-        cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
-        cdef int modifiers = 1 - zones_to
-        cdef int target
+        cdef int target = self.dodge_target + self.tzones[to_pos.y][to_pos.x]
         if self.game.state.weather == table.WeatherType.POURING_RAIN:
-            modifiers -= 1
-        target = agi_table[self.player_ag] - modifiers
+            target += 1
         return min(6, max(2, target))
 
     cdef int _get_handoff_target(self, object catcher):
@@ -254,8 +250,7 @@ cdef class Pathfinder:
         return min(6, max(2, target))
 
     cdef int _get_dodge_target(self, Square from_pos, Square to_pos):
-        cdef int modifiers = 1 - self.tzones[to_pos.y][to_pos.x]
-        cdef int target = agi_table[self.player_ag] - modifiers
+        cdef int target = self.dodge_target + (0 if self.is_stunty else self.tzones[to_pos.y][to_pos.x])
         return min(6, max(2, target))
 
     cdef void _expand(self, NodePtr node):
@@ -282,6 +277,10 @@ cdef class Pathfinder:
             return
 
         for direction in DIRECTIONS:
+            if node.get().parent.use_count() > 0:
+                if node.get().parent.get().position == direction + node.get().position:
+                    continue
+
             next_node = self._expand_node(node, direction, out_of_moves)
             if next_node.use_count() == 0:
                 continue
