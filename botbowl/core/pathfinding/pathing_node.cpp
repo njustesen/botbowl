@@ -108,11 +108,11 @@ namespace node_ns {
     }
 
     bool operator<(const Node & n1, const Node & n2) {
-        return n1.euclidean_distance < n2.euclidean_distance;
+        return n1.euclidean_distance > n2.euclidean_distance; // inverse to give priority to shorter paths
     }
 
     bool operator<(const node_ptr& n1, const node_ptr& n2){
-        return n1->euclidean_distance < n2->euclidean_distance;
+        return n1->euclidean_distance > n2->euclidean_distance; // inverse to give priority to shorter paths
     }
 
 } //namespace
