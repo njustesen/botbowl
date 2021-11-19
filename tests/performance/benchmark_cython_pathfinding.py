@@ -21,6 +21,7 @@ def benchmark_cython_pathfinding():
 
     print(f"cython_time = {cython_time}")
     print(f"python_time = {python_time}")
+    print(f"{python_time/cython_time:.2f} times better")
 
 if __name__ == "__main__":
     benchmark_cython_pathfinding()

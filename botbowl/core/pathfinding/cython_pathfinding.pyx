@@ -6,22 +6,20 @@ Author: Mattias Bermell
 Year: 2021
 ==========================
 This module contains the pathfinding algorithm implemented in cython
-which compiles to a much fast module. The algorithm is intended to generate
+which compiles to a faster module. The algorithm is intended to generate
 the exact same result as the python implementation.
 """
 
-
 import botbowl.core.table as table
 import botbowl.core.model as model
-from botbowl.core.forward_model import Reversible
-from botbowl.core.util import compare_object
+import botbowl.core.forward_model as forward_model
+from .python_pathfinding import _alter_state, _reset_state
 import copy
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
 from libcpp.memory cimport shared_ptr
-#from libc.math cimport round
 
 import cython
 cimport cython
@@ -61,34 +59,89 @@ agi_table[9] = 1
 agi_table[10] = 1
 
 
-class Path(Reversible):
+cdef class Path:
+    cdef:
+        NodePtr final_node
+        public object _steps, _rolls
+        public double prob
+        public object block_dice, handoff_roll, foul_roll
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
-        super().__init__()
-        self.steps = steps
-        self.prob = prob
-        self.rolls = rolls
-        self.block_dice = block_dice
-        self.handoff_roll = handoff_roll
-        self.foul_roll = foul_roll
+    cdef void set_node(self, NodePtr n):
+        self.final_node = n
+        self.prob = n.get().prob
+        self.block_dice = None if n.get().block_dice == 0 else n.get().block_dice
+        self.handoff_roll = None if n.get().handoff_roll == 0 else n.get().handoff_roll
+        self.foul_roll = None if n.get().foul_roll == 0 else n.get().foul_roll
+
+    cpdef object get_last_step(self):
+        if self._steps is None:
+            return to_botbowl_Square( self.final_node.get().position )
+        else:
+            return self._steps[-1]
+
+    @property
+    def steps(self):
+        if self._steps is None:
+            self._collect_path()
+        return self._steps
+
+    @property
+    def rolls(self):
+        if self._rolls is None:
+            self._collect_path()
+        return self._rolls
 
     def __len__(self) -> int:
         return len(self.steps)
 
-    def get_last_step(self) -> 'Square':
-        return self.steps[-1]
+    def is_empty(self):
+        return self.final_node.use_count() == 0
 
-    def is_empty(self) -> bool:
-        return len(self) == 0
+    cdef void _collect_path(self):
+        cdef NodePtr node = self.final_node
+        cdef list steps = []
+        cdef list rolls = []
 
-    def compare(self, other, path=""):
-        return compare_object(self, other, path)
+        while node.get().parent.use_count() > 0:
+            steps.append( to_botbowl_Square(node.get().position) )
+            rolls.append(node.get().rolls)
+            node = node.get().parent
+        self._steps = list(reversed(steps))
+        self._rolls = list(reversed(rolls))
 
+    def __reduce__(self):
+        # Need custom reduce() because built in reduce() can't handle the c++ objects
+        def recreate_self():
+            path = Path()
+            path._steps = self._steps
+            path._rolls = self._rolls
+            path.block_dice = self.block_dice
+            path.foul_roll = self.foul_roll
+            path.handoff_roll = self.handoff_roll
+            path.prob = self.prob
+            return path
+        return recreate_self, ()
+
+    def __eq__(self, other):
+        return  self.prob == other.prob and \
+                self.steps == other.steps and \
+                self.rolls == other.rolls and \
+                self.block_dice == other.block_dice and \
+                self.handoff_roll == other.handoff_roll and \
+                self.foul_roll == other.foul_roll
+
+# Make the forward model treat Path as an immutable type.
+forward_model.immutable_types.add(Path)
+
+cdef Path create_path(NodePtr node):
+    cdef Path path = Path()
+    path.set_node(node)
+    return path
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
-    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent
-    cdef int ma, gfis, player_ag, pitch_width, pitch_height
+    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -118,16 +171,15 @@ cdef class Pathfinder:
         self.target_is_square = False
         self.target_found = False
 
-        self.player = player # todo, assert no skills that aren't handled: stunty, twitchy, etc...
+        self.player = player # todo, assert no skills that aren't handled: twitchy, two_heads, break_tackle, etc..
 
         self.trr = trr
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
+        self.is_stunty = player.has_skill(table.Skill.STUNTY)
         self.directly_to_adjacent = directly_to_adjacent
-        self.ma = player.get_ma() - player.state.moves
-        self.player_ag = self.player.get_ag()
-        self.gfis = 2
+        self.dodge_target = agi_table[self.player.get_ag()] - 1
         self.current_prob = 1.0
                 
         for p in game.get_players_on_pitch():
@@ -161,7 +213,7 @@ cdef class Pathfinder:
         gfis_used = 0 if ma >= 0 else -ma
 
         self.ma = max(0, ma)
-        self.gfis = 2-gfis_used #3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
+        self.gfis = 3-gfis_used if self.player.has_skill(table.Skill.SPRINT) else 2-gfis_used
 
         start_square = from_botbowl_Square(self.player.position)
 
@@ -187,12 +239,9 @@ cdef class Pathfinder:
         return self._collect_paths()
 
     cdef int _get_pickup_target(self, Square to_pos):
-        cdef int zones_to = self.tzones[to_pos.y][to_pos.x]
-        cdef int modifiers = 1 - zones_to
-        cdef int target
+        cdef int target = self.dodge_target + self.tzones[to_pos.y][to_pos.x]
         if self.game.state.weather == table.WeatherType.POURING_RAIN:
-            modifiers -= 1
-        target = agi_table[self.player_ag] - modifiers
+            target += 1
         return min(6, max(2, target))
 
     cdef int _get_handoff_target(self, object catcher):
@@ -201,14 +250,18 @@ cdef class Pathfinder:
         return min(6, max(2, target))
 
     cdef int _get_dodge_target(self, Square from_pos, Square to_pos):
-        cdef int modifiers = 1 - self.tzones[to_pos.y][to_pos.x]
-        cdef int target = agi_table[self.player_ag] - modifiers
+        cdef int target = self.dodge_target + (0 if self.is_stunty else self.tzones[to_pos.y][to_pos.x])
         return min(6, max(2, target))
 
     cdef void _expand(self, NodePtr node):
         cdef bint out_of_moves = node.get().moves_left + node.get().gfis_left == 0
         cdef NodePtr next_node
         cdef double rounded_p
+        cdef Node * parent = <Node *> node.get().parent.get()
+        cdef Square to_square
+
+        if node.get().parent.use_count() == 0:
+            parent = NULL
 
         if self.has_target:
             if self.target_is_square and self.target_square.distance(node.get().position) > node.get().moves_left + node.get().gfis_left:
@@ -229,6 +282,16 @@ cdef class Pathfinder:
             return
 
         for direction in DIRECTIONS:
+            if parent is not NULL:
+                to_square = direction + node.get().position
+                if parent.position == to_square:
+                    continue
+
+                if parent.position.distance(to_square) < 2 and \
+                        (self.tzones[to_square.y][to_square.x] == 0 or \
+                        self.tzones[parent.position.y][parent.position.x] == 0 ):
+                    continue
+
             next_node = self._expand_node(node, direction, out_of_moves)
             if next_node.use_count() == 0:
                 continue
@@ -281,9 +344,6 @@ cdef class Pathfinder:
             if total_moves_left <= best_total_moves_left:
                 return NodePtr()
 
-            # removing this is makes for more ugly paths. But it's a speed improvement!
-            #if total_moves_left == best_total_moves_left and euclidean_distance >= best_node.get().euclidean_distance:
-            #    return NodePtr()
         next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
         if gfi:
             next_node.get().apply_gfi()
@@ -376,7 +436,6 @@ cdef class Pathfinder:
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
         cdef:
             int a_moves_left, b_moves_left
-            bint block, foul
 
         # Directly to adjescent
         if self.directly_to_adjacent and a.get().position.distance( self.start_pos ) == 1 and a.get().moves_left > b.get().moves_left:
@@ -389,17 +448,17 @@ cdef class Pathfinder:
         if b.get().prob > a.get().prob:
             return b
 
-        foul = a.get().foul_roll != 0
-        if foul and a.get().foul_roll < b.get().foul_roll:
-            return a
-        if foul and b.get().foul_roll < a.get().foul_roll:
-            return b
+        if a.get().foul_roll != 0:
+            if a.get().foul_roll < b.get().foul_roll:
+                return a
+            if b.get().foul_roll < a.get().foul_roll:
+                return b
 
-        block = a.get().block_dice != 0
-        if block and a.get().block_dice > b.get().block_dice:
-            return a
-        if block and b.get().block_dice > a.get().block_dice:
-            return b
+        if a.get().block_dice != 0:
+            if a.get().block_dice > b.get().block_dice:
+                return a
+            if b.get().block_dice > a.get().block_dice:
+                return b
 
         a_moves_left = a.get().moves_left + a.get().gfis_left
         b_moves_left = b.get().moves_left + b.get().gfis_left
@@ -467,12 +526,13 @@ cdef class Pathfinder:
     cdef object _collect_paths(self):
         cdef:
             NodePtr node
+            Path path
             list paths
 
         if self.target_is_square:
             node = self.locked_nodes[self.target_square.y][self.target_square.x]
             if node.use_count()>0:
-                return [self._collect_path(node)]
+                return [create_path(node)]
             return []
 
         paths = []
@@ -482,29 +542,8 @@ cdef class Pathfinder:
                     continue
                 node = self.locked_nodes[y][x]
                 if node.use_count()> 0:
-                    paths.append(self._collect_path(node))
+                    paths.append(create_path(node))
         return paths
-
-    cdef object _collect_path(self, NodePtr node):
-        cdef:
-            double prob
-            list steps, rolls
-            #int block_dice, foul_roll, handoff_roll
-
-        prob = node.get().prob
-        steps = [ to_botbowl_Square(node.get().position) ]
-        rolls = [node.get().rolls]
-        block_dice = node.get().block_dice if node.get().block_dice != 0 else None 
-        foul_roll = node.get().foul_roll if node.get().foul_roll != 0 else None 
-        handoff_roll = node.get().handoff_roll if node.get().handoff_roll != 0 else None 
-        node = node.get().parent
-        while node.use_count() > 0:
-            steps.append( to_botbowl_Square(node.get().position) )
-            rolls.append(node.get().rolls)
-            node = node.get().parent
-        steps = list(reversed(steps))[1:]
-        rolls = list(reversed(rolls))[1:]
-        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
 
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
@@ -566,30 +605,3 @@ def get_all_paths(game, player, from_position=None, allow_team_reroll=False, num
         _reset_state(game, player, orig_player, orig_ball)
 
     return paths
-
-
-def _alter_state(game, player, from_position, moves_used):
-    orig_player, orig_ball = None, None
-    if from_position is not None or moves_used is not None:
-        orig_player = copy.deepcopy(player)
-        orig_ball = copy.deepcopy(game.get_ball())
-    # Move player if another starting position is used
-    if from_position is not None:
-        assert game.get_player_at(from_position) is None or game.get_player_at(from_position) == player
-        game.move(player, from_position)
-        if from_position == game.get_ball_position() and game.get_ball().on_ground:
-            game.get_ball().carried = True
-    if moves_used != None:
-        assert moves_used >= 0
-        player.state.moves = moves_used
-        if moves_used > 0:
-            player.state.up = True
-    return orig_player, orig_ball
-
-
-def _reset_state(game, player, orig_player, orig_ball):
-    if orig_player is not None:
-        game.move(player, orig_player.position)
-        player.state = orig_player.state
-    if orig_ball is not None:
-        game.ball = orig_ball

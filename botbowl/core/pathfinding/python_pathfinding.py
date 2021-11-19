@@ -6,12 +6,11 @@ Year: 2020
 This module contains pathfinding functionalities for botbowl.
 """
 
-from typing import Optional, List
 from botbowl.core.table import Rules
-from botbowl.core.model import Player, Square, D6
+from botbowl.core.model import Square
 from botbowl.core.forward_model import Reversible
 from botbowl.core.util import compare_object
-from botbowl.core.table import Skill, WeatherType, Tile
+from botbowl.core.table import Skill, WeatherType
 import copy
 import numpy as np
 from queue import PriorityQueue
@@ -19,26 +18,51 @@ from queue import PriorityQueue
 
 class Path(Reversible):
 
-    def __init__(self, steps: List['Square'], prob: float, rolls: Optional[List[float]], block_dice=None, foul_roll=None, handoff_roll=False):
+    def __init__(self, node: 'Node'):
         super().__init__()
-        self.steps = steps
-        self.prob = prob
-        self.rolls = rolls
-        self.block_dice = block_dice
-        self.handoff_roll = handoff_roll
-        self.foul_roll = foul_roll
+        self.final_node = node
+        self._steps = None
+        self.prob = node.prob
+        self._rolls = None
+        self.block_dice = node.block_dice
+        self.handoff_roll = node.handoff_roll
+        self.foul_roll = node.foul_roll
+
+    @property
+    def steps(self):
+        if self._steps is None:
+            self.collect_path()
+        return self._steps
+
+    @property
+    def rolls(self):
+        if self._rolls is None:
+            self.collect_path()
+        return self._rolls
 
     def __len__(self) -> int:
         return len(self.steps)
 
     def get_last_step(self) -> 'Square':
-        return self.steps[-1]
+        return self.final_node.position
 
     def is_empty(self) -> bool:
         return len(self) == 0
 
     def compare(self, other, path=""):
         return compare_object(self, other, path)
+
+    def collect_path(self):
+        steps = []
+        rolls = []
+        node = self.final_node
+
+        while node.parent is not None:
+            steps.append(node.position)
+            rolls.append(node.rolls)
+            node = node.parent
+        self._steps = list(reversed(steps))
+        self._rolls = list(reversed(rolls))
 
 
 class Node:
@@ -471,7 +495,7 @@ class Pathfinder:
         if type(target) == Square:
             node = self.locked_nodes[target.y][target.x]
             if node is not None:
-                return [self._collect_path(node)]
+                return [Path(node)]
             return []
         paths = []
         for y in range(self.game.arena.height):
@@ -482,24 +506,8 @@ class Pathfinder:
                     continue
                 node = self.locked_nodes[y][x]
                 if node is not None:
-                    paths.append(self._collect_path(node))
+                    paths.append(Path(node))
         return paths
-
-    def _collect_path(self, node):
-        prob = node.prob
-        steps = [node.position]
-        rolls = [node.rolls]
-        block_dice = node.block_dice
-        foul_roll = node.foul_roll
-        handoff_roll = node.handoff_roll
-        node = node.parent
-        while node is not None:
-            steps.append(node.position)
-            rolls.append(node.rolls)
-            node = node.parent
-        steps = list(reversed(steps))[1:]
-        rolls = list(reversed(rolls))[1:]
-        return Path(steps, prob=prob, rolls=rolls, block_dice=block_dice, foul_roll=foul_roll, handoff_roll=handoff_roll)
 
 
 def get_safest_path(game, player, position, from_position=None, allow_team_reroll=False, num_moves_used=0, blitz=False):
