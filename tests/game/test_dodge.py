@@ -1,5 +1,5 @@
 import pytest
-from ffai.core.game import *
+from botbowl.core.game import *
 from tests.util import *
 
 

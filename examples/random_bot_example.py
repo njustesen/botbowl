@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import ffai
+import botbowl
 import numpy as np
 
 
-class MyRandomBot(ffai.Agent):
+class MyRandomBot(botbowl.Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -19,7 +19,7 @@ class MyRandomBot(ffai.Agent):
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)
             # Ignore PLACE_PLAYER actions
-            if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
+            if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
                 break
 
         # Select a random position and/or player
@@ -27,7 +27,7 @@ class MyRandomBot(ffai.Agent):
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
 
         # Make action object
-        action = ffai.Action(action_choice.action_type, position=position, player=player)
+        action = botbowl.Action(action_choice.action_type, position=position, player=player)
 
         # Return action to the framework
         return action
@@ -37,29 +37,29 @@ class MyRandomBot(ffai.Agent):
 
 
 # Register the bot to the framework
-ffai.register_bot('my-random-bot', MyRandomBot)
+botbowl.register_bot('my-random-bot', MyRandomBot)
 
 
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl-iii")
     config.competition_mode = False
     config.pathfinding_enabled = False
-    ruleset = ffai.load_rule_set(config.ruleset)
-    arena = ffai.load_arena(config.arena)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
     config.competition_mode = False
     config.debug_mode = False
 
     # Play 10 games
     game_times = []
     for i in range(10):
-        away_agent = ffai.make_bot("my-random-bot")
-        home_agent = ffai.make_bot("my-random-bot")
+        away_agent = botbowl.make_bot("my-random-bot")
+        home_agent = botbowl.make_bot("my-random-bot")
 
-        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))

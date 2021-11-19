@@ -1,21 +1,21 @@
 # Scripted Bots I: Getting Started
-This tutorial will introduce you to the Fantasy Football AI framework (FFAI) that allows you to make your own Blood Bowl bot in Python. First, I will explain how to download and set up the framework, then how to make a simple bot that uses FFAI’s API to retrieve information about the game state in order to make actions. Finally, I will introduce a fully fledged bot called GrodBot (developed by Peter Moore) that you can use as solid starting point.
+This tutorial will introduce you to the Fantasy Football AI framework (botbowl) that allows you to make your own Blood Bowl bot in Python. First, I will explain how to download and set up the framework, then how to make a simple bot that uses botbowl’s API to retrieve information about the game state in order to make actions. Finally, I will introduce a fully fledged bot called GrodBot (developed by Peter Moore) that you can use as solid starting point.
 
 If you end up developing your own bot, please submit it to [Bot Bowl II](bot-bowl-ii.md).
 
-Make sure that FFAI is installed. If you haven't installed it yet, go to the [installation guide](installation.md).
+Make sure that botbowl is installed. If you haven't installed it yet, go to the [installation guide](installation.md).
 
 ## A Random Bot
-Let’s start by making a bot that takes random actions. The code below, which can also be found in [examples/random_bot_example.py](https://github.com/njustesen/ffai/blob/master/examples/random_bot_example.py), implements a bot that takes random actions.
+Let’s start by making a bot that takes random actions. The code below, which can also be found in [examples/random_bot_example.py](https://github.com/njustesen/botbowl/blob/master/examples/random_bot_example.py), implements a bot that takes random actions.
 
 ```python
 #!/usr/bin/env python3
 
-import ffai
+import botbowl
 import numpy as np
 
 
-class MyRandomBot(ffai.Agent):
+class MyRandomBot(botbowl.Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -30,7 +30,7 @@ class MyRandomBot(ffai.Agent):
         while True:
             action_choice = self.rnd.choice(game.state.available_actions)
             # Ignore PLACE_PLAYER actions
-            if action_choice.action_type != ffai.ActionType.PLACE_PLAYER:
+            if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
                 break
 
         # Select a random position and/or player
@@ -38,7 +38,7 @@ class MyRandomBot(ffai.Agent):
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
 
         # Make action object
-        action = ffai.Action(action_choice.action_type, position=position, player=player)
+        action = botbowl.Action(action_choice.action_type, position=position, player=player)
 
         # Return action to the framework
         return action
@@ -48,27 +48,27 @@ class MyRandomBot(ffai.Agent):
 
 
 # Register the bot to the framework
-ffai.register_bot('my-random-bot', MyRandomBot)
+botbowl.register_bot('my-random-bot', MyRandomBot)
 
 
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-ii")
-    ruleset = ffai.load_rule_set(config.ruleset)
-    arena = ffai.load_arena(config.arena)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
+    config = botbowl.load_config("bot-bowl-ii")
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
     config.competition_mode = False
     config.debug_mode = False
 
     # Play 10 games
     game_times = []
     for i in range(10):
-        away_agent = ffai.make_bot("my-random-bot")
-        home_agent = ffai.make_bot("my-random-bot")
+        away_agent = botbowl.make_bot("my-random-bot")
+        home_agent = botbowl.make_bot("my-random-bot")
 
-        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 ```
 
-Let’s go through the code step by step. First, we import the ffai package as well as numpy. Then, we create a new class called MyRandomBot that inherits from the Agent class. Doing so, requires us to implement three functions:
+Let’s go through the code step by step. First, we import the botbowl package as well as numpy. Then, we create a new class called MyRandomBot that inherits from the Agent class. Doing so, requires us to implement three functions:
 
 * **new_game(self, game, team):** is called whenever a new game is started with this bot, telling it which team it is controlling as well as a few initial information in the game object (such as the name of the opponent).
 * **act(self, game):** is called at every step in the game where the bot is supposed to perform an action. Here, the game object is given as well which contains information about the entire game state. This function must return an instance of the class Action which contains both an action type and optionally a position or a player.
@@ -92,7 +92,7 @@ class Action:
         ...
 ```
 
-The only required parameter in the constructor is ```action_type```, which should be an instance of the enum ```ActionType```. You can see all the different action types in [ffai/core/table.py](../ffai/core/table.py). Here are some examples of actions that could be instantiated in a sequence of ```act()```-calls:
+The only required parameter in the constructor is ```action_type```, which should be an instance of the enum ```ActionType```. You can see all the different action types in [botbowl/core/table.py](../botbowl/core/table.py). Here are some examples of actions that could be instantiated in a sequence of ```act()```-calls:
 
 ```python
 Action(ActionType.START_BLITZ, player=game.get_players_on_pitch(self.my_team)[0])
@@ -180,7 +180,7 @@ server.start_server(debug=True, use_reloader=False)
 
 ## A Procedure-based Bot
 
-FFAI offers a built-in template for scripted bots with a simple structure that calls different functions depending on the current procedure of the game. FFAI has a number of different procedures for each part of the game, such as ‘Turn’, ‘Move’, ‘Block’, and ‘Pass’. The procedure-based bot template ‘ProcBot’ has one function for each of these procedures:
+botbowl offers a built-in template for scripted bots with a simple structure that calls different functions depending on the current procedure of the game. botbowl has a number of different procedures for each part of the game, such as ‘Turn’, ‘Move’, ‘Block’, and ‘Pass’. The procedure-based bot template ‘ProcBot’ has one function for each of these procedures:
 
 ```python
 class ProcBot(Agent):

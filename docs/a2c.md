@@ -8,15 +8,15 @@ temporal difference learning, and parallelization in RL. If you are unfamiliar w
 - Reinforcement Learning ([Richard Sutton's book Reinforcement Learning: An Introduction](https://www.google.com/search?q=richard+sutton+introduction+reinforcement+learning))
 - Asynchronous/Synchronous Advantage Actor-Critic methods ([Asynchronous Methods for Deep Reinforcement Learning by Mnih et al.](https://arxiv.org/pdf/1602.01783.pdf) and [OpenAI Baselines: ACKTR & A2C](https://openai.com/blog/baselines-acktr-a2c/)) 
 
-The code presented in this tutorial is based on [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
-of A2C](https://github.com/p-kar/a2c-acktr-vizdoom) by Pratyush Kar and the [FFAI-A2C](https://github.com/lasseuth1/blood_bowl2) 
-repository by Lasse Møller Uth and Christopher Jakobsen, which is no longer compatible with the newer versions of FFAI. 
+The code presented in this tutorial is based on [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
+of A2C](https://github.com/p-kar/a2c-acktr-vizdoom) by Pratyush Kar and the [botbowl-A2C](https://github.com/lasseuth1/blood_bowl2) 
+repository by Lasse Møller Uth and Christopher Jakobsen, which is no longer compatible with the newer versions of botbowl. 
 
 In this tutorial, we focus on three small variants of Blood Bowl: 
 
-- **FFAI-1-v2:** 1 player on a 4x3 pitch for each team.
-- **FFAI-3-v2:** 3 player on a 12x5 pitch for each team.
-- **FFAI-5-v2:** 5 player on a 16x9 pitch for each team.
+- **botbowl-1-v2:** 1 player on a 4x3 pitch for each team.
+- **botbowl-3-v2:** 3 player on a 12x5 pitch for each team.
+- **botbowl-5-v2:** 5 player on a 16x9 pitch for each team.
 
 It was previously shown in the paper [Blood Bowl: A New Board Game Challenge
 and Competition for AI](https://njustesen.github.io/njustesen/publications/justesen2019blood.pdf) that A2C with reward shaping 
@@ -27,12 +27,12 @@ In future tutorials, we will attempt to:
 1. scale this approach to the 11-player variant of the game
 2. apply self-play to achieve a robust policy against diverse opponents
 
-The v2 environments don't use pathfinding, i.e. you can only move one square at each step. The results shown in the first two RL tutorials use v2. The v3 environments (simply change the name from FFAI-1-v2 to FFAI-1-v3) does use pathfinding such that players can move several squares in one action. The games thus have fewer steps in v3 but are slower. 
+The v2 environments don't use pathfinding, i.e. you can only move one square at each step. The results shown in the first two RL tutorials use v2. The v3 environments (simply change the name from botbowl-1-v2 to botbowl-1-v3) does use pathfinding such that players can move several squares in one action. The games thus have fewer steps in v3 but are slower. 
 
 ## Observation and Action Space
-We will use the [default observation space](gym.md) in FFAI. 
+We will use the [default observation space](gym.md) in botbowl. 
 
-Action spaces can be split into __branches__, such that one action is sampled from each branch. In FFAI, we need to 
+Action spaces can be split into __branches__, such that one action is sampled from each branch. In botbowl, we need to 
 sample an action type, and then for some action types also a position. This can be achieved using three branches; 1) action type, 
 2) x-coordinate, and 3) y-coordinate. This approach was e.g. applied in preliminary results presented in [StarCraft II: A New Challenge for
 Reinforcement Learning](https://arxiv.org/pdf/1708.04782.pdf) since StarCraft has a similar action space. 
@@ -182,7 +182,7 @@ with batches of observations and thus batches of actions are returned.
  
 ## Reward Shaping
 
-The default rewards in FFAI are based on the game outcome. To ease the learning, we will shape the reward function in 
+The default rewards in botbowl are based on the game outcome. To ease the learning, we will shape the reward function in 
 several ways. First, we define the reward value of certain events. E.g. if the agent scores a touchdown it is rewarded with a value of 1 and if 
 the opponent scores it is rewarded (punished) with a value of -1.
 
@@ -281,14 +281,14 @@ def worker(remote, parent_remote, env, worker_id):
 
 Notice the ```while``` loop that will run until it is terminated (when a 'close' command is called) and will execute steps in the environment when queried. 
 We use a meta-environment class called ```VecEnv``` that abstracts the communication with these workers by acting as list of 
-FFAI environments. We can thus call ```step()``` with a list of actions, one for each environment, and it returns a list of 
+botbowl environments. We can thus call ```step()``` with a list of actions, one for each environment, and it returns a list of 
 future observations and rewards. This is practical as we can query our policy network with a batch of observations.
 
 ```python
 class VecEnv():
     def __init__(self, envs):
         """
-        envs: list of FFAI environments to run in subprocesses
+        envs: list of botbowl environments to run in subprocesses
         """
         self.closed = False
         nenvs = len(envs)
@@ -369,16 +369,16 @@ log_interval = 50
 save_interval = 500
 
 # Environment
-env_name = "FFAI-1-v2"
-# env_name = "FFAI-3-v2"
-# env_name = "FFAI-5-v2"
-# env_name = "FFAI-7-v2"
-# env_name = "FFAI-v2"
+env_name = "botbowl-1-v2"
+# env_name = "botbowl-3-v2"
+# env_name = "botbowl-5-v2"
+# env_name = "botbowl-7-v2"
+# env_name = "botbowl-v2"
 
 reset_steps = 2000  # The environment is reset after this many steps it gets stuck
 
 # If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
-FFAIEnv.play_on_both_sides = False
+botbowlEnv.play_on_both_sides = False
 
 # Architecture
 num_hidden_nodes = 256
@@ -388,7 +388,7 @@ model_name = env_name
 log_filename = "logs/" + model_name + ".dat"
 ```
 
-If ```FFAIEnv.play_on_both_sides = False```, then the agent will only play as the home team. If set to ```True```, it will 
+If ```botbowlEnv.play_on_both_sides = False```, then the agent will only play as the home team. If set to ```True```, it will 
 also play as the away team and thus has to deal with flipped observations. We set this to False for now. We believe it is 
 easier, in the future, to flip the observations data when playing as the away team rather learning how to play with on both sides.`
 
@@ -396,7 +396,7 @@ If for some reason the game halts or the agent is unable to execute a valid acti
 
 ## Training
 
-We make the code agnostic to which variant of FFAI we are using by first computing the size of action and observation space.
+We make the code agnostic to which variant of botbowl we are using by first computing the size of action and observation space.
 
 ```python
 def make_env(worker_id):
@@ -412,9 +412,9 @@ board_dim = (spatial_obs_space[1], spatial_obs_space[2])
 board_squares = spatial_obs_space[1] * spatial_obs_space[2]
 
 non_spatial_obs_space = es[0].observation_space.spaces['state'].shape[0] + es[0].observation_space.spaces['procedures'].shape[0] + es[0].observation_space.spaces['available-action-types'].shape[0]
-non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+non_spatial_action_types = botbowlEnv.simple_action_types + botbowlEnv.defensive_formation_action_types + botbowlEnv.offensive_formation_action_types
 num_non_spatial_action_types = len(non_spatial_action_types)
-spatial_action_types = FFAIEnv.positional_action_types
+spatial_action_types = botbowlEnv.positional_action_types
 num_spatial_action_types = len(spatial_action_types)
 num_spatial_actions = num_spatial_action_types * spatial_obs_space[1] * spatial_obs_space[2]
 action_space = num_non_spatial_action_types + num_spatial_actions
@@ -444,24 +444,24 @@ memory.non_spatial_obs[0].copy_(non_spatial_obs)
 
 When the memory is full (20 steps has been reached), reward values are discounted and training is performed on the data in the memory where after it is flushed.
 
-Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](https://github.com/njustesen/ffai/blob/master/examples/a2c/a2c_example.py) to understand how the learning works. 
+Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) to understand how the learning works. 
 Because the neural network is written in pytorch, you can run the code in debug mode and go through the code line by line.
 
 ## Results
 
-The training process is plotted as the script runs. Here are the results we got on the three small FFAI environments.
+The training process is plotted as the script runs. Here are the results we got on the three small botbowl environments.
 
-### FFAI-1-v2
+### botbowl-1-v2
 
-![FFAI-1-v2 Results](img/FFAI-1-v2.png?raw=true "FFAI-1-v2 Results")
+![botbowl-1-v2 Results](img/botbowl-1-v2.png?raw=true "botbowl-1-v2 Results")
 
-### FFAI-3-v2
+### botbowl-3-v2
 
-![FFAI-3-v2 Results](img/FFAI-3-v2.png?raw=true "FFAI-3-v2 Results")
+![botbowl-3-v2 Results](img/botbowl-3-v2.png?raw=true "botbowl-3-v2 Results")
 
-### FFAI-5-v2
+### botbowl-5-v2
 
-![FFAI-5-v2 Results](img/FFAI-5-v2.png?raw=true "FFAI-5-v2 Results")
+![botbowl-5-v2 Results](img/botbowl-5-v2.png?raw=true "botbowl-5-v2 Results")
 
 Run the script to see if you can reproduce some of the results. Can you find better hyper-parameters or reward shaping rules?
 

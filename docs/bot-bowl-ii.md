@@ -2,7 +2,7 @@
 
 **See the results** further down on this page.
 
-Bot Bowl II is an AI competition in Blood Bowl using the FFAI framework. The traditional board size of 26×15 squares with 11 players on each side is used. Participants are, however, limited to use a prefixed human team. In future competitions, we plan to allow all teams and the option to customized rosters.
+Bot Bowl II is an AI competition in Blood Bowl using the botbowl framework. The traditional board size of 26×15 squares with 11 players on each side is used. Participants are, however, limited to use a prefixed human team. In future competitions, we plan to allow all teams and the option to customized rosters.
 
 Bot Bowl II had six bot submissions and we added the Random agent baseline to the competition. The competition consisted of a round-robin tournament where all bots played every other bot 10 times. The winner is the one with most wins, then draws, then TDs, then CAS.
 
@@ -16,7 +16,7 @@ Bot Bowl II had two prizes:
 Participants **CAN** win both prizes, if they win the competition with a machine learning bot. 
 
 ## Format
-The format of Bot Bowl II is similar to last year's competition. Only a [prefixed Human team](https://github.com/njustesen/ffai/blob/master/ffai/data/teams/11/human.json) can be used. 
+The format of Bot Bowl II is similar to last year's competition. Only a [prefixed Human team](https://github.com/njustesen/botbowl/blob/master/botbowl/data/teams/11/human.json) can be used. 
 None of the pre and post-game procedures are used. Rosters are thus reset without injuries and improvement rolls.
 
 In contrast to last year there will be no final. 
@@ -30,7 +30,7 @@ In contrast to last year there will be no final.
     - Opponent decisions: 5s
     - Initialization: 20s
     - Game End: 10s
-- We use [this configuration file](https://github.com/njustesen/ffai/blob/master/ffai/data/config/bot-bowl-ii.json) for FFAI
+- We use [this configuration file](https://github.com/njustesen/botbowl/blob/master/botbowl/data/config/bot-bowl-ii.json) for botbowl
 - You are allowed to submit an extension of an existing bot that was developed by someone else, as long as it is a significant improvement. We reserve the right to disqualify 
 bots that play similarly to the existing bot.
 
@@ -55,7 +55,7 @@ Minigrod is a scripted bot based on Grodbot (the winner of Bot Bowl I) it applie
 Sapling is a search-based bot that uses Monte Carlo Tree Search with a scripted heuristic function.
 
 ### Scripted Plus Bot by Mark Christiansen
-Scripted Plus Bot is a scripted bot based on the one from the [tutorials](https://njustesen.github.io/ffai/tutorials). It has dynamic formations, prioritizes blitzing players near the ball, and has logic for crowd surfing (pushing players of the board).
+Scripted Plus Bot is a scripted bot based on the one from the [tutorials](https://njustesen.github.io/botbowl/tutorials). It has dynamic formations, prioritizes blitzing players near the ball, and has logic for crowd surfing (pushing players of the board).
 
 ## Results
 

@@ -1,7 +1,7 @@
 from timeit import timeit
 from tests.util import get_game_turn
-import ffai.core.pathfinding.python_pathfinding as python_pathfinding
-import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
+import botbowl.core.pathfinding.python_pathfinding as python_pathfinding
+import botbowl.core.pathfinding.cython_pathfinding as cython_pathfinding
 
 
 def benchmark_cython_pathfinding():
@@ -21,6 +21,7 @@ def benchmark_cython_pathfinding():
 
     print(f"cython_time = {cython_time}")
     print(f"python_time = {python_time}")
+    print(f"{python_time/cython_time:.2f} times better")
 
 if __name__ == "__main__":
     benchmark_cython_pathfinding()

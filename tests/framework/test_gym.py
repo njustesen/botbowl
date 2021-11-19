@@ -1,17 +1,17 @@
 import pytest
 import gym
-import ffai.ai
+import botbowl.ai
 from multiprocessing import Process, Pipe
 import numpy as np
 import multiprocessing
 import os
 
 envs = [
-    "FFAI-1-v3",
-    "FFAI-3-v3",
-    "FFAI-5-v3",
-    "FFAI-7-v3",
-    "FFAI-11-v3"
+    "botbowl-1-v3",
+    "botbowl-3-v3",
+    "botbowl-5-v3",
+    "botbowl-7-v3",
+    "botbowl-11-v3"
 ]
 
 

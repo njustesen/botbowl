@@ -1,6 +1,6 @@
 # Tutorials
 
-Welcome to our tutorials on how to use FFAI. These resources are sufficient to get you started developing a Blood Bowl bot.
+Welcome to our tutorials on how to use botbowl. These resources are sufficient to get you started developing a Blood Bowl bot.
 
 ## Getting Started
 1. [**Installation**](installation.md)
@@ -25,5 +25,5 @@ Welcome to our tutorials on how to use FFAI. These resources are sufficient to g
 ## Submit
 1. [**Submit to Bot Bowl**](submit.md)
 
-If you find any problems or have questions as you go through the tutorials, please report an issue on [https://github.com/njustesen/ffai/](github).
+If you find any problems or have questions as you go through the tutorials, please report an issue on [https://github.com/njustesen/botbowl/](github).
 You are also welcome to join the discussions on our [https://discord.gg/MTXMuae](Discord server).

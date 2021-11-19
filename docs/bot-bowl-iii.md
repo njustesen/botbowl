@@ -36,7 +36,7 @@ The machine learning prize sponsored by modl.ai of $500 will be given to the mos
 # New Features
 
 ## Pathfinding-assisted Move Actions
-In previous Bot Bowls, bots could only move to adjacent squares, step by step. In Bot Bowl III, however, the FFAI framework 
+In previous Bot Bowls, bots could only move to adjacent squares, step by step. In Bot Bowl III, however, the botbowl framework 
 will provide bots with available move actions to all reachable squares together with the safest and shortest path to reach it.
 Bots are then able to perform move actions to squares that are further away than one step, and the framework will perform all 
 the intermediate steps automatically. 
@@ -60,7 +60,7 @@ for handoff and foul actions.
 Check out our new tutorial on how to use [pathfinding-assistance in reinforcement learning](a2c-pathfinding.md). 
 
 ## Forward Model
-Previously, it was difficult to get a fast forward model up and running in FFAI due to the reliance on the slow ```copy.deepcopy()``` function. Thanks to amazing work by Mattias Bermell, FFAI now has a built-in forward model that is reasonably fast. At least much faster that what we had before!
+Previously, it was difficult to get a fast forward model up and running in botbowl due to the reliance on the slow ```copy.deepcopy()``` function. Thanks to amazing work by Mattias Bermell, botbowl now has a built-in forward model that is reasonably fast. At least much faster that what we had before!
 
 It works by tracking changes to non-immutable properties in the game state. Such changes can then be reverted to go back in time, e.g. to reset the state, where we had to completely reinstantiate the entire game object before.
 
@@ -93,5 +93,5 @@ The second place goes to GrodBot by Peter Moore, and the 3rd Place to Dryad by J
 
 ![Bot Bowl III Results](img/bot-bowl-iii-results.png?raw=true "Bot Bowl III Results")
 
-The replays can be downloaded [here](https://drive.google.com/file/d/1Oz7nrBRTCwHIiqJDYF7m6j9kvMdpdSDl/view?usp=sharing) and are compatible with [FFAI v0.3.1](https://github.com/njustesen/ffai/releases/tag/v0.3.1).
+The replays can be downloaded [here](https://drive.google.com/file/d/1Oz7nrBRTCwHIiqJDYF7m6j9kvMdpdSDl/view?usp=sharing) and are compatible with [botbowl v0.3.1](https://github.com/njustesen/botbowl/releases/tag/v0.3.1).
 

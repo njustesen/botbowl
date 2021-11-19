@@ -27,7 +27,7 @@ class Node:
 Now we will implement a bot that relies its decision making on a one-step search with a simple heuristic.
 
 ```python
-class SearchBot(ffai.Agent):
+class SearchBot(botbowl.Agent):
 
     def __init__(self, name, seed=None):
         super().__init__(name)
@@ -46,7 +46,7 @@ class SearchBot(ffai.Agent):
         root_step = game_copy.get_step()
         root_node = Node()
         for action_choice in game_copy.get_available_actions():
-            if action_choice.action_type == ffai.ActionType.PLACE_PLAYER:
+            if action_choice.action_type == botbowl.ActionType.PLACE_PLAYER:
                 continue
             for player in action_choice.players:
                 root_node.children.append(Node(Action(action_choice.action_type, player=player), parent=root_node))
@@ -98,7 +98,7 @@ After this, we make a root node representing the current state of the game and c
 root_step = game_copy.get_step()
 root_node = Node()
 for action_choice in game_copy.get_available_actions():
-    if action_choice.action_type == ffai.ActionType.PLACE_PLAYER:
+    if action_choice.action_type == botbowl.ActionType.PLACE_PLAYER:
         continue
     for player in action_choice.players:
         root_node.children.append(Node(Action(action_choice.action_type, player=player), parent=root_node))

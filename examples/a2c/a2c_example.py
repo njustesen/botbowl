@@ -1,17 +1,17 @@
 import os
 import gym
-from ffai import FFAIEnv
+from botbowl import BotBowlEnv
 from torch.autograd import Variable
 import torch.optim as optim
 from multiprocessing import Process, Pipe
-from ffai.ai.layers import *
+from botbowl.ai.layers import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import sys
 from a2c_agent import A2CAgent
-import ffai
+import botbowl
 import random
 import uuid
 
@@ -29,7 +29,7 @@ save_interval = 10
 ppcg = False
 
 # Environment
-env_name = "FFAI-1-v3"
+env_name = "botbowl-1-v3"
 
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
@@ -241,7 +241,7 @@ def worker(remote, parent_remote, env, worker_id):
     steps = 0
     tds = 0
     tds_opp = 0
-    next_opp = ffai.make_bot('random')
+    next_opp = botbowl.make_bot('random')
 
     while True:
         command, data = remote.recv()
@@ -294,7 +294,7 @@ def worker(remote, parent_remote, env, worker_id):
 class VecEnv():
     def __init__(self, envs):
         """
-        envs: list of FFAI environments to run in subprocesses
+        envs: list of botbowl environments to run in subprocesses
         """
         self.closed = False
         nenvs = len(envs)
@@ -372,9 +372,9 @@ def main():
     board_squares = spatial_obs_space[1] * spatial_obs_space[2]
 
     non_spatial_obs_space = es[0].observation_space.spaces['state'].shape[0] + es[0].observation_space.spaces['procedures'].shape[0] + es[0].observation_space.spaces['available-action-types'].shape[0]
-    non_spatial_action_types = FFAIEnv.simple_action_types + FFAIEnv.defensive_formation_action_types + FFAIEnv.offensive_formation_action_types
+    non_spatial_action_types = BotBowlEnv.simple_action_types + BotBowlEnv.defensive_formation_action_types + BotBowlEnv.offensive_formation_action_types
     num_non_spatial_action_types = len(non_spatial_action_types)
-    spatial_action_types = FFAIEnv.positional_action_types
+    spatial_action_types = BotBowlEnv.positional_action_types
     num_spatial_action_types = len(spatial_action_types)
     num_spatial_actions = num_spatial_action_types * spatial_obs_space[1] * spatial_obs_space[2]
     action_space = num_non_spatial_action_types + num_spatial_actions
@@ -469,7 +469,7 @@ def main():
         envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
         selfplay_models += 1
 
-    renderer = ffai.Renderer()
+    renderer = botbowl.Renderer()
 
     while all_steps < num_steps:
 

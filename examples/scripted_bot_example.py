@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import ffai
-from ffai import Action, ActionType, Square, BBDieResult, Skill, Formation, ProcBot
-import ffai.core.pathfinding as pf
+import botbowl
+from botbowl import Action, ActionType, Square, BBDieResult, Skill, Formation, ProcBot
+import botbowl.core.pathfinding as pf
 import time
 
 
@@ -104,19 +104,19 @@ class MyScriptedBot(ProcBot):
         """
         reroll_proc = game.get_procedure()
         context = reroll_proc.context
-        if type(context) == ffai.Dodge:
+        if type(context) == botbowl.Dodge:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.Pickup:
+        if type(context) == botbowl.Pickup:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.PassAttempt:
+        if type(context) == botbowl.PassAttempt:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.Catch:
+        if type(context) == botbowl.Catch:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.GFI:
+        if type(context) == botbowl.GFI:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.BloodLust:
+        if type(context) == botbowl.BloodLust:
             return Action(ActionType.USE_REROLL)
-        if type(context) == ffai.Block:
+        if type(context) == botbowl.Block:
             attacker = context.attacker
             attackers_down = 0
             for die in context.roll.dice:
@@ -712,32 +712,32 @@ class MyScriptedBot(ProcBot):
 
 
 # Register MyScriptedBot
-ffai.register_bot('scripted', MyScriptedBot)
+botbowl.register_bot('scripted', MyScriptedBot)
 
 if __name__ == "__main__":
 
     # Uncomment to this to evaluate the bot against the random baseline
 
     # Load configurations, rules, arena and teams
-    config = ffai.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl-iii")
     config.competition_mode = False
     config.pathfinding_enabled = True
     # config = get_config("gym-7.json")
     # config = get_config("gym-5.json")
     # config = get_config("gym-3.json")
-    ruleset = ffai.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
-    arena = ffai.load_arena(config.arena)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
+    ruleset = botbowl.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
+    arena = botbowl.load_arena(config.arena)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
 
     # Play 10 games
     for i in range(10):
-        home_agent = ffai.make_bot('scripted')
+        home_agent = botbowl.make_bot('scripted')
         home_agent.name = "Scripted Bot"
-        away_agent = ffai.make_bot('random')
+        away_agent = botbowl.make_bot('random')
         away_agent.name = "Random Bot"
         config.debug_mode = False
-        game = ffai.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
+        game = botbowl.Game(i, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
         game.config.fast_mode = True
 
         print("Starting game", (i+1))

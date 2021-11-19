@@ -1,6 +1,6 @@
 # Bot Bowl I
 
-Bot Bowl I was the first AI competition in Blood Bowl! The competition uses the [Fantasy Football AI (FFAI) framework](www.github.com/njustesen/ffai) and the results were be presented at the IEEE Conference on Games in London, 21st August, 2019.
+Bot Bowl I was the first AI competition in Blood Bowl! The competition uses the [Fantasy Football AI (botbowl) framework](www.github.com/njustesen/botbowl) and the results were be presented at the IEEE Conference on Games in London, 21st August, 2019.
 
 Bot Bowl I featured one track which used the traditional board size of 26×15 squares with 11 players on each side. Participants are, however, limited to use a prefixed human team. In future competitions, we plan to allow all teams and the option to customized rosters.
 

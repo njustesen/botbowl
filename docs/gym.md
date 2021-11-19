@@ -1,12 +1,12 @@
 # Reinforcement Learning I: OpenAI Gym Environment
-This tutorial will introduce you to FFAI's implementations of the [Open AI Gym interface](https://arxiv.org/pdf/1606.01540.pdf) that will allow for easy integration of reinforcement learning algorithms. 
+This tutorial will introduce you to botbowl's implementations of the [Open AI Gym interface](https://arxiv.org/pdf/1606.01540.pdf) that will allow for easy integration of reinforcement learning algorithms. 
 
-You can run [examples/gym_example.py](examples/gym_example.py) to se a random agent play Blood Bowl through the FFAI Gym environment. The rendering is simplified for faster execution and looks like this:
-![FFAI Gym GUI](https://njustesen.github.io/ffai/img/gym.png?raw=true "FFAI Gym GUI FFAI-3")
+You can run [examples/gym_example.py](examples/gym_example.py) to se a random agent play Blood Bowl through the botbowl Gym environment. The rendering is simplified for faster execution and looks like this:
+![botbowl Gym GUI](https://njustesen.github.io/botbowl/img/gym.png?raw=true "botbowl Gym GUI botbowl-3")
 
 [examples/gym_example.py](examples/gym_example.py) demonstrated how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
 
-Agents receive numerical observations from the FFAI environment at every step and sends back and action with an action type and in some cases a position. Along with the observations, the environment also sends a scalar reward value to the agent. We will describe the structure of the three components: observations, actions, and rewards.
+Agents receive numerical observations from the botbowl environment at every step and sends back and action with an action type and in some cases a position. Along with the observations, the environment also sends a scalar reward value to the agent. We will describe the structure of the three components: observations, actions, and rewards.
 
 ## Observations
 An observation object is a dictionary containing four differet parts:
@@ -49,10 +49,10 @@ The default feature layers in obs['board'] are:
 
 A layer is a 2-D array of scalars in [0,1] with the size of the board including __crowd__ padding. Some layers have binary values, e.g. indicating whether a square is occupied by player (```OccupiedLayer()```), a standing player (```UpLayer()```), or a player with the __Block__ skill (```SkillLayer(Skill.BLOCK)```). Other layers contain normalized values such as ```OwnTackleZoneLayer()``` that represents the number of frendly tackle zones squares are covered by divided by 8, or ```MALayer()``` where the values are equal to the movement allowence of players divided by 10.
 
-FfAI environments have the above 45 layers by defaults. Custom layers can, however, be implemented by implementing the ```FeatureLayer```:
+botbowl environments have the above 45 layers by defaults. Custom layers can, however, be implemented by implementing the ```FeatureLayer```:
 
 ```python
-from ffai.ai import FeatureLayer
+from botbowl.ai import FeatureLayer
 class MyCustomLayer(FeatureLayer):
 
     def produce(self, game):
@@ -79,7 +79,7 @@ To visualize the feature layers, use the ```feature_layers``` option when callin
 env.render(feature_layers=True)
 ```
 
-![FFAI Gym Feature Layers](img/gym_layers.png?raw=true "FFAI Gym Feature Layers")
+![botbowl Gym Feature Layers](img/gym_layers.png?raw=true "botbowl Gym Feature Layers")
 
 ### Observation: 'state'
 The 'state' part of the observation contains normailized values for folliwng 50  features:
@@ -261,15 +261,15 @@ However, the info object returned by the step function contains useful informati
 These values are commulative, such that 'cas_inflicted' refers to the total number of casualties inflicted by the team in the game. Another way to detect events is looking at ```env.game.state.reports```.
 
 ## Environments
-FFAI comes with five environments with various difficulty:
+botbowl comes with five environments with various difficulty:
 
-- **FFAI-v2:** 11 players on a 26x15 pitch (traditional size)
-- **FFAI-7-v2:** 7 players on a 20x11 pitch
-- **FFAI-5-v2:** 5 players on a 16x8 pitch
-- **FFAI-3-v2:** 3 players on a 12x5 pitch
-- **FFAI-1-v2:** 1 player on a 4x3 pitch
+- **botbowl-v2:** 11 players on a 26x15 pitch (traditional size)
+- **botbowl-7-v2:** 7 players on a 20x11 pitch
+- **botbowl-5-v2:** 5 players on a 16x8 pitch
+- **botbowl-3-v2:** 3 players on a 12x5 pitch
+- **botbowl-1-v2:** 1 player on a 4x3 pitch
 
-![A rendering of __FFAI-3-v2__.](img/gym_3.png?raw=true "A rendering of __FFAI-3-v2__.")
+![A rendering of __botbowl-3-v2__.](img/gym_3.png?raw=true "A rendering of __botbowl-3-v2__.")
 
 ## Explore the Observation Space
 Try running [examples/gym_example.py](examples/gym_example.py) while debugging in your favorite IDE (e.g. [PyCharm](https://www.jetbrains.com/pycharm/)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.

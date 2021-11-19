@@ -1,0 +1,25 @@
+{
+    "name": "botbowl",
+    "arena": "ff-pitch-11.txt",
+    "ruleset": "BB2016",
+    "dungeon": false,
+    "roster_size": 16,
+    "pitch_max": 11,
+    "pitch_min": 3,
+    "scrimmage_min": 3,
+    "wing_max": 2,
+    "turns": 8,
+    "kick_off_table": true,
+    "fast_mode": true,
+    "debug_mode": false,
+    "competition_mode": false,
+    "kick_scatter_dice": "d6",
+    "defensive_formations": ["def_spread.txt", "def_zone.txt"],
+    "offensive_formations": ["off_wedge.txt", "off_line.txt"],
+    "time_limits": {
+        "turn": 240,
+        "secondary": 5,
+        "init": 10,
+        "end": 10
+    }
+}

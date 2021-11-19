@@ -2,9 +2,9 @@
 
 import gym
 import numpy as np
-import ffai
-from ffai.core.game import Game
-from ffai.core.model import Agent
+import botbowl
+from botbowl.core.game import Game
+from botbowl.core.model import Agent
 
 import cProfile
 import io
@@ -27,7 +27,7 @@ def profile_and_print_result(function, sortkey="tottime"):
     print(s.getvalue())
 
 
-def run_env(n, enable_forward_model, env_name="FFAI-11-v3"):
+def run_env(n, enable_forward_model, env_name="botbowl-11-v3"):
     env = gym.make(env_name)
 
     seed = 0
@@ -57,16 +57,16 @@ def get_random_action_from_env(env, random_state):
 
 
 def run_game(nbr_of_games, enable_forward_model):
-    config = ffai.load_config("gym-11")
+    config = botbowl.load_config("gym-11")
     config.fast_mode = True
-    ruleset = ffai.load_rule_set(config.ruleset)
-    home = ffai.load_team_by_filename("human", ruleset)
-    away = ffai.load_team_by_filename("human", ruleset)
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    home = botbowl.load_team_by_filename("human", ruleset)
+    away = botbowl.load_team_by_filename("human", ruleset)
     away_agent = Agent("Human 1", human=True, agent_id=1)
     home_agent = Agent("Human 2", human=True, agent_id=2)
 
     seed = 0
-    random_agent = ffai.make_bot('random')
+    random_agent = botbowl.make_bot('random')
     random_agent.rnd = np.random.RandomState(seed)
 
     for _ in range(nbr_of_games):

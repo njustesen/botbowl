@@ -2,15 +2,15 @@ from tests.util import Square, get_game_turn, Skill, Action, ActionType
 import pytest
 import unittest.mock
 import numpy as np
-import ffai.core.procedure
+import botbowl.core.procedure
 
-import ffai.core.pathfinding.python_pathfinding as python_pathfinding
+import botbowl.core.pathfinding.python_pathfinding as python_pathfinding
 pathfinding_modules_to_test = [python_pathfinding]
 
 # We only test the cython pathfindng module if it exists. Otherwise half of the tests fail.
 # This way only test_compare_cython_python_paths() fails because it explicitly uses cython pf module.
 try:
-    import ffai.core.pathfinding.cython_pathfinding as cython_pathfinding
+    import botbowl.core.pathfinding.cython_pathfinding as cython_pathfinding
     pathfinding_modules_to_test.append(cython_pathfinding)
 except ImportError:
     cython_pathfinding = None  # this will make the cython vs. python compare test fail.
@@ -52,7 +52,7 @@ def test_gfi(pf):
         moves = player.get_ma() + gfis
         target = Square(position.x + moves, position.y)
         path = pf.get_safest_path(game, player, target)
-        assert len(path.steps) == moves and path.steps[-1] == target
+        assert len(path.steps) == moves and path.get_last_step()  == target
         assert path.prob == (5 / 6) ** gfis
 
 
@@ -219,7 +219,7 @@ def test_that_unittest_mock_patch_works():
     """
     This test makes sure that unittest.mock.patch works as expected in other tests.
     """
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', None):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', None):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -230,7 +230,7 @@ def test_that_unittest_mock_patch_works():
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_blitz_action_type_is_block(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -242,7 +242,7 @@ def test_blitz_action_type_is_block(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_action_type_is_handoff(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -256,7 +256,7 @@ def test_handoff_action_type_is_handoff(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_action_type_is_foul(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -272,7 +272,7 @@ def test_handoff_action_type_is_foul(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_blitz_action_type_is_block_with_stab(pf):
-    with unittest.mock.patch('ffai.core.procedure.Pathfinder', pf.Pathfinder):
+    with unittest.mock.patch('botbowl.core.procedure.Pathfinder', pf.Pathfinder):
         game = get_game_turn()
         game.config.pathfinding_enabled = True
         team = game.get_agent_team(game.actor)
@@ -380,7 +380,7 @@ def test_foul(pf):
         for step in path.steps:
             if step in [opp_position_1, opp_position_2]:
                 fouls += 1
-                assert step == path.steps[-1]
+                assert step == path.get_last_step()
         assert fouls <= 1
         total_fouls += fouls
     assert total_fouls == 2
@@ -414,7 +414,7 @@ def test_handoff(pf):
         for step in path.steps:
             if step in [teammate_position_1, teammate_position_2]:
                 handoffs += 1
-                assert step == path.steps[-1]
+                assert step == path.get_last_step()
         assert handoffs <= 1
         total_handoffs += handoffs
     assert total_handoffs == 2
@@ -447,7 +447,7 @@ def test_compare_cython_python_paths():
     python_paths = python_pathfinding.Pathfinder(game, player, directly_to_adjacent=True, trr=True).get_paths()
 
     def create_path_str_to_compare(path):
-        return f"({path.steps[-1].x}, {path.steps[-1].y}) p={path.prob:.5f} len={len(path.steps)}"
+        return f"({path.get_last_step() .x}, {path.get_last_step() .y}) p={path.prob:.5f} len={len(path.steps)}"
 
     def create_path_str_to_debug(path):
         """ Only used for debugging, see below """
@@ -462,3 +462,16 @@ def test_compare_cython_python_paths():
         # if python_str != cython_str:
         #    print(f"slow = {python_str} \n {create_path_string(python_str)}")
         #    print(f"fast = {cython_str} \n {create_path_string(cython_str)}")
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_straight_paths(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    game.put(player, Square(7, 7))
+    paths = pf.get_all_paths(game, player)
+
+    for path in paths:
+        if path.get_last_step().x == 7:
+            assert all(step.x==7 for step in path.steps)
+        if path.get_last_step().y == 7:
+            assert all(step.y == 7 for step in path.steps)

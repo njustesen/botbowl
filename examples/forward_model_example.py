@@ -1,15 +1,15 @@
-import ffai
-from ffai.core import Action, Agent, ActionType
+import botbowl
+from botbowl.core import Action, Agent, ActionType
 
 # Setup a game
-config = ffai.load_config("bot-bowl-iii")
-ruleset = ffai.load_rule_set(config.ruleset)
-arena = ffai.load_arena(config.arena)
-home = ffai.load_team_by_filename("human", ruleset)
-away = ffai.load_team_by_filename("human", ruleset)
+config = botbowl.load_config("bot-bowl-iii")
+ruleset = botbowl.load_rule_set(config.ruleset)
+arena = botbowl.load_arena(config.arena)
+home = botbowl.load_team_by_filename("human", ruleset)
+away = botbowl.load_team_by_filename("human", ruleset)
 agent_home = Agent("home agent", human=True)
 agent_away = Agent("home agent", human=True)
-game = ffai.Game(1, home, away, agent_home, agent_away, config, arena=arena, ruleset=ruleset)
+game = botbowl.Game(1, home, away, agent_home, agent_away, config, arena=arena, ruleset=ruleset)
 game.init()
 
 # Enable forward model

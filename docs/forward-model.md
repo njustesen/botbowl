@@ -1,23 +1,23 @@
 # Forward Model
-Previously, it was difficult to get a fast forward model up and running in FFAI due to the reliance on the slow copy.deepcopy() function. Thanks to amazing work by Mattias Bermell, FFAI now has a built-in forward model that is reasonably fast. At least much faster that what we had before!
+Previously, it was difficult to get a fast forward model up and running in botbowl due to the reliance on the slow copy.deepcopy() function. Thanks to amazing work by Mattias Bermell, botbowl now has a built-in forward model that is reasonably fast. At least much faster that what we had before!
 
 It works by tracking changes to non-immutable properties in the game state. Such changes can then be reverted to go back in time, e.g. to reset the state, where we had to completely reinstantiate the entire game object before.
 
 Here's a small example showing how to first enable the forward model, then take some steps in the game, and finally revert back to the original state: 
 
 ```python
-import ffai
-from ffai.core import Action, Agent
+import botbowl
+from botbowl.core import Action, Agent
 
 # Setup a game
-config = ffai.load_config("bot-bowl-iii")
-ruleset = ffai.load_rule_set(config.ruleset)
-arena = ffai.load_arena(config.arena)
-home = ffai.load_team_by_filename("human", ruleset)
-away = ffai.load_team_by_filename("human", ruleset)
+config = botbowl.load_config("bot-bowl-iii")
+ruleset = botbowl.load_rule_set(config.ruleset)
+arena = botbowl.load_arena(config.arena)
+home = botbowl.load_team_by_filename("human", ruleset)
+away = botbowl.load_team_by_filename("human", ruleset)
 agent_home = Agent("home agent", human=True)
 agent_away = Agent("home agent", human=True)
-game = ffai.Game(1, home, away, agent_home, agent_away, config, arena=arena, ruleset=ruleset)
+game = botbowl.Game(1, home, away, agent_home, agent_away, config, arena=arena, ruleset=ruleset)
 game.init()
 
 # Enable forward model
