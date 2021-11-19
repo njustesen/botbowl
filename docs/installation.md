@@ -45,10 +45,30 @@ If you ran into issues, please seek help at our [Discord server](https://discord
 ## Compiling with Cython
 "[Cython](https://github.com/cython/cython) is a language that makes writing C extensions for Python as easy as Python itself."
 
-Some of the botbowl modules are prepared for compilation with Cython. Compiling them will make the framework run faster. You need to have a C++ compiler available. Check the [Cython documentation](https://cython.readthedocs.io/en/latest/) for more information. 
+Some of the botbowl modules are prepared for compilation with Cython. Compiling them will make the framework run faster. 
 
 Installation through pip will automatically build with Cython if possible. If you cloned the repository with git, you need to manually call the build script by standing in the root of the repo and running:
 ```
 python setup.py build 
 ```
-You get a message confirming that botbowl was built with Cython. To test simply try to import one of the compiled modules with `import botbowl.core.pathfinding.cython_pathfinding`. You're good to go! 
+
+If you get the following message ```You've built botbowl without cython compilation. Check docs/installation.md for details.```, cython couldn't find a C++ compiler. Go install one and try again:
+
+**Windows**
+
+Install [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019) (you find it on the bottom of the page under Tools for Visual Studio 2022).
+
+**Linux**
+
+```
+apt install g++
+```
+
+**MacOS**
+
+```
+xcode-select –install
+```
+
+Check the [Cython documentation](https://cython.readthedocs.io/en/latest/) for more information. 
+
