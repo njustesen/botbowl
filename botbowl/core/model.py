@@ -220,6 +220,15 @@ class PlayerState(Reversible):
         self.used_skills.clear()
         self.squares_moved.clear()
 
+    always_show_attr = ['up']
+    show_if_true_attr = ['used', 'stunned', 'bone_headed', 'hypnotized', 'really_stupid', 'heated', 'knocked_out',
+                         'ejected', 'wild_animal', 'taken_root', 'blood_lust', 'has_blocked']
+
+    def __repr__(self):
+        states_to_show = [f"{attr}={getattr(self, attr)}" for attr in PlayerState.always_show_attr] +\
+                         [f"{attr}=True" for attr in PlayerState.show_if_true_attr if getattr(self, attr)]
+        return f'PlayerState({", ".join(states_to_show)})'
+
 
 class Agent:
 
@@ -869,6 +878,12 @@ class Ball(Catchable, Reversible):
 
         super().move_to(position)
 
+    def __repr__(self):
+        return f"Ball(position={self.position if self.position is not None else 'None'}, " \
+               f"on_ground={self.on_ground}, " \
+               f"is_carried={self.is_carried})"
+
+
 class Bomb(Catchable):
 
     def __init__(self, position, on_ground=True, is_carried=False):
@@ -1006,6 +1021,8 @@ class Player(Piece, Reversible):
         self.state.up = False
         self.state.taken_root = False
 
+    def __repr__(self):
+        return f"Player(position={self.position if self.position is not None else 'None'}, {self.role.name}, state={self.state})"
 
 class Square(Immutable):
 
@@ -1055,6 +1072,8 @@ class Square(Immutable):
     def is_adjacent(self, other, manhattan=False):
         return self.distance(other, manhattan) == 1
 
+    def __repr__(self):
+        return f"Square({self.x}, {self.y})"
 
 class Race:
 
