@@ -8,15 +8,15 @@ This module contains pathfinding functionalities for botbowl.
 
 from botbowl.core.table import Rules
 from botbowl.core.model import Square
-from botbowl.core.forward_model import Reversible
-from botbowl.core.util import compare_object
+from botbowl.core.forward_model import treat_as_immutable
 from botbowl.core.table import Skill, WeatherType
 import copy
 import numpy as np
 from queue import PriorityQueue
 
 
-class Path(Reversible):
+@treat_as_immutable
+class Path:
 
     def __init__(self, node: 'Node'):
         super().__init__()
@@ -49,9 +49,6 @@ class Path(Reversible):
     def is_empty(self) -> bool:
         return len(self) == 0
 
-    def compare(self, other, path=""):
-        return compare_object(self, other, path)
-
     def collect_path(self):
         steps = []
         rolls = []
@@ -63,6 +60,14 @@ class Path(Reversible):
             node = node.parent
         self._steps = list(reversed(steps))
         self._rolls = list(reversed(rolls))
+
+    def __eq__(self, other):
+        return self.prob == other.prob and \
+               self.steps == other.steps and \
+               self.rolls == other.rolls and \
+               self.block_dice == other.block_dice and \
+               self.handoff_roll == other.handoff_roll and \
+               self.foul_roll == other.foul_roll
 
 
 class Node:

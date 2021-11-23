@@ -7,12 +7,13 @@ Classes and method for recursively tracing changes to objects.
 """
 from copy import deepcopy, copy
 from enum import Enum
-from pytest import set_trace
 
 
 class Reversible:
 
-    def __init__(self, ignored_keys=[]):
+    def __init__(self, ignored_keys=None):
+        if ignored_keys is None:
+            ignored_keys = []
         super().__setattr__("_trajectory", None)
         super().__setattr__("_ignored_keys", set(ignored_keys))
 
@@ -87,7 +88,6 @@ class Trajectory:
         if self.enabled:
             self.action_log.append([])
             self.current_step += 1
-
 
 
 class Step:
@@ -330,6 +330,12 @@ def is_immutable(obj):
 
 replacement_type = [(list, ReversibleList), (dict, ReversibleDict), (set, ReversibleSet)]
 immutable_types = {int, float, str, tuple, bool, range, type(None)}
+
+
+def treat_as_immutable(cls):
+    """Used as decorator for classes that should never be tracked by forward model"""
+    immutable_types.add(cls)
+    return cls
 
 
 def add_reversibility(value, trajectory):
