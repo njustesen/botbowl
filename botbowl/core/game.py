@@ -5,7 +5,7 @@ Year: 2018
 ==========================
 This module contains the Game class, which is the main class and interface used to interact with a game in botbowl.
 """
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Union
 
 from botbowl.core.load import *
 from botbowl.core.procedure import *
@@ -45,7 +45,7 @@ class Game:
         self.trajectory = Trajectory()
         self.square_shortcut = self.state.pitch.squares
 
-    def to_json(self, ignore_reports=False):
+    def to_json(self, ignore_reports: bool = False):
         return {
             'game_id': self.game_id,
             'start_time': self.start_time,
@@ -229,9 +229,9 @@ class Game:
             clock.resume()
 
     def _end_game(self) -> None:
-        '''
+        """
         End the game
-        '''
+        """
         # Game ended when the last action was received - to avoid timout during finishing procedures
         self.end_time = self.last_action_time
 
@@ -306,9 +306,9 @@ class Game:
         return action
 
     def _forced_action(self) -> Action:
-        '''
+        """
         Return action that prioritize to end the player's turn.
-        '''
+        """
         # Take first negative action
         for action_type in [ActionType.END_TURN, ActionType.END_SETUP, ActionType.END_PLAYER_TURN,
                             ActionType.SELECT_NONE, ActionType.HEADS, ActionType.KICK, ActionType.SELECT_DEFENDER_DOWN,
@@ -399,8 +399,8 @@ class Game:
 
             for team in self.state.teams:
                 for player in team.players:
-                    if not (player.position is None or self.state.pitch.board[player.position.y][
-                        player.position.x] == player):
+                    if not (player.position is None or
+                            self.state.pitch.board[player.position.y][player.position.x] == player):
                         raise Exception("Player position violation")
 
         # Remove all finished procs
@@ -440,89 +440,90 @@ class Game:
             return False  # Can continue without user input
 
         # End player turn if only action available
-        if len(self.state.available_actions) == 1 and self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:
+        if len(self.state.available_actions) == 1 and \
+                self.state.available_actions[0].action_type == ActionType.END_PLAYER_TURN:
             return self._one_step(Action(ActionType.END_PLAYER_TURN))
 
         return True  # Game needs user input
 
     def remove_clocks(self) -> None:
-        '''
+        """
         Remove all clocks.
-        '''
+        """
         self.state.clocks.clear()
 
     def remove_secondary_clocks(self) -> None:
-        '''
+        """
         Remove all secondary clocks and resume the primary clock - if any.
-        '''
+        """
         self.state.clocks = [clock for clock in self.state.clocks if clock.is_primary]
         for clock in self.state.clocks:
             if not clock.is_running():
                 clock.resume()
 
     def get_clock(self, team: Team) -> Optional[Clock]:
-        '''
+        """
         Returns the clock belonging to the given team.
-        '''
+        """
         for clock in self.state.clocks:
             if clock.team == team:
                 return clock
         return None
 
-    def get_agent_clock(self, agent: Agent):
-        '''
+    def get_agent_clock(self, agent: Agent) -> Optional[Clock]:
+        """
         Returns the clock belonging to the given agent's team.
-        '''
+        """
         for clock in self.state.clocks:
             if clock.team == self.get_agent_team(agent):
                 return clock
         return None
 
-    def has_clock(self, team: Team):
-        '''
+    def has_clock(self, team: Team) -> bool:
+        """
         Returns true if the given team has a clock.
-        '''
+        """
         for clock in self.state.clocks:
             if clock.team == team:
                 return True
         return False
 
-    def has_agent_clock(self, agent: Agent):
-        '''
+    def has_agent_clock(self, agent: Agent) -> bool:
+        """
         Returns true if the given agent's team has a clock.
-        '''
+        """
         for clock in self.state.clocks:
             if clock.team == self.get_agent_team(agent):
                 return True
         return False
 
-    def pause_clocks(self):
-        '''
+    def pause_clocks(self) -> None:
+        """
         Pauses all clocks.
-        '''
+        """
         for clock in self.state.clocks:
             if clock.is_running():
                 clock.pause()
 
-    def add_secondary_clock(self, team: Team):
-        '''
+    def add_secondary_clock(self, team: Team) -> None:
+        """
         Adds a secondary clock for quick decisions.
-        '''
+        """
         self.pause_clocks()
         assert team is not None and type(team) == Team
         clock = Clock(team, self.config.time_limits.secondary)
         self.state.clocks.append(clock)
 
-    def add_primary_clock(self, team: Team):
-        '''
+    def add_primary_clock(self, team: Team) -> None:
+        """
         Adds a primary clock that will be paused if secondary clocks are added.
-        '''
+        """
         self.state.clocks.clear()
         assert team is not None and type(team) == Team
         clock = Clock(team, self.config.time_limits.turn, is_primary=True)
         self.state.clocks.append(clock)
 
-    def get_seconds_left(self, team: Team=None):
+    def get_seconds_left(self, team: Team = None) -> Optional[int]:
         '''
         Returns the number of seconds left on the clock for the given team and None if the given team has no clock.
         '''
@@ -544,7 +545,7 @@ class Game:
     #    """
     #    return (not self.state.game_over) and len(self.state.stack.items) > 0
 
-    def get_team_agent(self, team: Team):
+    def get_team_agent(self, team: Team) -> Optional[Agent]:
         """
         :param team:
         :return: The agent who's controlling the specified team.
@@ -555,7 +556,7 @@ class Game:
             return self.home_agent
         return self.away_agent
 
-    def get_agent_team(self, agent: Agent):
+    def get_agent_team(self, agent: Agent) -> Optional[Team]:
         """
         :param agent: The agent controlling the team
         :return: The team controlled by the specified agent.
@@ -566,30 +567,30 @@ class Game:
             return self.state.home_team
         return self.state.away_team
 
-    def set_seed(self, seed):
+    def set_seed(self, seed: int) -> None:
         '''
         Sets the random seed of the game.
         '''
         self.seed = seed
         self.rnd = np.random.RandomState(self.seed)
 
-    def set_available_actions(self):
+    def set_available_actions(self) -> None:
         """
         Calls the current procedure's available_actions() method and sets the game's available actions to the returned
         list.
         """
         self.state.available_actions = self.state.stack.peek().available_actions()
 
-    def report(self, outcome):
+    def report(self, outcome) -> None:
         """
         Adds the outcome to the game's reports.
         """
         self.state.reports.append(outcome)
 
-    def is_started(self):
+    def is_started(self) -> bool:
         return self.start_time is not None
 
-    def is_team_side(self, position: Square, team: Team):
+    def is_team_side(self, position: Square, team: Team) -> bool:
         """
         :param position:
         :param team:
@@ -599,7 +600,7 @@ class Game:
             return self.arena.board[position.y][position.x] in TwoPlayerArena.home_tiles
         return self.arena.board[position.y][position.x] in TwoPlayerArena.away_tiles
 
-    def get_team_side(self, team: Team):
+    def get_team_side(self, team: Team) -> List[Square]:
         """
         :param team:
         :return: a list of squares on team's side of the arena.
@@ -607,18 +608,19 @@ class Game:
         tiles = []
         for y in range(len(self.arena.board)):
             for x in range(len(self.arena.board[y])):
-                if self.arena.board[y][x] in (TwoPlayerArena.home_tiles if team == self.state.home_team else TwoPlayerArena.away_tiles):
+                if self.arena.board[y][x] in \
+                        (TwoPlayerArena.home_tiles if team == self.state.home_team else TwoPlayerArena.away_tiles):
                     tiles.append(self.get_square(x, y))
         return tiles
 
-    def is_scrimmage(self, position: Square):
+    def is_scrimmage(self, position: Square) -> bool:
         """
         :param position:
         :return: Returns True if pos is on the scrimmage line.
         """
         return self.arena.board[position.y][position.x] in TwoPlayerArena.scrimmage_tiles
 
-    def is_wing(self, position: Square, right):
+    def is_wing(self, position: Square, right) -> bool:
         """
         :param position:
         :param right: Whether to check on the right side of the arena. If False, it will check on the left side.
@@ -628,25 +630,25 @@ class Game:
             return self.arena.board[position.y][position.x] in TwoPlayerArena.wing_right_tiles
         return self.arena.board[position.y][position.x] in TwoPlayerArena.wing_left_tiles
 
-    def remove_balls(self):
+    def remove_balls(self) -> None:
         """
         Removes all balls from the arena.
         """
         self.state.pitch.balls.clear()
 
-    def is_last_turn(self):
+    def is_last_turn(self) -> bool:
         """
         :return: True if this turn is the last turn of the game.
         """
         return self.get_next_team().state.turn == self.config.rounds and self.state.half == 2
 
-    def is_last_round(self):
+    def is_last_round(self) -> bool:
         """
         :return: True if this round is the las round of the game.
         """
         return self.state.round == self.config.rounds
 
-    def get_next_team(self):
+    def get_next_team(self) -> Team:
         """
         :return: The team who's turn it is next.
         """
@@ -655,7 +657,7 @@ class Game:
             return self.state.turn_order[0]
         return self.state.turn_order[idx + 1]
 
-    def add_or_skip_turn(self, turns):
+    def add_or_skip_turn(self, turns: None) -> None:
         """
         Adds or removes a number of turns from the current half. This method will raise an assertion error if the turn
         counter goes to a negative number.
@@ -665,21 +667,21 @@ class Game:
             team.state.turn += turns
             assert team.state.turn >= 0
 
-    def get_player(self, player_id):
+    def get_player(self, player_id: str) -> Optional[Player]:
         """
         :param player_id: 
         :return: Returns the player with player_id
         """
         return self.state.player_by_id[player_id]
 
-    def get_player_at(self, position: Square):
+    def get_player_at(self, position: Square) -> Optional[Player]:
         """
         :param position: 
         :return: Returns the player at pos else None.
         """
         return self.state.pitch.board[position.y][position.x]
 
-    def set_turn_order_from(self, first_team):
+    def set_turn_order_from(self, first_team: Team) -> None:
         """
         Sets the turn order starting from first_team.
         :param first_team: The first team to start.
@@ -698,7 +700,7 @@ class Game:
                 after.append(team)
         self.state.turn_order = after + before
 
-    def set_turn_order_after(self, last_team):
+    def set_turn_order_after(self, last_team: Team) -> None:
         """
         Sets the turn order starting after last_team.
         :param last_team: The last team to start.
@@ -717,57 +719,57 @@ class Game:
                 added = True
         self.state.turn_order = after + before
 
-    def get_turn_order(self):
+    def get_turn_order(self) -> List[Team]:
         """
         :return: The list of teams sorted by turn order.
         """
         return self.state.turn_order
 
-    def is_home_team(self, team: Team):
+    def is_home_team(self, team: Team) -> bool:
         """
         :return: True if team is the home team.
         """
         return team == self.state.home_team
 
-    def get_opp_team(self, team: Team):
+    def get_opp_team(self, team: Team) -> Team:
         """
         :param team: 
         :return: The opponent team of team.
         """
         return self.state.home_team if self.state.away_team == team else self.state.away_team
 
-    def get_dugout(self, team: Team):
+    def get_dugout(self, team: Team) -> Dugout:
         return self.state.dugouts[team.team_id]
 
-    def get_reserves(self, team: Team):
+    def get_reserves(self, team: Team) -> List[Player]:
         """
         :param team: 
         :return: The reserves in the dugout of this team.
         """
         return self.get_dugout(team).reserves
 
-    def get_knocked_out(self, team: Team):
+    def get_knocked_out(self, team: Team) -> List[Player]:
         """
         :param team:
         :return: The knocked out players in the dugout of this team.
         """
         return self.get_dugout(team).kod
 
-    def get_casualties(self, team: Team):
+    def get_casualties(self, team: Team) -> List[Player]:
         """
         :param team:
         :return: The badly hurt, injured, and dead players in th dugout of this team.
         """
         return self.get_dugout(team).casualties
 
-    def get_dungeon(self, team: Team):
+    def get_dungeon(self, team: Team) -> List[Player]:
         """
         :param team:
         :return: The ejected players of this team, who's locked to a cell in the dungeon.
         """
         return self.get_dugout(team).dungeon
 
-    def current_turn(self):
+    def current_turn(self) -> Optional[Turn]:
         """
         :return: The top-most Turn procedure in the stack.
         """
@@ -777,7 +779,7 @@ class Game:
                 return proc
         return None
 
-    def can_use_reroll(self, team: Team):
+    def can_use_reroll(self, team: Team) -> bool:
         """
         :param team:
         :return: True if the team can use reroll right now (i.e. this turn).
@@ -788,7 +790,7 @@ class Game:
                 return not current_turn.quick_snap
         return False
 
-    def get_kicking_team(self, half=None):
+    def get_kicking_team(self, half: Optional[int] = None):
         """
         :param half: Set this to None if you want the team who's kicking this drive.
         :return: The team who's kicking in the specified half. If half is None, the team who's kicking this drive.
@@ -797,7 +799,7 @@ class Game:
             return self.state.kicking_this_drive
         return self.state.kicking_first_half if half == 1 else self.state.receiving_first_half
 
-    def get_receiving_team(self, half=None):
+    def get_receiving_team(self, half: Optional[int] = None) -> Team:
         """
         :param half: Set this to None if you want the team who's receiving this drive.
         :return: The team who's receiving in the specified half. If half is None, the team who's receiving this drive.
@@ -806,29 +808,30 @@ class Game:
             return self.state.receiving_this_drive
         return self.state.receiving_first_half if half == 1 else self.state.kicking_first_half
 
-    def has_ball(self, player: Player):
+    def has_ball(self, player: Player) -> bool:
         """
         :param player:
         :return: True if player has the ball.
         """
         ball = self.get_ball_at(player.position)
-        return True if ball is not None and ball.is_carried else False
+        return ball is not None and ball.is_carried
 
-    def get_ball(self):
+    def get_ball(self) -> Optional[Ball]:
         """
         :return: A ball on the pitch or None.
         """
         for ball in self.state.pitch.balls:
             return ball
 
-    def is_touchdown(self, player: Player):
+    def is_touchdown(self, player: Player) -> bool:
         """
         :param player:
         :return: True if player is in the opponent's endzone with the ball.
         """
-        return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team) and self.has_ball(player)
+        return self.arena.is_in_opp_endzone(player.position, player.team == self.state.home_team) and \
+               self.has_ball(player)
 
-    def is_blitz_available(self):
+    def is_blitz_available(self) -> bool:
         """
         :return: True if the current team can make a blitz this turn.
         """
@@ -836,7 +839,7 @@ class Game:
         if turn is not None:
             return turn.blitz_available
 
-    def use_blitz_action(self):
+    def use_blitz_action(self) -> None:
         """
         Uses this turn's blitz action.
         """
@@ -844,7 +847,7 @@ class Game:
         if turn is not None:
             turn.blitz_available = False
 
-    def unuse_blitz_action(self):
+    def unuse_blitz_action(self) -> None:
         """
         Unuses this turn's blitz action.
         """
@@ -852,7 +855,7 @@ class Game:
         if turn is not None:
             turn.blitz_available = True
 
-    def is_pass_available(self):
+    def is_pass_available(self) -> bool:
         """
         :return: True if the current team can make a pass this turn.
         """
@@ -860,7 +863,7 @@ class Game:
         if turn is not None:
             return turn.pass_available
 
-    def use_pass_action(self):
+    def use_pass_action(self) -> None:
         """
         Use this turn's pass action.
         """
@@ -868,7 +871,7 @@ class Game:
         if turn is not None:
             turn.pass_available = False
 
-    def unuse_pass_action(self):
+    def unuse_pass_action(self) -> None:
         """
         Use this turn's pass action.
         """
@@ -876,7 +879,7 @@ class Game:
         if turn is not None:
             turn.pass_available = True
 
-    def is_handoff_available(self):
+    def is_handoff_available(self) -> bool:
         """
         :return: True if the current team can make a handoff this turn.
         """
@@ -884,7 +887,7 @@ class Game:
         if turn is not None:
             return turn.handoff_available
 
-    def use_handoff_action(self):
+    def use_handoff_action(self) -> None:
         """
         Uses this turn's handoff action.
         """
@@ -892,7 +895,7 @@ class Game:
         if turn is not None:
             turn.handoff_available = False
 
-    def unuse_handoff_action(self):
+    def unuse_handoff_action(self) -> None:
         """
         Uses this turn's handoff action.
         """
@@ -900,7 +903,7 @@ class Game:
         if turn is not None:
             turn.handoff_available = True
 
-    def is_foul_available(self):
+    def is_foul_available(self) -> bool:
         """
         :return: True if the current team can make a foul this turn.
         """
@@ -908,7 +911,7 @@ class Game:
         if turn is not None:
             return turn.foul_available
 
-    def use_foul_action(self):
+    def use_foul_action(self) -> None:
         """
         Uses this turn's foul action.
         """
@@ -916,7 +919,7 @@ class Game:
         if turn is not None:
             turn.foul_available = False
 
-    def unuse_foul_action(self):
+    def unuse_foul_action(self) -> None:
         """
         Uses this turn's foul action.
         """
@@ -924,7 +927,7 @@ class Game:
         if turn is not None:
             turn.foul_available = True
 
-    def is_blitz(self):
+    def is_blitz(self) -> bool:
         """
         :return: True if the current turn is a Blitz!
         """
@@ -932,7 +935,7 @@ class Game:
         if turn is not None:
             return turn.blitz
 
-    def is_quick_snap(self):
+    def is_quick_snap(self) -> bool:
         """
         :return: True if the current turn is a Quick Snap!
         """
@@ -940,7 +943,7 @@ class Game:
         if turn is not None:
             return turn.quick_snap
 
-    def get_players_on_pitch(self, team: Team=None, used=None, up=None):
+    def get_players_on_pitch(self, team: Team = None, used=None, up=None) -> List[Player]:
         """
         :param team: The team of the players.
         :param used: If specified, filter by ther players used state.
@@ -956,7 +959,7 @@ class Game:
                     players.append(player)
         return players
 
-    def pitch_to_reserves(self, player: Player):
+    def pitch_to_reserves(self, player: Player) -> None:
         """
         Moves player from the pitch to the reserves section in the dugout.
         :param player:
@@ -966,10 +969,11 @@ class Game:
         player.state.used = False
         player.state.up = True
 
-    def reserves_to_pitch(self, player: Player, position: Square):
+    def reserves_to_pitch(self, player: Player, position: Square) -> None:
         """
         Moves player from the reserves section in the dugout to the pitch.
         :param player:
+        :param position: position on pitch to put player
         """
         self.get_reserves(player.team).remove(player)
         player_at = self.get_player_at(position)
@@ -978,7 +982,7 @@ class Game:
         self.put(player, position)
         player.state.up = True
 
-    def pitch_to_kod(self, player: Player):
+    def pitch_to_kod(self, player: Player) -> None:
         """
         Moves player from the pitch to the KO section in the dugout.
         :param player:
@@ -988,7 +992,7 @@ class Game:
         player.state.knocked_out = True
         player.state.up = True
 
-    def kod_to_reserves(self, player: Player):
+    def kod_to_reserves(self, player: Player) -> None:
         """
         Moves player from the KO section in the dugout to the pitch. This also resets the players knocked_out state.
         :param player:
@@ -998,7 +1002,7 @@ class Game:
         player.state.knocked_out = False
         player.state.up = True
 
-    def pitch_to_casualties(self, player: Player):
+    def pitch_to_casualties(self, player: Player) -> None:
         """
         Moves player from the pitch to the CAS section in the dugout and applies the casualty and effect to the player.
         :param player:
@@ -1008,7 +1012,7 @@ class Game:
         player.state.stunned = False
         self.get_casualties(player.team).append(player)
 
-    def pitch_to_dungeon(self, player: Player):
+    def pitch_to_dungeon(self, player: Player) -> None:
         """
         Moves player from the pitch to the dungeon and ejects the player from the game.
         :param player:
@@ -1018,7 +1022,7 @@ class Game:
         player.state.ejected = True
         player.state.up = True
 
-    def lift(self, player: Player):
+    def lift(self, player: Player) -> None:
         """
         Lifts player from the board. Call put_down(player) to set player down again.
         """
@@ -1026,7 +1030,7 @@ class Game:
         player.state.in_air = True
         self.state.pitch.board[player.position.y][player.position.x] = None
 
-    def put_down(self, player: Player):
+    def put_down(self, player: Player) -> None:
         """
         Puts a player down on the board on the square it was hovering.
         """
@@ -1034,7 +1038,7 @@ class Game:
         player.state.in_air = False
         self.put(player, player.position)
 
-    def put(self, piece, position: Square):
+    def put(self, piece: Union[Catchable, Player], position: Square) -> None:
         """
         Put a piece on or above a square.
         :param piece: Ball or player
@@ -1055,7 +1059,7 @@ class Game:
         else:
             raise Exception("Unknown piece type")
 
-    def remove(self, piece):
+    def remove(self, piece: Union[Catchable, Player]) -> None:
         """
         Remove a piece from the board.
         :param piece:
@@ -1075,7 +1079,7 @@ class Game:
         elif type(piece) is Bomb:
             self.state.pitch.bomb = None
 
-    def move(self, piece, position: Square):
+    def move(self, piece: Union[Catchable, Player], position: Square) -> None:
         """
         Move a piece already on the board. If the piece is a ball carrier, the ball is moved as well.
         :param piece:
@@ -1092,7 +1096,7 @@ class Game:
         elif piece.is_catchable():
             piece.move_to(position)
 
-    def shove(self, piece, x, y):
+    def shove(self, piece: Union[Catchable, Player], x: int, y: int) -> None:
         """
         Shove a push x number of step in the horizontal direction and y number of steps in the vertical direction.
         :param piece
@@ -1101,7 +1105,7 @@ class Game:
         """
         self.move(piece, self.get_square(piece.position.x + x, piece.position.y + y))
 
-    def swap(self, piece_a, piece_b):
+    def swap(self, piece_a: Union[Catchable, Player], piece_b: Union[Catchable, Player]) -> None:
         """
         Swap two pieces on the board.
         :param piece_a:
@@ -1129,12 +1133,13 @@ class Game:
         elif type(piece_b) is Catchable:
             piece_a.move_to(pos_b)
 
-    def get_catch_modifiers(self, catcher, accurate=False, interception=False, handoff=False):
+    def get_catch_modifiers(self, catcher: Player, accurate: bool = False, interception: bool = False,
+                            handoff: bool = False) -> int:
         """
         :param catcher:
         :param accurate: whether it is an accurate pass.
         :param interception: whether it is an interception catch.
-        :param interception: whether it is a handoff catch.
+        :param handoff: whether it is a handoff catch.
         :return: the modifier to be added to the pass roll.
         """
         modifiers = 1 if accurate or handoff else 0
@@ -1156,7 +1161,7 @@ class Game:
                 modifiers -= 1
         return modifiers
 
-    def get_pass_modifiers(self, passer: Player, pass_distance, ttm=False):
+    def get_pass_modifiers(self, passer: Player, pass_distance: PassDistance, ttm: bool = False) -> int:
         """
         :param passer:
         :param pass_distance: the PassDistance to the target.
@@ -1194,17 +1199,18 @@ class Game:
 
         return modifiers
 
-    def get_leap_modifiers(self, player: Player):
+    def get_leap_modifiers(self, player: Player) -> int:
         """
         :param player:
         :return: the modifier to be added to the leap roll.
         """
         return 1 if player.has_skill(Skill.VERY_LONG_LEGS) else 0
 
-    def get_dodge_modifiers(self, player: Player, position: Square, include_diving_tackle=False):
+    def get_dodge_modifiers(self, player: Player, position: Square, include_diving_tackle: bool = False) -> int:
         """
         :param player:
         :param position: The position the player is dodging to
+        :param include_diving_tackle:
         :return: the modifier to be added to the dodge roll.
         """
         modifiers = 1
@@ -1233,7 +1239,7 @@ class Game:
 
         return modifiers
 
-    def get_pickup_modifiers(self, player: Player, position: Square):
+    def get_pickup_modifiers(self, player: Player, position: Square) -> int:
         """
         :param player:
         :param position: the square of the ball.
@@ -1256,14 +1262,14 @@ class Game:
 
         return modifiers
 
-    def num_tackle_zones_in(self, player: Player):
+    def num_tackle_zones_in(self, player: Player) -> int:
         """
         :param player:
         :return: Number of opponent tackle zones the player is in.
         """
         return self.num_tackle_zones_at(player, player.position)
 
-    def num_tackle_zones_at(self, player: Player, position: Square):
+    def num_tackle_zones_at(self, player: Player, position: Square) -> int:
         """
         :param player:
         :param position:
@@ -1275,7 +1281,7 @@ class Game:
                 tackle_zones += 1
         return tackle_zones
 
-    def get_catcher(self, position: Square):
+    def get_catcher(self, position: Square) -> Optional[Player]:
         """
         :param position: A square on the board
         :return: A player if the ball can be catched by one at the given square, otherwise None.
@@ -1289,7 +1295,7 @@ class Game:
         else:
             return None
 
-    def is_setup_legal(self, team: Team):
+    def is_setup_legal(self, team: Team) -> bool:
         """
         :param team:
         :return: Whether the team has set up legally.
@@ -1303,7 +1309,7 @@ class Game:
             return False
         return True
 
-    def is_setup_legal_count(self, team: Team, tile=None, max_players=11, min_players=3):
+    def is_setup_legal_count(self, team: Team, tile=None, max_players=11, min_players=3) -> bool:
         """
         :param team:
         :param tile: The tile area to check.
@@ -1325,7 +1331,7 @@ class Game:
             return False
         return True
 
-    def num_casualties(self, team: Team=None):
+    def num_casualties(self, team: Team = None) -> int:
         """
         :param team: If None, return the sum of both teams casualties.
         :return: The number of casualties suffered by team.
@@ -1335,7 +1341,7 @@ class Game:
         else:
             return len(self.get_casualties(self.state.home_team)) + len(self.get_casualties(self.state.away_team))
 
-    def get_winning_team(self):
+    def get_winning_team(self) -> Optional[Team]:
         """
         :return: The team with most touchdowns, otherwise None.
         """
@@ -1345,7 +1351,7 @@ class Game:
             return self.state.away_team
         return None
 
-    def is_setup_legal_scrimmage(self, team: Team, min_players=3):
+    def is_setup_legal_scrimmage(self, team: Team, min_players=3) -> bool:
         """
         :param team:
         :param min_players:
@@ -1355,7 +1361,7 @@ class Game:
             return self.is_setup_legal_count(team, tile=Tile.HOME_SCRIMMAGE, min_players=min_players)
         return self.is_setup_legal_count(team, tile=Tile.AWAY_SCRIMMAGE, min_players=min_players)
 
-    def is_setup_legal_wings(self, team: Team, min_players=0, max_players=2):
+    def is_setup_legal_wings(self, team: Team, min_players=0, max_players=2) -> bool:
         """
         :param team:
         :param min_players:
@@ -1368,7 +1374,7 @@ class Game:
         return self.is_setup_legal_count(team, tile=Tile.AWAY_WING_LEFT, max_players=max_players, min_players=min_players) and \
                self.is_setup_legal_count(team, tile=Tile.AWAY_WING_RIGHT, max_players=max_players, min_players=min_players)
 
-    def get_procedure_names(self):
+    def get_procedure_names(self) -> List[str]:
         """
         :return: a list of procedure names in the stack.
         """
@@ -1382,13 +1388,13 @@ class Game:
                 procs.append(proc.__class__.__name__)
         return procs
 
-    def get_player_action_type(self):
+    def get_player_action_type(self) -> Optional[PlayerActionType]:
         """
         :return: the player PlayerActionType if there is any on the stack.
         """
         return self.state.player_action_type
 
-    def remove_recursive_refs(self):
+    def remove_recursive_refs(self) -> None:
         """
         Removes recursive references. Must be called before serializing.
         """
@@ -1396,7 +1402,7 @@ class Game:
             for player in team.players:
                 player.team = None
 
-    def add_recursive_refs(self):
+    def add_recursive_refs(self) -> None:
         """
         Adds recursive references. Can be called after serializing.
         """
@@ -1412,7 +1418,7 @@ class Game:
     #        return self.state.termination_opp
     #    return self.state.termination_turn
 
-    def get_team_by_id(self, team_id):
+    def get_team_by_id(self, team_id) -> Optional[Team]:
         """
         :param team_id:
         :return: returns the team with the id or None
@@ -1423,7 +1429,7 @@ class Game:
             return self.state.away_team
         return None
 
-    def get_winner(self):
+    def get_winner(self) -> Optional[Agent]:
         """
         returns the winning agent of the game. None if it's a draw.
         If the game timed out the current player loses.
@@ -1443,7 +1449,7 @@ class Game:
 
         return None
 
-    def get_other_agent(self, agent: Agent):
+    def get_other_agent(self, agent: Agent) -> Optional[Agent]:
         """
         Returns the other agent in the game.
         """
@@ -1453,7 +1459,7 @@ class Game:
             return self.away_agent
         return self.home_agent
 
-    def get_other_active_player_id(self):
+    def get_other_active_player_id(self) -> Optional[str]:
         """
         Returns the player id of the other player involved in current procedures - if any.
         """
@@ -1475,21 +1481,21 @@ class Game:
                     return proc.picked_up_teammate.player_id
         return None
 
-    def replace_home_agent(self, agent: Agent):
+    def replace_home_agent(self, agent: Agent) -> None:
         """
         Replaces the home agent safely.
         :param agent:
         """
         self.home_agent = agent
 
-    def replace_away_agent(self, agent: Agent):
+    def replace_away_agent(self, agent: Agent) -> None:
         """
         Replaces the away agent safely.
         :param agent:
         """
         self.away_agent = agent
 
-    def has_report_of_type(self, outcome_type, last=None):
+    def has_report_of_type(self, outcome_type, last=None) -> bool:
         """
         :param outcome_type:
         :return: True if the the game has reported an outcome of the given type. If last is specified, only the recent number of reports are checked.
@@ -1502,7 +1508,7 @@ class Game:
                 return True
         return False
 
-    def get_balls_at(self, position: Square, in_air=False):
+    def get_balls_at(self, position: Square, in_air=False) -> List[Ball]:
         """
         Assumes there is only one ball on the square
         :param position:
@@ -1515,7 +1521,7 @@ class Game:
                 balls.append(ball)
         return balls
 
-    def get_ball_at(self, position: Square, in_air=False):
+    def get_ball_at(self, position: Square, in_air=False) -> Optional[Ball]:
         """
         Assumes there is only one ball on the square.
         :param position:
@@ -1525,34 +1531,34 @@ class Game:
         balls_at = self.get_balls_at(position, in_air)
         return balls_at[0] if balls_at else None
 
-    def get_bomb(self):
+    def get_bomb(self) -> Optional[Bomb]:
         """
         Returns a bomb or None.
         :return: Bomb or None
         """
         return self.state.pitch.bomb
 
-    def remove_bomb(self):
+    def remove_bomb(self) -> None:
         """
         Removes the bombe from the pitch.
         """
         self.state.pitch.bomb = None
 
-    def put_bomb(self, bomb):
+    def put_bomb(self, bomb) -> None:
         """
         Adds a bomb to the pitch.
         """
         assert self.state.pitch.bomb is None
         self.state.pitch.bomb = bomb
 
-    def get_ball_positions(self):
+    def get_ball_positions(self) -> List[Square]:
         """
         :return: The position of the ball. If no balls are in the arena None is returned. If multiple balls are in the
         arena, the position of the first ball is return.
         """
         return [ball.position for ball in self.state.pitch.balls]
 
-    def get_ball_position(self):
+    def get_ball_position(self) -> Optional[Square]:
         """
         Assumes there is only one ball on the square
         :return: Ball or None
@@ -1561,7 +1567,7 @@ class Game:
             return ball.position
         return None
 
-    def get_ball_carrier(self):
+    def get_ball_carrier(self) -> Optional[Player]:
         """
         :return: the ball carrier if any - otherwise None.
         """
@@ -1571,7 +1577,7 @@ class Game:
         else:
             return self.get_player_at(ball_position)
 
-    def is_out_of_bounds(self, position: Square):
+    def is_out_of_bounds(self, position: Square) -> bool:
         """
         :param position:
         :return: True if pos is out of bounds.
@@ -1579,7 +1585,7 @@ class Game:
         return position.x < 1 or position.x >= self.state.pitch.width - 1 or \
                position.y < 1 or position.y >= self.state.pitch.height - 1
 
-    def get_push_squares(self, from_position, to_position):
+    def get_push_squares(self, from_position: Square, to_position: Square) -> List[Square]:
         """
         :param from_position: The position of the attacker.
         :param to_position: The position of the defender.
@@ -1614,7 +1620,7 @@ class Game:
         assert len(squares) > 0
         return squares
 
-    def get_square(self, x, y):
+    def get_square(self, x, y) -> Square:
         """
         Returns an existing square object for the given position to avoid a new instantiation. If the square object
         is out of bounds it may be instantiated.
@@ -1628,7 +1634,8 @@ class Game:
             return Square(x, y)
         return self.square_shortcut[y][x]
 
-    def get_adjacent_squares(self, position: Square, diagonal=True, out=False, occupied=True, distance=1):
+    def get_adjacent_squares(self, position: Square, diagonal=True, out=False, occupied=True, distance=1) \
+            -> List[Square]:
         """
         Returns a list of adjacent squares from the position.
         :param position:
@@ -1655,7 +1662,7 @@ class Game:
                     squares.append(sq)
         return squares
 
-    def get_adjacent_opponents(self, player: Player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
+    def get_adjacent_opponents(self, player: Player, diagonal=True, down=True, standing=True, stunned=True, skill=None) -> List[Player]:
         """
         Returns a list of adjacent opponents to the player it its current position.
         :param player:
@@ -1669,7 +1676,7 @@ class Game:
         return self.get_adjacent_players(player.position, self.get_opp_team(player.team), diagonal, down, standing,
                                          stunned, skill=skill)
 
-    def get_adjacent_teammates(self, player: Player, diagonal=True, down=True, standing=True, stunned=True, skill=None):
+    def get_adjacent_teammates(self, player: Player, diagonal=True, down=True, standing=True, stunned=True, skill=None) -> List[Player]:
         """
         Returns a list of adjacent teammates to the player it its current position.
         :param player:
@@ -1683,7 +1690,7 @@ class Game:
         return self.get_adjacent_players(player.position, player.team, diagonal, down, standing, stunned, skill=skill)
 
     def get_adjacent_players(self, position: Square, team: Team=None, diagonal=True, down=True, standing=True, stunned=True,
-                             skill=None):
+                             skill=None) -> List[Player]:
         """
         Returns a list of adjacent player to the position.
         :param position:
@@ -1713,7 +1720,7 @@ class Game:
             players.append(player_at)
         return players
 
-    def get_assisting_players(self, player: Player, opp_player: Player, foul=False):
+    def get_assisting_players(self, player: Player, opp_player: Player, foul=False) -> List[Player]:
         """
         :param player:
         :param opp_player:
@@ -1737,7 +1744,7 @@ class Game:
                                 assists.append(player_at)
         return assists
 
-    def can_assist(self, player: Player, foul=False):
+    def can_assist(self, player: Player, foul: bool = False) -> bool:
         """
         :param player: The player which potentially can assist
         :param foul:
@@ -1750,7 +1757,7 @@ class Game:
             return True
         return False
 
-    def get_assisting_players_at(self, player: Player, opp_player: Player, foul=False):
+    def get_assisting_players_at(self, player: Player, opp_player: Player, foul: bool=False) -> List[Player]:
         """
         :param player:
         :param opp_player:
@@ -1766,11 +1773,11 @@ class Game:
                 if not self.is_out_of_bounds(p) and player.position != p:
                     player_at = self.get_player_at(p)
                     if player_at is not None:
-                        if player_at.team == player.team and self.can_assist(player_at):
+                        if player_at.team == player.team and self.can_assist(player_at, foul):
                             assists.append(player_at)
         return assists
 
-    def get_block_strengths(self, attacker, defender, blitz=False):
+    def get_block_strengths(self, attacker: Player, defender: Player, blitz: bool = False) -> Tuple[int, int]:
         """
         :param attacker:
         :param defender:
@@ -1785,7 +1792,7 @@ class Game:
         defender_strength += len(self.get_assisting_players(defender, attacker))
         return attacker_strength, defender_strength
 
-    def num_block_dice(self, attacker, defender, blitz=False, dauntless_success=False):
+    def num_block_dice(self, attacker: Player, defender: Player, blitz: bool = False, dauntless_success: bool = False) -> int:
         """
         :param attacker: 
         :param defender: 
@@ -1795,7 +1802,7 @@ class Game:
         """
         return self.num_block_dice_at(attacker, defender, attacker.position, blitz, dauntless_success)
 
-    def get_block_probs(self, attacker, defender):
+    def get_block_probs(self, attacker: Player, defender: Player) -> Tuple[float, float, float, float]:
         """
         :param attacker:
         :param defender:
@@ -1832,7 +1839,7 @@ class Game:
             p_fumble_self = p_self
         return p_self, p_opp, p_fumble_self, p_fumble_opp
 
-    def get_blitz_probs(self, attacker, attack_position, defender):
+    def get_blitz_probs(self, attacker: Player, attack_position: Square, defender: Player) -> Tuple[float, float, float, float]:
         """
         :param attacker:
         :param attack_position:
@@ -1848,7 +1855,7 @@ class Game:
             self.move(attacker, orig_position)
         return p_self, p_opp, p_fumble_self, p_fumble_opp
 
-    def get_dodge_prob(self, player: Player, position: Square, allow_dodge_reroll=True, allow_team_reroll=False):
+    def get_dodge_prob(self, player: Player, position: Square, allow_dodge_reroll: bool=True, allow_team_reroll: bool=False) -> float:
         """
         :param player:
         :param position:
@@ -1868,8 +1875,8 @@ class Game:
             p += (1.0 - p) * p
         return p
 
-    def get_catch_prob(self, player: Player, accurate=False, interception=False, handoff=False, allow_catch_reroll=True,
-                       allow_team_reroll=False):
+    def get_catch_prob(self, player: Player, accurate: bool=False, interception: bool=False, handoff: bool=False, allow_catch_reroll: bool=True,
+                       allow_team_reroll: bool=False) -> float:
         """
         :param player:
         :param accurate: whether it is an accurate pass
@@ -1889,8 +1896,8 @@ class Game:
             p += (1.0 - p) * p
         return p
 
-    def get_dodge_prob_from(self, player: Player, from_position: Square, to_position: Square, allow_dodge_reroll=False,
-                            allow_team_reroll=False):
+    def get_dodge_prob_from(self, player: Player, from_position: Square, to_position: Square,
+                            allow_dodge_reroll: bool=False, allow_team_reroll: bool=False) -> float:
         """
         :param player:
         :param from_position:
@@ -1905,7 +1912,8 @@ class Game:
         self.move(player, orig_position)
         return p
 
-    def get_pickup_prob(self, player: Player, position: Square, allow_pickup_reroll=True, allow_team_reroll=False):
+    def get_pickup_prob(self, player: Player, position: Square, allow_pickup_reroll: bool=True,
+                        allow_team_reroll: bool=False) -> float:
         """
         :param player:
         :param position: the position of the ball
@@ -1924,7 +1932,7 @@ class Game:
         return p
 
     def get_pass_prob(self, player: Player, piece: Piece, position: Square,
-                      allow_pass_reroll: bool = True, allow_team_reroll = False):
+                      allow_pass_reroll: bool = True, allow_team_reroll: bool = False) -> float:
         """
         :param player: passer
         :param piece: piece to pass
@@ -1943,13 +1951,15 @@ class Game:
             p += (1.0 - p) * p
         return p
 
-    def num_block_dice_at(self, attacker, defender, position: Square, blitz=False, dauntless_success=False):
+    def num_block_dice_at(self, attacker, defender, position: Square, blitz: bool=False, dauntless_success: bool=False):
         """
         :param attacker:
         :param defender:
+        :param position: attackers position
         :param blitz: if it is a blitz
         :param dauntless_success: If a dauntless rolls was successful.
-        :return: The number of block dice used in a block between the attacker and defender if the attacker block at the given position.
+        :return: The number of block dice used in a block between the attacker and defender if the attacker block at
+                 the given position.
         """
 
         # Determine dice and favor
@@ -1982,14 +1992,16 @@ class Game:
         elif st_for < st_against:
             return -2
 
-    def num_assists_at(self, attacker: Player, defender: Player, position: Square, foul: bool = False) -> Tuple[int, int]:
+    def num_assists_at(self, attacker: Player, defender: Player, position: Square, foul: bool = False) \
+            -> Tuple[int, int]:
         '''
         Return net assists for a block of player on opp_player when player has moved to position first.  Required for
         calculating assists after moving in a Blitz action.
         :return: int - Net # of assists
         '''
 
-        # Note that because blitzing/fouling player may have moved, calculating assists for is slightly different to against.
+        # Note that because blitzing/fouling player may have moved,
+        # calculating assists for is slightly different to against.
         # Assists against
         opp_assisters = self.get_adjacent_players(position, team=self.get_opp_team(attacker.team), down=False)
         n_assist_against: int = 0
@@ -2006,7 +2018,8 @@ class Game:
                 adjacent_to_assisters = self.get_adjacent_opponents(assister, down=False)
                 found_adjacent = False
                 for adjacent_to_assister in adjacent_to_assisters:
-                    # Need to make sure we take into account the blocking/blitzing player may be in a different square than currently represented on the board.
+                    # Need to make sure we take into account the blocking/blitzing player may be in a different square
+                    # than currently represented on the board.
                     if adjacent_to_assister.position == position or adjacent_to_assister.position == attacker.position or not adjacent_to_assister.can_assist():
                         continue
                     else:
@@ -2039,17 +2052,21 @@ class Game:
                     n_assists_for += 1
         return n_assists_for, n_assist_against
 
-    def get_pass_distances(self, passer, piece, dump_off=False):
+    def get_pass_distances(self, passer: Player, piece: Piece, dump_off: bool = False) -> Tuple[List[Square], List[PassDistance]]:
         """
-        :param passer:
         :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to.
         """
         return self.get_pass_distances_at(passer, piece, passer.position, dump_off=dump_off)
 
-    def get_pass_distances_at(self, passer, piece, position: Square, dump_off=False):
+    def get_pass_distances_at(self, passer: Player, piece: Piece, position: Square, dump_off: bool = False) \
+            -> Tuple[List[Square], List[PassDistance]]:
         """
         :param passer:
-        :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to if at the given position.
+        :param piece:
+        :param position:
+        :param dump_off:
+        :return: two lists (squares, distances) indicating the PassDistance to each square that the passer can pass to
+                 if at the given position.
         """
         squares = []
         distances = []
@@ -2075,7 +2092,7 @@ class Game:
                     distances.append(distance)
         return squares, distances
 
-    def get_pass_distance(self, from_position, to_position):
+    def get_pass_distance(self, from_position: Square, to_position: Square) -> PassDistance:
         """
         :param from_position:
         :param to_position:
@@ -2088,7 +2105,7 @@ class Game:
         distance = Rules.pass_matrix[distance_y][distance_x]
         return PassDistance(distance)
 
-    def get_distance_to_endzone(self, player: Player):
+    def get_distance_to_endzone(self, player: Player) -> int:
         """
         :param player:
         :return: direct distance to the nearest opponent endzone tile.
@@ -2107,7 +2124,7 @@ class Game:
         else:
             return self.arena.width - 2
 
-    def get_interceptors(self, position_from: Square, position_to: Square, team: Team):
+    def get_interceptors(self, position_from: Square, position_to: Square, team: Team) -> List[Player]:
         """
         Finds interceptors using the following rules:
         1) Find line x from a to b
@@ -2118,6 +2135,7 @@ class Game:
         6) Determine players on squares
         :param position_from where the passer is
         :param position_to where the ball is passed to
+        :param team: team that can attempt interception
         """
 
         # 1) Find line x from a to b
@@ -2171,13 +2189,13 @@ class Game:
 
         return players
 
-    def get_available_actions(self):
+    def get_available_actions(self) -> List[ActionChoice]:
         """
         :return: a list of available action choices in the current state.
         """
         return self.state.available_actions
 
-    def clear_board(self):
+    def clear_board(self) -> None:
         """
         Moves all players from the board to their respective reserves box.
         """
@@ -2186,25 +2204,26 @@ class Game:
         for player in self.get_players_on_pitch(self.state.away_team):
             self.pitch_to_reserves(player)
 
-    def get_active_player(self):
+    def get_active_player(self) -> Optional[Player]:
         """
         :return: the current player to make a move if any, else None.
         """
         return self.state.active_player
 
-    def get_procedure(self):
+    def get_procedure(self) -> Procedure:
         """
         :return: The current procedure on the top of the stack.
         """
         return self.state.stack.peek()
 
-    def get_weather(self):
+    def get_weather(self) -> WeatherType:
         """
         :return: The current weather.
         """
         return self.state.weather
 
-    def apply_casualty(self, player: Player, inflictor, casualty, effect, roll):
+    def apply_casualty(self, player: Player, inflictor: Player, casualty, effect: CasualtyEffect, roll: DiceRoll) \
+            -> None:
         """
         Applies a casualty to a player and moves it to the dugout.
         :param player: the player to apply the casualty to.
@@ -2232,7 +2251,7 @@ class Game:
         if effect is not CasualtyEffect.MNG and effect is not CasualtyEffect.NONE:
             player.state.injuries_gained.append(effect)
 
-    def get_current_turn_proc(self):
+    def get_current_turn_proc(self) -> Optional[Procedure]:
         """
         :return: the Turn procedure that is highest on the stack.
         """
@@ -2242,14 +2261,14 @@ class Game:
                 return self.state.stack.items[idx]
         return None
 
-    def get_tile(self, position: Square):
+    def get_tile(self, position: Square) -> Tile:
         """
         :param position: a Square on the board.
         :return: the tile type at the given position.
         """
         return self.arena.board[position.y][position.x]
 
-    def get_adjacent_blood_lust_victims(self, player: Player):
+    def get_adjacent_blood_lust_victims(self, player: Player)  -> List[Square]:
         """
         :param player: a player on the board.
         :return: return positions of adjecent players that can be bitten
@@ -2257,7 +2276,7 @@ class Game:
         """
         return [p.position for p in self.get_adjacent_teammates(player) if not p.has_skill(Skill.BLOOD_LUST)]
 
-    def get_hypno_targets(self, player: Player):
+    def get_hypno_targets(self, player: Player) -> List[Player]:
         """
         :param player: player on the board. 
         :return: available targets for given player to hypnotize if player has Hypnotic Gaze skill 
@@ -2268,20 +2287,20 @@ class Game:
 
         return [o.position for o in self.get_adjacent_opponents(player, down=False) if o.has_tackle_zone()]
 
-    def get_hypno_modifier(self, player: Player):
+    def get_hypno_modifier(self, player: Player) -> int:
         """
         :param player: player on the board with hypnotic gaze skill. 
         :return:  modifier for player to hypnotize target. 
         """
         return 1 - self.num_tackle_zones_in(player)
 
-    def get_landing_modifiers(self, player: Player):
+    def get_landing_modifiers(self, player: Player) -> int:
         """
         :param player: Player attempting to land.
         """
         return self.num_tackle_zones_in(player)
 
-    def get_handoff_actions(self, player: Player):
+    def get_handoff_actions(self, player: Player) -> List[ActionChoice]:
         """
         :param player: Hand-offing player
         :return: Available hand-off actions for the player.
@@ -2301,7 +2320,7 @@ class Game:
                                         positions=hand_off_positions, rolls=rolls))
         return actions
 
-    def get_stand_up_actions(self, player: Player):
+    def get_stand_up_actions(self, player: Player) -> List[ActionChoice]:
         rolls = []
         if not player.state.up:
             moves = 0 if player.has_skill(Skill.JUMP_UP) else 3
@@ -2313,7 +2332,7 @@ class Game:
             return [ActionChoice(ActionType.STAND_UP, team=player.team, rolls=rolls)]
         return []
 
-    def get_adjacent_move_actions(self, player: Player):
+    def get_adjacent_move_actions(self, player: Player) -> List[ActionChoice]:
         quick_snap = self.is_quick_snap()
         actions = []
         move_positions = []
@@ -2349,7 +2368,7 @@ class Game:
 
         return actions
 
-    def get_leap_actions(self, player: Player):
+    def get_leap_actions(self, player: Player) -> List[ActionChoice]:
         actions = []
         if player.can_use_skill(Skill.LEAP) and not self.is_quick_snap():
             sprints = 3 if player.has_skill(Skill.SPRINT) else 2
@@ -2378,7 +2397,7 @@ class Game:
                                             positions=leap_positions, rolls=leap_rolls))
         return actions
 
-    def get_foul_actions(self, player: Player):
+    def get_foul_actions(self, player: Player) -> List[ActionChoice]:
         """
         :param player: Fouling player
         :return: Available foul actions for the player.
@@ -2398,7 +2417,7 @@ class Game:
                                         positions=foul_positions, rolls=foul_rolls))
         return actions
 
-    def get_pickup_teammate_actions(self, player: Player):
+    def get_pickup_teammate_actions(self, player: Player) -> List[ActionChoice]:
         actions = []
         teammates = self.get_adjacent_teammates(player, down=False, skill=Skill.RIGHT_STUFF)
         if teammates:
@@ -2409,7 +2428,7 @@ class Game:
                                         positions=positions, rolls=d6_rolls))
         return actions
 
-    def get_block_actions(self, player: Player, blitz=False):
+    def get_block_actions(self, player: Player, blitz = False) -> List[ActionChoice]:
 
         if player.state.has_blocked:
             return []
@@ -2463,7 +2482,7 @@ class Game:
 
         return actions
 
-    def get_pass_actions(self, player: Player, piece, dump_off=False):
+    def get_pass_actions(self, player: Player, piece, dump_off = False) -> List[ActionChoice]:
         actions = []
         if piece:
             ttm = type(piece) == Player
@@ -2498,7 +2517,7 @@ class Game:
             actions.append(ActionChoice(ActionType.DONT_USE_SKILL, team=player.team, skill=Skill.DUMP_OFF))
         return actions
 
-    def get_hypnotic_gaze_actions(self, player: Player):
+    def get_hypnotic_gaze_actions(self, player: Player) -> List[ActionChoice]:
         actions = []
         if player.has_skill(Skill.HYPNOTIC_GAZE) and player.state.up:
 
@@ -2515,7 +2534,7 @@ class Game:
                                             rolls=rolls))
         return actions
 
-    def purge_stack_until(self, proc_class, inclusive=False):
+    def purge_stack_until(self, proc_class, inclusive = False) -> None:
         assert proc_class in [proc.__class__ for proc in self.state.stack.items]
         while not isinstance(self.state.stack.peek(), proc_class):
             self.state.stack.pop()
@@ -2523,13 +2542,13 @@ class Game:
             self.state.stack.pop()
         assert not self.state.stack.is_empty()
 
-    def get_proc(self, proc_type):
+    def get_proc(self, proc_type) -> Optional[Procedure]:
         for proc in self.state.stack.items:
             if type(proc) == proc_type:
                 return proc
         return None
 
-    def get_stand_up_modifier(self, player: Player):
+    def get_stand_up_modifier(self, player: Player) -> int:
         """
         :param player: player on the board with MA < 3. 
         :return:  modifier for player to stand up. 
