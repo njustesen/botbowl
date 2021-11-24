@@ -1,3 +1,5 @@
+from typing import List, Optional, Tuple, Union
+
 from botbowl.core.game import *
 from botbowl.ai.bots.random_bot import *
 from copy import deepcopy
@@ -44,6 +46,59 @@ def get_game_turn(seed=0, empty=False):
     else:
         game_turn_full[seed] = deepcopy(game)
     return game
+
+Position = Union[Square, Tuple[int, int]]
+
+
+
+def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
+                         ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
+                         rerolls: int = 0) \
+        -> Tuple:
+    """
+    :param player_positions: places human linemen of active team in these squares
+    :param opp_player_positions: places human linemen of not active team in these squares
+    :param ball_position: places ball in this square.
+    :param weather:
+    :param rerolls: number of rerolls
+    :return: tuple with created game object followed by all the placed players
+    """
+    game = get_game_turn(empty=True)
+    team = game.get_agent_team(game.actor)
+    team_players = [player for player in team.players if player.role.name == "Lineman"]
+
+    game.state.weather = weather
+    game.state.teams[0].state.rerolls = rerolls
+
+    def assert_square_type(obj: Position) -> Square:
+        if type(obj) == Square:
+            return obj
+        else:
+            return game.get_square(obj[0], obj[1])
+
+
+    return_list = [game]
+
+    for i, sq in enumerate(player_positions):
+        player = team_players[i]
+        game.put(player, assert_square_type(sq))
+        return_list.append(player)
+
+    if opp_player_positions is not None:
+        opp_team_players = [player for player in game.get_opp_team(team).players if player.role.name == "Lineman"]
+        for i, sq in enumerate(opp_player_positions):
+            player = opp_team_players[i]
+            game.put(player, assert_square_type(sq))
+            return_list.append(player)
+
+    if ball_position is not None:
+        game.get_ball().move_to(assert_square_type(ball_position))
+        game.get_ball().is_carried = game.get_player_at(assert_square_type(ball_position)) is not None
+
+    game.set_available_actions()
+    game.state.reports.clear()
+
+    return tuple(return_list)
 
 
 def get_game_kickoff(seed=0):
