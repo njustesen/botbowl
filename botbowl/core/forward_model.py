@@ -371,14 +371,22 @@ def immutable_after_init(cls):
 
     old_init = cls.__init__
 
-    def setattr_error(self, attr_name, value):
-        raise AttributeError(f"Can't assign new value to {self} because class is immutable after init")
+#    def setattr_error(self, attr_name, value):
+#        raise AttributeError(f"Can't assign new value to {self} because class is immutable after init")
+
+
+    def _setattr(self, key, value):
+        if self.__setattr__ is None:
+            raise AttributeError()
+        object.__setattr__(self, key, value)
+
 
     def init(self, *args, **kwargs):
         old_init(self, *args, **kwargs)
-        cls.__setattr__ = setattr_error
+        self.__setattr__ = None
 
     cls.__init__ = init
+    cls.__setattr__ = _setattr
     treat_as_immutable(cls)
     return cls
 

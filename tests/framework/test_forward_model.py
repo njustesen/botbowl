@@ -170,3 +170,11 @@ def test_actor_correctly_reset():
     game.revert(root)
     assert game.actor == actor1
 
+
+def test_immutability():
+    sq = Square(1, 2)
+    sq2 = Square(3, 2)
+
+    with pytest.raises(AttributeError):
+        sq.x = 2
+    assert sq.x == 1

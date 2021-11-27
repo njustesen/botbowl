@@ -17,26 +17,27 @@ config = load_config("gym-11")
 ruleset = load_rule_set(config.ruleset)
 home = load_team_by_filename("human", ruleset)
 away = load_team_by_filename("human", ruleset)
-away_agent = make_bot("random")
-home_agent = make_bot("random")
+
 
 
 def run_game_with_forward_model():
-    game = Game(1, home, away, home_agent, away_agent, config)
+    game = Game(1, home, away, RandomBot('random', seed=1), RandomBot('random', seed=1), config)
     game.enable_forward_model()
     game.init()
 
 
 def run_game_without_forward_model():
-    game = Game(1, home, away, home_agent, away_agent, config)
+    game = Game(1, home, away, RandomBot('random', seed=1), RandomBot('random', seed=1), config)
     game.init()
 
 
 def normal_games():
     nbr_of_games = 10
 
-    games_disabled_model = [Game(1, home, away, home_agent, away_agent, config, seed=i) for i in range(nbr_of_games)]
-    games_enabled_model = [Game(1, home, away, home_agent, away_agent, config, seed=i) for i in range(nbr_of_games)]
+    games_disabled_model = [Game(i, home, away, RandomBot('random', i), RandomBot('random', i), config, seed=i)
+                            for i in range(nbr_of_games)]
+    games_enabled_model = [Game(i, home, away, RandomBot('random', i), RandomBot('random', i), config, seed=i)
+                           for i in range(nbr_of_games)]
 
     for game in games_enabled_model:
         game.enable_forward_model()
