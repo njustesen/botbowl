@@ -1,4 +1,4 @@
-from tests.util import Square, get_game_turn, Skill, Action, ActionType
+from tests.util import Square, get_game_turn, Skill, Action, ActionType, get_custom_game_turn
 import pytest
 import unittest.mock
 import numpy as np
@@ -353,20 +353,12 @@ def test_foul_after_gfi(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_foul(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.away_team)[0]
+    game, player, opp_player_1, opp_player_2 = get_custom_game_turn(player_positions=[(1, 1)],
+                                                      opp_player_positions=[(1, 2), (1, 3)])
+
     player.role.ma = 1
-    game.put(player, Square(1, 1))
-
-    opp_player_1 = game.get_reserves(game.state.home_team)[0]
     opp_player_1.state.up = False
-    opp_position_1 = Square(1, 2)
-    game.put(opp_player_1, opp_position_1)
-
-    opp_player_2 = game.get_reserves(game.state.home_team)[1]
     opp_player_2.state.up = False
-    opp_position_2 = Square(1, 3)
-    game.put(opp_player_2, opp_position_2)
 
     pathfinder = pf.Pathfinder(game,
                                player,
@@ -378,7 +370,7 @@ def test_foul(pf):
     for path in paths:
         fouls = 0
         for step in path.steps:
-            if step in [opp_position_1, opp_position_2]:
+            if step in [opp_player_1.position, opp_player_2.position]:
                 fouls += 1
                 assert step == path.get_last_step()
         assert fouls <= 1
@@ -388,19 +380,10 @@ def test_foul(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.away_team)[0]
-    player.role.ma = 1
-    game.move(game.get_ball(), player.position)
-    game.put(player, Square(1, 1))
-    game.get_ball().is_carried = True
-    teammate_1 = game.get_reserves(game.state.away_team)[1]
-    teammate_position_1 = Square(1, 2)
-    game.put(teammate_1, teammate_position_1)
-    teammate_2 = game.get_reserves(game.state.away_team)[2]
-    teammate_position_2 = Square(1, 3)
-    game.put(teammate_2, teammate_position_2)
+    game, player, teammate_1, teammate_2 = get_custom_game_turn(player_positions=[(1, 1), (1, 2), (1, 3)],
+                                                                ball_position=(1, 1))
 
+    player.role.ma = 1
     pathfinder = pf.Pathfinder(game,
                                player,
                                directly_to_adjacent=True,
@@ -412,7 +395,7 @@ def test_handoff(pf):
     for path in paths:
         handoffs = 0
         for step in path.steps:
-            if step in [teammate_position_1, teammate_position_2]:
+            if step in [teammate_1.position, teammate_2.position]:
                 handoffs += 1
                 assert step == path.get_last_step()
         assert handoffs <= 1
