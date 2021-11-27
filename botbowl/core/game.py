@@ -9,7 +9,7 @@ from typing import Optional, Tuple, List, Union
 
 from botbowl.core.load import *
 from botbowl.core.procedure import *
-from botbowl.core.forward_model import Trajectory, MovementStep
+from botbowl.core.forward_model import Trajectory, MovementStep, Step
 
 
 class InvalidActionError(Exception):
@@ -80,14 +80,22 @@ class Game:
         Returns an int that is the forward model step counter. The step counter can be used to revert the game state
         to this state with Game.revert()
         """
-        return self.trajectory.current_step
+        return len(self.trajectory)
 
-    def revert(self, to_step: int) -> None:
+    def revert(self, to_step: int) -> List[Step]:
         """
-        Reverts the game state to how a the step to_step
+        :param to_step: reverts the gamestate to this step, this step should come from self.get_step()
+        :returns: list of the undone steps that can be used to redo the steps with function self.foward()
         """
         assert self.trajectory.enabled
-        self.trajectory.revert(to_step)
+        return self.trajectory.revert(to_step)
+
+    def forward(self, steps: List[Step]) -> None:
+        """
+        :param steps: re-does previously reverted with function self.revert().
+        """
+        assert self.trajectory.enabled
+        self.trajectory.step_forward(steps)
 
     @property
     def actor(self) -> Optional[Agent]:
@@ -177,7 +185,6 @@ class Game:
                 # Else continue procedure with no action
                 self.action = None
 
-        self.trajectory.next_step()
 
     def refresh(self) -> None:
         """
