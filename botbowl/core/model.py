@@ -7,6 +7,8 @@ This module contains most of the model classes.
 """
 
 from copy import copy, deepcopy
+from typing import Optional
+
 import numpy as np
 import uuid
 import time
@@ -447,15 +449,13 @@ class Pitch(Reversible):
         super().__init__(ignored_keys=["board", "squares"])
         self.balls = []
         self.bomb = None
-        #self.board = []
         self.board = np.full((height, width), None)
         self.squares = []
         for y in range(height):
-        #    self.board.append([])
             self.squares.append([])
             for x in range(width):
-        #        self.board[y].append(None)
-                self.squares[y].append(Square(x, y))
+                out = x == 0 or x == width-1 or y == 0 or y == height-1
+                self.squares[y].append(Square(x, y, out))
         self.height = len(self.board)
         self.width = len(self.board[0])
 
@@ -1029,10 +1029,13 @@ class Player(Piece, Reversible):
 class Square:
     x: int
     y: int
+    out_of_bounds: Optional[bool]
 
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, out_of_bounds=None):
         self.x = x
         self.y = y
+        self.out_of_bounds = out_of_bounds
+
 
     def to_json(self):
         return {
