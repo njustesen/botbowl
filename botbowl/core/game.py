@@ -5,6 +5,7 @@ Year: 2018
 ==========================
 This module contains the Game class, which is the main class and interface used to interact with a game in botbowl.
 """
+from itertools import chain
 from typing import Optional, Tuple, List, Union, Any
 
 from botbowl.core.load import *
@@ -976,14 +977,15 @@ class Game:
         :param up: If specified, filter by ther players up state.
         :return: Players on the pitch who's on team.
         """
-        players = []
-        for y in range(len(self.state.pitch.board)):
-            for x in range(len(self.state.pitch.board[y])):
-                player = self.state.pitch.board[y][x]
-                if player is not None and (team is None or player.team == team) and (
-                        used is None or used == player.state.used) and (up is None or up == player.state.up):
-                    players.append(player)
-        return players
+        if team is None:
+            iter_players = chain(self.state.home_team.players, self.state.away_team.players)
+        else:
+            iter_players = iter(team.players)
+
+        return [player for player in iter_players
+                if player.position is not None
+                and (used is None or used == player.state.used)
+                and (up is None or up == player.state.up)]
 
     def pitch_to_reserves(self, player: Player) -> None:
         """
