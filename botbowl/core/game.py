@@ -5,11 +5,12 @@ Year: 2018
 ==========================
 This module contains the Game class, which is the main class and interface used to interact with a game in botbowl.
 """
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List, Union, Any
 
 from botbowl.core.load import *
 from botbowl.core.procedure import *
 from botbowl.core.forward_model import Trajectory, MovementStep, Step
+from copy import deepcopy
 
 
 class InvalidActionError(Exception):
@@ -17,6 +18,24 @@ class InvalidActionError(Exception):
 
 
 class Game:
+    replay: Optional[Replay]
+    game_id: str
+    home_agent: Agent
+    away_agent: Agent
+    arena: TwoPlayerArena
+    config: Configuration
+    ruleset: RuleSet
+    state: GameState
+    rnd: np.random.RandomState
+    ff_map: Any #??
+    start_time: float
+    end_time: float
+    last_request_time: float
+    last_action_time: float
+    forced_action: Any #??
+    action: Action
+    trajectory: Trajectory
+    square_shortcut: List[List['Square']]
 
     def __init__(self, game_id, home_team: Team, away_team: Team,
                  home_agent: Agent, away_agent: Agent,
