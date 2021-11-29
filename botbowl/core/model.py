@@ -6,19 +6,19 @@ Year: 2018
 This module contains most of the model classes.
 """
 from abc import ABC, abstractmethod
-from copy import copy, deepcopy
+from copy import copy
 from typing import List, Optional, Set, Dict
 
 import numpy as np
 import uuid
 import time
-import json
 import pickle
 from math import sqrt
+import os
 
-from botbowl import Procedure
+from botbowl.core.util import get_data_path, Stack, compare_iterable
+from botbowl.core.procedure import Procedure
 from botbowl.core.pathfinding import Path
-#from botbowl.core.util import *
 from botbowl.core.table import *
 from botbowl.core.forward_model import Immutable, Reversible, CallableStep
 
@@ -176,7 +176,7 @@ class PlayerState(Reversible):
     blood_lust: bool
     picked_up: bool
     used_skills: Set[Skill]
-    squares_moved: List[Square]
+    squares_moved: List['Square']
     has_blocked: bool
 
     def __init__(self):
@@ -411,28 +411,28 @@ class GameState(Reversible):
     reports: List['Report']
     half: int
     round: int
-    coin_toss_winner: Optional[Team]
-    kicking_first_half: Optional[Team]
-    receiving_first_half: Optional[Team]
-    kicking_this_drive: Optional[Team]
-    receiving_this_drive: Optional[Team]
-    current_team: Optional[Team]
-    teams: List[Team]
-    home_team: Team
-    away_team: Team
-    team_by_id: Dict[str, Team]
-    player_by_id: Dict[str, Player]
-    team_by_player_id: Dict[str, Team]
+    coin_toss_winner: Optional['Team']
+    kicking_first_half: Optional['Team']
+    receiving_first_half: Optional['Team']
+    kicking_this_drive: Optional['Team']
+    receiving_this_drive: Optional['Team']
+    current_team: Optional['Team']
+    teams: List['Team']
+    home_team: 'Team'
+    away_team: 'Team'
+    team_by_id: Dict[str, 'Team']
+    player_by_id: Dict[str, 'Player']
+    team_by_player_id: Dict[str, 'Team']
 
-    pitch: Pitch
-    dugouts: Dict[str, Dugout]
+    pitch: 'Pitch'
+    dugouts: Dict[str, 'Dugout']
     weather: WeatherType
     gentle_gust: bool
-    turn_order: List[Team]
+    turn_order: List['Team']
     spectators: int
-    active_player: Optional[Player]
+    active_player: Optional['Player']
     game_over: bool
-    available_actions: List[ActionChoice]
+    available_actions: List['ActionChoice']
     clocks: List[Clock]
     rerolled_procs: Set[Procedure]
     player_action_type: Optional[ActionType]
@@ -513,7 +513,6 @@ class GameState(Reversible):
 
 class Pitch(Reversible):
 
-
     range = [-1, 0, 1]
 
     def __init__(self, width, height):
@@ -548,9 +547,9 @@ class Pitch(Reversible):
 
 class ActionChoice(Immutable):
     action_type: ActionType
-    positions: List[Square]
-    players: List[Player]
-    team: Team
+    positions: List['Square']
+    players: List['Player']
+    team: 'Team'
     rolls: List[int]
     block_dice: List
     disabled: bool
@@ -593,8 +592,8 @@ class ActionChoice(Immutable):
 
 class Action(Reversible):
     action_type: ActionType
-    position: Optional[Square]
-    player: Optional[Player]
+    position: Optional['Square']
+    player: Optional['Player']
 
     def __init__(self, action_type, position=None, player=None):
         super().__init__()
@@ -657,6 +656,7 @@ class Die(ABC):
     @abstractmethod
     def to_json(self):
         pass
+
 
 class DiceRoll(Reversible):
     dice: List[Die]
@@ -992,7 +992,7 @@ class Player(Piece, Reversible):
     player_id: str
     role: Role
     nr: int
-    team: Team
+    team: 'Team'
     extra_ma: int
     extra_st: int
     extra_ag: int
@@ -1131,6 +1131,7 @@ class Player(Piece, Reversible):
     def __repr__(self):
         return f"Player(position={self.position if self.position is not None else 'None'}, {self.role.name}, state={self.state})"
 
+
 class Square(Immutable):
 
     def __init__(self, x, y):
@@ -1181,6 +1182,7 @@ class Square(Immutable):
 
     def __repr__(self):
         return f"Square({self.x}, {self.y})"
+
 
 class Race:
 
@@ -1237,6 +1239,14 @@ class Team(Reversible):
 
 
 class Outcome(Immutable):
+    outcome_type: OutcomeType
+    position: Optional[Square]
+    player: Optional[Player]
+    opp_player: Optional[Player]
+    rolls: List[int]
+    team: Optional[Team]
+    n: int
+    skill: Optional[Skill]
 
     def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
         self.outcome_type = outcome_type
