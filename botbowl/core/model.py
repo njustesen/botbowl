@@ -5,15 +5,20 @@ Year: 2018
 ==========================
 This module contains most of the model classes.
 """
-
+from abc import ABC, abstractmethod
 from copy import copy, deepcopy
+from typing import List, Optional, Set, Dict
+
 import numpy as np
 import uuid
 import time
 import json
 import pickle
 from math import sqrt
-from botbowl.core.util import *
+
+from botbowl import Procedure
+from botbowl.core.pathfinding import Path
+#from botbowl.core.util import *
 from botbowl.core.table import *
 from botbowl.core.forward_model import Immutable, Reversible, CallableStep
 
@@ -153,6 +158,26 @@ class Configuration:
 
 
 class PlayerState(Reversible):
+    up: bool
+    in_air: bool
+    used: bool
+    spp_earned: int
+    moves: int
+    stunned: bool
+    bone_headed: bool
+    hypnotized: bool
+    really_stupid: bool
+    heated: bool
+    knocked_out: bool
+    ejected: bool
+    injuries_gained: List
+    wild_animal: bool
+    taken_root: bool
+    blood_lust: bool
+    picked_up: bool
+    used_skills: Set[Skill]
+    squares_moved: List[Square]
+    has_blocked: bool
 
     def __init__(self):
         super().__init__()
@@ -171,7 +196,8 @@ class PlayerState(Reversible):
         self.injuries_gained = []
         self.wild_animal = False
         self.taken_root = False
-        self.blood_lust = False 
+        self.blood_lust = False
+        self.picked_up = False
         self.used_skills = set()
         self.squares_moved = []
         self.has_blocked = False
@@ -222,7 +248,7 @@ class PlayerState(Reversible):
 
     always_show_attr = ['up']
     show_if_true_attr = ['used', 'stunned', 'bone_headed', 'hypnotized', 'really_stupid', 'heated', 'knocked_out',
-                         'ejected', 'wild_animal', 'taken_root', 'blood_lust', 'has_blocked']
+                         'ejected', 'wild_animal', 'taken_root', 'blood_lust', 'picked_up', 'has_blocked']
 
     def __repr__(self):
         states_to_show = [f"{attr}={getattr(self, attr)}" for attr in PlayerState.always_show_attr] +\
@@ -231,6 +257,9 @@ class PlayerState(Reversible):
 
 
 class Agent:
+    name: str
+    human: bool
+    agent_id: str
 
     def __init__(self, name, human=False, agent_id=None):
         if agent_id is not None:
@@ -266,6 +295,20 @@ class Agent:
 
 
 class TeamState(Reversible):
+    bribes: int
+    babes: int
+    apothecaries: int
+    wizard_available: bool
+    masterchef: bool
+    score: int
+    turn: int
+    rerolls_start: int
+    rerolls: int
+    ass_coaches: int
+    cheerleaders: int
+    fame: int
+    reroll_used: bool
+    time_violation: int
 
     def __init__(self, team):
         super().__init__()
@@ -364,6 +407,35 @@ class Clock:
 
 
 class GameState(Reversible):
+    stack: Stack
+    reports: List['Report']
+    half: int
+    round: int
+    coin_toss_winner: Optional[Team]
+    kicking_first_half: Optional[Team]
+    receiving_first_half: Optional[Team]
+    kicking_this_drive: Optional[Team]
+    receiving_this_drive: Optional[Team]
+    current_team: Optional[Team]
+    teams: List[Team]
+    home_team: Team
+    away_team: Team
+    team_by_id: Dict[str, Team]
+    player_by_id: Dict[str, Player]
+    team_by_player_id: Dict[str, Team]
+
+    pitch: Pitch
+    dugouts: Dict[str, Dugout]
+    weather: WeatherType
+    gentle_gust: bool
+    turn_order: List[Team]
+    spectators: int
+    active_player: Optional[Player]
+    game_over: bool
+    available_actions: List[ActionChoice]
+    clocks: List[Clock]
+    rerolled_procs: Set[Procedure]
+    player_action_type: Optional[ActionType]
 
     def __init__(self, game, home_team, away_team):
         super().__init__(ignored_keys=["clocks"])
@@ -441,6 +513,7 @@ class GameState(Reversible):
 
 class Pitch(Reversible):
 
+
     range = [-1, 0, 1]
 
     def __init__(self, width, height):
@@ -474,6 +547,15 @@ class Pitch(Reversible):
 
 
 class ActionChoice(Immutable):
+    action_type: ActionType
+    positions: List[Square]
+    players: List[Player]
+    team: Team
+    rolls: List[int]
+    block_dice: List
+    disabled: bool
+    skill: Optional[Skill]
+    paths: List[Path]
 
     def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None, paths=None, disabled=False):
         self.action_type = action_type
@@ -510,6 +592,9 @@ class ActionChoice(Immutable):
 
 
 class Action(Reversible):
+    action_type: ActionType
+    position: Optional[Square]
+    player: Optional[Player]
 
     def __init__(self, action_type, position=None, player=None):
         super().__init__()
@@ -563,13 +648,26 @@ class TwoPlayerArena:
         return self.json
 
 
-class Die:
+class Die(ABC):
 
+    @abstractmethod
     def get_value(self):
-        Exception("Method not implemented")
+        pass
 
+    @abstractmethod
+    def to_json(self):
+        pass
 
 class DiceRoll(Reversible):
+    dice: List[Die]
+    modifiers: int
+    target: Optional[int]
+    d68: bool
+    roll_type: RollType
+    target_higher: int
+    target_lower: int
+    highest_succeed: bool
+    lowest_fail: bool
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
         super().__init__()
@@ -891,27 +989,36 @@ class Bomb(Catchable):
 
 
 class Player(Piece, Reversible):
+    player_id: str
+    role: Role
+    nr: int
+    team: Team
+    extra_ma: int
+    extra_st: int
+    extra_ag: int
+    extra_av: int
+    injuries: List
 
     def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
-                 niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
-        Reversible.__init__(self, ignored_keys=["position", "role"])
-        super().__init__(position)
-        self.player_id = player_id
-        self.role = role
-        self.name = name
-        self.nr = nr
-        self.team = team
-        self.extra_skills = extra_skills if extra_skills is not None else []
-        self.extra_ma = extra_ma
-        self.extra_st = extra_st
-        self.extra_ag = extra_ag
-        self.extra_av = extra_av
-        self.injuries = [] if injuries is None else injuries
-        for _ in range(niggling_injuries):
-            self.injuries.append(CasualtyEffect.NIGGLING)
-        self.mng = mng
-        self.spp = spp
-        self.state = PlayerState()
+                     niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
+            Reversible.__init__(self, ignored_keys=["position", "role"])
+            super().__init__(position)
+            self.player_id = player_id
+            self.role = role
+            self.name = name
+            self.nr = nr
+            self.team = team
+            self.extra_skills = extra_skills if extra_skills is not None else []
+            self.extra_ma = extra_ma
+            self.extra_st = extra_st
+            self.extra_ag = extra_ag
+            self.extra_av = extra_av
+            self.injuries = [] if injuries is None else injuries
+            for _ in range(niggling_injuries):
+                self.injuries.append(CasualtyEffect.NIGGLING)
+            self.mng = mng
+            self.spp = spp
+            self.state = PlayerState()
 
     def to_json(self):
         return {
