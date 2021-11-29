@@ -17,8 +17,6 @@ from math import sqrt
 import os
 
 from botbowl.core.util import get_data_path, Stack, compare_iterable
-from botbowl.core.procedure import Procedure
-from botbowl.core.pathfinding import Path
 from botbowl.core.table import *
 from botbowl.core.forward_model import Immutable, Reversible, CallableStep
 
@@ -64,7 +62,8 @@ class Replay:
     def dump(self, game):
         replay_id = game.game_id
         self.reports = game.state.reports
-        name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(replay_id)
+        name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(
+            replay_id)
         directory = get_data_path('replays')
         if not os.path.exists(directory):
             os.mkdir(directory)
@@ -78,7 +77,7 @@ class Replay:
             return None
         self.idx += 1
         while self.idx not in self.steps:
-            #print(self.actions[self.idx])
+            # print(self.actions[self.idx])
             self.idx += 1
         return self.steps[self.idx]
 
@@ -87,7 +86,7 @@ class Replay:
             return None
         self.idx -= 1
         while self.idx not in self.steps:
-            #print(self.actions[self.idx])
+            # print(self.actions[self.idx])
             self.idx -= 1
         return self.steps[self.idx]
 
@@ -134,6 +133,25 @@ class TimeLimits:
 
 
 class Configuration:
+    name: str
+    arena: Optional['TwoPlayerArena']
+    ruleset: Optional['RuleSet']
+    roster_size: int
+    pitch_max: int
+    pitch_min: int
+    scrimmage_min: int
+    wing_max: int
+    rounds: int
+    kick_off_table: bool
+    fast_mode: bool
+    debug_mode: bool
+    competition_mode: bool
+    kick_scatter_distance: str
+    offensive_formations: List['Formation']
+    defensive_formations: List['Formation']
+    time_limits: Optional[TimeLimits]
+    pathfinding_enabled: bool
+    pathfinding_directly_to_adjacent: bool
 
     def __init__(self):
         self.name = "Default"
@@ -219,7 +237,7 @@ class PlayerState(Reversible):
             'injuries_gained': [injury.name for injury in self.injuries_gained],
             'squares_moved': [square.to_json() for square in self.squares_moved],
             'wild_animal': self.wild_animal,
-            'taken_root': self.taken_root, 
+            'taken_root': self.taken_root,
             'blood_lust': self.blood_lust,
             'has_blocked': self.has_blocked
         }
@@ -251,7 +269,7 @@ class PlayerState(Reversible):
                          'ejected', 'wild_animal', 'taken_root', 'blood_lust', 'picked_up', 'has_blocked']
 
     def __repr__(self):
-        states_to_show = [f"{attr}={getattr(self, attr)}" for attr in PlayerState.always_show_attr] +\
+        states_to_show = [f"{attr}={getattr(self, attr)}" for attr in PlayerState.always_show_attr] + \
                          [f"{attr}=True" for attr in PlayerState.show_if_true_attr if getattr(self, attr)]
         return f'PlayerState({", ".join(states_to_show)})'
 
@@ -353,6 +371,12 @@ class TeamState(Reversible):
 
 
 class Clock:
+    seconds: int
+    started_at: int
+    paused_at: int
+    paused_seconds: int
+    is_primary: bool
+    team: 'Team'
 
     def __init__(self, team, seconds, is_primary=False):
         self.seconds = seconds
@@ -362,20 +386,20 @@ class Clock:
         self.is_primary = is_primary
         self.team = team
 
-    def is_running(self):
+    def is_running(self) -> bool:
         return self.paused_at is None
 
-    def pause(self):
+    def pause(self) -> None:
         assert self.paused_at is None
         self.paused_at = time.time()
 
-    def resume(self):
+    def resume(self) -> None :
         assert self.paused_at is not None
         now = time.time()
         self.paused_seconds += now - self.paused_at
         self.paused_at = None
 
-    def get_running_time(self):
+    def get_running_time(self) -> int :
         now = time.time()
         if self.is_running():
             return now - self.started_at - self.paused_seconds
@@ -408,7 +432,7 @@ class Clock:
 
 class GameState(Reversible):
     stack: Stack
-    reports: List['Report']
+    reports: List['Outcome']
     half: int
     round: int
     coin_toss_winner: Optional['Team']
@@ -434,7 +458,7 @@ class GameState(Reversible):
     game_over: bool
     available_actions: List['ActionChoice']
     clocks: List[Clock]
-    rerolled_procs: Set[Procedure]
+    rerolled_procs: Set['Procedure']
     player_action_type: Optional[ActionType]
 
     def __init__(self, game, home_team, away_team):
@@ -512,22 +536,19 @@ class GameState(Reversible):
 
 
 class Pitch(Reversible):
-
-    range = [-1, 0, 1]
+    balls: List['Ball']
+    bomb: Optional['Bomb']
+    board: List[List[Optional['Player']]]
+    squares: List[List['Square']]
+    height: int
+    width: int
 
     def __init__(self, width, height):
         super().__init__(ignored_keys=["board", "squares"])
         self.balls = []
         self.bomb = None
-        #self.board = []
-        self.board = np.full((height, width), None)
-        self.squares = []
-        for y in range(height):
-        #    self.board.append([])
-            self.squares.append([])
-            for x in range(width):
-        #        self.board[y].append(None)
-                self.squares[y].append(Square(x, y))
+        self.board = [[None for x in range(width)] for y in range(height)]
+        self.squares = [[Square(x, y) for x in range(width)] for y in range(height)]
         self.height = len(self.board)
         self.width = len(self.board[0])
 
@@ -554,9 +575,10 @@ class ActionChoice(Immutable):
     block_dice: List
     disabled: bool
     skill: Optional[Skill]
-    paths: List[Path]
+    paths: List['Path']
 
-    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None, paths=None, disabled=False):
+    def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None,
+                 paths=None, disabled=False):
         self.action_type = action_type
         self.positions = [] if positions is None else positions
         self.players = [] if players is None else players
@@ -610,7 +632,6 @@ class Action(Reversible):
 
 
 class TwoPlayerArena:
-
     home_tiles = [Tile.HOME, Tile.HOME_TOUCHDOWN, Tile.HOME_WING_LEFT, Tile.HOME_WING_RIGHT, Tile.HOME_SCRIMMAGE]
     away_tiles = [Tile.AWAY, Tile.AWAY_TOUCHDOWN, Tile.AWAY_WING_LEFT, Tile.AWAY_WING_RIGHT, Tile.AWAY_SCRIMMAGE]
     scrimmage_tiles = [Tile.HOME_SCRIMMAGE, Tile.AWAY_SCRIMMAGE]
@@ -648,6 +669,7 @@ class TwoPlayerArena:
 
 
 class Die(ABC):
+    value: str
 
     @abstractmethod
     def get_value(self):
@@ -669,7 +691,8 @@ class DiceRoll(Reversible):
     highest_succeed: bool
     lowest_fail: bool
 
-    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True, target_lower=False, highest_succeed=True, lowest_fail=True):
+    def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True,
+                 target_lower=False, highest_succeed=True, lowest_fail=True):
         super().__init__()
         self.dice = dice
         self.sum = 0
@@ -709,7 +732,7 @@ class DiceRoll(Reversible):
 
     def modified_target(self):
         if self.target is not None:
-            return max(1*len(self.dice), min(6*len(self.dice), self.target - self.modifiers))
+            return max(1 * len(self.dice), min(6 * len(self.dice), self.target - self.modifiers))
         return None
 
     def contains(self, value):
@@ -728,10 +751,10 @@ class DiceRoll(Reversible):
         return self.sum + self.modifiers
 
     def is_d6_success(self):
-        if self.lowest_fail and self.sum == 1*len(self.dice):
+        if self.lowest_fail and self.sum == 1 * len(self.dice):
             return False
 
-        if self.highest_succeed and self.sum == 6*len(self.dice):
+        if self.highest_succeed and self.sum == 6 * len(self.dice):
             return True
 
         if self.target_higher:
@@ -752,7 +775,6 @@ class DiceRoll(Reversible):
 
 
 class D3(Die):
-
     FixedRolls = []
 
     @staticmethod
@@ -779,21 +801,20 @@ class D3(Die):
 
 
 class D6(Die, Immutable):
-
     FixedRolls = []
 
     TWO_PROBS = {
-        2: (1/6 * 1/6),
-        3: 2 * (1/6 * 1/6),
-        4: 3 * (1/6 * 1/6),
-        5: 4 * (1/6 * 1/6),
-        6: 5 * (1/6 * 1/6),
-        7: 6 * (1/6 * 1/6),
-        8: 5 * (1/6 * 1/6),
-        9: 4 * (1/6 * 1/6),
-        10: 3 * (1/6 * 1/6),
-        11: 2 * (1/6 * 1/6),
-        12: 1 * (1/6 * 1/6)
+        2: (1 / 6 * 1 / 6),
+        3: 2 * (1 / 6 * 1 / 6),
+        4: 3 * (1 / 6 * 1 / 6),
+        5: 4 * (1 / 6 * 1 / 6),
+        6: 5 * (1 / 6 * 1 / 6),
+        7: 6 * (1 / 6 * 1 / 6),
+        8: 5 * (1 / 6 * 1 / 6),
+        9: 4 * (1 / 6 * 1 / 6),
+        10: 3 * (1 / 6 * 1 / 6),
+        11: 2 * (1 / 6 * 1 / 6),
+        12: 1 * (1 / 6 * 1 / 6)
     }
 
     @staticmethod
@@ -820,7 +841,6 @@ class D6(Die, Immutable):
 
 
 class D8(Die, Immutable):
-
     FixedRolls = []
 
     @staticmethod
@@ -847,7 +867,7 @@ class D8(Die, Immutable):
 
 
 class BBDie(Die, Immutable):
-
+    value: BBDieResult
     FixedRolls = []
 
     @staticmethod
@@ -870,7 +890,7 @@ class BBDie(Die, Immutable):
                 r = 3
             self.value = BBDieResult(r)
 
-    def get_value(self):
+    def get_value(self) -> BBDieResult:
         return self.value
 
     def to_json(self):
@@ -919,6 +939,7 @@ class Role:
 
 
 class Piece:
+    position: 'Square'
 
     def __init__(self, position=None):
         self.position = position
@@ -938,8 +959,8 @@ class Catchable(Piece):
         # This is unfortunately way slower than below, but Square is Immutable
         self.position = Square(self.position.x + x, self.position.y + y)
 
-        #self.position.x += x
-        #self.position.y += y
+        # self.position.x += x
+        # self.position.y += y
 
     def move_to(self, position):
         self.position = position
@@ -999,26 +1020,26 @@ class Player(Piece, Reversible):
     extra_av: int
     injuries: List
 
-    def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0, extra_av=0,
-                     niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
-            Reversible.__init__(self, ignored_keys=["position", "role"])
-            super().__init__(position)
-            self.player_id = player_id
-            self.role = role
-            self.name = name
-            self.nr = nr
-            self.team = team
-            self.extra_skills = extra_skills if extra_skills is not None else []
-            self.extra_ma = extra_ma
-            self.extra_st = extra_st
-            self.extra_ag = extra_ag
-            self.extra_av = extra_av
-            self.injuries = [] if injuries is None else injuries
-            for _ in range(niggling_injuries):
-                self.injuries.append(CasualtyEffect.NIGGLING)
-            self.mng = mng
-            self.spp = spp
-            self.state = PlayerState()
+    def __init__(self, player_id, role, name, nr, team, extra_skills=None, extra_ma=0, extra_st=0, extra_ag=0,
+                 extra_av=0, niggling_injuries=0, mng=False, spp=0, injuries=None, position=None):
+        Reversible.__init__(self, ignored_keys=["position", "role"])
+        super().__init__(position)
+        self.player_id = player_id
+        self.role = role
+        self.name = name
+        self.nr = nr
+        self.team = team
+        self.extra_skills = extra_skills if extra_skills is not None else []
+        self.extra_ma = extra_ma
+        self.extra_st = extra_st
+        self.extra_ag = extra_ag
+        self.extra_av = extra_av
+        self.injuries = [] if injuries is None else injuries
+        for _ in range(niggling_injuries):
+            self.injuries.append(CasualtyEffect.NIGGLING)
+        self.mng = mng
+        self.spp = spp
+        self.state = PlayerState()
 
     def to_json(self):
         return {
@@ -1041,14 +1062,16 @@ class Player(Piece, Reversible):
         }
 
     def get_ag(self):
-        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG) - self.state.injuries_gained.count(CasualtyEffect.AG)
+        ag = self.role.ag + self.extra_ag - self.injuries.count(CasualtyEffect.AG) - self.state.injuries_gained.count(
+            CasualtyEffect.AG)
         ag = max(self.role.ag - 2, ag)
         ag = max(1, ag)
         ag = min(10, ag)
         return ag
 
     def get_st(self):
-        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST) - self.state.injuries_gained.count(CasualtyEffect.ST)
+        st = self.role.st + self.extra_st - self.injuries.count(CasualtyEffect.ST) - self.state.injuries_gained.count(
+            CasualtyEffect.ST)
         st = max(self.role.st - 2, st)
         st = max(1, st)
         st = min(10, st)
@@ -1058,14 +1081,16 @@ class Player(Piece, Reversible):
         if self.state.taken_root:
             return 0
         else:
-            ma = self.role.ma + self.extra_ma - self.injuries.count(CasualtyEffect.MA) - self.state.injuries_gained.count(CasualtyEffect.MA)
+            ma = self.role.ma + self.extra_ma - self.injuries.count(
+                CasualtyEffect.MA) - self.state.injuries_gained.count(CasualtyEffect.MA)
             ma = max(self.role.ma - 2, ma)
             ma = max(1, ma)
             ma = min(10, ma)
             return ma
 
     def get_av(self):
-        av = self.role.av + self.extra_av -  - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(CasualtyEffect.AV)
+        av = self.role.av + self.extra_av - - self.injuries.count(CasualtyEffect.AV) - self.state.injuries_gained.count(
+            CasualtyEffect.AV)
         av = max(self.role.av - 2, av)
         av = max(1, av)
         av = min(10, av)
@@ -1154,7 +1179,6 @@ class Square(Immutable):
     def y(self, y):
         raise AttributeError("Squares is immutable, how dare you?!")
 
-
     def to_json(self):
         return {
             'x': self.x,
@@ -1173,7 +1197,7 @@ class Square(Immutable):
         if manhattan:
             return abs(other.x - self.x) + abs(other.y - self.y)
         elif flight:
-            return sqrt((other.x - self.x)**2 + (other.y - self.y)**2)
+            return sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
         else:
             return max(abs(other.x - self.x), abs(other.y - self.y))
 
@@ -1243,12 +1267,13 @@ class Outcome(Immutable):
     position: Optional[Square]
     player: Optional[Player]
     opp_player: Optional[Player]
-    rolls: List[int]
+    rolls: List[DiceRoll]
     team: Optional[Team]
     n: int
     skill: Optional[Skill]
 
-    def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0, skill=None):
+    def __init__(self, outcome_type, position=None, player=None, opp_player=None, rolls=None, team=None, n=0,
+                 skill=None):
         self.outcome_type = outcome_type
         self.position = position
         self.player = player
@@ -1285,7 +1310,8 @@ class Inducement:
 
 class RuleSet:
 
-    def __init__(self, name, races=[], star_players=[], inducements=[], spp_actions={}, spp_levels={}, improvements={}, se_start=0, se_interval=0, se_pace=0):
+    def __init__(self, name, races=[], star_players=[], inducements=[], spp_actions={}, spp_levels={}, improvements={},
+                 se_start=0, se_interval=0, se_pace=0):
         self.name = name
         self.races = races
         self.star_players = star_players
@@ -1315,7 +1341,8 @@ class Formation(Immutable):
 
     def _get_player(self, players, t):
         if t == 'S':
-            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) - (0.5 if player.has_skill(Skill.SURE_HANDS) else 0) for player in players])
+            idx = np.argmax([player.get_st() + (0.5 if player.has_skill(Skill.BLOCK) else 0) - (
+                0.5 if player.has_skill(Skill.SURE_HANDS) else 0) for player in players])
             return players[idx]
         if t == 'm':
             idx = np.argmax([player.get_ma() for player in players])
@@ -1345,7 +1372,8 @@ class Formation(Immutable):
             idx = np.argmin([len(player.get_skills()) for player in players])
             return players[idx]
         if t == 'x':
-            idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else (0 if player.has_skill(Skill.PASS) or player.has_skill(Skill.CATCH) else 0.5) for player in players])
+            idx = np.argmax([1 if player.has_skill(Skill.BLOCK) else (
+                0 if player.has_skill(Skill.PASS) or player.has_skill(Skill.CATCH) else 0.5) for player in players])
             return players[idx]
         return players[0]
 
@@ -1369,7 +1397,7 @@ class Formation(Immutable):
             for y in range(len(self.formation)):
                 if len(players) == 0:
                     return actions
-                x = len(self.formation[0])-1
+                x = len(self.formation[0]) - 1
                 tp = self.formation[y][x]
                 if tp == '-' or tp != t:
                     continue
@@ -1410,7 +1438,7 @@ class Formation(Immutable):
         if self.name != other.name:
             diff.append(f"{path}.name: {self.name} _NotEqual_ {other.name}")
 
-        formations_equal = all([(self_a == other_a).all() for self_a, other_a in zip(self.formation, other.formation)])
+        formations_equal = all((self_a == other_a).all() for self_a, other_a in zip(self.formation, other.formation))
 
         if not formations_equal:
             diff.append(f"{path}.formation: <too big to display> _NotEqual_ <too big to display>")
