@@ -712,6 +712,9 @@ class DiceRoll(Reversible):
                 else:
                     self.sum += d.get_value()
 
+    def __repr__(self):
+        return f"DiceRoll(dice={self.dice})"
+
     def to_json(self):
         dice = []
         for die in self.dice:
@@ -790,6 +793,9 @@ class D3(Die):
         else:
             self.value = rnd.randint(1, 4)
 
+    def __repr__(self):
+        return f"D3({self.value})"
+
     def get_value(self):
         return self.value
 
@@ -830,6 +836,9 @@ class D6(Die, Immutable):
         else:
             self.value = rnd.randint(1, 7)
 
+    def __repr__(self):
+        return f"D6({self.value})"
+
     def get_value(self):
         return self.value
 
@@ -855,6 +864,9 @@ class D8(Die, Immutable):
             self.value = D8.FixedRolls.pop(0)
         else:
             self.value = rnd.randint(1, 9)
+
+    def __repr__(self):
+        return f"D8({self.value})"
 
     def get_value(self):
         return self.value
@@ -889,6 +901,9 @@ class BBDie(Die, Immutable):
             if r == 6:
                 r = 3
             self.value = BBDieResult(r)
+
+    def __repr__(self):
+        return f"BBDie({self.value})"
 
     def get_value(self) -> BBDieResult:
         return self.value
