@@ -1283,6 +1283,10 @@ class Outcome(Immutable):
         self.n = n
         self.skill = skill
 
+    def __repr__(self):
+        pos_str = "" if self.position is None else f", position={self.position}"
+        return f"Outcome({self.outcome_type}{pos_str}, rolls={self.rolls})"
+
     def to_json(self):
         rolls = []
         for roll in self.rolls:
