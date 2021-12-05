@@ -47,13 +47,13 @@ def get_game_turn(seed=0, empty=False):
         game_turn_full[seed] = deepcopy(game)
     return game
 
-Position = Union[Square, Tuple[int, int]]
 
+Position = Union[Square, Tuple[int, int]]
 
 
 def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
                          ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
-                         rerolls: int = 0) \
+                         rerolls: int = 0, forward_model_enabled=False, pathfinding_enabled=False) \
         -> Tuple:
     """
     :param player_positions: places human linemen of active team in these squares
@@ -61,6 +61,8 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
     :param ball_position: places ball in this square.
     :param weather:
     :param rerolls: number of rerolls
+    :param forward_model_enabled:
+    :param pathfinding_enabled:
     :return: tuple with created game object followed by all the placed players
     """
     game = get_game_turn(empty=True)
@@ -75,7 +77,6 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
             return obj
         else:
             return game.get_square(obj[0], obj[1])
-
 
     return_list = [game]
 
@@ -95,8 +96,12 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
         game.get_ball().move_to(assert_square_type(ball_position))
         game.get_ball().is_carried = game.get_player_at(assert_square_type(ball_position)) is not None
 
+    game.config.pathfinding_enabled = pathfinding_enabled
     game.set_available_actions()
     game.state.reports.clear()
+
+    if forward_model_enabled:
+        game.enable_forward_model()
 
     return tuple(return_list)
 
