@@ -238,10 +238,9 @@ def only_fixed_rolls(game: botbowl.Game,
       1) There are no fixes and the fixes rolls according to arguments
       2) No roll other than the fixed rolls are used i.e. no randomness
       3) All fixed rolls are consumed
-    usage:
+    Example usage:
     > with only_fixed_rolls(game, block_dice=[BBDieResult.DEFENDER_DOWN], d6=[6, 6]):
     >     game.step(...)
-
     """
     assert len(botbowl.D3.FixedRolls) == 0, f"There are fixed D3 rolls={botbowl.D3.FixedRolls}"
     assert len(botbowl.D6.FixedRolls) == 0, f"There are fixed D6 rolls={botbowl.D6.FixedRolls}"
@@ -272,9 +271,9 @@ def only_fixed_rolls(game: botbowl.Game,
         yield
     finally:
         game.rnd = rnd
-        assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls where consumed"
-        assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls where consumed"
-        assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls where consumed"
-        assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls where consumed"
+        assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
+        assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
+        assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
+        assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
 
 
