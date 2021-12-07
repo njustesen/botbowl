@@ -260,7 +260,7 @@ def only_fixed_rolls(game: botbowl.Game,
         for roll in d8:
             assert roll in {1, 2, 3, 4, 5, 6, 7, 8}
             botbowl.D8.fix(roll)
-    if BBDie is not None:
+    if block_dice is not None:
         for roll in block_dice:
             assert roll in BBDieResult
             botbowl.BBDie.fix(roll)
