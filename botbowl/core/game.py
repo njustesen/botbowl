@@ -156,6 +156,7 @@ class Game:
         # Ensure player points to player object
         if action is not None:
             action.player = self.get_player(action.player.player_id) if action.player is not None else None
+            action.position = self.get_square(action.position.x, action.position.y) if action.position is not None else None
 
         # Set action as a property so other methods can access it
         self.action = action
@@ -1659,7 +1660,7 @@ class Game:
         try:
             return self.square_shortcut[y][x]
         except IndexError:
-            return Square(x, y)
+            return Square(x, y, out_of_bounds=x <= 0 or x >= self.arena.width-1 or y <= 0 or y >= self.arena.height-1)
 
     def get_adjacent_squares(self, position: Square, diagonal=True, out=False, occupied=True, distance=1) \
             -> List[Square]:

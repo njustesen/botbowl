@@ -1178,12 +1178,17 @@ class Player(Piece, Reversible):
 class Square:
     x: int
     y: int
-    out_of_bounds: Optional[bool]
+    _out_of_bounds: Optional[bool]
 
-    def __init__(self, x: int, y: int, out_of_bounds=None):
+    def __init__(self, x: int, y: int, _out_of_bounds=None):
         self.x = x
         self.y = y
-        self.out_of_bounds = out_of_bounds
+        self._out_of_bounds = _out_of_bounds
+
+    @property
+    def out_of_bounds(self):
+        assert self._out_of_bounds is not None  # This assertion can be removed when we trust the unit tests more
+        return self._out_of_bounds
 
     def to_json(self):
         return {
@@ -1211,7 +1216,7 @@ class Square:
         return self.distance(other, manhattan) == 1
 
     def __repr__(self):
-        return f"Square({self.x}, {self.y})"
+        return f"Square({self.x}, {self.y}, out={self._out_of_bounds if self._out_of_bounds is not None else 'None'})"
 
 
 class Race:

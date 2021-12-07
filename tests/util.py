@@ -47,8 +47,8 @@ def get_game_turn(seed=0, empty=False):
         game_turn_full[seed] = deepcopy(game)
     return game
 
-Position = Union[Square, Tuple[int, int]]
 
+Position = Union[Square, Tuple[int, int]]
 
 
 def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
@@ -72,10 +72,9 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
 
     def assert_square_type(obj: Position) -> Square:
         if type(obj) == Square:
-            return obj
+            return game.get_square(obj.x, obj.y)
         else:
             return game.get_square(obj[0], obj[1])
-
 
     return_list = [game]
 
