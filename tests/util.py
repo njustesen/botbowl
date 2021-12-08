@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import List, Optional, Tuple, Union
 
 from botbowl.core.game import *
@@ -53,7 +54,7 @@ Position = Union[Square, Tuple[int, int]]
 
 def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
                          ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
-                         rerolls: int = 0) \
+                         rerolls: int = 0, forward_model_enabled=False, pathfinding_enabled=False) \
         -> Tuple:
     """
     :param player_positions: places human linemen of active team in these squares
@@ -61,6 +62,8 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
     :param ball_position: places ball in this square.
     :param weather:
     :param rerolls: number of rerolls
+    :param forward_model_enabled:
+    :param pathfinding_enabled:
     :return: tuple with created game object followed by all the placed players
     """
     game = get_game_turn(empty=True)
@@ -94,8 +97,12 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
         game.get_ball().move_to(assert_square_type(ball_position))
         game.get_ball().is_carried = game.get_player_at(assert_square_type(ball_position)) is not None
 
+    game.config.pathfinding_enabled = pathfinding_enabled
     game.set_available_actions()
     game.state.reports.clear()
+
+    if forward_model_enabled:
+        game.enable_forward_model()
 
     return tuple(return_list)
 
@@ -218,3 +225,55 @@ def get_block_players(game, team):
             defender = adjacent[0]
             break
     return attacker, defender
+
+
+@contextmanager
+def only_fixed_rolls(game: botbowl.Game,
+                     d3: Optional[List[int]] = None,
+                     d6: Optional[List[int]] = None,
+                     d8: Optional[List[int]] = None,
+                     block_dice: Optional[List[BBDieResult]] = None):
+    """
+    Context manager that ensures that
+      1) There are no fixes and the fixes rolls according to arguments
+      2) No roll other than the fixed rolls are used i.e. no randomness
+      3) All fixed rolls are consumed
+    Example usage:
+    > with only_fixed_rolls(game, block_dice=[BBDieResult.DEFENDER_DOWN], d6=[6, 6]):
+    >     game.step(...)
+    """
+    assert len(botbowl.D3.FixedRolls) == 0, f"There are fixed D3 rolls={botbowl.D3.FixedRolls}"
+    assert len(botbowl.D6.FixedRolls) == 0, f"There are fixed D6 rolls={botbowl.D6.FixedRolls}"
+    assert len(botbowl.D8.FixedRolls) == 0, f"There are fixed D8 rolls={botbowl.D8.FixedRolls}"
+    assert len(botbowl.BBDie.FixedRolls) == 0, f"There are fixed BBDie rolls={botbowl.BBDie.FixedRolls}"
+
+    if d3 is not None:
+        for roll in d3:
+            assert roll in {1, 2, 3}
+            botbowl.D3.fix(roll)
+    if d6 is not None:
+        for roll in d6:
+            assert roll in {1, 2, 3, 4, 5, 6}
+            botbowl.D6.fix(roll)
+    if d8 is not None:
+        for roll in d8:
+            assert roll in {1, 2, 3, 4, 5, 6, 7, 8}
+            botbowl.D8.fix(roll)
+    if block_dice is not None:
+        for roll in block_dice:
+            assert roll in BBDieResult
+            botbowl.BBDie.fix(roll)
+
+    rnd = game.rnd
+    game.rnd = None
+
+    try:
+        yield
+    finally:
+        game.rnd = rnd
+        assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
+        assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
+        assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
+        assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
+
+

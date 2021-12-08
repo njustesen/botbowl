@@ -3652,16 +3652,16 @@ class ThrowIn(Procedure):
             x = 0 if roll_direction.get_sum() == 1 else 1
         elif self.ball.position.y == 1:  # Above
             y = 1
-            x = -1 if roll_direction.get_sum() == 3 else 1
+            x = 2 - roll_direction.get_sum()
         elif self.ball.position.y == len(self.game.arena.board)-2:  # Below
             y = -1
-            x = -1 if roll_direction.get_sum() == 1 else 1
+            x = -2 + roll_direction.get_sum()
         elif self.ball.position.x == 1:  # Right
             x = 1
-            y = -1 if roll_direction.get_sum() == 3 else 1
+            y = -2 + roll_direction.get_sum()
         elif self.ball.position.x == len(self.game.arena.board[0])-2:  # Left
             x = -1
-            y = -1 if roll_direction.get_sum() == 1 else 1
+            y = 2 - roll_direction.get_sum()
 
         for i in range(roll_distance.get_sum()):
             self.ball.move(x, y)
