@@ -59,6 +59,9 @@ class Procedure(Reversible):
     def compare(self, other, path=""):
         return compare_object(self, other, path, ignored_keys={"game"}, ignored_types={Procedure})
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}(done={self.done}, started={self.started})"
+
 
 class Regeneration(Procedure):
 
