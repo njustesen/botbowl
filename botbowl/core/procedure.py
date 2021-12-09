@@ -1655,7 +1655,7 @@ class KnockDown(Procedure):
         # Check fumble - does not handle throw-in
         ball = self.game.get_ball_at(self.player.position)
         if ball is not None:
-            if not self.player.position.out_of_bounds:
+            if not  self.game.is_out_of_bounds(self.player.position):
                 Bounce(self.game, ball)
             self.game.report(Outcome(OutcomeType.FUMBLE, player=self.player, opp_player=self.inflictor))
 
@@ -3241,7 +3241,7 @@ class Push(Procedure):
 
             # Ball
             if self.game.has_ball(self.player):
-                if self.player.position.out_of_bounds:
+                if self.game.is_out_of_bounds(self.player.position):
                     ball = self.game.get_ball_at(self.player.position)
                     ThrowIn(self.game, ball, position=self.follow_to)
                 elif self.strip_ball_condition: 

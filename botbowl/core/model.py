@@ -549,7 +549,7 @@ class Pitch(Reversible):
         self.balls = []
         self.bomb = None
         self.board = [[None for x in range(width)] for y in range(height)]
-        self.squares = [[Square(x, y, x == 0 or x == width-1 or y == 0 or y == height-1)
+        self.squares = [[Square(x, y)
                          for x in range(width)] for y in range(height)]
         self.height = len(self.board)
         self.width = len(self.board[0])
@@ -1187,17 +1187,10 @@ class Player(Piece, Reversible):
 class Square:
     x: int
     y: int
-    _out_of_bounds: Optional[bool]
 
-    def __init__(self, x: int, y: int, _out_of_bounds=None):
+    def __init__(self, x: int, y: int):
         self.x = x
         self.y = y
-        self._out_of_bounds = _out_of_bounds
-
-    @property
-    def out_of_bounds(self):
-        assert self._out_of_bounds is not None  # This assertion can be removed when we trust the unit tests more
-        return self._out_of_bounds
 
     def to_json(self):
         return {
@@ -1225,7 +1218,7 @@ class Square:
         return self.distance(other, manhattan) == 1
 
     def __repr__(self):
-        return f"Square({self.x}, {self.y}, out={self._out_of_bounds if self._out_of_bounds is not None else 'None'})"
+        return f"Square({self.x}, {self.y})"
 
 
 class Race:

@@ -1073,8 +1073,8 @@ class Game:
         :param piece: Ball or player
         :param position: square to put the player on or above
         """
-        if position._out_of_bounds is None:
-            position = self.get_square(position.x, position.y)
+        #if self.position._out_of_bounds is None:
+        #    position = self.get_square(position.x, position.y)
         piece.position = position
         if type(piece) is Player:
             if not piece.state.in_air:
@@ -1639,7 +1639,7 @@ class Game:
                 if from_position.distance(square, manhattan=True) >= 3:
                     include = True
             if include:
-                if square.out_of_bounds:
+                if self.is_out_of_bounds(square):
                     squares_out.append(square)
                 elif self.get_player_at(square) is None:
                     squares_empty.append(square)
@@ -1682,7 +1682,7 @@ class Game:
                 if yy == 0 and xx == 0:
                     continue
                 sq = self.get_square(position.x + xx, position.y + yy)
-                if not out and sq.out_of_bounds:
+                if not out and self.is_out_of_bounds(sq):
                     continue
                 if not occupied and self.get_player_at(sq) is not None:
                     continue
@@ -1763,7 +1763,7 @@ class Game:
                 if yy == 0 and xx == 0:
                     continue
                 p = self.get_square(opp_player.position.x + xx, opp_player.position.y + yy)
-                if not p.out_of_bounds and player.position != p:
+                if not self.is_out_of_bounds(p) and player.position != p:
                     player_at = self.get_player_at(p)
                     if player_at is not None:
                         if player_at.team == player.team:
@@ -1800,7 +1800,7 @@ class Game:
                 if yy == 0 and xx == 0:
                     continue
                 p = self.get_square(opp_player.position.x + xx, opp_player.position.y + yy)
-                if not p.out_of_bounds and player.position != p:
+                if not self.is_out_of_bounds(p) and player.position != p:
                     player_at = self.get_player_at(p)
                     if player_at is not None:
                         if player_at.team == player.team and self.can_assist(player_at, foul):
@@ -2114,7 +2114,7 @@ class Game:
         for y in range(len(self.state.pitch.board)):
             for x in range(len(self.state.pitch.board[y])):
                 to_position = self.get_square(x, y)
-                if to_position.out_of_bounds or position == to_position:
+                if self.is_out_of_bounds(to_position) or position == to_position:
                     continue
                 distance = self.get_pass_distance(position, to_position)
                 if distance in distances_allowed:
