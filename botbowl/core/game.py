@@ -1073,6 +1073,8 @@ class Game:
         :param piece: Ball or player
         :param position: square to put the player on or above
         """
+        if position._out_of_bounds is None:
+            position = self.get_square(position.x, position.y)
         piece.position = position
         if type(piece) is Player:
             if not piece.state.in_air:
