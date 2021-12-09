@@ -133,7 +133,7 @@ def compare_iterable(s1, s2, path=""):
             diff.extend(compare_iterable(item1, item2, f"{path}[{i}]"))
 
     else:
-        if s1 != s2:
+        if not (s1 == s2):
             d = f"{path}: '{s1}' _notEqual_ '{s2}'"
             diff.append(d)
     return diff
