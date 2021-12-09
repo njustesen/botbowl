@@ -7,31 +7,6 @@ from botbowl.core.forward_model import ReversibleSet
 from botbowl.ai.registry import make_bot
 
 
-def test_very_custom_revert_and_forward():
-    game = get_game(fast_mode=True, human_agents=True)
-
-    game.step(get_random_action(game))
-
-    game_before_actions = deepcopy(game)
-    assert_game_states(game, game_before_actions, equal=True)
-    prev_step = game.get_step()
-
-    assert type(game.get_procedure()) != MoveAction
-    while type(game.get_procedure()) != MoveAction:
-        game.step(get_random_action(game))
-    assert type(game.get_procedure()) == MoveAction
-
-    assert_game_states(game, game_before_actions, equal=False)
-
-    game_before_revert = deepcopy(game)
-    undone_steps = game.revert(prev_step)
-
-    assert_game_states(game, game_before_actions, equal=True)
-
-    game.forward(undone_steps)
-    assert_game_states(game, game_before_revert, equal=True)
-
-
 def test_revert_and_forward():
     game = get_game(fast_mode=True, human_agents=True)
 
@@ -155,7 +130,7 @@ def get_game(fast_mode=True, human_agents=True):
     away = load_team_by_filename("human", ruleset)
     away_agent = Agent("Human 1", human=True, agent_id=1) if human_agents else make_bot("random")
     home_agent = Agent("Human 2", human=True, agent_id=2) if human_agents else make_bot("random")
-    game = Game(5, home, away, home_agent, away_agent, config)
+    game = Game(1, home, away, home_agent, away_agent, config)
     game.init()
 
     game.enable_forward_model()

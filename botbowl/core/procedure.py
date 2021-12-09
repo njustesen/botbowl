@@ -2602,11 +2602,6 @@ class MoveAction(Procedure):
             self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
             self.game.state.player_action_type = PlayerActionType.MOVE
 
-    #TODO: Remove this function, only added for debug
-    def compare(self, other, path=""):
-        return compare_object(self, other, path, ignored_keys={"game"}, ignored_types={Procedure})
-
-
     def step(self, action):
 
         # Follow the selected path
