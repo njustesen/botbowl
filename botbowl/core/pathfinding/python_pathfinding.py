@@ -69,9 +69,6 @@ class Path:
                self.handoff_roll == other.handoff_roll and \
                self.foul_roll == other.foul_roll
 
-    def __ne__(self, other):
-        return not (self == other)
-
 
 class Node:
 
