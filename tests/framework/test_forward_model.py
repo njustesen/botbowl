@@ -22,13 +22,15 @@ def test_revert_and_forward():
 
         assert_game_states(game, game_before_actions, equal=False)
 
-        game_before_revert = deepcopy(game)
+        game_after_actions = deepcopy(game)
         undone_steps = game.revert(prev_step)
 
         assert_game_states(game, game_before_actions, equal=True)
 
         game.forward(undone_steps)
-        assert_game_states(game, game_before_revert, equal=True)
+        assert_game_states(game, game_after_actions, equal=True)
+
+        game = game_after_actions
 
 
 def test_logged_state():
