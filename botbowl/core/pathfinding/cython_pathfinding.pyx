@@ -111,16 +111,16 @@ cdef class Path:
 
     def __reduce__(self):
         # Need custom reduce() because built in reduce() can't handle the c++ objects
-        def recreate_self():
+        def recreate_self(steps, rolls, block_dice, foul_roll, handoff_roll, prob):
             path = Path()
-            path._steps = self._steps
-            path._rolls = self._rolls
-            path.block_dice = self.block_dice
-            path.foul_roll = self.foul_roll
-            path.handoff_roll = self.handoff_roll
-            path.prob = self.prob
+            path._steps = steps
+            path._rolls = rolls
+            path.block_dice = block_dice
+            path.foul_roll = foul_roll
+            path.handoff_roll = handoff_roll
+            path.prob = prob
             return path
-        return recreate_self, ()
+        return recreate_self, (self.steps, self.rolls, self.block_dice, self.foul_roll, self.handoff_roll, self.prob)
 
     def __eq__(self, other):
         return  self.prob == other.prob and \
