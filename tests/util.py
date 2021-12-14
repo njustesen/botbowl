@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-from typing import List, Optional, Tuple, Union
-
 from botbowl.core.game import *
 from botbowl.ai.bots.random_bot import *
 from copy import deepcopy
+
+from typing import List, Optional, Tuple, Union, Iterable, Any
+from contextlib import contextmanager
 
 game_turn_empty = {}
 game_turn_full = {}
@@ -55,7 +55,7 @@ Position = Union[Square, Tuple[int, int]]
 def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
                          ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
                          rerolls: int = 0, forward_model_enabled=False, pathfinding_enabled=False) \
-        -> Tuple:
+        -> Tuple[Game, Tuple[Player, ...]]:
     """
     :param player_positions: places human linemen of active team in these squares
     :param opp_player_positions: places human linemen of not active team in these squares
@@ -79,19 +79,19 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
         else:
             return game.get_square(obj[0], obj[1])
 
-    return_list = [game]
+    added_players = []
 
     for i, sq in enumerate(player_positions):
         player = team_players[i]
         game.put(player, assert_square_type(sq))
-        return_list.append(player)
+        added_players.append(player)
 
     if opp_player_positions is not None:
         opp_team_players = [player for player in game.get_opp_team(team).players if player.role.name == "Lineman"]
         for i, sq in enumerate(opp_player_positions):
             player = opp_team_players[i]
             game.put(player, assert_square_type(sq))
-            return_list.append(player)
+            added_players.append(player)
 
     if ball_position is not None:
         game.get_ball().move_to(assert_square_type(ball_position))
@@ -104,7 +104,7 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
     if forward_model_enabled:
         game.enable_forward_model()
 
-    return tuple(return_list)
+    return game, tuple(added_players)
 
 
 def get_game_kickoff(seed=0):
