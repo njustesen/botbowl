@@ -44,8 +44,8 @@ def test_pickup_modifiers(weather):
 
 @pytest.mark.parametrize("sure_hands", [True, False])
 def test_pickup_sure_hands(sure_hands):
-    game, player = get_custom_game_turn(player_positions=[(1, 1)],
-                                        ball_position=(2, 2))
+    game, (player, ) = get_custom_game_turn(player_positions=[(1, 1)],
+                                            ball_position=(2, 2))
     if sure_hands:
         player.extra_skills.append(Skill.SURE_HANDS)
     assert player.has_skill(Skill.SURE_HANDS) == sure_hands
