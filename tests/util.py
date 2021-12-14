@@ -272,13 +272,15 @@ def only_fixed_rolls(game: botbowl.Game,
 
     try:
         yield
-    finally:
-        game.rnd = rnd
 
         if assert_fixes_consumed:
             assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
             assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
             assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
             assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
+    finally:
+        game.rnd = rnd
+
+
 
 
