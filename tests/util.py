@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-from typing import List, Optional, Tuple, Union
-
 from botbowl.core.game import *
 from botbowl.ai.bots.random_bot import *
 from copy import deepcopy
+
+from typing import List, Optional, Tuple, Union, Iterable, Any
+from contextlib import contextmanager
 
 game_turn_empty = {}
 game_turn_full = {}
@@ -55,7 +55,7 @@ Position = Union[Square, Tuple[int, int]]
 def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
                          ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
                          rerolls: int = 0, forward_model_enabled=False, pathfinding_enabled=False) \
-        -> Tuple:
+        -> Tuple[Game, Tuple[Player, ...]]:
     """
     :param player_positions: places human linemen of active team in these squares
     :param opp_player_positions: places human linemen of not active team in these squares
@@ -79,19 +79,19 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
         else:
             return game.get_square(obj[0], obj[1])
 
-    return_list = [game]
+    added_players = []
 
     for i, sq in enumerate(player_positions):
         player = team_players[i]
         game.put(player, assert_square_type(sq))
-        return_list.append(player)
+        added_players.append(player)
 
     if opp_player_positions is not None:
         opp_team_players = [player for player in game.get_opp_team(team).players if player.role.name == "Lineman"]
         for i, sq in enumerate(opp_player_positions):
             player = opp_team_players[i]
             game.put(player, assert_square_type(sq))
-            return_list.append(player)
+            added_players.append(player)
 
     if ball_position is not None:
         game.get_ball().move_to(assert_square_type(ball_position))
@@ -104,7 +104,7 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
     if forward_model_enabled:
         game.enable_forward_model()
 
-    return tuple(return_list)
+    return game, tuple(added_players)
 
 
 def get_game_kickoff(seed=0):
@@ -229,10 +229,12 @@ def get_block_players(game, team):
 
 @contextmanager
 def only_fixed_rolls(game: botbowl.Game,
-                     d3: Optional[List[int]] = None,
-                     d6: Optional[List[int]] = None,
-                     d8: Optional[List[int]] = None,
-                     block_dice: Optional[List[BBDieResult]] = None):
+                     assert_no_prev_fixes: bool = True,
+                     assert_fixes_consumed: bool = True,
+                     d3: Optional[Iterable[int]] = None,
+                     d6: Optional[Iterable[int]] = None,
+                     d8: Optional[Iterable[int]] = None,
+                     block_dice: Optional[Iterable[BBDieResult]] = None):
     """
     Context manager that ensures that
       1) There are no fixes and the fixes rolls according to arguments
@@ -242,10 +244,11 @@ def only_fixed_rolls(game: botbowl.Game,
     > with only_fixed_rolls(game, block_dice=[BBDieResult.DEFENDER_DOWN], d6=[6, 6]):
     >     game.step(...)
     """
-    assert len(botbowl.D3.FixedRolls) == 0, f"There are fixed D3 rolls={botbowl.D3.FixedRolls}"
-    assert len(botbowl.D6.FixedRolls) == 0, f"There are fixed D6 rolls={botbowl.D6.FixedRolls}"
-    assert len(botbowl.D8.FixedRolls) == 0, f"There are fixed D8 rolls={botbowl.D8.FixedRolls}"
-    assert len(botbowl.BBDie.FixedRolls) == 0, f"There are fixed BBDie rolls={botbowl.BBDie.FixedRolls}"
+    if assert_no_prev_fixes:
+        assert len(botbowl.D3.FixedRolls) == 0, f"There are fixed D3 rolls={botbowl.D3.FixedRolls}"
+        assert len(botbowl.D6.FixedRolls) == 0, f"There are fixed D6 rolls={botbowl.D6.FixedRolls}"
+        assert len(botbowl.D8.FixedRolls) == 0, f"There are fixed D8 rolls={botbowl.D8.FixedRolls}"
+        assert len(botbowl.BBDie.FixedRolls) == 0, f"There are fixed BBDie rolls={botbowl.BBDie.FixedRolls}"
 
     if d3 is not None:
         for roll in d3:
@@ -271,9 +274,11 @@ def only_fixed_rolls(game: botbowl.Game,
         yield
     finally:
         game.rnd = rnd
-        assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
-        assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
-        assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
-        assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
+
+        if assert_fixes_consumed:
+            assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
+            assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
+            assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
+            assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
 
 

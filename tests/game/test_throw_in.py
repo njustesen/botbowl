@@ -8,9 +8,9 @@ import pytest
                                        ((5, 14), (5, 15)) ])
 def test_crowd_surf_ball_carrier(positions):
     blocker_pos, ball_carrier_pos = positions
-    game, blocker, ball_carrier = get_custom_game_turn(player_positions=[blocker_pos],
-                                                       opp_player_positions=[ball_carrier_pos],
-                                                       ball_position=ball_carrier_pos)
+    game, (blocker, ball_carrier) = get_custom_game_turn(player_positions=[blocker_pos],
+                                                         opp_player_positions=[ball_carrier_pos],
+                                                         ball_position=ball_carrier_pos)
     throw_in_from_square = ball_carrier.position
     delta_x = ball_carrier.position.x - blocker.position.x
     delta_y = ball_carrier.position.y - blocker.position.y

@@ -353,8 +353,8 @@ def test_foul_after_gfi(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_foul(pf):
-    game, player, opp_player_1, opp_player_2 = get_custom_game_turn(player_positions=[(1, 1)],
-                                                      opp_player_positions=[(1, 2), (1, 3)])
+    game, (player, opp_player_1, opp_player_2) = get_custom_game_turn(player_positions=[(1, 1)],
+                                                                      opp_player_positions=[(1, 2), (1, 3)])
 
     player.role.ma = 1
     opp_player_1.state.up = False
@@ -380,8 +380,8 @@ def test_foul(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff(pf):
-    game, player, teammate_1, teammate_2 = get_custom_game_turn(player_positions=[(1, 1), (1, 2), (1, 3)],
-                                                                ball_position=(1, 1))
+    game, (player, teammate_1, teammate_2) = get_custom_game_turn(player_positions=[(1, 1), (1, 2), (1, 3)],
+                                                                  ball_position=(1, 1))
 
     player.role.ma = 1
     pathfinder = pf.Pathfinder(game,
