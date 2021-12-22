@@ -7,18 +7,22 @@ This module contains all the procedures. Procedures contain the core part of the
 responsible for an isolated part of the game. Procedures are added to a stack, and the top-most procedure must finish
 before other procedures are run. Procedures can add other procedures to the stack simply by instantiating procedures.
 """
-from abc import abstractmethod, ABCMeta
+
 
 from botbowl.core.pathfinding import Pathfinder
-
+from botbowl.core.util import compare_object
 from botbowl.core.model import *
 from botbowl.core.table import *
+
 import time
+from abc import abstractmethod, ABCMeta
 
 
 class Procedure(Reversible):
 
-    def __init__(self, game, context=None, ignored_keys=[]):
+    def __init__(self, game, context=None, ignored_keys=None):
+        ignored_keys = [] if ignored_keys is None else ignored_keys
+
         super().__init__(ignored_keys=["game"]+ignored_keys)
         self.game = game
         self.context = context
@@ -54,6 +58,9 @@ class Procedure(Reversible):
 
     def compare(self, other, path=""):
         return compare_object(self, other, path, ignored_keys={"game"}, ignored_types={Procedure})
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(done={self.done}, started={self.started})"
 
 
 class Regeneration(Procedure):
