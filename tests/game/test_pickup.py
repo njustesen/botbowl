@@ -44,24 +44,17 @@ def test_pickup_modifiers(weather):
 
 @pytest.mark.parametrize("sure_hands", [True, False])
 def test_pickup_sure_hands(sure_hands):
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-    player = team.players[0]
+    game, (player, ) = get_custom_game_turn(player_positions=[(1, 1)],
+                                            ball_position=(2, 2))
     if sure_hands:
-        player.role.skills = [Skill.SURE_HANDS]
-    else:
-        player.role.skills = []
-    player.role.ag = 3
-    game.put(player, Square(1, 1))
-    game.get_ball().move_to(Square(2, 2))
-    game.get_ball().is_carried = False
-    game.state.weather = WeatherType.NICE
-    game.set_available_actions()
+        player.extra_skills.append(Skill.SURE_HANDS)
+    assert player.has_skill(Skill.SURE_HANDS) == sure_hands
+
     game.step(Action(ActionType.START_MOVE, player=player))
-    D6.fix(1) # Failed pickup
+    D6.fix(1)  # Failed pickup
     D6.fix(6)  # Successful pickup
     game.step(Action(ActionType.MOVE, position=Square(2, 2)))
+
     if sure_hands:
         assert game.has_report_of_type(OutcomeType.FAILED_PICKUP)
         assert game.has_report_of_type(OutcomeType.SUCCESSFUL_PICKUP)

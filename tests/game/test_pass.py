@@ -111,22 +111,13 @@ def test_strong_arm():
 
 
 def test_pass_nerves_of_steel():
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-    passer = team.players[0]
-    passer.role.skills = []
-    passer.role.ag = 3
-    catcher = team.players[1]
-    game.put(passer, Square(1, 1))
-    opponent = game.get_opp_team(team).players[0]
-    game.put(opponent, Square(1, 2))
+    game, (passer, catcher, _) = get_custom_game_turn(player_positions=[(1,1), (8,1)],
+                                                      opp_player_positions=[(1,2)],
+                                                      ball_position=(1,1))
+
     # one TZ on the thrower
     assert len(game.get_adjacent_opponents(passer, down=False, stunned=False)) == 1
 
-    game.state.weather = WeatherType.NICE
-    catcher_position = Square(passer.position.x + 7, passer.position.y + 0)
-    game.put(catcher, catcher_position)
     pass_distance = game.get_pass_distance(passer.position, catcher.position)
     pass_mods = game.get_pass_modifiers(passer, pass_distance)
     passer.role.skills = [Skill.NERVES_OF_STEEL]
@@ -134,36 +125,19 @@ def test_pass_nerves_of_steel():
     # nos removes the 1 TZ impact
     assert pass_mods + 1 == nos_pass_mods
 
+
 @pytest.mark.parametrize("pass_skill", [True, False]) 
 def test_pass_roll_fumble(pass_skill): 
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-    game.state.weather = WeatherType.NICE
-    game.state.teams[0].state.rerolls = 0
-    
-    passer = team.players[0]
-    passer.role.skills = [Skill.PASS] if pass_skill else [] 
-    passer.role.ag = 3
-    game.put(passer, Square(2, 2))
-    game.get_ball().move_to(passer.position)
-    game.get_ball().is_carried = True
-    
-    catcher = team.players[1]
-    catcher_position = Square(passer.position.x + 6, passer.position.y + 0)
-    game.put(catcher, catcher_position)
-    
-    game.set_available_actions()
-    game.state.reports.clear() 
-    
+    game, (passer, catcher) = get_custom_game_turn(player_positions=[(2, 2), (8, 2)],
+                                                   ball_position=(2, 2))
+
+    passer.role.skills = [Skill.PASS] if pass_skill else []
+
     D6.fix(1)  # Fumble pass
     D6.fix(6)  # Successful pass after skill re-roll
-    
-    if pass_skill: 
-        assert passer.can_use_skill(Skill.PASS)
-    
+
     game.step(Action(ActionType.START_PASS, player=passer))
-    game.step(Action(ActionType.PASS, position=catcher_position ))
+    game.step(Action(ActionType.PASS, position=catcher.position))
     
     if pass_skill:
         assert game.has_report_of_type(OutcomeType.FUMBLE)
@@ -175,29 +149,14 @@ def test_pass_roll_fumble(pass_skill):
         assert game.has_report_of_type(OutcomeType.BALL_BOUNCE_GROUND)
         assert not game.has_report_of_type(OutcomeType.ACCURATE_PASS)
         assert not game.has_report_of_type(OutcomeType.SKILL_USED)
-        
+
+
 @pytest.mark.parametrize("pass_skill", [True, False]) 
 def test_pass_roll_inaccurate(pass_skill): 
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-    game.state.weather = WeatherType.NICE
-    game.state.teams[0].state.rerolls = 0
-    
-    passer = team.players[0]
-    passer.role.skills = [Skill.PASS] if pass_skill else [] 
-    passer.role.ag = 3
-    game.put(passer, Square(5, 5))
-    game.get_ball().move_to(passer.position)
-    game.get_ball().is_carried = True
-    
-    catcher = team.players[1]
-    catcher_position = Square(passer.position.x + 3, passer.position.y + 0)
-    game.put(catcher, catcher_position)
-    
-    game.set_available_actions()
-    game.state.reports.clear() 
-    
+    game, (passer, catcher) = get_custom_game_turn(player_positions=[(5,5), (8,5)],
+                                                   ball_position=(5,5))
+    passer.role.skills = [Skill.PASS] if pass_skill else []
+
     D6.fix(2)  # Inaccurate pass
     D6.fix(6)  # Successful pass after skill re-roll
     
@@ -205,7 +164,7 @@ def test_pass_roll_inaccurate(pass_skill):
         assert passer.can_use_skill(Skill.PASS)
     
     game.step(Action(ActionType.START_PASS, player=passer))
-    game.step(Action(ActionType.PASS, position=catcher_position ))
+    game.step(Action(ActionType.PASS, position=catcher.position ))
     
     if pass_skill:
         assert game.has_report_of_type(OutcomeType.INACCURATE_PASS)
@@ -221,30 +180,13 @@ def test_pass_roll_inaccurate(pass_skill):
 
 
 def test_pass_safe_throw():
-    game = get_game_turn()
-    team = game.get_agent_team(game.actor)
-    game.clear_board()
-    game.state.weather = WeatherType.NICE
-    game.state.teams[0].state.rerolls = 0
-
-    passer = team.players[0]
+    game, (passer, catcher) = get_custom_game_turn(player_positions=[(2,2), (14,2)],
+                                                   ball_position=(2,2))
     passer.role.skills = [Skill.SAFE_THROW]
-    passer.role.ag = 3
-    game.put(passer, Square(2, 2))
-    game.get_ball().move_to(passer.position)
-    game.get_ball().is_carried = True
-
-    catcher = team.players[1]
-    catcher_position = Square(passer.position.x + 12, passer.position.y + 0)
-    game.put(catcher, catcher_position)
-
-    game.set_available_actions()
-    game.state.reports.clear()
-
-    D6.fix(2)  # Fumble pass
 
     game.step(Action(ActionType.START_PASS, player=passer))
-    game.step(Action(ActionType.PASS, position=catcher_position))
+    with only_fixed_rolls(game, d6=[2]):
+        game.step(Action(ActionType.PASS, position=catcher.position))
 
     assert game.has_report_of_type(OutcomeType.SKILL_USED)
     assert not game.has_report_of_type(OutcomeType.FUMBLE)
