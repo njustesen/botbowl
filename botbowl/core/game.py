@@ -32,16 +32,17 @@ class Game:
     end_time: Optional[float]
     last_request_time: Optional[float]
     last_action_time: Optional[float]
-    forced_action: Any #??
     action: Optional[Action]
     trajectory: Trajectory
     square_shortcut: List[List[Square]]
 
-    def __init__(self, game_id, home_team: Team, away_team: Team,
-                 home_agent: Agent, away_agent: Agent,
+    def __init__(self, game_id, home_team: Team, away_team: Team, home_agent: Agent, away_agent: Agent,
                  config: Optional[Configuration] = None,
-                 arena: Optional[TwoPlayerArena] = None, ruleset: Optional[RuleSet] = None,
-                 state: Optional[GameState] = None, seed=None, record: bool = False):
+                 arena: Optional[TwoPlayerArena] = None,
+                 ruleset: Optional[RuleSet] = None,
+                 state: Optional[GameState] = None,
+                 seed=None,
+                 record: bool = False):
         assert config is not None or arena is not None
         assert config is not None or ruleset is not None
         assert home_team.team_id != away_team.team_id
@@ -59,7 +60,6 @@ class Game:
         self.end_time = None
         self.last_request_time = None
         self.last_action_time = None
-        self.forced_action = None
         self.action = None
         self.trajectory = Trajectory()
         self.square_shortcut = self.state.pitch.squares
