@@ -195,8 +195,8 @@ class Pathfinder:
         self.can_foul = can_foul
         self.ma = player.get_ma() - player.state.moves
         self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
-        self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
-        self.nodes = np.full((game.arena.height, game.arena.width), None)
+        self.locked_nodes = np.empty((game.arena.height, game.arena.width))
+        self.nodes = np.empty((game.arena.height, game.arena.width))
         self.tzones = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
         self.current_prob = 1
         self.open_set = PriorityQueue()

@@ -9,6 +9,8 @@ A few utilities used across the core modules.
 import os
 from collections.abc import Iterable
 from copy import copy
+from typing import Sized
+
 import botbowl
 from botbowl.core.forward_model import Reversible
 from botbowl.core.model import *
@@ -121,7 +123,7 @@ def compare_iterable(s1, s2, path=""):
     elif hasattr(s1, "compare"):
         diff.extend(s1.compare(s2, f"{path}"))
 
-    elif isinstance(s1, Iterable) and len(s1) != len(s2):
+    elif isinstance(s1, Sized) and len(s1) != len(s2):
         diff.append(f"{path}: __len__: '{len(s1)}' _notEqual_ '{len(s2)}'")
 
     elif isinstance(s1, dict):
