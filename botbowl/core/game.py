@@ -109,11 +109,15 @@ class Game:
         self.trajectory.revert(to_step)
 
     @property
-    def actor(self) -> Optional[Agent]:
+    def active_team(self) -> Optional[Team]:
         if len(self.state.available_actions) > 0:
-            return self.get_team_agent(self.state.available_actions[0].team)
+            return self.state.available_actions[0].team
         else:
             return None
+
+    @property
+    def actor(self) -> Optional[Agent]:
+        return self.get_team_agent(self.active_team)
 
     def init(self) -> None:
         """
