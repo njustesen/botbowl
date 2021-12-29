@@ -7,6 +7,7 @@ This module contains the feature layers used by the gym implementation.
 """
 
 from botbowl.core.procedure import *
+from botbowl.core.game import Game
 
 
 class FeatureLayer:
@@ -17,7 +18,7 @@ class FeatureLayer:
     def name(self):
         raise NotImplementedError("Must be overridden by subclass")
 
-    def get(self, game):
+    def get(self, game: Game):
         """
         :return: a 2D 1-hot feature layer, possibly cached.
         """
@@ -451,6 +452,7 @@ class AVLayer(FeatureLayer):
 class SkillLayer(FeatureLayer):
 
     def __init__(self, skill):
+        super().__init__()
         self.skill = skill
 
     def produce(self, game):
@@ -600,4 +602,3 @@ class GFIsLeftLayer(FeatureLayer):
 
     def name(self):
         return "gfi left"
-
