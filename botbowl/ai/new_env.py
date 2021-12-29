@@ -5,16 +5,20 @@ Year: 2018
 ==========================
 This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
 """
-from typing import Tuple
+from typing import Tuple, Iterable
 
 from botbowl.ai.layers import *
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena
 
 import gym
 import uuid
-from more_itertools import take
 from itertools import count
 from copy import deepcopy
+
+
+def take(n: int, iterable: Iterable) -> None:
+    for _ in range(n):
+        next(iterable)
 
 
 class EnvConf:
