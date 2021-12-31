@@ -5,6 +5,7 @@ Year: 2018
 ==========================
 This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
 """
+from itertools import chain
 
 import gym
 from gym import spaces
@@ -248,7 +249,7 @@ class BotBowlEnv(gym.Env):
 
     def _step(self, action):
         self.game.step(action)
-        if action.action_type in BotBowlEnv.offensive_formation_action_types or action.action_type in BotBowlEnv.defensive_formation_action_types:
+        if action.action_type in chain(BotBowlEnv.offensive_formation_action_types, BotBowlEnv.defensive_formation_action_types):
             self.game.step(Action(ActionType.END_SETUP))
         reward = 0
         if self.game.get_winner() is not None:

@@ -1,5 +1,15 @@
-from botbowl.ai.new_env import NewBotBowlEnv
+import unittest.mock
+
+from botbowl.ai.new_env import NewBotBowlEnv, EnvConf
 import numpy as np
+
+
+def test_fast_new_env():
+    aa_layer_first_index = len(EnvConf.layers) - len(EnvConf.positional_action_types)
+    layers = EnvConf.layers[aa_layer_first_index:]
+
+    with unittest.mock.patch('botbowl.ai.new_env.EnvConf.layers', layers):
+        test_env()
 
 
 def test_env():

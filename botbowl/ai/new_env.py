@@ -5,10 +5,10 @@ Year: 2018
 ==========================
 This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
 """
-from typing import Tuple, Iterable
+from typing import Tuple, Iterable, Union
 
 from botbowl.ai.layers import *
-from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena
+from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
 import gym
 import uuid
@@ -22,13 +22,21 @@ def take(n: int, iterable: Iterable) -> None:
 
 
 class EnvConf:
-    simple_action_types = [
+    config: Configuration = load_config("gym-11")
+    formations_paths = [
+        'def_spread.txt',
+        'def_zone.txt',
+        'off_line.txt',
+        'off_wedge.txt'
+    ]
+
+    simple_action_types: List[Union[ActionType, Formation]] = [
         ActionType.START_GAME,
         ActionType.HEADS,
         ActionType.TAILS,
         ActionType.KICK,
         ActionType.RECEIVE,
-        ActionType.END_SETUP,
+        #ActionType.END_SETUP,
         ActionType.END_PLAYER_TURN,
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
@@ -44,11 +52,10 @@ class EnvConf:
         ActionType.SELECT_NONE,
         ActionType.USE_BRIBE,
         ActionType.DONT_USE_BRIBE,
-        ActionType.SETUP_FORMATION_SPREAD,
-        ActionType.SETUP_FORMATION_ZONE,
-        ActionType.SETUP_FORMATION_WEDGE,
-        ActionType.SETUP_FORMATION_LINE
     ]
+    formations = [load_formation(formation, size=11) for formation in formations_paths]
+
+    simple_action_types.extend(formations)
 
     positional_action_types = [
         ActionType.PLACE_BALL,
@@ -101,9 +108,7 @@ class EnvConf:
         SkillLayer(Skill.CATCH),
         SkillLayer(Skill.PASS)
     ]
-
-    for action_type in positional_action_types:
-        layers.append(AvailablePositionLayer(action_type))
+    layers.extend(AvailablePositionLayer(action_type) for action_type in positional_action_types)
 
     # Procedures that require actions
     procedures: List[Procedure] = [
@@ -145,7 +150,6 @@ class NewBotBowlEnv(gym.Env):
     game: Game
     _seed: int
     rnd: np.random.RandomState
-    config: Configuration
     ruleset: RuleSet
     home_team: Team
     away_team: Team
@@ -155,11 +159,10 @@ class NewBotBowlEnv(gym.Env):
 
         # Game
         self.game = None
-        self.config = load_config("gym-11")
-        self.ruleset = load_rule_set(self.config.ruleset, all_rules=False)
+        self.ruleset = load_rule_set(EnvConf.config.ruleset, all_rules=False)
         self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
         self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
-        arena = load_arena(self.config.arena)
+        arena = load_arena(EnvConf.config.arena)
         self.width = arena.width
         self.height = arena.height
         self.board_squares = self.width * self.height
@@ -273,10 +276,15 @@ class NewBotBowlEnv(gym.Env):
         # Available action types
         aa_types = np.zeros(len(EnvConf.action_types))
         game_aa_types = set(action_choice.action_type for action_choice in game.get_available_actions())
+        is_setup: bool = type(self.game.get_procedure()) == Setup
         for i, action_type in enumerate(EnvConf.action_types):
             if action_type is ActionType.END_SETUP and not game.is_setup_legal(active_team):
                 continue  # Ignore end setup action if setup is illegal
-            aa_types[i] = 1.0 * (action_type in game_aa_types)
+
+            if is_setup and isinstance(action_type, Formation):
+                aa_types[i] = 1.0
+            else:
+                aa_types[i] = 1.0 * (action_type in game_aa_types)
 
         next_index = next(index)
         non_spatial_obs[next_index:next_index+len(aa_types)] = aa_types
@@ -293,9 +301,13 @@ class NewBotBowlEnv(gym.Env):
 
         return spatial_obs, non_spatial_obs, action_mask
 
-    def compute_action(self, action_idx: int) -> Action:
+    def compute_action(self, action_idx: int) -> List[Action]:
         if action_idx < len(EnvConf.simple_action_types):
-            return Action(EnvConf.simple_action_types[action_idx])
+            if action_idx >= len(EnvConf.simple_action_types) - len(EnvConf.formations):
+                formation = EnvConf.simple_action_types[action_idx]
+                return formation.actions(self.game, self.game.active_team) + [Action(ActionType.END_SETUP)]
+            else:
+                return [Action(EnvConf.simple_action_types[action_idx])]
 
         spatial_idx = action_idx - len(EnvConf.simple_action_types)
         spatial_pos_idx = spatial_idx % self.board_squares
@@ -305,13 +317,15 @@ class NewBotBowlEnv(gym.Env):
             spatial_x = self.width - spatial_x - 1
 
         spatial_action_type = EnvConf.positional_action_types[spatial_idx // self.board_squares]
-        return Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))
+        return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
 
     def step(self, action: int, skip_observation: bool = False):
         # Convert to Action object
-        action_object = self.compute_action(action)
+        action_objects = self.compute_action(action)
         active_team = self.game.active_team
-        self.game.step(action_object)
+
+        for action in action_objects:
+            self.game.step(action)
 
         reward = 0
         done = self.game.state.game_over
@@ -341,7 +355,7 @@ class NewBotBowlEnv(gym.Env):
                          away_team=deepcopy(self.away_team),
                          home_agent=Agent("Gym Learner (home)", human=True),
                          away_agent=Agent("Gym Learner (away)", human=True),
-                         config=self.config,
+                         config=EnvConf.config,
                          ruleset=self.ruleset,
                          seed=seed)
 
