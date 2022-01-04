@@ -5,8 +5,10 @@ Year: 2018
 ==========================
 This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
 """
-from typing import Tuple, Iterable, Union
+from typing import Tuple, Iterable, Union, Callable
 
+from botbowl.ai.bots import RandomBot
+from botbowl.ai.registry import registry as bot_registry
 from botbowl.ai.layers import *
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
@@ -36,7 +38,7 @@ class EnvConf:
         ActionType.TAILS,
         ActionType.KICK,
         ActionType.RECEIVE,
-        #ActionType.END_SETUP,
+        # ActionType.END_SETUP,
         ActionType.END_PLAYER_TURN,
         ActionType.USE_REROLL,
         ActionType.DONT_USE_REROLL,
@@ -155,13 +157,16 @@ class NewBotBowlEnv(gym.Env):
     away_team: Team
     num_non_spatial_observables: int
 
-    def __init__(self, seed: int = None):
+    def __init__(self, seed: int = None, home_agent='human', away_agent='random'):
 
         # Game
         self.game = None
         self.ruleset = load_rule_set(EnvConf.config.ruleset, all_rules=False)
         self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
         self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        self.home_agent = home_agent
+        self.away_agent = away_agent
+
         arena = load_arena(EnvConf.config.arena)
         self.width = arena.width
         self.height = arena.height
@@ -191,7 +196,7 @@ class NewBotBowlEnv(gym.Env):
 
         # Spatial state
         spatial_obs = np.stack([layer.get(game) for layer in EnvConf.layers])
-        if self.flip_x_axis():
+        if self._flip_x_axis():
             spatial_obs = np.flip(spatial_obs, axis=2)
 
         # Non spatial state
@@ -287,9 +292,9 @@ class NewBotBowlEnv(gym.Env):
                 aa_types[i] = 1.0 * (action_type in game_aa_types)
 
         next_index = next(index)
-        non_spatial_obs[next_index:next_index+len(aa_types)] = aa_types
+        non_spatial_obs[next_index:next_index + len(aa_types)] = aa_types
         if self.num_non_spatial_observables is None:
-            self.num_non_spatial_observables = next_index+len(aa_types)
+            self.num_non_spatial_observables = next_index + len(aa_types)
             non_spatial_obs = non_spatial_obs[:self.num_non_spatial_observables]
 
         # Action mask
@@ -301,27 +306,9 @@ class NewBotBowlEnv(gym.Env):
 
         return spatial_obs, non_spatial_obs, action_mask
 
-    def compute_action(self, action_idx: int) -> List[Action]:
-        if action_idx < len(EnvConf.simple_action_types):
-            if action_idx >= len(EnvConf.simple_action_types) - len(EnvConf.formations):
-                formation = EnvConf.simple_action_types[action_idx]
-                return formation.actions(self.game, self.game.active_team) + [Action(ActionType.END_SETUP)]
-            else:
-                return [Action(EnvConf.simple_action_types[action_idx])]
-
-        spatial_idx = action_idx - len(EnvConf.simple_action_types)
-        spatial_pos_idx = spatial_idx % self.board_squares
-        spatial_y = int(spatial_pos_idx // self.width)
-        spatial_x = int(spatial_pos_idx % self.width)
-        if self.flip_x_axis():
-            spatial_x = self.width - spatial_x - 1
-
-        spatial_action_type = EnvConf.positional_action_types[spatial_idx // self.board_squares]
-        return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
-
     def step(self, action: int, skip_observation: bool = False):
         # Convert to Action object
-        action_objects = self.compute_action(action)
+        action_objects = self._compute_action(action, flip=self._flip_x_axis())
         active_team = self.game.active_team
 
         for action in action_objects:
@@ -350,11 +337,12 @@ class NewBotBowlEnv(gym.Env):
 
     def reset(self):
         seed = self.rnd.randint(0, 2 ** 31)
+
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
                          away_team=deepcopy(self.away_team),
-                         home_agent=Agent("Gym Learner (home)", human=True),
-                         away_agent=Agent("Gym Learner (away)", human=True),
+                         home_agent=NewBotBowlEnv._create_agent(self.home_agent),
+                         away_agent=NewBotBowlEnv._create_agent(self.home_agent),
                          config=EnvConf.config,
                          ruleset=self.ruleset,
                          seed=seed)
@@ -371,6 +359,96 @@ class NewBotBowlEnv(gym.Env):
             self.rnd = np.random.RandomState(self._seed)
         return self._seed
 
-    def flip_x_axis(self) -> bool:
+    def _flip_x_axis(self) -> bool:
         """Returns true if x-axis should be flipped"""
         return self.game.active_team is self.game.state.away_team
+
+    def _compute_action(self, action_idx: int, flip: bool) -> List[Action]:
+        if action_idx < len(EnvConf.simple_action_types):
+            if action_idx >= len(EnvConf.simple_action_types) - len(EnvConf.formations):
+                formation = EnvConf.simple_action_types[action_idx]
+                return formation.actions(self.game, self.game.active_team) + [Action(ActionType.END_SETUP)]
+            else:
+                return [Action(EnvConf.simple_action_types[action_idx])]
+
+        spatial_idx = action_idx - len(EnvConf.simple_action_types)
+        spatial_pos_idx = spatial_idx % self.board_squares
+        spatial_y = int(spatial_pos_idx // self.width)
+        spatial_x = int(spatial_pos_idx % self.width)
+        if flip:
+            spatial_x = self.width - spatial_x - 1
+
+        spatial_action_type = EnvConf.positional_action_types[spatial_idx // self.board_squares]
+        return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
+
+    def _compute_action_idx(self, action: Action) -> int:
+        if action.action_type in EnvConf.simple_action_types:
+            return EnvConf.simple_action_types.index(action.action_type)
+        elif action.action_type in EnvConf.positional_action_types:
+            position = action.position if action.position is not None else action.player.position
+            spatial_index = position.x + position.y * self.width
+            position_action_index = EnvConf.positional_action_types.index(action.action_type)
+            return len(EnvConf.simple_action_types) + self.board_squares * position_action_index + spatial_index
+        else:
+            raise AttributeError(f"Can't convert {action} to an action index")
+
+    @staticmethod
+    def _create_agent(agent_option) -> Agent:
+        if agent_option == "human":
+            return Agent("Gym Learner", human=True)
+        elif agent_option == "random":
+            return RandomBot("Random bot")
+        elif agent_option in bot_registry.list():
+            return bot_registry.make(agent_option)
+        else:
+            raise AttributeError(f"Not regonized bot name: {agent_option}")
+
+
+class BotBowlWrapper:
+    env: NewBotBowlEnv
+
+    def __init__(self, env):
+        self.env = env
+
+    def get_state(self):
+        return self.env.get_state()
+
+    def step(self, action: int, skip_observation: bool = False):
+        return self.env.step(action, skip_observation)
+
+    def render(self, mode='human'):
+        return self.env.render(mode)
+
+    def reset(self):
+        return self.env.reset()
+
+    def close(self):
+        return self.env.close()
+
+    def seed(self, seed=None):
+        return self.env.seed(seed)
+
+
+class RewardWrapper(BotBowlWrapper):
+    reward_func: Callable[[Game], float]
+
+    def __init__(self, env, reward_func: Callable[[Game], float]):
+        super().__init__(env)
+        self.home_accumulated_reward = 0
+        self.away_accumulated_reward = 0
+        self.reward_func = reward_func
+        self.index_last_report = 0
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, skip_observation)
+
+    def reset(self):
+        self.env.reset()
+        self.home_accumulated_reward = 0
+        self.away_accumulated_reward = 0
+        self.index_last_report = 0
+
+
+class ScriptedActionWrapper(BotBowlWrapper):
+    def __init__(self):
+        pass
