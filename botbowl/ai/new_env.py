@@ -24,126 +24,137 @@ def take(n: int, iterable: Iterable) -> None:
 
 
 class EnvConf:
-    config: Configuration = load_config("gym-11")
-    formations_paths = [
-        'def_spread.txt',
-        'def_zone.txt',
-        'off_line.txt',
-        'off_wedge.txt'
-    ]
+    config: Configuration
+    simple_action_types: List[Union[ActionType, Formation]]
+    positional_action_types: List[ActionType]
+    action_types: List[Union[ActionType, Formation]]
+    layers: List[FeatureLayer]
+    procedures: List[Procedure]
+    formations: List[Formation]
 
-    simple_action_types: List[Union[ActionType, Formation]] = [
-        ActionType.START_GAME,
-        ActionType.HEADS,
-        ActionType.TAILS,
-        ActionType.KICK,
-        ActionType.RECEIVE,
-        # ActionType.END_SETUP,
-        ActionType.END_PLAYER_TURN,
-        ActionType.USE_REROLL,
-        ActionType.DONT_USE_REROLL,
-        ActionType.USE_SKILL,
-        ActionType.DONT_USE_SKILL,
-        ActionType.END_TURN,
-        ActionType.STAND_UP,
-        ActionType.SELECT_ATTACKER_DOWN,
-        ActionType.SELECT_BOTH_DOWN,
-        ActionType.SELECT_PUSH,
-        ActionType.SELECT_DEFENDER_STUMBLES,
-        ActionType.SELECT_DEFENDER_DOWN,
-        ActionType.SELECT_NONE,
-        ActionType.USE_BRIBE,
-        ActionType.DONT_USE_BRIBE,
-    ]
-    formations = [load_formation(formation, size=11) for formation in formations_paths]
+    def __init__(self, size=11, extra_formation_paths: Optional[Iterable[str]] = None):
 
-    simple_action_types.extend(formations)
+        self.config: Configuration = load_config(f"gym-{size}")
+        formations_paths = [
+            'def_spread.txt',
+            'def_zone.txt',
+            'off_line.txt',
+            'off_wedge.txt'
+        ]
+        if extra_formation_paths is not None:
+            formations_paths.extend(extra_formation_paths)
 
-    positional_action_types = [
-        ActionType.PLACE_BALL,
-        ActionType.PUSH,
-        ActionType.FOLLOW_UP,
-        ActionType.MOVE,
-        ActionType.BLOCK,
-        ActionType.PASS,
-        ActionType.FOUL,
-        ActionType.HANDOFF,
-        ActionType.LEAP,
-        ActionType.STAB,
-        ActionType.SELECT_PLAYER,
-        ActionType.START_MOVE,
-        ActionType.START_BLOCK,
-        ActionType.START_BLITZ,
-        ActionType.START_PASS,
-        ActionType.START_FOUL,
-        ActionType.START_HANDOFF
-    ]
+        self.simple_action_types = [
+            ActionType.START_GAME,
+            ActionType.HEADS,
+            ActionType.TAILS,
+            ActionType.KICK,
+            ActionType.RECEIVE,
+            # ActionType.END_SETUP,
+            ActionType.END_PLAYER_TURN,
+            ActionType.USE_REROLL,
+            ActionType.DONT_USE_REROLL,
+            ActionType.USE_SKILL,
+            ActionType.DONT_USE_SKILL,
+            ActionType.END_TURN,
+            ActionType.STAND_UP,
+            ActionType.SELECT_ATTACKER_DOWN,
+            ActionType.SELECT_BOTH_DOWN,
+            ActionType.SELECT_PUSH,
+            ActionType.SELECT_DEFENDER_STUMBLES,
+            ActionType.SELECT_DEFENDER_DOWN,
+            ActionType.SELECT_NONE,
+            ActionType.USE_BRIBE,
+            ActionType.DONT_USE_BRIBE,
+        ]
+        self.formations = [load_formation(formation, size=11) for formation in formations_paths]
+        self.simple_action_types.extend(self.formations)
 
-    action_types = simple_action_types + positional_action_types
+        self.positional_action_types = [
+            ActionType.PLACE_BALL,
+            ActionType.PUSH,
+            ActionType.FOLLOW_UP,
+            ActionType.MOVE,
+            ActionType.BLOCK,
+            ActionType.PASS,
+            ActionType.FOUL,
+            ActionType.HANDOFF,
+            ActionType.LEAP,
+            ActionType.STAB,
+            ActionType.SELECT_PLAYER,
+            ActionType.START_MOVE,
+            ActionType.START_BLOCK,
+            ActionType.START_BLITZ,
+            ActionType.START_PASS,
+            ActionType.START_FOUL,
+            ActionType.START_HANDOFF
+        ]
 
-    layers: List[FeatureLayer] = [
-        OccupiedLayer(),
-        OwnPlayerLayer(),
-        OppPlayerLayer(),
-        OwnTackleZoneLayer(),
-        OppTackleZoneLayer(),
-        UpLayer(),
-        StunnedLayer(),
-        UsedLayer(),
-        RollProbabilityLayer(),
-        BlockDiceLayer(),
-        ActivePlayerLayer(),
-        TargetPlayerLayer(),
-        MALayer(),
-        STLayer(),
-        AGLayer(),
-        AVLayer(),
-        MovementLeftLayer(),
-        GFIsLeftLayer(),
-        BallLayer(),
-        OwnHalfLayer(),
-        OwnTouchdownLayer(),
-        OppTouchdownLayer(),
-        SkillLayer(Skill.BLOCK),
-        SkillLayer(Skill.DODGE),
-        SkillLayer(Skill.SURE_HANDS),
-        SkillLayer(Skill.CATCH),
-        SkillLayer(Skill.PASS)
-    ]
-    layers.extend(AvailablePositionLayer(action_type) for action_type in positional_action_types)
+        self.action_types = self.simple_action_types + self.positional_action_types
 
-    # Procedures that require actions
-    procedures: List[Procedure] = [
-        StartGame,
-        CoinTossFlip,
-        CoinTossKickReceive,
-        Setup,
-        PlaceBall,
-        HighKick,
-        Touchback,
-        Turn,
-        MoveAction,
-        BlockAction,
-        BlitzAction,
-        PassAction,
-        HandoffAction,
-        FoulAction,
-        ThrowBombAction,
-        Block,
-        Push,
-        FollowUp,
-        Apothecary,
-        PassAttempt,
-        Interception,
-        Reroll,
-        Ejection]
+        self.layers = [
+            OccupiedLayer(),
+            OwnPlayerLayer(),
+            OppPlayerLayer(),
+            OwnTackleZoneLayer(),
+            OppTackleZoneLayer(),
+            UpLayer(),
+            StunnedLayer(),
+            UsedLayer(),
+            RollProbabilityLayer(),
+            BlockDiceLayer(),
+            ActivePlayerLayer(),
+            TargetPlayerLayer(),
+            MALayer(),
+            STLayer(),
+            AGLayer(),
+            AVLayer(),
+            MovementLeftLayer(),
+            GFIsLeftLayer(),
+            BallLayer(),
+            OwnHalfLayer(),
+            OwnTouchdownLayer(),
+            OppTouchdownLayer(),
+            SkillLayer(Skill.BLOCK),
+            SkillLayer(Skill.DODGE),
+            SkillLayer(Skill.SURE_HANDS),
+            SkillLayer(Skill.CATCH),
+            SkillLayer(Skill.PASS)
+        ]
+        self.layers.extend(AvailablePositionLayer(action_type) for action_type in self.positional_action_types)
+
+        # Procedures that require actions
+        self.procedures = [
+            StartGame,
+            CoinTossFlip,
+            CoinTossKickReceive,
+            Setup,
+            PlaceBall,
+            HighKick,
+            Touchback,
+            Turn,
+            MoveAction,
+            BlockAction,
+            BlitzAction,
+            PassAction,
+            HandoffAction,
+            FoulAction,
+            ThrowBombAction,
+            Block,
+            Push,
+            FollowUp,
+            Apothecary,
+            PassAttempt,
+            Interception,
+            Reroll,
+            Ejection]
 
 
 class NewBotBowlEnv(gym.Env):
     """
     Environment for Bot Bowl IV targeted at reinforcement learning algorithms
     """
-
+    env_conf: EnvConf
     layers: FeatureLayer
     width: int
     height: int
@@ -157,17 +168,22 @@ class NewBotBowlEnv(gym.Env):
     away_team: Team
     num_non_spatial_observables: int
 
-    def __init__(self, seed: int = None, home_agent='human', away_agent='random'):
+    def __init__(self, env_conf=None, seed: int = None, home_agent='human', away_agent='random'):
+
+        if env_conf is None:
+            self.env_conf = EnvConf()
+        else:
+            self.env_conf = env_conf
 
         # Game
         self.game = None
-        self.ruleset = load_rule_set(EnvConf.config.ruleset, all_rules=False)
+        self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
         self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
         self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
         self.home_agent = home_agent
         self.away_agent = away_agent
 
-        arena = load_arena(EnvConf.config.arena)
+        arena = load_arena(self.env_conf.config.arena)
         self.width = arena.width
         self.height = arena.height
         self.board_squares = self.width * self.height
@@ -179,7 +195,7 @@ class NewBotBowlEnv(gym.Env):
 
         # Setup gym shapes
         spat_obs = self.reset()
-        self.action_space = gym.spaces.Discrete(len(EnvConf.action_types))
+        self.action_space = gym.spaces.Discrete(len(self.env_conf.action_types))
         self.observation_space = gym.spaces.Box(low=0, high=1, shape=spat_obs.shape)
 
     def get_state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -195,7 +211,7 @@ class NewBotBowlEnv(gym.Env):
         opp_team = game.get_opp_team(active_team) if active_team is not None else None
 
         # Spatial state
-        spatial_obs = np.stack([layer.get(game) for layer in EnvConf.layers])
+        spatial_obs = np.stack([layer.get(game) for layer in self.env_conf.layers])
         if self._flip_x_axis():
             spatial_obs = np.flip(spatial_obs, axis=2)
 
@@ -275,14 +291,14 @@ class NewBotBowlEnv(gym.Env):
 
         # Procedures in stack
         all_proc_types = set(type(proc) for proc in game.state.stack.items)
-        for i, proc_type in zip(index, EnvConf.procedures):
+        for i, proc_type in zip(index, self.env_conf.procedures):
             non_spatial_obs[i] = 1.0 * (proc_type in all_proc_types)
 
         # Available action types
-        aa_types = np.zeros(len(EnvConf.action_types))
+        aa_types = np.zeros(len(self.env_conf.action_types))
         game_aa_types = set(action_choice.action_type for action_choice in game.get_available_actions())
         is_setup: bool = type(self.game.get_procedure()) == Setup
-        for i, action_type in enumerate(EnvConf.action_types):
+        for i, action_type in enumerate(self.env_conf.action_types):
             if action_type is ActionType.END_SETUP and not game.is_setup_legal(active_team):
                 continue  # Ignore end setup action if setup is illegal
 
@@ -298,8 +314,8 @@ class NewBotBowlEnv(gym.Env):
             non_spatial_obs = non_spatial_obs[:self.num_non_spatial_observables]
 
         # Action mask
-        num_simple_actions = len(EnvConf.simple_action_types)
-        aa_layer_first_index = len(EnvConf.layers) - len(EnvConf.positional_action_types)
+        num_simple_actions = len(self.env_conf.simple_action_types)
+        aa_layer_first_index = len(self.env_conf.layers) - len(self.env_conf.positional_action_types)
         action_mask = np.concatenate((aa_types[:num_simple_actions],
                                       spatial_obs[aa_layer_first_index:].flatten()))
         assert 1.0 in action_mask
@@ -309,18 +325,14 @@ class NewBotBowlEnv(gym.Env):
     def step(self, action: int, skip_observation: bool = False):
         # Convert to Action object
         action_objects = self._compute_action(action, flip=self._flip_x_axis())
-        active_team = self.game.active_team
 
         for action in action_objects:
             self.game.step(action)
 
-        reward = 0
+        return self.get_step_return(skip_observation)
+
+    def get_step_return(self, skip_observation):
         done = self.game.state.game_over
-        if done:
-            if self.game.get_winning_team() is active_team:
-                reward = 1
-            elif self.game.get_winning_team() is self.game.get_opp_team(active_team):
-                reward = -1
 
         if done or skip_observation:
             spatial_observation, non_spatial_observation, action_mask = None, None, None
@@ -330,12 +342,12 @@ class NewBotBowlEnv(gym.Env):
         info = {'non_spatial_obs': non_spatial_observation,
                 'action_mask': action_mask}
 
-        return spatial_observation, reward, done, info
+        return spatial_observation, 0.0, done, info
 
     def render(self, mode='human'):
         pass
 
-    def reset(self):
+    def reset(self, skip_observation=False):
         seed = self.rnd.randint(0, 2 ** 31)
 
         self.game = Game(game_id=str(uuid.uuid1()),
@@ -343,12 +355,13 @@ class NewBotBowlEnv(gym.Env):
                          away_team=deepcopy(self.away_team),
                          home_agent=NewBotBowlEnv._create_agent(self.home_agent),
                          away_agent=NewBotBowlEnv._create_agent(self.home_agent),
-                         config=EnvConf.config,
+                         config=self.env_conf.config,
                          ruleset=self.ruleset,
                          seed=seed)
 
         self.game.init()
-        return self.get_state()[0]
+        spatial_observation = None if skip_observation else self.get_state()[0]
+        return spatial_observation
 
     def close(self):
         pass
@@ -364,31 +377,31 @@ class NewBotBowlEnv(gym.Env):
         return self.game.active_team is self.game.state.away_team
 
     def _compute_action(self, action_idx: int, flip: bool) -> List[Action]:
-        if action_idx < len(EnvConf.simple_action_types):
-            if action_idx >= len(EnvConf.simple_action_types) - len(EnvConf.formations):
-                formation = EnvConf.simple_action_types[action_idx]
+        if action_idx < len(self.env_conf.simple_action_types):
+            if action_idx >= len(self.env_conf.simple_action_types) - len(self.env_conf.formations):
+                formation = self.env_conf.simple_action_types[action_idx]
                 return formation.actions(self.game, self.game.active_team) + [Action(ActionType.END_SETUP)]
             else:
-                return [Action(EnvConf.simple_action_types[action_idx])]
+                return [Action(self.env_conf.simple_action_types[action_idx])]
 
-        spatial_idx = action_idx - len(EnvConf.simple_action_types)
+        spatial_idx = action_idx - len(self.env_conf.simple_action_types)
         spatial_pos_idx = spatial_idx % self.board_squares
         spatial_y = int(spatial_pos_idx // self.width)
         spatial_x = int(spatial_pos_idx % self.width)
         if flip:
             spatial_x = self.width - spatial_x - 1
 
-        spatial_action_type = EnvConf.positional_action_types[spatial_idx // self.board_squares]
+        spatial_action_type = self.env_conf.positional_action_types[spatial_idx // self.board_squares]
         return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
 
     def _compute_action_idx(self, action: Action) -> int:
-        if action.action_type in EnvConf.simple_action_types:
-            return EnvConf.simple_action_types.index(action.action_type)
-        elif action.action_type in EnvConf.positional_action_types:
+        if action.action_type in self.env_conf.simple_action_types:
+            return self.env_conf.simple_action_types.index(action.action_type)
+        elif action.action_type in self.env_conf.positional_action_types:
             position = action.position if action.position is not None else action.player.position
             spatial_index = position.x + position.y * self.width
-            position_action_index = EnvConf.positional_action_types.index(action.action_type)
-            return len(EnvConf.simple_action_types) + self.board_squares * position_action_index + spatial_index
+            position_action_index = self.env_conf.positional_action_types.index(action.action_type)
+            return len(self.env_conf.simple_action_types) + self.board_squares * position_action_index + spatial_index
         else:
             raise AttributeError(f"Can't convert {action} to an action index")
 
