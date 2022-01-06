@@ -441,27 +441,62 @@ class BotBowlWrapper:
     def seed(self, seed=None):
         return self.env.seed(seed)
 
+    @property
+    def root_env(self) -> NewBotBowlEnv:
+        env = self.env
+        while True:
+            if type(env) is NewBotBowlEnv:
+                return env
+            env = env.env
+
+    @property
+    def game(self) -> Game:
+        return self.root_env.game
+
 
 class RewardWrapper(BotBowlWrapper):
-    reward_func: Callable[[Game], float]
+    GameToFloat = Callable[[Game], float]  # Type alias
 
-    def __init__(self, env, reward_func: Callable[[Game], float]):
+    home_reward_func: GameToFloat
+    away_reward_func: GameToFloat
+
+    def __init__(self, env, home_reward_func: GameToFloat, away_reward_func: Optional[GameToFloat] = None):
         super().__init__(env)
-        self.home_accumulated_reward = 0
-        self.away_accumulated_reward = 0
-        self.reward_func = reward_func
-        self.index_last_report = 0
+        self.home_reward_func = home_reward_func
+        self.away_reward_func = away_reward_func
 
     def step(self, action: int, skip_observation: bool = False):
-        self.env.step(action, skip_observation)
-
-    def reset(self):
-        self.env.reset()
-        self.home_accumulated_reward = 0
-        self.away_accumulated_reward = 0
-        self.index_last_report = 0
+        obs, reward, done, info = self.env.step(action, skip_observation)
+        game = self.game
+        if game.active_team == game.state.home_team:
+            reward += self.home_reward_func(game)
+        elif game.active_team == game.state.away_team and self.away_reward_func is not None:
+            reward += self.home_reward_func(game)
+        return obs, reward, done, info
 
 
 class ScriptedActionWrapper(BotBowlWrapper):
-    def __init__(self):
-        pass
+    scripted_func: Callable[[Game], Optional[Action]]
+
+    def __init__(self, env, scripted_func: Callable[[Game], Optional[Action]]):
+        super().__init__(env)
+        self.scripted_func = scripted_func
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, False)
+        self.do_scripted_actions()
+        return self.root_env.get_step_return(skip_observation)
+
+    def reset(self):
+        self.env.reset()
+        self.do_scripted_actions()
+        obs, _, _ = self.root_env.get_state()
+        return obs
+
+    def do_scripted_actions(self):
+        game = self.game
+        action = self.scripted_func(game)
+
+        while action is not None:
+            game.step(action)
+            action = self.scripted_func(game)
