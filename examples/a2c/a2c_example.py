@@ -1,24 +1,19 @@
-import os
-from operator import itemgetter
+from multiprocessing import Process, Pipe
 from typing import Tuple, Iterable
 
-import gym
-from botbowl import BotBowlEnv
-from torch.autograd import Variable
-import torch.optim as optim
-from multiprocessing import Process, Pipe
-from botbowl.ai.layers import *
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
-import sys
-from .a2c_agent import A2CAgent
-from .a2c_env import make_env
-import botbowl
-import random
-import uuid
+import torch.optim as optim
+from torch.autograd import Variable
 
+import botbowl
+# from a2c_agent import A2CAgent
+from a2c_env import make_env
+from botbowl.ai.layers import *
+
+env_name = "botbowl-11"
 
 # Training configuration
 num_steps = 1000000
@@ -31,7 +26,7 @@ value_loss_coef = 0.5
 max_grad_norm = 0.05
 log_interval = 50
 save_interval = 10
-ppcg = False
+ppcg = True
 
 
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
@@ -313,10 +308,10 @@ def main():
 
     env = make_env()
     env.reset()
-    obs, _, _, info = env.get_state()
-    spatial_obs_space = obs.shape
-    non_spatial_obs_space = info['non_spatial_obs'].shape
-    action_space = len(info['action_mask'])
+    spat_obs, non_spat_obs, action_mask = env.get_state()
+    spatial_obs_space = spat_obs.shape
+    non_spatial_obs_space = non_spat_obs.shape[0]
+    action_space = len(action_mask)
 
     # MODEL
     ac_agent = CNNPolicy(spatial_obs_space,
@@ -339,9 +334,11 @@ def main():
     envs = VecEnv([make_env() for _ in range(num_processes)])
     spatial_obs, non_spatial_obs, action_masks, reward, tds_scored, tds_opp_scored, done = envs.reset(difficulty)
 
+
+
     # Add obs to memory
-    memory.spatial_obs[0].copy_(spatial_obs)
-    memory.non_spatial_obs[0].copy_(non_spatial_obs)
+    memory.spatial_obs[0].copy_(torch.from_numpy(spatial_obs))
+    memory.non_spatial_obs[0].copy_(torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)))
 
     # Variables for storing stats
     all_updates = 0
@@ -370,13 +367,14 @@ def main():
     selfplay_next_save = selfplay_save_steps
     selfplay_next_swap = selfplay_swap_steps
     selfplay_models = 0
+    """
     if selfplay:
         model_name = f"{exp_id}_selfplay_0.nn"
         model_path = os.path.join(model_dir, model_name)
         torch.save(ac_agent, model_path)
         envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
         selfplay_models += 1
-
+    """
     while all_steps < num_steps:
 
         for step in range(steps_per_update):
@@ -388,7 +386,7 @@ def main():
                 Variable(memory.non_spatial_obs[step]),
                 Variable(action_masks))
 
-            action_objects = map(itemgetter(0), actions)
+            action_objects = (action[0] for action in actions.numpy())
 
             spatial_obs, non_spatial_obs, action_masks, shaped_reward, tds_scored, tds_opp_scored, done = envs.step(action_objects, difficulty=difficulty)
 
@@ -424,8 +422,8 @@ def main():
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
             shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
 
-            memory.insert(step, spatial_obs, non_spatial_obs,
-                          actions.data, values.data, shaped_reward, masks, action_masks)
+            memory.insert(step, torch.from_numpy(spatial_obs), torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)),
+                          actions.data, values.data, shaped_reward, masks, torch.from_numpy(action_masks))
 
         next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
 
@@ -484,6 +482,7 @@ def main():
             selfplay_models += 1
 
         # Self-play swap
+        """
         if selfplay and all_steps >= selfplay_next_swap:
             selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
             lower = max(0, selfplay_models-1-(selfplay_window-1))
@@ -492,7 +491,7 @@ def main():
             model_path = os.path.join(model_dir, model_name)
             print(f"Swapping opponent to {model_path}")
             envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
-
+        """
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
             td_rate = np.mean(episode_tds)

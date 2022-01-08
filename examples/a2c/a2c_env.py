@@ -75,5 +75,4 @@ class A2C_Reward:
             self.last_ball_team = None
             self.last_ball_x = None
 
-
-class
+        return r
