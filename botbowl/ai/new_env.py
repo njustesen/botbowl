@@ -376,7 +376,10 @@ class NewBotBowlEnv(gym.Env):
         """Returns true if x-axis should be flipped"""
         return self.game.active_team is self.game.state.away_team
 
-    def _compute_action(self, action_idx: int, flip: bool) -> List[Action]:
+    def _compute_action(self, action_idx: Optional[int], flip: bool) -> List[Optional[Action]]:
+        if action_idx is None:
+            return [None]
+
         if action_idx < len(self.env_conf.simple_action_types):
             if action_idx >= len(self.env_conf.simple_action_types) - len(self.env_conf.formations):
                 formation = self.env_conf.simple_action_types[action_idx]
