@@ -1,19 +1,38 @@
+from functools import partial
 from multiprocessing import Process, Pipe
+import random
 from typing import Tuple, Iterable
 
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
 
 import botbowl
+from botbowl.ai.new_env import NewBotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper
 from a2c_agent import A2CAgent, CNNPolicy
-from a2c_env import make_env
+from a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
-env_name = "botbowl-11"
+# Environment
+env_size = 11
+pathfinding_enabled = False
+env_name = f"botbowl-{env_size}"
+env_conf = EnvConf(size=env_size)
+
+
+make_agent_from_model = partial(A2CAgent,
+                                env_conf=env_conf,
+                                scripted_func=a2c_scripted_actions)
+
+
+def make_env():
+    env = NewBotBowlEnv(env_conf)
+    #env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    env = RewardWrapper(env, home_reward_func=A2C_Reward())
+    return env
+
 
 # Training configuration
 num_steps = 1000000
@@ -101,7 +120,7 @@ class Memory(object):
             self.returns[step] = self.returns[step + 1] * gamma * self.masks[step] + self.rewards[step]
 
 
-def worker(remote, parent_remote, env, worker_id):
+def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
     parent_remote.close()
 
     steps = 0
@@ -143,7 +162,7 @@ def worker(remote, parent_remote, env, worker_id):
                 if steps >= reset_steps:
                     print("Max. number of steps exceeded! Consider increasing the number.")
                     done = True
-                #env.opp_actor = next_opp
+                env.root_env.away_agent = next_opp
                 env.reset()
                 spatial_obs, non_spatial_obs, action_mask = env.get_state()
                 steps = 0
@@ -155,7 +174,7 @@ def worker(remote, parent_remote, env, worker_id):
             steps = 0
             tds = 0
             tds_opp = 0
-            env.opp_actor = next_opp
+            env.root_env.away_agent = next_opp
             env.reset()
             spatial_obs, non_spatial_obs, action_mask = env.get_state()
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
@@ -219,8 +238,6 @@ class VecEnv:
 
 
 def main():
-    assert not selfplay, "Self play is not implemented yet"
-
     env = make_env()
     env.reset()
     spat_obs, non_spat_obs, action_mask = env.get_state()
@@ -282,14 +299,14 @@ def main():
     selfplay_next_save = selfplay_save_steps
     selfplay_next_swap = selfplay_swap_steps
     selfplay_models = 0
-    """
+
     if selfplay:
         model_name = f"{exp_id}_selfplay_0.nn"
         model_path = os.path.join(model_dir, model_name)
         torch.save(ac_agent, model_path)
-        envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
+        envs.swap(make_agent_from_model(name=model_name, filename=model_path))
         selfplay_models += 1
-    """
+
     while all_steps < num_steps:
 
         for step in range(steps_per_update):
@@ -397,7 +414,7 @@ def main():
             selfplay_models += 1
 
         # Self-play swap
-        """
+
         if selfplay and all_steps >= selfplay_next_swap:
             selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
             lower = max(0, selfplay_models-1-(selfplay_window-1))
@@ -405,8 +422,8 @@ def main():
             model_name = f"{exp_id}_selfplay_{i}.nn"
             model_path = os.path.join(model_dir, model_name)
             print(f"Swapping opponent to {model_path}")
-            envs.swap(A2CAgent(name=model_name, env_name=env_name, filename=model_path))
-        """
+            envs.swap(make_agent_from_model(name=model_name, filename=model_path))
+
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
             td_rate = np.mean(episode_tds)

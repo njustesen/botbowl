@@ -1,15 +1,8 @@
+from pprint import pprint
+
 from botbowl import OutcomeType, Game
-from botbowl.ai.new_env import NewBotBowlEnv, ScriptedActionWrapper, RewardWrapper
-
-env_size = 11
-pathfinding_enabled = False
-
-
-def make_env():
-    env = NewBotBowlEnv()
-    # env = ScriptedActionWrapper(env, scripted_func)
-    env = RewardWrapper(env, home_reward_func=A2C_Reward())
-    return env
+import botbowl.core.procedure as procedure
+from examples.scripted_bot_example import MyScriptedBot
 
 
 class A2C_Reward:
@@ -76,3 +69,12 @@ class A2C_Reward:
             self.last_ball_x = None
 
         return r
+
+
+def a2c_scripted_actions(game: Game):
+    proc_type = type(game.get_procedure())
+    if proc_type is procedure.Block:
+        # noinspection PyTypeChecker
+        return MyScriptedBot.block(self=None, game=game)
+
+    return None

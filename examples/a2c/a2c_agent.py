@@ -7,7 +7,8 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 import botbowl
-from botbowl import BotBowlEnv, NewBotBowlEnv
+from botbowl.ai.new_env import EnvConf, NewBotBowlEnv
+from a2c_env import a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Architecture
@@ -110,14 +111,13 @@ class A2CAgent(Agent):
     env: NewBotBowlEnv
 
     def __init__(self, name,
-                 make_env_func: Callable[[], NewBotBowlEnv],
+                 env_conf: EnvConf,
                  scripted_func: Callable[[Game], Optional[Action]] = None,
                  filename=model_filename,
                  exclude_pathfinding_moves=True):
         super().__init__(name)
         self.my_team = None
-        self.make_env_func = make_env_func
-        self.env = make_env_func()
+        self.env = NewBotBowlEnv(env_conf)
         self.exclude_pathfinding_moves = exclude_pathfinding_moves
 
         self.scripted_func = scripted_func
@@ -183,8 +183,16 @@ class A2CAgent(Agent):
         pass
 
 
+def _make_my_a2c_bot(name):
+    return A2CAgent(name=name,
+                    make_env_func=NewBotBowlEnv,
+                    scripted_func=a2c_scripted_actions,
+                    filename=model_filename,
+                    exclude_pathfinding_moves=True)
+
+
 # Register the bot to the framework
-botbowl.register_bot('my-a2c-bot', A2CAgent)
+botbowl.register_bot('my-a2c-bot', _make_my_a2c_bot)
 
 
 def main():

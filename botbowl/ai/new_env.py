@@ -18,9 +18,17 @@ from itertools import count
 from copy import deepcopy
 
 
-def take(n: int, iterable: Iterable) -> None:
+def take(n: int, iterable) -> None:
     for _ in range(n):
         next(iterable)
+
+
+formation_defaults = {1: ['def_spread.txt', 'def_zone.txt', 'off_line.txt', 'off_wedge.txt'],
+                      3: ['def_spread.txt', 'off_wedge.txt'],
+                      5: ['def_spread.txt', 'off_wedge.txt'],
+                      7: ['def_spread.txt', 'off_wedge.txt'],
+                      11: ['def_spread.txt', 'def_zone.txt', 'off_line.txt', 'off_wedge.txt']
+                      }
 
 
 class EnvConf:
@@ -35,12 +43,8 @@ class EnvConf:
     def __init__(self, size=11, extra_formation_paths: Optional[Iterable[str]] = None):
 
         self.config: Configuration = load_config(f"gym-{size}")
-        formations_paths = [
-            'def_spread.txt',
-            'def_zone.txt',
-            'off_line.txt',
-            'off_wedge.txt'
-        ]
+        formations_paths = formation_defaults[size]
+
         if extra_formation_paths is not None:
             formations_paths.extend(extra_formation_paths)
 
@@ -67,7 +71,7 @@ class EnvConf:
             ActionType.USE_BRIBE,
             ActionType.DONT_USE_BRIBE,
         ]
-        self.formations = [load_formation(formation, size=11) for formation in formations_paths]
+        self.formations = [load_formation(formation, size=size) for formation in formations_paths]
         self.simple_action_types.extend(self.formations)
 
         self.positional_action_types = [
@@ -322,9 +326,9 @@ class NewBotBowlEnv(gym.Env):
 
         return spatial_obs, non_spatial_obs, action_mask
 
-    def step(self, action: int, skip_observation: bool = False):
+    def step(self, action_idx: int, skip_observation: bool = False):
         # Convert to Action object
-        action_objects = self._compute_action(action, flip=self._flip_x_axis())
+        action_objects = self._compute_action(action_idx, flip=self._flip_x_axis())
 
         for action in action_objects:
             self.game.step(action)
@@ -354,7 +358,7 @@ class NewBotBowlEnv(gym.Env):
                          home_team=deepcopy(self.home_team),
                          away_team=deepcopy(self.away_team),
                          home_agent=NewBotBowlEnv._create_agent(self.home_agent),
-                         away_agent=NewBotBowlEnv._create_agent(self.home_agent),
+                         away_agent=NewBotBowlEnv._create_agent(self.away_agent),
                          config=self.env_conf.config,
                          ruleset=self.ruleset,
                          seed=seed)
@@ -410,12 +414,16 @@ class NewBotBowlEnv(gym.Env):
 
     @staticmethod
     def _create_agent(agent_option) -> Agent:
-        if agent_option == "human":
+        if isinstance(agent_option, Agent):
+            return agent_option
+        elif agent_option == "human":
             return Agent("Gym Learner", human=True)
         elif agent_option == "random":
             return RandomBot("Random bot")
         elif agent_option in bot_registry.list():
             return bot_registry.make(agent_option)
+        elif isinstance(agent_option, Agent):
+            return agent_option
         else:
             raise AttributeError(f"Not regonized bot name: {agent_option}")
 
@@ -429,7 +437,7 @@ class BotBowlWrapper:
     def get_state(self):
         return self.env.get_state()
 
-    def step(self, action: int, skip_observation: bool = False):
+    def step(self, action: Optional[int], skip_observation: bool = False):
         return self.env.step(action, skip_observation)
 
     def render(self, mode='human'):
@@ -487,7 +495,8 @@ class ScriptedActionWrapper(BotBowlWrapper):
 
     def step(self, action: int, skip_observation: bool = False):
         self.env.step(action, False)
-        self.do_scripted_actions()
+        if not self.game.state.game_over:
+            self.do_scripted_actions()
         return self.root_env.get_step_return(skip_observation)
 
     def reset(self):
