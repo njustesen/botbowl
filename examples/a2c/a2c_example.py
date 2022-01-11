@@ -93,7 +93,7 @@ class Memory(object):
         self.actions = torch.zeros(steps_per_update, num_processes, action_shape)
         self.actions = self.actions.long()
         self.masks = torch.ones(steps_per_update + 1, num_processes, 1)
-        self.action_masks = torch.zeros(steps_per_update + 1, num_processes, action_space, dtype=torch.uint8)
+        self.action_masks = torch.zeros(steps_per_update + 1, num_processes, action_space, dtype=torch.bool)
 
     def cuda(self):
         self.spatial_obs = self.spatial_obs.cuda()
@@ -106,13 +106,13 @@ class Memory(object):
         self.action_masks = self.action_masks.cuda()
 
     def insert(self, step, spatial_obs, non_spatial_obs, action, value_pred, reward, mask, action_masks):
-        self.spatial_obs[step + 1].copy_(spatial_obs)
-        self.non_spatial_obs[step + 1].copy_(non_spatial_obs)
+        self.spatial_obs[step + 1].copy_(torch.from_numpy(spatial_obs).float())
+        self.non_spatial_obs[step + 1].copy_(torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)).float())
         self.actions[step].copy_(action)
         self.value_predictions[step].copy_(value_pred)
-        self.rewards[step].copy_(reward)
+        self.rewards[step].copy_(torch.from_numpy(np.expand_dims(reward, 1)).float())
         self.masks[step].copy_(mask)
-        self.action_masks[step].copy_(action_masks)
+        self.action_masks[step].copy_(torch.from_numpy(action_masks))
 
     def compute_returns(self, next_value, gamma):
         self.returns[-1] = next_value
@@ -264,11 +264,13 @@ def main():
 
     # Reset environments
     envs = VecEnv([make_env() for _ in range(num_processes)])
-    spatial_obs, non_spatial_obs, action_masks, reward, tds_scored, tds_opp_scored, done = envs.reset(difficulty)
+
+    spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
+    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
 
     # Add obs to memory
-    memory.spatial_obs[0].copy_(torch.from_numpy(spatial_obs))
-    memory.non_spatial_obs[0].copy_(torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)))
+    memory.spatial_obs[0].copy_(spatial_obs)
+    memory.non_spatial_obs[0].copy_(non_spatial_obs)
 
     # Variables for storing stats
     all_updates = 0
@@ -309,8 +311,6 @@ def main():
 
         for step in range(steps_per_update):
 
-            action_masks = torch.tensor(action_masks, dtype=torch.bool)
-
             values, actions = ac_agent.act(
                 Variable(memory.spatial_obs[step]),
                 Variable(memory.non_spatial_obs[step]),
@@ -350,10 +350,9 @@ def main():
 
             # insert the step taken into memory
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
-            shaped_reward = torch.from_numpy(np.expand_dims(np.stack(shaped_reward), 1)).float()
 
-            memory.insert(step, torch.from_numpy(spatial_obs), torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)),
-                          actions.data, values.data, shaped_reward, masks, torch.from_numpy(action_masks))
+            memory.insert(step, spatial_obs, non_spatial_obs, actions.data, values.data, shaped_reward, masks, action_masks)
+            action_masks = memory.action_masks[step]
 
         next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
 

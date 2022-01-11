@@ -322,7 +322,8 @@ class NewBotBowlEnv(gym.Env):
         aa_layer_first_index = len(self.env_conf.layers) - len(self.env_conf.positional_action_types)
         action_mask = np.concatenate((aa_types[:num_simple_actions],
                                       spatial_obs[aa_layer_first_index:].flatten()))
-        assert 1.0 in action_mask
+        action_mask = action_mask > 0.0
+        assert True in action_mask
 
         return spatial_obs, non_spatial_obs, action_mask
 

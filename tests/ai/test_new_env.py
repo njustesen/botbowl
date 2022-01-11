@@ -4,7 +4,7 @@ from random import randint
 from typing import Optional
 
 from botbowl import Action, Square, Formation, Game, ActionType
-from botbowl.ai.new_env import NewBotBowlEnv, ScriptedActionWrapper, RewardWrapper
+from botbowl.ai.new_env import NewBotBowlEnv, ScriptedActionWrapper, RewardWrapper, EnvConf
 import numpy as np
 
 from examples.a2c.a2c_env import A2C_Reward
@@ -72,11 +72,13 @@ def test_reward_and_scripted_wrapper():
         else:
             return None
 
-    env = NewBotBowlEnv()
+    env = NewBotBowlEnv(EnvConf(size=1))
     #env = ScriptedActionWrapper(env, scripted_func)
     env = RewardWrapper(env, home_reward_func=reward_func)
 
     rewards = []
+    own_tds = []
+    opp_tds = []
 
     for _ in range(10):
         env.reset()
@@ -86,13 +88,16 @@ def test_reward_and_scripted_wrapper():
         ep_reward = 0.0
 
         while not done:
-            aa = np.where(mask > 0.0)[0]
+            aa = np.where(mask)[0]
             action_idx = np.random.choice(aa, 1)[0]
             obs, reward, done, info = env.step(action_idx)
             ep_reward += reward
             mask = info['action_mask']
 
         rewards.append(ep_reward)
+        own_tds.append(env.game.state.home_team.state.score)
+        opp_tds.append(env.game.state.away_team.state.score)
 
     print("\n\n")
     print(np.mean(rewards))
+    print(f"td rate: {np.mean(own_tds)} vs. {np.mean(opp_tds)}")
