@@ -7,6 +7,8 @@ from botbowl import Action, Square, Formation, Game, ActionType
 from botbowl.ai.new_env import NewBotBowlEnv, ScriptedActionWrapper, RewardWrapper
 import numpy as np
 
+from examples.a2c.a2c_env import A2C_Reward
+
 
 def test_env():
     env = NewBotBowlEnv()
@@ -41,7 +43,7 @@ def test_compute_action():
 
 
 def test_reward_and_scripted_wrapper():
-
+    """
     class RewardFunc():
         def __init__(self):
             self.last_ball_pos_x = None
@@ -56,6 +58,8 @@ def test_reward_and_scripted_wrapper():
             self.last_ball_pos_x = ball_pos_x
             return reward
     reward_func = RewardFunc()
+    """
+    reward_func = A2C_Reward()
 
     def scripted_func(game) -> Optional[Action]:
         available_action_types = [action_choice.action_type for action_choice in game.get_available_actions()]
@@ -69,17 +73,26 @@ def test_reward_and_scripted_wrapper():
             return None
 
     env = NewBotBowlEnv()
-    env = ScriptedActionWrapper(env, scripted_func)
+    #env = ScriptedActionWrapper(env, scripted_func)
     env = RewardWrapper(env, home_reward_func=reward_func)
 
-    env.reset()
+    rewards = []
 
-    done = False
-    reward = None
-    _, _, mask = env.get_state()
+    for _ in range(10):
+        env.reset()
+        done = False
+        _, _, mask = env.get_state()
 
-    while not done:
-        aa = np.where(mask > 0.0)[0]
-        action_idx = np.random.choice(aa, 1)[0]
-        obs, reward, done, info = env.step(action_idx)
-        mask = info['action_mask']
+        ep_reward = 0.0
+
+        while not done:
+            aa = np.where(mask > 0.0)[0]
+            action_idx = np.random.choice(aa, 1)[0]
+            obs, reward, done, info = env.step(action_idx)
+            ep_reward += reward
+            mask = info['action_mask']
+
+        rewards.append(ep_reward)
+
+    print("\n\n")
+    print(np.mean(rewards))

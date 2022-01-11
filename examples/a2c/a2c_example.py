@@ -16,7 +16,7 @@ from a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 11
+env_size = 1
 pathfinding_enabled = False
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size)
@@ -29,7 +29,7 @@ make_agent_from_model = partial(A2CAgent,
 
 def make_env():
     env = NewBotBowlEnv(env_conf)
-    #env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
     env = RewardWrapper(env, home_reward_func=A2C_Reward())
     return env
 
@@ -45,7 +45,7 @@ value_loss_coef = 0.5
 max_grad_norm = 0.05
 log_interval = 50
 save_interval = 10
-ppcg = True
+ppcg = False
 
 
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
@@ -266,8 +266,6 @@ def main():
     envs = VecEnv([make_env() for _ in range(num_processes)])
     spatial_obs, non_spatial_obs, action_masks, reward, tds_scored, tds_opp_scored, done = envs.reset(difficulty)
 
-
-
     # Add obs to memory
     memory.spatial_obs[0].copy_(torch.from_numpy(spatial_obs))
     memory.non_spatial_obs[0].copy_(torch.from_numpy(np.expand_dims(non_spatial_obs, axis=1)))
@@ -434,8 +432,6 @@ def main():
             episode_rewards.clear()
             win_rate = np.mean(wins)
             wins.clear()
-            #mean_value_loss = np.mean(value_losses)
-            #mean_policy_loss = np.mean(policy_losses)    
             
             log_updates.append(all_updates)
             log_episode.append(all_episodes)
@@ -446,9 +442,9 @@ def main():
             log_mean_reward.append(mean_reward)
             log_difficulty.append(difficulty)
 
-            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, TD rate opp: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
-                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
-
+            log = "Upd: {}, Ep: {}, Win: {:.2f}, TD: {:.2f}, TD opp: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
+                .format(all_updates, all_episodes, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
+            """
             log_to_file = "{}, {}, {}, {}, {}, {}, {}\n" \
                 .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
 
@@ -457,7 +453,7 @@ def main():
             print(f"Save log to {log_path}")
             with open(log_path, "a") as myfile:
                 myfile.write(log_to_file)
-
+            """
             print(log)
 
             episodes = 0
