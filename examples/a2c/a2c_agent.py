@@ -39,6 +39,7 @@ class CNNPolicy(nn.Module):
         self.critic = nn.Linear(hidden_nodes, 1)
         self.actor = nn.Linear(hidden_nodes, actions)
 
+        self.train()
         self.reset_parameters()
 
     def reset_parameters(self):
