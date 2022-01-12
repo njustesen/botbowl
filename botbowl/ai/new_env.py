@@ -54,7 +54,7 @@ class EnvConf:
             ActionType.TAILS,
             ActionType.KICK,
             ActionType.RECEIVE,
-            # ActionType.END_SETUP,
+            ActionType.END_SETUP,
             ActionType.END_PLAYER_TURN,
             ActionType.USE_REROLL,
             ActionType.DONT_USE_REROLL,
@@ -80,18 +80,18 @@ class EnvConf:
             ActionType.FOLLOW_UP,
             ActionType.MOVE,
             ActionType.BLOCK,
-            #ActionType.PASS,
-            #ActionType.FOUL,
-            #ActionType.HANDOFF,
-            #ActionType.LEAP,
-            #ActionType.STAB,
+            ActionType.PASS,
+            ActionType.FOUL,
+            ActionType.HANDOFF,
+            ActionType.LEAP,
+            ActionType.STAB,
             ActionType.SELECT_PLAYER,
             ActionType.START_MOVE,
             ActionType.START_BLOCK,
             ActionType.START_BLITZ,
-            #ActionType.START_PASS,
-            #ActionType.START_FOUL,
-            #ActionType.START_HANDOFF
+            ActionType.START_PASS,
+            ActionType.START_FOUL,
+            ActionType.START_HANDOFF
         ]
 
         self.action_types = self.simple_action_types + self.positional_action_types
