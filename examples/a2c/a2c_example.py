@@ -123,7 +123,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
     steps = 0
     tds = 0
     tds_opp = 0
-    next_opp = botbowl.make_bot('random')
+    #next_opp = botbowl.make_bot('random')
 
     while True:
         command, data = remote.recv()
@@ -158,8 +158,8 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                 # If we get stuck or something - reset the environment
                 if steps >= reset_steps:
                     print("Max. number of steps exceeded! Consider increasing the number.")
-                    done = True
-                env.root_env.away_agent = next_opp
+                done = True
+                #env.root_env.away_agent = next_opp
                 env.reset()
                 spatial_obs, non_spatial_obs, action_mask = env.get_state()
                 steps = 0
@@ -171,7 +171,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             steps = 0
             tds = 0
             tds_opp = 0
-            env.root_env.away_agent = next_opp
+            #env.root_env.away_agent = next_opp
             env.reset()
             spatial_obs, non_spatial_obs, action_mask = env.get_state()
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
