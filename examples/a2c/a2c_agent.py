@@ -93,10 +93,14 @@ class CNNPolicy(nn.Module):
         actions_mask = actions_mask.view(-1, 1, actions_mask.shape[2]).squeeze().bool()
         policy[~actions_mask] = float('-inf')
         log_probs = F.log_softmax(policy, dim=1)
+        assert all(float('-inf') != log_probs.flatten()), '"-inf" in log_probs'
+
         probs = F.softmax(policy, dim=1)
         action_log_probs = log_probs.gather(1, actions)
         log_probs = torch.where(log_probs[None, :] == float('-inf'), torch.tensor(0.), log_probs)
         dist_entropy = -(log_probs * probs).sum(-1).mean()
+
+        assert all(float('-inf') != action_log_probs.flatten()), '"-inf" in action_log_probs'
         return action_log_probs, value, dist_entropy
 
     def get_action_probs(self, spatial_input, non_spatial_input, action_mask):
