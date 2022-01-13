@@ -36,8 +36,8 @@ def make_env():
 
 # Training configuration
 num_steps = 1000000
-num_processes = 2
-steps_per_update = 3
+num_processes = 8
+steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
 entropy_coef = 0.01
@@ -109,7 +109,7 @@ class Memory(object):
         self.actions[step].copy_(action)
         self.rewards[step].copy_(torch.from_numpy(np.expand_dims(reward, 1)).float())
         self.masks[step].copy_(mask)
-        self.action_masks[step].copy_(torch.from_numpy(action_masks))
+        self.action_masks[step+1].copy_(torch.from_numpy(action_masks))
 
     def compute_returns(self, next_value, gamma):
         self.returns[-1] = next_value
@@ -268,6 +268,7 @@ def main():
     # Add obs to memory
     memory.spatial_obs[0].copy_(spatial_obs)
     memory.non_spatial_obs[0].copy_(non_spatial_obs)
+    memory.action_masks[0].copy_(action_masks)
 
     # Variables for storing stats
     all_updates = 0
@@ -311,7 +312,7 @@ def main():
             values, actions = ac_agent.act(
                 Variable(memory.spatial_obs[step]),
                 Variable(memory.non_spatial_obs[step]),
-                Variable(action_masks))
+                Variable(memory.action_masks[step]))
 
             action_objects = (action[0] for action in actions.numpy())
 
@@ -349,7 +350,6 @@ def main():
             masks = torch.FloatTensor([[0.0] if done_ else [1.0] for done_ in done])
 
             memory.insert(step, spatial_obs, non_spatial_obs, actions.data, shaped_reward, masks, action_masks)
-            action_masks = memory.action_masks[step]
 
         next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
 
@@ -389,6 +389,7 @@ def main():
 
         memory.non_spatial_obs[0].copy_(memory.non_spatial_obs[-1])
         memory.spatial_obs[0].copy_(memory.spatial_obs[-1])
+        memory.action_masks[0].copy_(memory.action_masks[-1])
 
         # Updates
         all_updates += 1

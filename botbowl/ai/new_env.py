@@ -51,14 +51,14 @@ class EnvConf:
         self.simple_action_types = [
             ActionType.START_GAME,
             ActionType.HEADS,
-            #ActionType.TAILS,
-            #ActionType.KICK,
+            ActionType.TAILS,
+            ActionType.KICK,
             ActionType.RECEIVE,
-            #ActionType.END_SETUP,
+            ActionType.END_SETUP,
             ActionType.END_PLAYER_TURN,
-            #ActionType.USE_REROLL,
+            ActionType.USE_REROLL,
             ActionType.DONT_USE_REROLL,
-            #ActionType.USE_SKILL,
+            ActionType.USE_SKILL,
             ActionType.DONT_USE_SKILL,
             ActionType.END_TURN,
             ActionType.STAND_UP,
@@ -68,7 +68,7 @@ class EnvConf:
             ActionType.SELECT_DEFENDER_STUMBLES,
             ActionType.SELECT_DEFENDER_DOWN,
             ActionType.SELECT_NONE,
-            #ActionType.USE_BRIBE,
+            ActionType.USE_BRIBE,
             ActionType.DONT_USE_BRIBE,
         ]
         self.formations = [load_formation(formation, size=size) for formation in formations_paths]
@@ -76,22 +76,22 @@ class EnvConf:
 
         self.positional_action_types = [
             ActionType.PLACE_BALL,
-            #ActionType.PUSH,
-            #ActionType.FOLLOW_UP,
+            ActionType.PUSH,
+            ActionType.FOLLOW_UP,
             ActionType.MOVE,
-            #ActionType.BLOCK,
-            #ActionType.PASS,
-            #ActionType.FOUL,
-            #ActionType.HANDOFF,
-            #ActionType.LEAP,
-            #ActionType.STAB,
+            ActionType.BLOCK,
+            ActionType.PASS,
+            ActionType.FOUL,
+            ActionType.HANDOFF,
+            ActionType.LEAP,
+            ActionType.STAB,
             ActionType.SELECT_PLAYER,
             ActionType.START_MOVE,
-            #ActionType.START_BLOCK,
-            #ActionType.START_BLITZ,
-            #ActionType.START_PASS,
-            #ActionType.START_FOUL,
-            #ActionType.START_HANDOFF
+            ActionType.START_BLOCK,
+            ActionType.START_BLITZ,
+            ActionType.START_PASS,
+            ActionType.START_FOUL,
+            ActionType.START_HANDOFF
         ]
 
         self.action_types = self.simple_action_types + self.positional_action_types
