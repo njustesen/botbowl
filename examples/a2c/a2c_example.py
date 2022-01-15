@@ -22,9 +22,7 @@ env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size)
 
 
-make_agent_from_model = partial(A2CAgent,
-                                env_conf=env_conf,
-                                scripted_func=a2c_scripted_actions)
+make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
 
 
 def make_env():
@@ -254,11 +252,10 @@ def main():
 
     # Reset environments
     envs = VecEnv([make_env() for _ in range(num_processes)])
-
     spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
-    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
 
     # Add obs to memory
+    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
     memory.spatial_obs[0].copy_(spatial_obs)
     memory.non_spatial_obs[0].copy_(non_spatial_obs)
     memory.action_masks[0].copy_(action_masks)
@@ -344,6 +341,9 @@ def main():
 
             memory.insert(step, spatial_obs, non_spatial_obs, actions.data, shaped_reward, masks, action_masks)
 
+        # -- TRAINING -- #
+
+        # bootstrap next value
         next_value = ac_agent(Variable(memory.spatial_obs[-1], requires_grad=False), Variable(memory.non_spatial_obs[-1], requires_grad=False))[0].data
 
         # Compute returns
@@ -402,7 +402,6 @@ def main():
             selfplay_models += 1
 
         # Self-play swap
-
         if selfplay and all_steps >= selfplay_next_swap:
             selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
             lower = max(0, selfplay_models-1-(selfplay_window-1))
@@ -432,9 +431,9 @@ def main():
             log_mean_reward.append(mean_reward)
             log_difficulty.append(difficulty)
 
-            log = "Upd: {}, Ep: {}, Win: {:.2f}, TD: {:.2f}, TD opp: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
-                .format(all_updates, all_episodes, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
-            """
+            log = "Updates: {}, Episodes: {}, Timesteps: {}, Win rate: {:.2f}, TD rate: {:.2f}, TD rate opp: {:.2f}, Mean reward: {:.3f}, Difficulty: {:.2f}" \
+                .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
+
             log_to_file = "{}, {}, {}, {}, {}, {}, {}\n" \
                 .format(all_updates, all_episodes, all_steps, win_rate, td_rate, td_rate_opp, mean_reward, difficulty)
 
@@ -443,7 +442,7 @@ def main():
             print(f"Save log to {log_path}")
             with open(log_path, "a") as myfile:
                 myfile.write(log_to_file)
-            """
+
             print(log)
 
             episodes = 0
