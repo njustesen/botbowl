@@ -327,7 +327,7 @@ class NewBotBowlEnv(gym.Env):
 
         return spatial_obs, non_spatial_obs, action_mask
 
-    def step(self, action_idx: int, skip_observation: bool = False):
+    def step(self, action_idx: Optional[int], skip_observation: bool = False):
         # Convert to Action object
         action_objects = self._compute_action(action_idx, flip=self._flip_x_axis())
 
@@ -465,6 +465,14 @@ class BotBowlWrapper:
     def game(self) -> Game:
         return self.root_env.game
 
+    def get_wrapper_with_type(self, wrapper_type) -> Optional['BotBowlWrapper']:
+        wrapper = self
+        while isinstance(wrapper, BotBowlWrapper):
+            if type(wrapper) is wrapper_type:
+                return wrapper
+            wrapper = wrapper.env
+        return None
+
 
 class RewardWrapper(BotBowlWrapper):
     GameToFloat = Callable[[Game], float]  # Type alias
@@ -495,9 +503,8 @@ class ScriptedActionWrapper(BotBowlWrapper):
         self.scripted_func = scripted_func
 
     def step(self, action: int, skip_observation: bool = False):
-        self.env.step(action, False)
-        if not self.game.state.game_over:
-            self.do_scripted_actions()
+        self.env.step(action, skip_observation=True)
+        self.do_scripted_actions()
         return self.root_env.get_step_return(skip_observation)
 
     def reset(self):
@@ -508,8 +515,32 @@ class ScriptedActionWrapper(BotBowlWrapper):
 
     def do_scripted_actions(self):
         game = self.game
-        action = self.scripted_func(game)
-
-        while action is not None:
-            game.step(action)
+        while not game.state.game_over and len(game.state.stack.items)>0:
             action = self.scripted_func(game)
+            if action is None:
+                break
+            game.step(action)
+
+
+class PPCGWrapper(BotBowlWrapper):
+    difficulty: float
+
+    def __init__(self, env, difficulty=1.0):
+        super().__init__(env)
+        self.difficulty = difficulty
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, skip_observation=True)
+
+        if self.difficulty < 1.0:
+            game = self.game
+            ball_carrier = game.get_ball_carrier()
+            if ball_carrier and ball_carrier.team == game.state.home_team:
+                extra_endzone_squares = int((1.0 - self.difficulty) * 25.0)
+                distance_to_endzone = ball_carrier.position.x - 1
+                if distance_to_endzone <= extra_endzone_squares:
+                    game.state.stack.push(Touchdown(game, ball_carrier))
+                    game.set_available_actions()
+                    self.env.step(None, skip_observation=True)
+
+        return self.root_env.get_step_return(skip_observation=skip_observation)

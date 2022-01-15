@@ -10,7 +10,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 import botbowl
-from botbowl.ai.new_env import NewBotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper
+from botbowl.ai.new_env import NewBotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper
 from a2c_agent import A2CAgent, CNNPolicy
 from a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
@@ -29,7 +29,9 @@ make_agent_from_model = partial(A2CAgent,
 
 def make_env():
     env = NewBotBowlEnv(env_conf)
-    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    if ppcg:
+        env = PPCGWrapper(env)
+    env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
     env = RewardWrapper(env, home_reward_func=A2C_Reward())
     return env
 
@@ -125,30 +127,21 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
     tds_opp = 0
     #next_opp = botbowl.make_bot('random')
 
+    ppcg_wrapper: Optional[PPCGWrapper] = env.get_wrapper_with_type(PPCGWrapper)
+
     while True:
         command, data = remote.recv()
         if command == 'step':
             steps += 1
             action, dif = data[0], data[1]
+            if ppcg_wrapper is not None:
+                ppcg_wrapper.difficulty = dif
+
             spatial_obs, reward, done, info = env.step(action)
             non_spatial_obs = info['non_spatial_obs']
             action_mask = info['action_mask']
 
-            game: Game = env.game
-
-            # PPCG
-            if dif < 1.0:
-                ball_carrier = game.get_ball_carrier()
-                if ball_carrier and ball_carrier.team == env.game.state.home_team:
-                    extra_endzone_squares = int((1.0 - dif) * 25.0)
-                    distance_to_endzone = ball_carrier.position.x - 1
-                    if distance_to_endzone <= extra_endzone_squares:
-                        game.state.stack.push(Touchdown(env.game, ball_carrier))
-                        game.set_available_actions()
-                        spatial_obs, reward, done, info = env.step(None)
-                        non_spatial_obs = info['non_spatial_obs']
-                        action_mask = info['action_mask']
-
+            game = env.game
             tds_scored = game.state.home_team.state.score - tds
             tds_opp_scored = game.state.away_team.state.score - tds_opp
             tds = game.state.home_team.state.score
