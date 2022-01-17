@@ -1,6 +1,7 @@
 from typing import Callable
 
 import gym
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -167,12 +168,16 @@ class A2CAgent(Agent):
         if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
             self._filter_actions()
 
-        spatial_obs, non_spatial_obs, action_mask = tuple(map(torch.from_numpy, self.env.get_state()))
+        def transform_array(array: np.ndarray):
+            return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
+
+        spatial_obs, non_spatial_obs, action_mask = tuple(map(transform_array, self.env.get_state()))
+        non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
 
         _, actions = self.policy.act(
-            Variable(spatial_obs),
-            Variable(non_spatial_obs),
-            Variable(action_mask))
+            Variable(spatial_obs, requires_grad=False),
+            Variable(non_spatial_obs, requires_grad=False),
+            Variable(action_mask, requires_grad=False))
 
         action_idx = actions[0]
         action_objects = self.env._compute_action(action_idx, flip=self.env._flip_x_axis())
@@ -186,7 +191,7 @@ class A2CAgent(Agent):
 
 def _make_my_a2c_bot(name):
     return A2CAgent(name=name,
-                    make_env_func=NewBotBowlEnv,
+                    env_conf=EnvConf(size=11),
                     scripted_func=a2c_scripted_actions,
                     filename=model_filename,
                     exclude_pathfinding_moves=True)
