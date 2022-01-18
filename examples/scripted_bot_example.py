@@ -324,7 +324,7 @@ class MyScriptedBot(ProcBot):
                             best_path = path
                             best_distance = distance_to_endzone
                     if best_path is not None:
-                        self.actions.extend(path_to_move_actions(game, best_path))
+                        self.actions.extend(path_to_move_actions(game, best_path, do_assertions=False))
                         #print(f"- Move ball carrier {pickup_player.role.name}")
                 return
 
@@ -353,8 +353,7 @@ class MyScriptedBot(ProcBot):
                     if not player.state.up:
                         self.actions.append(Action(ActionType.STAND_UP))
                     self.actions.extend(path_to_move_actions(game, best_path))
-
-                    print(f"Move receiver {player.role.name}")
+                    #print(f"Move receiver {player.role.name}")
                     return
 
         #print("6. Blitz with open block players")
@@ -735,8 +734,11 @@ def main():
     home = botbowl.load_team_by_filename("human", ruleset)
     away = botbowl.load_team_by_filename("human", ruleset)
 
+    num_games = 10
+    wins = 0
+    tds = 0
     # Play 10 games
-    for i in range(10):
+    for i in range(num_games):
         home_agent = botbowl.make_bot('scripted')
         home_agent.name = "Scripted Bot"
         away_agent = botbowl.make_bot('random')
@@ -751,6 +753,10 @@ def main():
         end = time.time()
         print(end - start)
 
+        wins += 1 if game.get_winning_team() is game.state.home_team else 0
+        tds += game.state.home_team.state.score
+    print(f"won {wins}/{num_games}")
+    print(f"Own TDs per game={tds/num_games}")
 
 if __name__ == "__main__":
     main()
