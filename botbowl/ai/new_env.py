@@ -392,10 +392,10 @@ class NewBotBowlEnv(gym.Env):
             else:
                 return [Action(self.env_conf.simple_action_types[action_idx])]
 
-        spatial_idx = action_idx - len(self.env_conf.simple_action_types)
+        spatial_idx = int(action_idx) - len(self.env_conf.simple_action_types)
         spatial_pos_idx = spatial_idx % self.board_squares
-        spatial_y = int(spatial_pos_idx // self.width)
-        spatial_x = int(spatial_pos_idx % self.width)
+        spatial_y = spatial_pos_idx // self.width
+        spatial_x = spatial_pos_idx % self.width
         if flip:
             spatial_x = self.width - spatial_x - 1
 
