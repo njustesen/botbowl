@@ -16,7 +16,7 @@ from a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 1
+env_size = 3
 pathfinding_enabled = False
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size)
@@ -35,8 +35,8 @@ def make_env():
 
 
 # Training configuration
-num_steps = 1000000
-num_processes = 8
+num_steps = 100000
+num_processes = 2
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
@@ -51,7 +51,7 @@ ppcg = False
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
 # Self-play
-selfplay = False  # Use this to enable/disable self-play
+selfplay = True  # Use this to enable/disable self-play
 selfplay_window = 1
 selfplay_save_steps = int(num_steps / 10)
 selfplay_swap_steps = selfplay_save_steps
@@ -123,7 +123,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
     steps = 0
     tds = 0
     tds_opp = 0
-    #next_opp = botbowl.make_bot('random')
+    next_opp = botbowl.make_bot('random')
 
     ppcg_wrapper: Optional[PPCGWrapper] = env.get_wrapper_with_type(PPCGWrapper)
 
@@ -150,7 +150,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                 if steps >= reset_steps:
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
-                #env.root_env.away_agent = next_opp
+                env.root_env.away_agent = next_opp
                 env.reset()
                 spatial_obs, non_spatial_obs, action_mask = env.get_state()
                 steps = 0
@@ -162,7 +162,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             steps = 0
             tds = 0
             tds_opp = 0
-            #env.root_env.away_agent = next_opp
+            env.root_env.away_agent = next_opp
             env.reset()
             spatial_obs, non_spatial_obs, action_mask = env.get_state()
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
@@ -250,16 +250,6 @@ def main():
     difficulty = 0.0 if ppcg else 1.0
     dif_delta = 0.01
 
-    # Reset environments
-    envs = VecEnv([make_env() for _ in range(num_processes)])
-    spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
-
-    # Add obs to memory
-    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
-    memory.spatial_obs[0].copy_(spatial_obs)
-    memory.non_spatial_obs[0].copy_(non_spatial_obs)
-    memory.action_masks[0].copy_(action_masks)
-
     # Variables for storing stats
     all_updates = 0
     all_episodes = 0
@@ -283,6 +273,9 @@ def main():
     log_mean_reward = []
     log_difficulty = []
 
+    # Create environments
+    envs = VecEnv([make_env() for _ in range(num_processes)])
+
     # self-play
     selfplay_next_save = selfplay_save_steps
     selfplay_next_swap = selfplay_swap_steps
@@ -292,11 +285,27 @@ def main():
         model_name = f"{exp_id}_selfplay_0.nn"
         model_path = os.path.join(model_dir, model_name)
         torch.save(ac_agent, model_path)
-        envs.swap(make_agent_from_model(name=model_name, filename=model_path))
+        self_play_agent = make_agent_from_model(name=model_name, filename=model_path)
+
+        # Test the self play agent
+        a = self_play_agent.act(env.game)
+        assert env.game._is_action_allowed(a)
+        print("It works to initalize and use the self play agent before sending sending it to the workers\n\n")
+
+        envs.swap(self_play_agent)
         selfplay_models += 1
 
-    while all_steps < num_steps:
+    # Reset environments
+    spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
 
+    # Add obs to memory
+    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
+    memory.spatial_obs[0].copy_(spatial_obs)
+    memory.non_spatial_obs[0].copy_(non_spatial_obs)
+    memory.action_masks[0].copy_(action_masks)
+
+    while all_steps < num_steps:
+        print(f"{all_steps=},  {all_episodes=}")
         for step in range(steps_per_update):
 
             values, actions = ac_agent.act(
