@@ -51,7 +51,7 @@ ppcg = False
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
 # Self-play
-selfplay = True  # Use this to enable/disable self-play
+selfplay = False  # Use this to enable/disable self-play
 selfplay_window = 1
 selfplay_save_steps = int(num_steps / 10)
 selfplay_swap_steps = selfplay_save_steps
@@ -305,7 +305,7 @@ def main():
     memory.action_masks[0].copy_(action_masks)
 
     while all_steps < num_steps:
-        print(f"{all_steps=},  {all_episodes=}")
+        # print(f"{all_steps},  {all_episodes}")
         for step in range(steps_per_update):
 
             values, actions = ac_agent.act(

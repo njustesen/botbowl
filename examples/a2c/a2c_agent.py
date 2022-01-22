@@ -57,20 +57,20 @@ class CNNPolicy(nn.Module):
         The forward functions defines how the data flows through the graph (layers)
         """
         # Spatial input through two convolutional layers
-
+        '''
         if spatial_input.shape[0] == 1:
             msg = f"agent.act: "
         else:
             msg = f"training agent: "
 
-        msg += f"{spatial_input.dtype=}, len={sum(map(len, self.conv1.parameters()))}\n"
+        msg += f"{spatial_input.dtype}, len={sum(map(len, self.conv1.parameters()))}\n"
         msg += f"{self.conv1}\n"
         print(msg)
-
+        '''
         x1 = self.conv1(spatial_input)
 
-        if spatial_input.shape[0] == 1:
-            print(f"----IT'S WORKING!!!------")
+        #if spatial_input.shape[0] == 1:
+        #    print(f"----IT'S WORKING!!!------")
 
         x1 = F.relu(x1)
         x1 = self.conv2(x1)
