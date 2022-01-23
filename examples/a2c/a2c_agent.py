@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 import botbowl
 from botbowl.ai.new_env import EnvConf, NewBotBowlEnv
-from a2c_env import a2c_scripted_actions
+from examples.a2c.a2c_env import a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Architecture
@@ -57,21 +57,8 @@ class CNNPolicy(nn.Module):
         The forward functions defines how the data flows through the graph (layers)
         """
         # Spatial input through two convolutional layers
-        '''
-        if spatial_input.shape[0] == 1:
-            msg = f"agent.act: "
-        else:
-            msg = f"training agent: "
 
-        msg += f"{spatial_input.dtype}, len={sum(map(len, self.conv1.parameters()))}\n"
-        msg += f"{self.conv1}\n"
-        print(msg)
-        '''
         x1 = self.conv1(spatial_input)
-
-        #if spatial_input.shape[0] == 1:
-        #    print(f"----IT'S WORKING!!!------")
-
         x1 = F.relu(x1)
         x1 = self.conv2(x1)
         x1 = F.relu(x1)
@@ -132,7 +119,6 @@ class A2CAgent(Agent):
                  filename=model_filename,
                  exclude_pathfinding_moves=True):
         super().__init__(name)
-        self.my_team = None
         self.env = NewBotBowlEnv(env_conf)
         self.exclude_pathfinding_moves = exclude_pathfinding_moves
 
@@ -167,6 +153,10 @@ class A2CAgent(Agent):
                 actions.append(action_choice)
         self.env.game.state.available_actions = actions
 
+    @staticmethod
+    def _update_obs(array: np.ndarray):
+        return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
+
     def act(self, game):
         if len(self.action_queue) > 0:
             return self.action_queue.pop(0)
@@ -182,10 +172,7 @@ class A2CAgent(Agent):
         if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
             self._filter_actions()
 
-        def transform_array(array: np.ndarray):
-            return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
-
-        spatial_obs, non_spatial_obs, action_mask = tuple(map(transform_array, self.env.get_state()))
+        spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
         non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
 
         _, actions = self.policy.act(
@@ -210,34 +197,6 @@ def _make_my_a2c_bot(name):
                     filename=model_filename,
                     exclude_pathfinding_moves=True)
 
-
-def run_a2c_bot():
-    env_conf = EnvConf()
-    env = NewBotBowlEnv(env_conf)
-    env.reset()
-    spat_obs, non_spat_obs, action_mask = env.get_state()
-    spatial_obs_space = spat_obs.shape
-    non_spatial_obs_space = non_spat_obs.shape[0]
-    action_space = len(action_mask)
-
-    # MODEL
-    ac_agent = CNNPolicy(spatial_obs_space,
-                         non_spatial_obs_space,
-                         hidden_nodes=128,
-                         kernels=[32, 64],
-                         actions=action_space)
-
-    model_name = f"botbowl_model_selfplay_0.nn"
-    model_path = os.path.join('/tmp/', model_name)
-    torch.save(ac_agent, model_path)
-    agent1 = A2CAgent(name=model_name, filename=model_path, env_conf=env_conf, scripted_func=a2c_scripted_actions)
-    agent2 = A2CAgent(name=model_name+"2", filename=model_path, env_conf=env_conf, scripted_func=a2c_scripted_actions)
-    print(ac_agent)
-
-    game = env.game
-    game.replace_away_agent(agent1)
-    game.replace_home_agent(agent2)
-    game.step(Action(ActionType.START_GAME))
 
 # Register the bot to the framework
 botbowl.register_bot('my-a2c-bot', _make_my_a2c_bot)
@@ -295,4 +254,4 @@ def main():
 
 
 if __name__ == "__main__":
-    run_a2c_bot()
+    main()

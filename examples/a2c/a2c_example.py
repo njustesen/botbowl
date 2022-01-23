@@ -11,12 +11,12 @@ from torch.autograd import Variable
 
 import botbowl
 from botbowl.ai.new_env import NewBotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper
-from a2c_agent import A2CAgent, CNNPolicy
-from a2c_env import A2C_Reward, a2c_scripted_actions
+from examples.a2c.a2c_agent import A2CAgent, CNNPolicy
+from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 3
+env_size = 1
 pathfinding_enabled = False
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size)
@@ -36,7 +36,7 @@ def make_env():
 
 # Training configuration
 num_steps = 100000
-num_processes = 2
+num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
@@ -231,6 +231,7 @@ def main():
     env = make_env()
     env.reset()
     spat_obs, non_spat_obs, action_mask = env.get_state()
+    del env
     spatial_obs_space = spat_obs.shape
     non_spatial_obs_space = non_spat_obs.shape[0]
     action_space = len(action_mask)
@@ -285,12 +286,6 @@ def main():
         model_path = os.path.join(model_dir, model_name)
         torch.save(ac_agent, model_path)
         self_play_agent = make_agent_from_model(name=model_name, filename=model_path)
-
-        # Test the self play agent
-        a = self_play_agent.act(env.game)
-        assert env.game._is_action_allowed(a)
-        print("It works to initalize and use the self play agent before sending sending it to the workers\n\n")
-
         envs.swap(self_play_agent)
         selfplay_models += 1
 
@@ -304,10 +299,9 @@ def main():
     memory.action_masks[0].copy_(action_masks)
 
     while all_steps < num_steps:
-        # print(f"{all_steps},  {all_episodes}")
         for step in range(steps_per_update):
 
-            values, actions = ac_agent.act(
+            _, actions = ac_agent.act(
                 Variable(memory.spatial_obs[step]),
                 Variable(memory.non_spatial_obs[step]),
                 Variable(memory.action_masks[step]))
