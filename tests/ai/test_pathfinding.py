@@ -52,7 +52,7 @@ def test_gfi(pf):
         moves = player.get_ma() + gfis
         target = Square(position.x + moves, position.y)
         path = pf.get_safest_path(game, player, target)
-        assert len(path.steps) == moves and path.get_last_step()  == target
+        assert len(path.steps) == moves and path.get_last_step() == target
         assert path.prob == (5 / 6) ** gfis
 
 
@@ -212,7 +212,22 @@ def test_all_paths(pf):
     game.put(player, position)
     paths = pf.get_all_paths(game, player)
     assert paths is not None
-    assert len(paths) == ((player.num_moves_left() + 1) * (player.num_moves_left() + 1)) - 1
+    moves_left = player.num_moves_left(include_gfi=True)
+    assert len(paths) == ((moves_left + 1) * (moves_left + 1)) - 1
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_all_paths_down(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    player.state.up = False
+    position = Square(1, 1)
+    game.put(player, position)
+    paths = pf.get_all_paths(game, player)
+    assert paths is not None
+    moves_left = player.num_moves_left(include_gfi=True)
+    assert len(paths) == ((moves_left - 3 + 1) * (moves_left - 3 + 1)) - 1
 
 
 def test_that_unittest_mock_patch_works():

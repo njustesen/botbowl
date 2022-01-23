@@ -88,7 +88,37 @@ def test_take_root_ends_move_turn():
 
     game.step(Action(ActionType.START_MOVE, player=player))
 
-    # check the player turn has not ended
+    # check the player turn has ended
+    assert game.state.active_player is not player
+
+
+def test_taken_root_players_can_stand_up():
+    game = get_game_turn()
+    game.config.pathfinding_enabled = True
+    team = game.get_agent_team(game.actor)
+    team.state.rerolls = 0  # ensure no reroll prompt
+
+    players = game.get_players_on_pitch(team)
+    player = players[1]
+    player.extra_skills = [Skill.TAKE_ROOT]
+    player.state.up = False
+
+    D6.FixedRolls.clear()
+    D6.fix(1)  # fail take root
+
+    game.step(Action(ActionType.START_MOVE, player=player))
+
+    # It's still that players turn
+    assert game.state.active_player is player
+
+    D6.fix(4)  # succeed stand up roll
+
+    game.step(Action(ActionType.STAND_UP, player=player))
+
+    assert player.state.up
+    assert player.state.taken_root
+
+    # Nothing more to do
     assert game.state.active_player is not player
 
 
