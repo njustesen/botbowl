@@ -226,6 +226,8 @@ class VecEnv:
 
 
 def main():
+    envs = VecEnv([make_env() for _ in range(num_processes)])
+
     env = make_env()
     env.reset()
     spat_obs, non_spat_obs, action_mask = env.get_state()
@@ -272,9 +274,6 @@ def main():
     log_td_rate_opp = []
     log_mean_reward = []
     log_difficulty = []
-
-    # Create environments
-    envs = VecEnv([make_env() for _ in range(num_processes)])
 
     # self-play
     selfplay_next_save = selfplay_save_steps
