@@ -12,6 +12,7 @@ from botbowl.core.load import *
 from botbowl.core.procedure import *
 from botbowl.core.forward_model import Trajectory, MovementStep, Step
 from copy import deepcopy
+from typing import Optional, Tuple, List, Union, Any
 
 
 class InvalidActionError(Exception):
@@ -29,20 +30,21 @@ class Game:
     state: GameState
     rnd: np.random.RandomState
     ff_map: Any #??
-    start_time: float
-    end_time: float
-    last_request_time: float
-    last_action_time: float
-    forced_action: Any #??
-    action: Action
+    start_time: Optional[float]
+    end_time: Optional[float]
+    last_request_time: Optional[float]
+    last_action_time: Optional[float]
+    action: Optional[Action]
     trajectory: Trajectory
-    square_shortcut: List[List['Square']]
+    square_shortcut: List[List[Square]]
 
-    def __init__(self, game_id, home_team: Team, away_team: Team,
-                 home_agent: Agent, away_agent: Agent,
+    def __init__(self, game_id, home_team: Team, away_team: Team, home_agent: Agent, away_agent: Agent,
                  config: Optional[Configuration] = None,
-                 arena: Optional[TwoPlayerArena] = None, ruleset: Optional[RuleSet] = None,
-                 state: Optional[GameState] = None, seed=None, record: bool = False):
+                 arena: Optional[TwoPlayerArena] = None,
+                 ruleset: Optional[RuleSet] = None,
+                 state: Optional[GameState] = None,
+                 seed=None,
+                 record: bool = False):
         assert config is not None or arena is not None
         assert config is not None or ruleset is not None
         assert home_team.team_id != away_team.team_id
@@ -60,7 +62,6 @@ class Game:
         self.end_time = None
         self.last_request_time = None
         self.last_action_time = None
-        self.forced_action = None
         self.action = None
         self.trajectory = Trajectory()
         self.square_shortcut = self.state.pitch.squares
@@ -1084,6 +1085,7 @@ class Game:
                                      put=True)
             self.trajectory.log_state_change(log_entry)
         elif type(piece) is Ball:
+            piece: Ball
             self.state.pitch.balls.append(piece)
         elif type(piece) is Bomb:
             self.state.pitch.bomb = piece
@@ -1106,6 +1108,7 @@ class Game:
 
             piece.position = None
         elif type(piece) is Ball:
+            piece: Ball
             self.state.pitch.balls.remove(piece)
         elif type(piece) is Bomb:
             self.state.pitch.bomb = None
@@ -1971,7 +1974,13 @@ class Game:
         :param allow_team_reroll:
         :return: the probability of a successful catch for player.
         """
-        ag_roll = Rules.agility_table[player.get_ag()] - self.get_pass_modifiers(player, piece, position) #todo: this is called with wrong arguments
+        distance = self.get_pass_distance(from_position=player.position, to_position=position)
+        ttm = type(piece) != Ball
+        if ttm:
+            assert distance in {PassDistance.SHORT_PASS, PassDistance.QUICK_PASS}, "Throw team mate distance is too far"
+
+        modifiers = self.get_pass_modifiers(player, pass_distance=distance, ttm=ttm)
+        ag_roll = Rules.agility_table[player.get_ag()] - modifiers
         ag_roll = max(2, min(6, ag_roll))
         successful_outcomes = 6 - (ag_roll - 1)
         p = successful_outcomes / 6.0
@@ -2306,7 +2315,7 @@ class Game:
         """
         return [p.position for p in self.get_adjacent_teammates(player) if not p.has_skill(Skill.BLOOD_LUST)]
 
-    def get_hypno_targets(self, player: Player) -> List[Player]:
+    def get_hypno_targets(self, player: Player) -> List[Square]:
         """
         :param player: player on the board. 
         :return: available targets for given player to hypnotize if player has Hypnotic Gaze skill 
@@ -2341,7 +2350,7 @@ class Game:
         for player_to in self.get_adjacent_teammates(player):
             if player_to.can_catch():
                 hand_off_positions.append(player_to.position)
-                modifiers = self.get_catch_modifiers(player, player_to.position)
+                modifiers = self.get_catch_modifiers(player_to, handoff=True)
                 target = Rules.agility_table[player.get_ag()]
                 rolls.append([min(6, max(2, target - modifiers))])
 
