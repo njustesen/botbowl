@@ -8,7 +8,7 @@ def test_no_dodge():
     team = game.get_agent_team(game.actor)
     # get a player
     players = game.get_players_on_pitch(team, False, True)
-    player = players[1]
+    player = [player for player in players if game.num_tackle_zones_in(player) == 0][0]
     # make sure there won't be a dodge roll needed
     assert len(game.get_adjacent_players(player.position, game.get_opp_team(player.team))) == 0
 
