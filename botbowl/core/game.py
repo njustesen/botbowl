@@ -1665,7 +1665,7 @@ class Game:
         try:
             return self.square_shortcut[y][x]
         except IndexError:
-            return Square(x, y, out_of_bounds=x <= 0 or x >= self.arena.width-1 or y <= 0 or y >= self.arena.height-1)
+            return Square(x, y, _out_of_bounds=x <= 0 or x >= self.arena.width-1 or y <= 0 or y >= self.arena.height-1)
 
     def get_adjacent_squares(self, position: Square, diagonal=True, out=False, occupied=True, distance=1) \
             -> List[Square]:
