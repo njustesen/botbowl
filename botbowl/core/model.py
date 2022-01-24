@@ -377,8 +377,8 @@ class TeamState(Reversible):
 
 class Clock:
     seconds: int
-    started_at: int
-    paused_at: int
+    started_at: float
+    paused_at: float
     paused_seconds: int
     is_primary: bool
     team: 'Team'
@@ -404,7 +404,7 @@ class Clock:
         self.paused_seconds += now - self.paused_at
         self.paused_at = None
 
-    def get_running_time(self) -> int :
+    def get_running_time(self) -> float:
         now = time.time()
         if self.is_running():
             return now - self.started_at - self.paused_seconds
