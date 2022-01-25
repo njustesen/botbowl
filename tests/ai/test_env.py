@@ -3,19 +3,27 @@ from itertools import chain
 from random import randint
 from typing import Optional
 
+import pytest
+
 from botbowl import Action, Square, Formation, Game, ActionType
 from botbowl.ai.env import BotBowlEnv, ScriptedActionWrapper, RewardWrapper, EnvConf
 import numpy as np
 
 from examples.a2c.a2c_env import A2C_Reward
+import gym
 
 
-def test_env():
-    env = BotBowlEnv()
+@pytest.mark.parametrize("name", ['botbowl-v4',
+                                  'botbowl-11-v4',
+                                  'botbowl-7-v4',
+                                  'botbowl-5-v4',
+                                  'botbowl-3-v4',
+                                  'botbowl-1-v4'])
+def test_gym_registry(name):
+    env = gym.make(name)
     env.reset()
 
     done = False
-    reward = None
     _, _, mask = env.get_state()
 
     while not done:
