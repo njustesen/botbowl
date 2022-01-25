@@ -4,19 +4,19 @@ This tutorial will introduce you to botbowl's implementations of the [Open AI Gy
 You can run [examples/gym_example.py](examples/gym_example.py) to se a random agent play Blood Bowl through the botbowl Gym environment. The rendering is simplified for faster execution and looks like this:
 ![botbowl Gym GUI](https://njustesen.github.io/botbowl/img/gym.png?raw=true "botbowl Gym GUI botbowl-3")
 
-[examples/gym_example.py](examples/gym_example.py) demonstrated how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
+[examples/gym_example.py](examples/multi_gym_example.py) demonstrates how you can run multiple instance of the environment in parallel. Notice, that the render() function doesn't work across multiple processes. Instead a custom renderer is used in this example.
 
 Agents receive numerical observations from the botbowl environment at every step and sends back and action with an action type and in some cases a position. Along with the observations, the environment also sends a scalar reward value to the agent. We will describe the structure of the three components: observations, actions, and rewards.
 
-## Observations
-An observation object is a dictionary containing four differet parts:
-1. 'board': a list of two-dimensional feature leayers describing the board state.
-2. 'state': a vector of normalized values (e.g. turn number, half, scores, etc.) describing the non-spatial game state.
-3. 'procedures': a one-hot vector describing which of the 16 procedures the game is currently in. 
-4. 'available-action-types': a one-hot vector describing which actions types that are available.
+## The step function 
+Now we will talk environments step() function which is called like this: 
+```python
+spatial_obs, reward, done, info = env.step(action) 
+```
 
-### Observation: 'board'
-The default feature layers in obs['board'] are:
+### Spatial observation
+`spatial_obs` is a 3 dimensional numpy array with `shape=(num_layer, height, width)`. This is all the features layers stack together. 
+The default feature layers are: 
 
 0. OccupiedLayer()
 1. OwnPlayerLayer()
@@ -47,7 +47,7 @@ The default feature layers in obs['board'] are:
 26. SkillLayer(Skill.CATCH)
 27. SkillLayer(Skill.PASS)
 
-A layer is a 2-D array of scalars in [0,1] with the size of the board including __crowd__ padding. Some layers have binary values, e.g. indicating whether a square is occupied by player (```OccupiedLayer()```), a standing player (```UpLayer()```), or a player with the __Block__ skill (```SkillLayer(Skill.BLOCK)```). Other layers contain normalized values such as ```OwnTackleZoneLayer()``` that represents the number of frendly tackle zones squares are covered by divided by 8, or ```MALayer()``` where the values are equal to the movement allowence of players divided by 10.
+A layer is a 2-D array of scalars in [0,1] with the size of the board including __crowd__ padding. Some layers have binary values, e.g. indicating whether a square is occupied by player (```OccupiedLayer()```), a standing player (```UpLayer()```), or a player with the __Block__ skill (```SkillLayer(Skill.BLOCK)```). Other layers contain normalized values such as ```OwnTackleZoneLayer()``` that represents the number of friendly tackle zones squares are covered by divided by 8, or ```MALayer()``` where the values are equal to the movement allowence of players divided by 10.
 
 botbowl environments have the above 45 layers by defaults. Custom layers can, however, be implemented by implementing the ```FeatureLayer```:
 
@@ -81,8 +81,12 @@ env.render(feature_layers=True)
 
 ![botbowl Gym Feature Layers](img/gym_layers.png?raw=true "botbowl Gym Feature Layers")
 
-### Observation: 'state'
-The 'state' part of the observation contains normailized values for folliwng 50  features:
+### Reward 
+`reward` is by default always zero. But we will later down discuss gym wrappers that help us define a reward function.
+
+### Non spatial observation
+`info['non_spatial_obs']` provides us with non-spatial observables in a numpy array with `shape=(116,)` and is divided into three parts. The first part is the state
+and contains normailized values for folliwng 50 features:
 
 0. 'half'
 1. 'round'
@@ -91,7 +95,7 @@ The 'state' part of the observation contains normailized values for folliwng 50 
 4. 'is nice'
 5. 'is pouring rain'
 6. 'is blizzard'
-7. 'is own turn'available_positions
+7. 'is own turn'
 8. 'is kicking first half'
 9. 'is kicking this drive'
 10. 'own reserves'
@@ -137,31 +141,33 @@ The 'state' part of the observation contains normailized values for folliwng 50 
 
 Some values are boolean, either 0 or 1, while others are normalized.
 
-### Observation: 'procedure'
-The 19 procedures represented in the one-hot vector obs['procedure'] are:
+The second part of the non-spatial observation is the 19 procedures represented in the one-hot vector:
 
-0. StartGame
-1. CoinTossFlip
-2. CoinTossKickReceive
-3. Setup
-4. PlaceBall
-5. HighKick
-6. Touchback
-7. Turn
-8. PlayerAction
-9. Block
-10. Push
-11. FollowUp
-12. Apothecary
-13. PassAction
-14. Catch
-15. Interception
-16. GFI
-17. Dodge
-18. Pickup
+0. StartGame,
+1. CoinTossFlip,
+2. CoinTossKickReceive,
+3. Setup,
+4. PlaceBall,
+5. HighKick,
+6. Touchback,
+7. Turn,
+8. MoveAction,
+9. BlockAction,
+10. BlitzAction,
+11. PassAction,
+12. HandoffAction,
+13. FoulAction,
+14. ThrowBombAction,
+15. Block,
+16. Push,
+17. FollowUp,
+18. Apothecary,
+19. PassAttempt,
+20. Interception,
+21. Reroll,
+22. Ejection
 
-## Action Types
-Actions consists of 43 action types. Some action types, denoted by `<position>` also requires a position and `<player>` requires a player to be specified.
+The final and third part of the non-spatial observation is the action types. Actions consist of 43 action types. Some action types, denoted by `<position>` also requires a position and `<player>` requires a player to be specified. If an action is available in the game state the corresponding value is 1.0 else 0.0. 
 
 0. ```ActionType.START_GAME```,
 1. ```ActionType.HEADS```,
@@ -207,58 +213,10 @@ Actions consists of 43 action types. Some action types, denoted by `<position>` 
 41. ```ActionType.USE_BRIBE```,
 42. ```ActionType.DONT_USE_BRIBE```
 
-### Observation: 'procedure'
-The 'procedure' part of the observation contains a one-hot vector with 16 values representing which procedures the game is in:
+## Actions and action mask
+The action space is discrete (`gym.spaces.Discrete(num_actions)`) where the number of actions is the number of non-positional actions plus number of positional actions times number of squares on the board. 
 
-0. ```StartGame```
-1. ```CoinTossFlip```
-2. ```CoinTossKickReceive```
-3. ```Setup```
-4. ```PlaceBall```
-5. ```HighKick```
-6. ```Touchback```
-7. ```Turn```
-8. ```PlayerAction```
-9. ```Block```
-10. ```Push```
-11. ```FollowUp```
-12. ```Apothecary```
-13. ```PassAction```
-14. ```Interception```
-15. ```Reroll```
-
-### Observation: 'available-action-types'
-The 'available-action-types' part of the observation contains a one-hot vector describing which action types that are currently available.
-
-## Actions
-To take an action, the step function must be called with an Action instance that contains an action type and a position if needed. See the list above whether an actions needs a position. Actions are instantiated and used like this:
-
-```python
-action = {
-    'action-type': 26,
-    'x': 8,
-    'y': 6
-}
-obs, reward, done, info = env.step(action)
-```
-
-You can always check if an action type is available using ```env.available_action_types()``` and for positions ```available_positions(action_type)```. The same information is available through ```obs['available-action-types']``` and ```obs['board']['<action_type> positions']``` where ```<action_type>``` e.g. could be `move`.
-
-## Rewards and Info
-The default reward function only rewards for a win, draw or loss 1/0/-1.
-However, the info object returned by the step function contains useful information for reward shaping:
-
-```python
-'cas_inflicted': {int},
-'opp_cas_inflicted': {int},
-'touchdowns': {int},
-'opp_touchdowns': {int},
-'half': {int},
-'round': {int},
-'ball_progression': {int}
-```
-
-These values are commulative, such that 'cas_inflicted' refers to the total number of casualties inflicted by the team in the game. Another way to detect events is looking at ```env.game.state.reports```.
+There is an action mask in the info object `info['action_mask]` that is a numpy array with `shape=(num_actions)`. With entries at 1.0 for allowed actions and zero for disallowed actions. 
 
 ## Environments
 botbowl comes with five environments with various difficulty:
@@ -275,3 +233,14 @@ botbowl comes with five environments with various difficulty:
 Try running [examples/gym_example.py](examples/gym_example.py) while debugging in your favorite IDE (e.g. [PyCharm](https://www.jetbrains.com/pycharm/)). Set a break point in the line where the step function is called and investigate the obs object. If you run with the rendering enabled it is easier to analyze the values in the feature layers.
 
 In the next tutorial, we will start developing a reinforcement learning agent.
+
+## Wrappers 
+By wrapping the environment in different wrappers we can change the behavior of the environement without modifying the internal parts of the environment. 
+Wrappers are applied like below, and then used as normal.  
+
+```python
+env = BotBowlEnv()
+env = NuffleWrapper(env, argument1=1337)
+```
+
+There are currently three wrappers, we will talk about two here: RewardWrapper and ScriptedActionWrapper
