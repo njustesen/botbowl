@@ -5,185 +5,97 @@ Year: 2018
 ==========================
 This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
 """
-from itertools import chain
+from typing import Tuple, Iterable, Union, Callable
+
+from botbowl.ai.bots import RandomBot
+from botbowl.ai.env_render import EnvRenderer
+from botbowl.ai.registry import registry as bot_registry
+from botbowl.ai.layers import *
+from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
 import gym
-from gym import spaces
-from botbowl.core import Game, load_rule_set, load_arena
-from botbowl.ai.bots.random_bot import RandomBot
-from botbowl.ai.layers import *
 import uuid
-import tkinter as tk
-import math
+from itertools import count
 from copy import deepcopy
 
 
-class BotBowlEnv(gym.Env):
+def take(n: int, iterable) -> None:
+    for _ in range(n):
+        next(iterable)
 
-    square_size = 16
-    square_size_fl = 4
-    top_bar_height = 42
-    bot_bar_height = 80
-    layer_text_height = 26
-    black = '#000000'
-    white = '#ffffff'
-    crowd = '#113311'
-    blue = '#2277cc'
-    red = '#cc7722'
-    ball = '#ff00cc'
-    field = '#77cc77'
-    wing = '#55aa55'
-    scrimmage = '#338833'
 
-    actions = [
-        ActionType.START_GAME,
-        ActionType.HEADS,
-        ActionType.TAILS,
-        ActionType.KICK,
-        ActionType.RECEIVE,
-        ActionType.END_PLAYER_TURN,
-        ActionType.USE_REROLL,
-        ActionType.DONT_USE_REROLL,
-        ActionType.END_TURN,
-        ActionType.END_SETUP,
-        ActionType.STAND_UP,
-        ActionType.SELECT_ATTACKER_DOWN,
-        ActionType.SELECT_BOTH_DOWN,
-        ActionType.SELECT_PUSH,
-        ActionType.SELECT_DEFENDER_STUMBLES,
-        ActionType.SELECT_DEFENDER_DOWN,
-        ActionType.SELECT_NONE,
-        ActionType.PLACE_PLAYER,
-        ActionType.PLACE_BALL,
-        ActionType.PUSH,
-        ActionType.FOLLOW_UP,
-        ActionType.SELECT_PLAYER,
-        ActionType.MOVE,
-        ActionType.BLOCK,
-        ActionType.PASS,
-        ActionType.FOUL,
-        ActionType.HANDOFF,
-        ActionType.LEAP,
-        ActionType.STAB,
-        ActionType.START_MOVE,
-        ActionType.START_BLOCK,
-        ActionType.START_BLITZ,
-        ActionType.START_PASS,
-        ActionType.START_FOUL,
-        ActionType.START_HANDOFF,
-        ActionType.USE_SKILL,
-        ActionType.DONT_USE_SKILL,
-        ActionType.SETUP_FORMATION_WEDGE,
-        ActionType.SETUP_FORMATION_LINE,
-        ActionType.SETUP_FORMATION_SPREAD,
-        ActionType.SETUP_FORMATION_ZONE,
-        ActionType.USE_BRIBE,
-        ActionType.DONT_USE_BRIBE
-    ]
+formation_defaults = {1: ['def_spread.txt', 'def_zone.txt', 'off_line.txt', 'off_wedge.txt'],
+                      3: ['def_spread.txt', 'off_wedge.txt'],
+                      5: ['def_spread.txt', 'off_wedge.txt'],
+                      7: ['def_spread.txt', 'off_wedge.txt'],
+                      11: ['def_spread.txt', 'def_zone.txt', 'off_line.txt', 'off_wedge.txt']
+                      }
 
-    simple_action_types = [
-        ActionType.START_GAME,
-        ActionType.HEADS,
-        ActionType.TAILS,
-        ActionType.KICK,
-        ActionType.RECEIVE,
-        ActionType.END_SETUP,
-        ActionType.END_PLAYER_TURN,
-        ActionType.USE_REROLL,
-        ActionType.DONT_USE_REROLL,
-        ActionType.USE_SKILL,
-        ActionType.DONT_USE_SKILL,
-        ActionType.END_TURN,
-        ActionType.STAND_UP,
-        ActionType.SELECT_ATTACKER_DOWN,
-        ActionType.SELECT_BOTH_DOWN,
-        ActionType.SELECT_PUSH,
-        ActionType.SELECT_DEFENDER_STUMBLES,
-        ActionType.SELECT_DEFENDER_DOWN,
-        ActionType.SELECT_NONE,
-        ActionType.USE_BRIBE,
-        ActionType.DONT_USE_BRIBE
-    ]
 
-    defensive_formation_action_types = [
-        ActionType.SETUP_FORMATION_SPREAD,
-        ActionType.SETUP_FORMATION_ZONE
-    ]
+class EnvConf:
+    config: Configuration
+    simple_action_types: List[Union[ActionType, Formation]]
+    positional_action_types: List[ActionType]
+    action_types: List[Union[ActionType, Formation]]
+    layers: List[FeatureLayer]
+    procedures: List[Procedure]
+    formations: List[Formation]
 
-    offensive_formation_action_types = [
-        ActionType.SETUP_FORMATION_WEDGE,
-        ActionType.SETUP_FORMATION_LINE
-    ]
+    def __init__(self, size=11, extra_formation_paths: Optional[Iterable[str]] = None):
 
-    positional_action_types = [
-        ActionType.PLACE_BALL,
-        ActionType.PUSH,
-        ActionType.FOLLOW_UP,
-        ActionType.MOVE,
-        ActionType.BLOCK,
-        ActionType.PASS,
-        ActionType.FOUL,
-        ActionType.HANDOFF,
-        ActionType.LEAP,
-        ActionType.STAB,
-        ActionType.SELECT_PLAYER,
-        ActionType.START_MOVE,
-        ActionType.START_BLOCK,
-        ActionType.START_BLITZ,
-        ActionType.START_PASS,
-        ActionType.START_FOUL,
-        ActionType.START_HANDOFF
-    ]
+        self.config: Configuration = load_config(f"gym-{size}")
+        formations_paths = formation_defaults[size]
 
-    # Procedures that require actions
-    procedures = [
-        StartGame,
-        CoinTossFlip,
-        CoinTossKickReceive,
-        Setup,
-        PlaceBall,
-        HighKick,
-        Touchback,
-        Turn,
-        MoveAction,
-        BlockAction,
-        BlitzAction,
-        PassAction,
-        HandoffAction,
-        FoulAction,
-        ThrowBombAction,
-        Block,
-        Push,
-        FollowUp,
-        Apothecary,
-        PassAttempt,
-        Interception,
-        Reroll,
-        Ejection
-    ]
+        if extra_formation_paths is not None:
+            formations_paths.extend(extra_formation_paths)
 
-    def __init__(self, config, home_team, away_team, opp_actor=None):
-        self.__version__ = "0.0.3"
-        self.config = config
-        self.config.competition_mode = False
-        self.config.fast_mode = True
-        self.game = None
-        self.team_id = None
-        self.ruleset = load_rule_set(config.ruleset, all_rules=False)
-        self.home_team = home_team
-        self.away_team = away_team
-        self.actor = Agent("Gym Learner", human=True)
-        self.opp_actor = opp_actor if opp_actor is not None else RandomBot("Random")
-        self._seed = None
-        self.seed()
-        self.root = None
-        self.cv = None
-        self.last_obs = None
-        self.last_report_idx = 0
-        self.last_ball_team = None
-        self.last_ball_x = None
-        self.own_team = None
-        self.opp_team = None
+        self.simple_action_types = [
+            ActionType.START_GAME,
+            ActionType.HEADS,
+            ActionType.TAILS,
+            ActionType.KICK,
+            ActionType.RECEIVE,
+            ActionType.END_SETUP,
+            ActionType.END_PLAYER_TURN,
+            ActionType.USE_REROLL,
+            ActionType.DONT_USE_REROLL,
+            ActionType.USE_SKILL,
+            ActionType.DONT_USE_SKILL,
+            ActionType.END_TURN,
+            ActionType.STAND_UP,
+            ActionType.SELECT_ATTACKER_DOWN,
+            ActionType.SELECT_BOTH_DOWN,
+            ActionType.SELECT_PUSH,
+            ActionType.SELECT_DEFENDER_STUMBLES,
+            ActionType.SELECT_DEFENDER_DOWN,
+            ActionType.SELECT_NONE,
+            ActionType.USE_BRIBE,
+            ActionType.DONT_USE_BRIBE,
+        ]
+        self.formations = [load_formation(formation, size=size) for formation in formations_paths]
+        self.simple_action_types.extend(self.formations)
+
+        self.positional_action_types = [
+            ActionType.PLACE_BALL,
+            ActionType.PUSH,
+            ActionType.FOLLOW_UP,
+            ActionType.MOVE,
+            ActionType.BLOCK,
+            ActionType.PASS,
+            ActionType.FOUL,
+            ActionType.HANDOFF,
+            ActionType.LEAP,
+            ActionType.STAB,
+            ActionType.SELECT_PLAYER,
+            ActionType.START_MOVE,
+            ActionType.START_BLOCK,
+            ActionType.START_BLITZ,
+            ActionType.START_PASS,
+            ActionType.START_FOUL,
+            ActionType.START_HANDOFF
+        ]
+
+        self.action_types = self.simple_action_types + self.positional_action_types
 
         self.layers = [
             OccupiedLayer(),
@@ -214,436 +126,427 @@ class BotBowlEnv(gym.Env):
             SkillLayer(Skill.CATCH),
             SkillLayer(Skill.PASS)
         ]
+        self.layers.extend(AvailablePositionLayer(action_type) for action_type in self.positional_action_types)
 
-        for action_type in BotBowlEnv.positional_action_types:
-            self.layers.append(AvailablePositionLayer(action_type))
+        # Procedures that require actions
+        self.procedures = [
+            StartGame,
+            CoinTossFlip,
+            CoinTossKickReceive,
+            Setup,
+            PlaceBall,
+            HighKick,
+            Touchback,
+            Turn,
+            MoveAction,
+            BlockAction,
+            BlitzAction,
+            PassAction,
+            HandoffAction,
+            FoulAction,
+            ThrowBombAction,
+            Block,
+            Push,
+            FollowUp,
+            Apothecary,
+            PassAttempt,
+            Interception,
+            Reroll,
+            Ejection]
 
-        arena = load_arena(self.config.arena)
 
-        self.observation_space = spaces.Dict({
-            'board': spaces.Box(low=0, high=1, shape=(len(self.layers), arena.height, arena.width)),
-            'state': spaces.Box(low=0, high=1, shape=(50,)),
-            'procedures': spaces.Box(low=0, high=1, shape=(len(BotBowlEnv.procedures),)),
-            'available-action-types': spaces.Box(low=0, high=1, shape=(len(BotBowlEnv.actions),))
-        })
+class BotBowlEnv(gym.Env):
+    """
+    Environment for Bot Bowl IV targeted at reinforcement learning algorithms
+    """
+    env_conf: EnvConf
+    layers: FeatureLayer
+    width: int
+    height: int
+    board_squares: int
+    num_actions: int
+    game: Game
+    _seed: int
+    rnd: np.random.RandomState
+    ruleset: RuleSet
+    home_team: Team
+    away_team: Team
+    num_non_spatial_observables: int
+    _renderer: Optional['EnvRenderer']
 
-        self.action_space = spaces.Dict({
-            'action-type': spaces.Discrete(len(BotBowlEnv.actions)),
-            'x': spaces.Discrete(arena.width),
-            'y': spaces.Discrete(arena.height)
-        })
+    def __init__(self, env_conf=None, seed: int = None, home_agent='human', away_agent='random'):
 
-    def step(self, action):
-        if type(action['action-type']) is ActionType and action['action-type'] in BotBowlEnv.actions:
-            action_type = action['action-type']
+        if env_conf is None:
+            self.env_conf = EnvConf()
         else:
-            action_type = BotBowlEnv.actions[int(action['action-type'])]
-        p = Square(action['x'], action['y']) if action['x'] is not None and action['y'] is not None else None
-        position = None
-        player = None
-        if action_type in self.positional_action_types:
-            position = p
-        real_action = Action(action_type=action_type, position=position, player=player)
-        self.last_report_idx = len(self.game.state.reports)
-        return self._step(real_action)
+            self.env_conf = env_conf
 
-    def _step(self, action):
-        self.game.step(action)
-        if action.action_type in chain(BotBowlEnv.offensive_formation_action_types, BotBowlEnv.defensive_formation_action_types):
-            self.game.step(Action(ActionType.END_SETUP))
-        reward = 0
-        if self.game.get_winner() is not None:
-            reward = 1 if self.game.get_winner() == self.actor else -1
-        team = self.game.state.home_team if self.team_id == self.home_team.team_id else self.game.state.away_team
-        opp_team = self.game.state.home_team if self.team_id != self.home_team.team_id else self.game.state.away_team
-        ball_carrier = self.game.get_ball_carrier()
-        ball_team = ball_carrier.team if ball_carrier is not None else None
-        ball_position = self.game.get_ball_position()
-        progression = 0
-        if ball_team == team and self.last_ball_team:
-            #print("From: ", self.last_ball_x, ", To: ", ball_position.x)
-            if team == self.game.state.home_team:
-                progression = self.last_ball_x - ball_position.x
-            else:
-                progression = ball_position.x - self.last_ball_x
-            #print("Progression: ", progression)
-        self.last_ball_x = ball_position.x if ball_position is not None else None
-        self.last_ball_team = ball_team
-        info = {
-            'cas_inflicted': len(self.game.get_casualties(team)),
-            'opp_cas_inflicted': len(self.game.get_casualties(opp_team)),
-            'touchdowns': team.state.score,
-            'opp_touchdowns': opp_team.state.score,
-            'half': self.game.state.round,
-            'round': self.game.state.round,
-            'ball_progression': progression
-        }
-        return self._observation(self.game), reward, self.game.state.game_over, info
+        # Game
+        self.game = None
+        self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
+        self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        self.home_agent = home_agent
+        self.away_agent = away_agent
 
-    def seed(self, seed=None):
-        if seed is None:
-            self._seed = np.random.randint(0, 2**31)
+        arena = load_arena(self.env_conf.config.arena)
+        self.width = arena.width
+        self.height = arena.height
+        self.board_squares = self.width * self.height
+        self.num_non_spatial_observables = None
+
+        # Gym stuff
+        self._seed = np.random.randint(0, 2 ** 31) if seed is None else seed
         self.rnd = np.random.RandomState(self._seed)
-        if isinstance(self.opp_actor, RandomBot):
-            self.opp_actor.rnd = self.rnd
-        return self._seed
 
-    def get_seed(self):
-        return self._seed
+        # Setup gym shapes
+        spat_obs = self.reset()
+        self.action_space = gym.spaces.Discrete(len(self.env_conf.action_types))
+        self.observation_space = gym.spaces.Box(low=0, high=1, shape=spat_obs.shape)
 
-    def get_game(self):
-        return self.game
+        self._renderer = None
 
-    def get_observation(self):
-        return self._observation(self.game)
+    def get_state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        :return: tuple with np arrays
+                     spatial observation with shape=(num_layers, height, width)
+                     non spatial observation with shape=(num_non_spatial_observations)
+                     action mask with shape = (action_space, )"""
 
-    def _observation(self, game):
-        obs = {
-            'board': {},
-            'state': {},
-            'procedures': {},
-            'available-action-types': {}
-        }
-        for layer in self.layers:
-            obs['board'][layer.name()] = layer.get(game)
-
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        game = self.game
+        active_team = game.active_team
+        active_player = game.state.active_player
         opp_team = game.get_opp_team(active_team) if active_team is not None else None
 
-        # State
-        obs['state']['half'] = game.state.half - 1.0
-        obs['state']['round'] = game.state.round / 8.0
-        obs['state']['is sweltering heat'] = 1.0 if game.state.weather == WeatherType.SWELTERING_HEAT else 0.0
-        obs['state']['is very sunny'] = 1.0 if game.state.weather == WeatherType.VERY_SUNNY else 0.0
-        obs['state']['is nice'] = 1.0 if game.state.weather.value == WeatherType.NICE else 0.0
-        obs['state']['is pouring rain'] = 1.0 if game.state.weather.value == WeatherType.POURING_RAIN else 0.0
-        obs['state']['is blizzard'] = 1.0 if game.state.weather.value == WeatherType.BLIZZARD else 0.0
+        # Spatial state
+        spatial_obs = np.stack([layer.get(game) for layer in self.env_conf.layers])
+        if self._flip_x_axis():
+            spatial_obs = np.flip(spatial_obs, axis=2)
 
-        obs['state']['is own turn'] = 1.0 if game.state.current_team == active_team else 0.0
-        obs['state']['is kicking first half'] = 1.0 if game.state.kicking_first_half == active_team else 0.0
-        obs['state']['is kicking this drive'] = 1.0 if game.state.kicking_this_drive == active_team else 0.0
-        obs['state']['own reserves'] = len(game.get_reserves(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['state']['own kods'] = len(game.get_knocked_out(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['state']['own casualites'] = len(game.get_casualties(active_team)) / 16.0 if active_team is not None else 0.0
-        obs['state']['opp reserves'] = len(game.get_reserves(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
-        obs['state']['opp kods'] = len(game.get_knocked_out(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
-        obs['state']['opp casualties'] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0 if active_team is not None else 0.0
+        # Non spatial state
+        if self.num_non_spatial_observables is None:
+            non_spatial_obs = np.zeros(2000)
+        else:
+            non_spatial_obs = np.zeros(self.num_non_spatial_observables)
 
-        obs['state']['own score'] = active_team.state.score / 16.0 if active_team is not None else 0.0
-        obs['state']['own turns'] = active_team.state.turn / 8.0 if active_team is not None else 0.0
-        obs['state']['own starting rerolls'] = active_team.state.rerolls_start / 8.0 if active_team is not None else 0.0
-        obs['state']['own rerolls left'] = active_team.state.rerolls / 8.0 if active_team is not None else 0.0
-        obs['state']['own ass coaches'] = active_team.state.ass_coaches / 8.0 if active_team is not None else 0.0
-        obs['state']['own cheerleaders'] = active_team.state.cheerleaders / 8.0 if active_team is not None else 0.0
-        obs['state']['own bribes'] = active_team.state.bribes / 4.0 if active_team is not None else 0.0
-        obs['state']['own babes'] = active_team.state.babes / 4.0 if active_team is not None else 0.0
-        obs['state']['own apothecaries'] = 0.0 if active_team is None else active_team.state.apothecaries / 2
-        obs['state']['own reroll available'] = 1.0 if active_team is not None and not active_team.state.reroll_used else 0.0
-        obs['state']['own fame'] = active_team.state.fame/2 if active_team is not None else 0.0
+        index = count()
+        non_spatial_obs[next(index)] = game.state.half - 1.0
+        non_spatial_obs[next(index)] = game.state.round / 8.0
 
-        obs['state']['opp score'] = opp_team.state.score / 16.0 if opp_team is not None else 0.0
-        obs['state']['opp turns'] = opp_team.state.turn / 8.0 if opp_team is not None else 0.0
-        obs['state']['opp starting rerolls'] = opp_team.state.rerolls_start / 8.0 if opp_team is not None else 0.0
-        obs['state']['opp rerolls left'] = opp_team.state.rerolls / 8.0 if opp_team is not None else 0.0
-        obs['state']['opp ass coaches'] = opp_team.state.ass_coaches / 8.0 if opp_team is not None else 0.0
-        obs['state']['opp cheerleaders'] = opp_team.state.cheerleaders / 8.0 if opp_team is not None else 0.0
-        obs['state']['opp bribes'] = opp_team.state.bribes / 4.0 if opp_team is not None else 0.0
-        obs['state']['opp babes'] = opp_team.state.babes / 4.0 if opp_team is not None else 0.0
-        obs['state']['opp apothecaries'] = 0.0 if opp_team is None else active_team.state.apothecaries / 2
-        obs['state']['opp reroll available'] = 1.0 if opp_team is not None and not opp_team.state.reroll_used else 0.0
-        obs['state']['opp fame'] = opp_team.state.fame/2 if opp_team is not None else 0.0
+        non_spatial_obs[next(index)] = 1.0 * (game.state.weather == WeatherType.SWELTERING_HEAT)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.weather == WeatherType.VERY_SUNNY)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.weather == WeatherType.NICE)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.weather == WeatherType.POURING_RAIN)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.weather == WeatherType.BLIZZARD)
 
-        obs['state']['is blitz available'] = 1.0 if game.is_blitz_available() else 0.0
-        obs['state']['is pass available'] = 1.0 if game.is_pass_available() else 0.0
-        obs['state']['is handoff available'] = 1.0 if game.is_handoff_available() else 0.0
-        obs['state']['is foul available'] = 1.0 if game.is_foul_available() else 0.0
-        obs['state']['is blitz'] = 1.0 if game.is_blitz() else 0.0
-        obs['state']['is quick snap'] = 1.0 if game.is_quick_snap() else 0.0
+        non_spatial_obs[next(index)] = 1.0 * (game.state.current_team == active_team)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.kicking_first_half == active_team)
+        non_spatial_obs[next(index)] = 1.0 * (game.state.kicking_this_drive == active_team)
+        non_spatial_obs[next(index)] = len(game.get_reserves(active_team)) / 16.0
+        non_spatial_obs[next(index)] = len(game.get_knocked_out(active_team)) / 16.0
+        non_spatial_obs[next(index)] = len(game.get_casualties(active_team)) / 16.0
+        non_spatial_obs[next(index)] = len(game.get_reserves(game.get_opp_team(active_team))) / 16.0
+        non_spatial_obs[next(index)] = len(game.get_knocked_out(game.get_opp_team(active_team))) / 16.0
+        non_spatial_obs[next(index)] = len(game.get_casualties(game.get_opp_team(active_team))) / 16.0
 
-        obs['state']['is move action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.MOVE else 0.0
-        obs['state']['is block action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLOCK else 0.0
-        obs['state']['is blitz action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.BLITZ else 0.0
-        obs['state']['is pass action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.PASS else 0.0
-        obs['state']['is handoff action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.HANDOFF else 0.0
-        obs['state']['is foul action'] = 1.0 if game.state.active_player is not None and game.get_player_action_type() == PlayerActionType.FOUL else 0.0
+        if active_team is not None:
+            non_spatial_obs[next(index)] = active_team.state.score / 16.0
+            non_spatial_obs[next(index)] = active_team.state.turn / 8.0
+            non_spatial_obs[next(index)] = active_team.state.rerolls_start / 8.0
+            non_spatial_obs[next(index)] = active_team.state.rerolls / 8.0
+            non_spatial_obs[next(index)] = active_team.state.ass_coaches / 8.0
+            non_spatial_obs[next(index)] = active_team.state.cheerleaders / 8.0
+            non_spatial_obs[next(index)] = active_team.state.bribes / 4.0
+            non_spatial_obs[next(index)] = active_team.state.babes / 4.0
+            non_spatial_obs[next(index)] = active_team.state.apothecaries / 2
+            non_spatial_obs[next(index)] = 1.0 * (not active_team.state.reroll_used)
+            non_spatial_obs[next(index)] = active_team.state.fame / 2
 
-        # Procedure
-        for procedure in BotBowlEnv.procedures:
-            proc_name = procedure.__name__
-            obs['procedures'][proc_name] = 0.0
+            non_spatial_obs[next(index)] = opp_team.state.score / 16.0
+            non_spatial_obs[next(index)] = opp_team.state.turn / 8.0
+            non_spatial_obs[next(index)] = opp_team.state.rerolls_start / 8.0
+            non_spatial_obs[next(index)] = opp_team.state.rerolls / 8.0
+            non_spatial_obs[next(index)] = opp_team.state.ass_coaches / 8.0
+            non_spatial_obs[next(index)] = opp_team.state.cheerleaders / 8.0
+            non_spatial_obs[next(index)] = opp_team.state.bribes / 4.0
+            non_spatial_obs[next(index)] = opp_team.state.babes / 4.0
+            non_spatial_obs[next(index)] = active_team.state.apothecaries / 2
+            non_spatial_obs[next(index)] = 1.0 * (not opp_team.state.reroll_used)
+            non_spatial_obs[next(index)] = opp_team.state.fame / 2
+        else:
+            take(22, index)
 
-        for procedure in game.state.stack.items:
-            if procedure.__class__ in BotBowlEnv.procedures:
-            # proc_idx = botbowlEnv.procedures.index(procedure.__class__)
-                proc_name = procedure.__class__.__name__
-                obs['procedures'][proc_name] = 1.0
+        if game.current_turn() is not None:
+            non_spatial_obs[next(index)] = 1.0 * game.is_blitz_available()
+            non_spatial_obs[next(index)] = 1.0 * game.is_pass_available()
+            non_spatial_obs[next(index)] = 1.0 * game.is_handoff_available()
+            non_spatial_obs[next(index)] = 1.0 * game.is_foul_available()
+            non_spatial_obs[next(index)] = 1.0 * game.is_blitz()
+            non_spatial_obs[next(index)] = 1.0 * game.is_quick_snap()
+        else:
+            take(6, index)
 
-        self.last_obs = obs
+        if active_player is not None:
+            player_action_type = game.get_player_action_type()
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.MOVE)
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.BLOCK)
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.BLITZ)
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.PASS)
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.HANDOFF)
+            non_spatial_obs[next(index)] = 1.0 * (player_action_type == PlayerActionType.FOUL)
+        else:
+            take(6, index)
 
-        # Actions
-        for action_type in BotBowlEnv.actions:
-            obs['available-action-types'][action_type.name] = 0.0
+        # Procedures in stack
+        all_proc_types = set(type(proc) for proc in game.state.stack.items)
+        for i, proc_type in zip(index, self.env_conf.procedures):
+            non_spatial_obs[i] = 1.0 * (proc_type in all_proc_types)
 
-        for action_choice in game.get_available_actions():
-            if action_choice.action_type not in BotBowlEnv.actions:
-                continue
-            # idx = botbowlEnv.actions.index(action_choice.action_type)
-            action_name = action_choice.action_type.name
-            # Ignore end setup action if setup is illegal
-            if action_choice.action_type == ActionType.END_SETUP and not game.is_setup_legal(active_team):
-                continue
-            obs['available-action-types'][action_name] = 1.0
+        # Available action types
+        aa_types = np.zeros(len(self.env_conf.action_types))
+        game_aa_types = set(action_choice.action_type for action_choice in game.get_available_actions())
+        is_setup: bool = type(self.game.get_procedure()) == Setup
+        for i, action_type in enumerate(self.env_conf.action_types):
+            if action_type is ActionType.END_SETUP and not game.is_setup_legal(active_team):
+                continue  # Ignore end setup action if setup is illegal
 
-        return obs
+            if is_setup and isinstance(action_type, Formation):
+                aa_types[i] = 1.0
+            else:
+                aa_types[i] = 1.0 * (action_type in game_aa_types)
 
-    def reset(self):
-        self.team_id = self.home_team.team_id
-        home_agent = self.actor
-        away_agent = self.opp_actor
-        seed = self.rnd.randint(0, 2**31)
+        next_index = next(index)
+        non_spatial_obs[next_index:next_index + len(aa_types)] = aa_types
+        if self.num_non_spatial_observables is None:
+            self.num_non_spatial_observables = next_index + len(aa_types)
+            non_spatial_obs = non_spatial_obs[:self.num_non_spatial_observables]
+
+        # Action mask
+        num_simple_actions = len(self.env_conf.simple_action_types)
+        aa_layer_first_index = len(self.env_conf.layers) - len(self.env_conf.positional_action_types)
+        action_mask = np.concatenate((aa_types[:num_simple_actions],
+                                      spatial_obs[aa_layer_first_index:].flatten()))
+        action_mask = action_mask > 0.0
+        assert True in action_mask
+
+        return spatial_obs, non_spatial_obs, action_mask
+
+    def step(self, action_idx: Optional[int], skip_observation: bool = False):
+        # Convert to Action object
+        action_objects = self._compute_action(action_idx, flip=self._flip_x_axis())
+
+        for action in action_objects:
+            self.game.step(action)
+
+        return self.get_step_return(skip_observation)
+
+    def get_step_return(self, skip_observation):
+        done = self.game.state.game_over
+
+        if done or skip_observation:
+            spatial_observation, non_spatial_observation, action_mask = None, None, None
+        else:
+            spatial_observation, non_spatial_observation, action_mask = self.get_state()
+
+        info = {'non_spatial_obs': non_spatial_observation,
+                'action_mask': action_mask}
+
+        return spatial_observation, 0.0, done, info
+
+    def render(self, mode='human', feature_layers=False):
+        if self._renderer is None:
+            self._renderer = EnvRenderer(self, feature_layers)
+        self._renderer.render()
+
+    def reset(self, skip_observation=False):
+        seed = self.rnd.randint(0, 2 ** 31)
+
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
                          away_team=deepcopy(self.away_team),
-                         home_agent=home_agent,
-                         away_agent=away_agent,
-                         config=self.config,
+                         home_agent=BotBowlEnv._create_agent(self.home_agent),
+                         away_agent=BotBowlEnv._create_agent(self.away_agent),
+                         config=self.env_conf.config,
                          ruleset=self.ruleset,
                          seed=seed)
-        self.last_report_idx = len(self.game.state.reports)
-        self.last_ball_team = None
-        self.last_ball_x = None
+
         self.game.init()
-        self.own_team = self.game.get_agent_team(self.actor)
-        self.opp_team = self.game.get_agent_team(self.opp_actor)
-
-        return self._observation(self.game)
-
-    def get_outcomes(self):
-        if self.last_report_idx == len(self.game.state.reports):
-            return []
-        return self.game.state.reports[self.last_report_idx:]
-
-    def available_action_types(self):
-        if isinstance(self.game.get_procedure(), Setup):
-            game_available_action_types = [action.action_type for action in self.game.state.available_actions]
-            if self.game.get_kicking_team().team_id == self.team_id:
-                aa = [BotBowlEnv.actions.index(action_type) for action_type in self.defensive_formation_action_types if action_type in game_available_action_types]
-            else:
-                aa = [BotBowlEnv.actions.index(action_type) for action_type in self.offensive_formation_action_types if action_type in game_available_action_types]
-            if ActionType.END_SETUP in BotBowlEnv.actions and self.game.is_setup_legal(self.game.get_team_by_id(self.team_id)):
-                aa.append( ActionType.END_SETUP )
-            return aa
-        else:
-            return [action.action_type for action in self.game.state.available_actions if action.action_type in BotBowlEnv.actions]
-
-    def available_positions(self, action_type):
-        action = None
-        for a in self.game.state.available_actions:
-            if a.action_type == action_type:
-                action = a
-        if action is None:
-            return []
-        if action.action_type in BotBowlEnv.positional_action_types:
-            if action.positions:
-                return [position for position in action.positions if position is not None]
-            elif action.players:
-                return [player.position for player in action.players if player is not None]
-        return []
-
-    def _available_players(self, action_type):
-        action = None
-        for a in self.game.state.available_actions:
-            if a.action_type == BotBowlEnv.actions[action_type]:
-                action = a
-        if action is None:
-            return []
-        return [player.position for player in action.players]
-
-    def _draw_player(self, player, x, y):
-        if player.team == self.game.state.home_team:
-            fill = BotBowlEnv.blue
-        else:
-            fill = BotBowlEnv.red
-        width = max(1, player.get_st() - 1)
-        if player.has_skill(Skill.BLOCK):
-            outline = 'red'
-        elif player.has_skill(Skill.CATCH):
-            outline = 'yellow'
-        elif player.has_skill(Skill.PASS):
-            outline = 'white'
-        elif player.get_st() > 3:
-            outline = 'green'
-        else:
-            outline = 'grey'
-        self.cv.create_oval(x, y, x + BotBowlEnv.square_size, y + BotBowlEnv.square_size, fill=fill, outline=outline,
-                            width=width)
-        text_fill = 'grey' if player.state.used else 'black'
-        self.cv.create_text(x + BotBowlEnv.square_size / 2,
-                            y + BotBowlEnv.square_size / 2,
-                            text=str(player.nr), fill=text_fill)
-
-        # State
-        if not player.state.up:
-            self.cv.create_line(BotBowlEnv.square_size * x, BotBowlEnv.square_size * y + BotBowlEnv.top_bar_height,
-                                BotBowlEnv.square_size * x + BotBowlEnv.square_size,
-                                BotBowlEnv.square_size * y + BotBowlEnv.square_size + BotBowlEnv.top_bar_height, fill='white',
-                                width=1)
-        if player.state.stunned:
-            self.cv.create_line(BotBowlEnv.square_size * x + BotBowlEnv.square_size,
-                                BotBowlEnv.square_size * y + BotBowlEnv.top_bar_height,
-                                BotBowlEnv.square_size * x,
-                                BotBowlEnv.square_size * y + BotBowlEnv.square_size + BotBowlEnv.top_bar_height, fill='white',
-                                width=1)
-
-    def render(self, mode='human', feature_layers=False):
-
-        if self.root is None:
-            self.root = tk.Tk()
-            self.root.title("botbowl Gym")
-            self.game_width = max(500, self.game.arena.width * BotBowlEnv.square_size)
-            self.game_height = self.game.arena.height * BotBowlEnv.square_size + BotBowlEnv.top_bar_height + BotBowlEnv.bot_bar_height
-            if feature_layers:
-                self.cols = math.floor(math.sqrt(len(self.layers)))
-                self.rows = math.ceil(math.sqrt(len(self.layers)))
-                self.fl_width = (self.game.arena.width+1) * self.cols * BotBowlEnv.square_size_fl + BotBowlEnv.square_size_fl
-                self.fl_height = ((self.game.arena.height+1) * BotBowlEnv.square_size_fl + BotBowlEnv.layer_text_height) * self.rows + BotBowlEnv.square_size_fl
-                self.cv = tk.Canvas(width=max(self.game_width, self.fl_width), height=self.fl_height + self.game_height, master=self.root)
-            else:
-                self.cv = tk.Canvas(width=self.game_width, height=self.game_height, master=self.root)
-
-        self.cv.pack(side='top', fill='both', expand='yes')
-        self.cv.delete("all")
-        self.root.configure(background='black')
-
-        if self.game is not None:
-            # Squares
-            for y in range(self.game.arena.height):
-                for x in range(self.game.arena.width):
-                    if self.game.arena.board[y][x] == Tile.CROWD:
-                        fill = BotBowlEnv.crowd
-                    elif self.game.arena.board[y][x] in TwoPlayerArena.home_td_tiles:
-                        fill = BotBowlEnv.blue
-                    elif self.game.arena.board[y][x] in TwoPlayerArena.away_td_tiles:
-                        fill = BotBowlEnv.red
-                    elif self.game.arena.board[y][x] in TwoPlayerArena.wing_left_tiles or self.game.arena.board[y][x] in TwoPlayerArena.wing_right_tiles:
-                        fill = BotBowlEnv.wing
-                    elif self.game.arena.board[y][x] in TwoPlayerArena.scrimmage_tiles:
-                        fill = BotBowlEnv.scrimmage
-                    else:
-                        fill = BotBowlEnv.field
-                    self.cv.create_rectangle(BotBowlEnv.square_size * x, BotBowlEnv.square_size * y + BotBowlEnv.top_bar_height, BotBowlEnv.square_size * x + BotBowlEnv.square_size, BotBowlEnv.square_size * y + BotBowlEnv.square_size + BotBowlEnv.top_bar_height, fill=fill, outline=BotBowlEnv.black)
-
-            self.cv.create_line(self.game.arena.width * BotBowlEnv.square_size / 2.0 - 1, BotBowlEnv.top_bar_height, self.game.arena.width * BotBowlEnv.square_size / 2.0 - 1, self.game.arena.height * BotBowlEnv.square_size + BotBowlEnv.top_bar_height, fill=BotBowlEnv.black, width=2)
-
-            # Players
-            for y in range(self.game.state.pitch.height):
-                for x in range(self.game.state.pitch.width):
-                    player = self.game.state.pitch.board[y][x]
-                    if player is not None:
-                        self._draw_player(player, BotBowlEnv.square_size * x, BotBowlEnv.square_size * y + BotBowlEnv.top_bar_height)
-
-            # Dugouts
-            x = 4
-            y = self.game.arena.height * BotBowlEnv.square_size + BotBowlEnv.top_bar_height + 4
-            for player in self.game.get_reserves(self.game.state.away_team):
-                self._draw_player(player, x, y)
-                x += BotBowlEnv.square_size
-            x = 4
-            y += BotBowlEnv.square_size
-            for player in self.game.get_knocked_out(self.game.state.away_team):
-                self._draw_player(player, x, y)
-                x += BotBowlEnv.square_size
-            x = 4
-            y += BotBowlEnv.square_size
-            for player in self.game.get_casualties(self.game.state.away_team):
-                self._draw_player(player, x, y)
-                x += BotBowlEnv.square_size
-            x = 4
-            y += BotBowlEnv.square_size
-            for player in self.game.get_dungeon(self.game.state.away_team):
-                self._draw_player(player, x, y)
-                x += BotBowlEnv.square_size
-
-            x = self.game.arena.width * BotBowlEnv.square_size - BotBowlEnv.square_size
-            y = self.game.arena.height * BotBowlEnv.square_size + BotBowlEnv.top_bar_height + 4
-            for player in self.game.get_reserves(self.game.state.home_team):
-                self._draw_player(player, x, y)
-                x -= BotBowlEnv.square_size
-            x = self.game.arena.width * BotBowlEnv.square_size - BotBowlEnv.square_size
-            y += BotBowlEnv.square_size
-            for player in self.game.get_knocked_out(self.game.state.home_team):
-                self._draw_player(player, x, y)
-                x -= BotBowlEnv.square_size
-            x = self.game.arena.width * BotBowlEnv.square_size - BotBowlEnv.square_size
-            y += BotBowlEnv.square_size
-            for player in self.game.get_casualties(self.game.state.home_team):
-                self._draw_player(player, x, y)
-                x -= BotBowlEnv.square_size
-            x = self.game.arena.width * BotBowlEnv.square_size - BotBowlEnv.square_size
-            y += BotBowlEnv.square_size
-            for player in self.game.get_dungeon(self.game.state.home_team):
-                self._draw_player(player, x, y)
-                x -= BotBowlEnv.square_size
-
-            # Ball
-            for ball in self.game.state.pitch.balls:
-                self.cv.create_oval(BotBowlEnv.square_size * ball.position.x + BotBowlEnv.square_size / 4,
-                                    BotBowlEnv.square_size * ball.position.y + BotBowlEnv.square_size / 4 + BotBowlEnv.top_bar_height,
-                                    BotBowlEnv.square_size * ball.position.x + BotBowlEnv.square_size - BotBowlEnv.square_size / 4,
-                                    BotBowlEnv.square_size * ball.position.y + BotBowlEnv.square_size - BotBowlEnv.square_size / 4 + BotBowlEnv.top_bar_height,
-                                    fill=BotBowlEnv.ball, outline=BotBowlEnv.black, width=1)
-
-            # Non-spatial
-            self.cv.create_text(self.game.arena.width * BotBowlEnv.square_size / 2.0, 10, text='Half: {}, Weather: {}'.format(self.game.state.half, self.game.state.weather.name), fill='black')
-            self.cv.create_text(self.game.arena.width * BotBowlEnv.square_size / 2.0, 34, text='{}: Score: {}, Turn: {}, RR: {}/{}, Bribes: {}'.format(
-                self.game.state.away_team.name,
-                self.game.state.away_team.state.score,
-                self.game.state.away_team.state.turn,
-                self.game.state.away_team.state.rerolls,
-                self.game.state.away_team.state.rerolls_start,
-                self.game.state.away_team.state.bribes), fill='blue')
-            self.cv.create_text(self.game.arena.width * BotBowlEnv.square_size / 2.0, 22,
-                                text='{}: Score: {}, Turn: {}, RR: {}/{}, Bribes: {}'.format(
-                                    self.game.state.home_team.name,
-                                    self.game.state.home_team.state.score,
-                                    self.game.state.home_team.state.turn,
-                                    self.game.state.home_team.state.rerolls,
-                                    self.game.state.home_team.state.rerolls_start,
-                                    self.game.state.home_team.state.bribes), fill='red')
-
-        # Feature layers
-        if feature_layers:
-            row = 0
-            col = 0
-            for name, grid in self.last_obs['board'].items():
-                grid_x = col * (len(grid[0]) + 1) * BotBowlEnv.square_size_fl + BotBowlEnv.square_size_fl
-                grid_y = row * (len(grid) + 1) * BotBowlEnv.square_size_fl + self.game_height + BotBowlEnv.square_size_fl + ((row + 1) * BotBowlEnv.layer_text_height)
-
-                self.cv.create_text(grid_x + (len(grid[0]) * BotBowlEnv.square_size_fl) / 2, grid_y - BotBowlEnv.layer_text_height / 2, text=name)
-                self.cv.create_rectangle(grid_x,
-                                         grid_y,
-                                         grid_x + len(grid[0]) * BotBowlEnv.square_size_fl,
-                                         grid_y + len(grid) * BotBowlEnv.square_size_fl,
-                                         fill='black', outline=BotBowlEnv.black, width=2)
-                for y in range(len(grid)):
-                    for x in range(len(grid[0])):
-                        value = 1 - grid[y][x]
-                        fill = '#%02x%02x%02x' % (int(value * 255), int(value * 255), int(value * 255))
-                        self.cv.create_rectangle(BotBowlEnv.square_size_fl * x + grid_x,
-                                                 BotBowlEnv.square_size_fl * y + grid_y,
-                                                 BotBowlEnv.square_size_fl * x + grid_x + BotBowlEnv.square_size_fl,
-                                                 BotBowlEnv.square_size_fl * y + grid_y + BotBowlEnv.square_size_fl,
-                                                 fill=fill, outline=BotBowlEnv.black)
-                col += 1
-                if col >= self.cols:
-                    col = 0
-                    row += 1
-
-        self.root.update_idletasks()
-        self.root.update()
+        spatial_observation = None if skip_observation else self.get_state()[0]
+        return spatial_observation
 
     def close(self):
-        self.game = None
-        self.root = None
-        self.cv = None
+        pass
 
+    def seed(self, seed=None):
+        if seed is not None:
+            self._seed = seed
+            self.rnd = np.random.RandomState(self._seed)
+        return self._seed
+
+    def _flip_x_axis(self) -> bool:
+        """Returns true if x-axis should be flipped"""
+        return self.game.active_team is self.game.state.away_team
+
+    def _compute_action(self, action_idx: Optional[int], flip: bool) -> List[Optional[Action]]:
+        if action_idx is None:
+            return [None]
+
+        if action_idx < len(self.env_conf.simple_action_types):
+            if action_idx >= len(self.env_conf.simple_action_types) - len(self.env_conf.formations):
+                formation = self.env_conf.simple_action_types[action_idx]
+                return formation.actions(self.game, self.game.active_team) + [Action(ActionType.END_SETUP)]
+            else:
+                return [Action(self.env_conf.simple_action_types[action_idx])]
+
+        spatial_idx = int(action_idx) - len(self.env_conf.simple_action_types)
+        spatial_pos_idx = spatial_idx % self.board_squares
+        spatial_y = spatial_pos_idx // self.width
+        spatial_x = spatial_pos_idx % self.width
+        if flip:
+            spatial_x = self.width - spatial_x - 1
+
+        spatial_action_type = self.env_conf.positional_action_types[spatial_idx // self.board_squares]
+        return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
+
+    def _compute_action_idx(self, action: Action) -> int:
+        if action.action_type in self.env_conf.simple_action_types:
+            return self.env_conf.simple_action_types.index(action.action_type)
+        elif action.action_type in self.env_conf.positional_action_types:
+            position = action.position if action.position is not None else action.player.position
+            spatial_index = position.x + position.y * self.width
+            position_action_index = self.env_conf.positional_action_types.index(action.action_type)
+            return len(self.env_conf.simple_action_types) + self.board_squares * position_action_index + spatial_index
+        else:
+            raise AttributeError(f"Can't convert {action} to an action index")
+
+    @staticmethod
+    def _create_agent(agent_option) -> Agent:
+        if isinstance(agent_option, Agent):
+            return agent_option
+        elif agent_option == "human":
+            return Agent("Gym Learner", human=True)
+        elif agent_option == "random":
+            return RandomBot("Random bot")
+        elif agent_option in bot_registry.list():
+            return bot_registry.make(agent_option)
+        elif isinstance(agent_option, Agent):
+            return agent_option
+        else:
+            raise AttributeError(f"Not regonized bot name: {agent_option}")
+
+
+class BotBowlWrapper:
+    env: BotBowlEnv
+
+    def __init__(self, env):
+        self.env = env
+
+    def get_state(self):
+        return self.env.get_state()
+
+    def step(self, action: Optional[int], skip_observation: bool = False):
+        return self.env.step(action, skip_observation)
+
+    def render(self, mode='human'):
+        return self.env.render(mode)
+
+    def reset(self):
+        return self.env.reset()
+
+    def close(self):
+        return self.env.close()
+
+    def seed(self, seed=None):
+        return self.env.seed(seed)
+
+    @property
+    def root_env(self) -> BotBowlEnv:
+        env = self.env
+        while True:
+            if type(env) is BotBowlEnv:
+                return env
+            env = env.env
+
+    @property
+    def game(self) -> Game:
+        return self.root_env.game
+
+    def get_wrapper_with_type(self, wrapper_type) -> Optional['BotBowlWrapper']:
+        wrapper = self
+        while isinstance(wrapper, BotBowlWrapper):
+            if type(wrapper) is wrapper_type:
+                return wrapper
+            wrapper = wrapper.env
+        return None
+
+
+class RewardWrapper(BotBowlWrapper):
+    GameToFloat = Callable[[Game], float]  # Type alias
+
+    home_reward_func: GameToFloat
+    away_reward_func: GameToFloat
+
+    def __init__(self, env, home_reward_func: GameToFloat, away_reward_func: Optional[GameToFloat] = None):
+        super().__init__(env)
+        self.home_reward_func = home_reward_func
+        self.away_reward_func = away_reward_func
+
+    def step(self, action: int, skip_observation: bool = False):
+        obs, reward, done, info = self.env.step(action, skip_observation)
+        game = self.game
+        if game.active_team == game.state.home_team:
+            reward += self.home_reward_func(game)
+        elif game.active_team == game.state.away_team and self.away_reward_func is not None:
+            reward += self.home_reward_func(game)
+        return obs, reward, done, info
+
+
+class ScriptedActionWrapper(BotBowlWrapper):
+    scripted_func: Callable[[Game], Optional[Action]]
+
+    def __init__(self, env, scripted_func: Callable[[Game], Optional[Action]]):
+        super().__init__(env)
+        self.scripted_func = scripted_func
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, skip_observation=True)
+        self.do_scripted_actions()
+        return self.root_env.get_step_return(skip_observation)
+
+    def reset(self):
+        self.env.reset()
+        self.do_scripted_actions()
+        obs, _, _ = self.root_env.get_state()
+        return obs
+
+    def do_scripted_actions(self):
+        game = self.game
+        while not game.state.game_over and len(game.state.stack.items) > 0:
+            action = self.scripted_func(game)
+            if action is None:
+                break
+            game.step(action)
+
+
+class PPCGWrapper(BotBowlWrapper):
+    difficulty: float
+
+    def __init__(self, env, difficulty=1.0):
+        super().__init__(env)
+        self.difficulty = difficulty
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, skip_observation=True)
+
+        if self.difficulty < 1.0:
+            game = self.game
+            ball_carrier = game.get_ball_carrier()
+            if ball_carrier and ball_carrier.team == game.state.home_team:
+                extra_endzone_squares = int((1.0 - self.difficulty) * 25.0)
+                distance_to_endzone = ball_carrier.position.x - 1
+                if distance_to_endzone <= extra_endzone_squares:
+                    game.state.stack.push(Touchdown(game, ball_carrier))
+                    game.set_available_actions()
+                    self.env.step(None, skip_observation=True)
+
+        return self.root_env.get_step_return(skip_observation=skip_observation)

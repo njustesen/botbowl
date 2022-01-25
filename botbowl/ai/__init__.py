@@ -2,7 +2,6 @@ from gym.envs.registration import register
 
 from botbowl.core.load import *
 from .env import BotBowlEnv
-from .new_env import NewBotBowlEnv
 from .layers import *
 from .registry import *
 from .competition import *

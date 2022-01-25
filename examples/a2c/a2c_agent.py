@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 import botbowl
-from botbowl.ai.new_env import EnvConf, NewBotBowlEnv
+from botbowl.ai.env import EnvConf, BotBowlEnv
 from examples.a2c.a2c_env import a2c_scripted_actions
 from botbowl.ai.layers import *
 
@@ -111,7 +111,7 @@ class CNNPolicy(nn.Module):
 
 
 class A2CAgent(Agent):
-    env: NewBotBowlEnv
+    env: BotBowlEnv
 
     def __init__(self, name,
                  env_conf: EnvConf,
@@ -119,7 +119,7 @@ class A2CAgent(Agent):
                  filename=model_filename,
                  exclude_pathfinding_moves=True):
         super().__init__(name)
-        self.env = NewBotBowlEnv(env_conf)
+        self.env = BotBowlEnv(env_conf)
         self.exclude_pathfinding_moves = exclude_pathfinding_moves
 
         self.scripted_func = scripted_func

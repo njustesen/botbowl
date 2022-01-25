@@ -10,7 +10,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 import botbowl
-from botbowl.ai.new_env import NewBotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper
+from botbowl.ai.env import BotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper
 from examples.a2c.a2c_agent import A2CAgent, CNNPolicy
 from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
@@ -26,7 +26,7 @@ make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_s
 
 
 def make_env():
-    env = NewBotBowlEnv(env_conf)
+    env = BotBowlEnv(env_conf)
     if ppcg:
         env = PPCGWrapper(env)
     env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
