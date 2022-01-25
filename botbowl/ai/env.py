@@ -495,7 +495,7 @@ class BotBowlEnv(gym.Env):
                                 BotBowlEnv.square_size * y + BotBowlEnv.square_size + BotBowlEnv.top_bar_height, fill='white',
                                 width=1)
 
-    def render(self, feature_layers=False):
+    def render(self, mode='human', feature_layers=False):
 
         if self.root is None:
             self.root = tk.Tk()

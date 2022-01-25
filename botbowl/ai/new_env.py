@@ -8,6 +8,7 @@ This module contains the botbowlEnv class; botbowl implementing the Open AI Gym 
 from typing import Tuple, Iterable, Union, Callable
 
 from botbowl.ai.bots import RandomBot
+from botbowl.ai.env_render import EnvRenderer
 from botbowl.ai.registry import registry as bot_registry
 from botbowl.ai.layers import *
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
@@ -171,6 +172,7 @@ class NewBotBowlEnv(gym.Env):
     home_team: Team
     away_team: Team
     num_non_spatial_observables: int
+    _renderer: Optional['EnvRenderer']
 
     def __init__(self, env_conf=None, seed: int = None, home_agent='human', away_agent='random'):
 
@@ -201,6 +203,8 @@ class NewBotBowlEnv(gym.Env):
         spat_obs = self.reset()
         self.action_space = gym.spaces.Discrete(len(self.env_conf.action_types))
         self.observation_space = gym.spaces.Box(low=0, high=1, shape=spat_obs.shape)
+
+        self._renderer = None
 
     def get_state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -349,8 +353,10 @@ class NewBotBowlEnv(gym.Env):
 
         return spatial_observation, 0.0, done, info
 
-    def render(self, mode='human'):
-        pass
+    def render(self, mode='human', feature_layers=False):
+        if self._renderer is None:
+            self._renderer = EnvRenderer(self, feature_layers)
+        self._renderer.render()
 
     def reset(self, skip_observation=False):
         seed = self.rnd.randint(0, 2 ** 31)
@@ -515,7 +521,7 @@ class ScriptedActionWrapper(BotBowlWrapper):
 
     def do_scripted_actions(self):
         game = self.game
-        while not game.state.game_over and len(game.state.stack.items)>0:
+        while not game.state.game_over and len(game.state.stack.items) > 0:
             action = self.scripted_func(game)
             if action is None:
                 break
