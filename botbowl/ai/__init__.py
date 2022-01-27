@@ -1,6 +1,6 @@
 from gym.envs.registration import register
 
-from .env import BotBowlEnv, EnvConf
+from .env import BotBowlEnv, EnvConf, BotBowlWrapper, RewardWrapper, ScriptedActionWrapper, PPCGWrapper
 from .layers import *
 from .registry import *
 from .competition import *
