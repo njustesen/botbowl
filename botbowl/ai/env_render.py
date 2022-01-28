@@ -1,4 +1,3 @@
-#from .new_env import BotBowlEnv
 import tkinter as tk
 import math
 
@@ -21,7 +20,7 @@ class EnvRenderer:
     wing = '#55aa55'
     scrimmage = '#338833'
 
-    def __init__(self, env: 'BotBowlEnv', feature_layers=False):
+    def __init__(self, env, feature_layers=False):
         self.env = env
         self.layers = env.env_conf.layers
         self.root = tk.Tk()
