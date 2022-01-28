@@ -1,4 +1,5 @@
-import unittest.mock
+from multiprocessing import Process, Pipe
+
 from itertools import chain
 from random import randint
 from typing import Optional
@@ -91,10 +92,6 @@ def test_reward_and_scripted_wrapper():
         own_tds.append(env.game.state.home_team.state.score)
         opp_tds.append(env.game.state.away_team.state.score)
 
-    print("\n\n")
-    print(np.mean(rewards))
-    print(f"td rate: {np.mean(own_tds)} vs. {np.mean(opp_tds)}")
-
 
 def test_observation_ranges():
     def find_first_index(array_: np.ndarray, value_: float):
@@ -138,3 +135,56 @@ def test_observation_ranges():
             _, _, done, _ = env.step(action_idx, skip_observation=True)
 
     env.close()
+
+
+def worker(remote, parent_remote, env: BotBowlEnv):
+    parent_remote.close()
+    seed = env._seed
+    rnd = np.random.RandomState(seed)
+    steps = 0
+    env.reset()
+    while True:
+        command = remote.recv()
+        if command == 'step':
+            _, _, mask = env.get_state()
+            aa = np.where(mask > 0.0)[0]
+            action_idx = rnd.choice(aa, 1)[0]
+
+            obs, reward, done, info = env.step(action_idx)
+            steps += 1
+            if done:
+                obs = env.reset()
+            remote.send((obs, reward, done, info))
+        elif command == 'reset':
+            obs = env.reset()
+            done = False
+        elif command == 'close':
+            env.close()
+            break
+
+
+def test_multiple_gyms():
+    nenvs = 2
+    ps = []
+    remotes = []
+    for _ in range(nenvs):
+        env = BotBowlEnv()
+        remote, work_remote = Pipe()
+        p = Process(target=worker, args=(work_remote, remote, env), daemon=True)
+        p.start()
+        work_remote.close()
+
+        ps.append(p)
+        remotes.append(remote)
+
+    for i in range(20):
+        for remote in remotes:
+            remote.send('step')
+        for remote in remotes:
+            obs, reward, done, info = remote.recv()
+            assert reward is not None
+            assert obs is not None
+
+    for remote, p in zip(remotes, ps):
+        remote.send('close')
+        p.join()
