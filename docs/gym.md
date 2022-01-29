@@ -51,6 +51,8 @@ The action space is discrete, the action is an int in the range `0 <= action_idx
 will translate `action_idx` into an action type. There are two kinds of action types: **simple action types** and 
 **positional action types**. The positional action types needs a position too, but don't worry the environment takes care of this.
 
+![Single-branch action space](img/action-space.png?raw=true "Single-branch action space")
+
 Default simple action types:
 
  0. START_GAME,
@@ -94,6 +96,15 @@ Default positional action types:
 15. START_PASS,
 16. START_FOUL, 
 17. START_HANDOFF
+
+By having an unrolled action space it becomes easy to use state-of-the-art algorithms, but it's worth considering that 
+compared to many of the standard reinforcement learning benchmarks we have orders of magnitude larger action space. 
+
+Unrolling is not necessarily the only way. Action spaces could also be split into __multiple branches__, such that one action is 
+sampled from each branch. In botbowl, we would sample an action type, and then for some action types also a position. 
+This can be achieved using three branches; 1) action type, 2) x-coordinate, and 3) y-coordinate. This approach was e.g. 
+applied in preliminary results presented in [StarCraft II: A New Challenge for Reinforcement Learning](https://arxiv.org/pdf/1708.04782.pdf) 
+since StarCraft has a similar action space.
 
 
 ### Spatial observation

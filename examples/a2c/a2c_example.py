@@ -16,10 +16,9 @@ from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 1
-pathfinding_enabled = False
+env_size = 1  # Options are 1,3,5,7,11
 env_name = f"botbowl-{env_size}"
-env_conf = EnvConf(size=env_size)
+env_conf = EnvConf(size=env_size, pathfinding=False)
 
 
 make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
@@ -292,7 +291,7 @@ def main():
     # Reset environments
     spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
 
-    # Add obs to memory
+    # Add first obs to memory
     non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
     memory.spatial_obs[0].copy_(spatial_obs)
     memory.non_spatial_obs[0].copy_(non_spatial_obs)
