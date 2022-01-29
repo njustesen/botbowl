@@ -40,12 +40,15 @@ class EnvConf:
     layers: List[FeatureLayer]
     procedures: List[Procedure]
     formations: List[Formation]
+    pathfinding: bool
 
     def __init__(self, size=11,
                  extra_formations: Optional[Iterable[Formation]] = None,
-                 extra_feature_layers: Optional[Iterable[FeatureLayer]] = None):
+                 extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
+                 pathfinding = False):
 
         self.config: Configuration = load_config(f"gym-{size}")
+        self.config.pathfinding_enabled = pathfinding
 
         self.simple_action_types = [
             ActionType.START_GAME,

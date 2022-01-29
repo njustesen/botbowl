@@ -27,65 +27,105 @@ In future tutorials, we will attempt to:
 1. scale this approach to the 11-player variant of the game
 2. apply self-play to achieve a robust policy against diverse opponents
 
-The v2 environments don't use pathfinding, i.e. you can only move one square at each step. The results shown in the first two RL tutorials use v2. The v3 environments (simply change the name from botbowl-1-v2 to botbowl-1-v3) does use pathfinding such that players can move several squares in one action. The games thus have fewer steps in v3 but are slower. 
 
-## Observation and Action Space
-We will use the [default observation space](gym.md) in botbowl. 
+## Environment 
+We will use the [default observation space and action space](gym.md) in botbowl, we'll use a reward wrapper to define 
+our custom reward (more details in the next section). For now we won't use the scripted wrapper. 
 
-Action spaces can be split into __branches__, such that one action is sampled from each branch. In botbowl, we need to 
-sample an action type, and then for some action types also a position. This can be achieved using three branches; 1) action type, 
-2) x-coordinate, and 3) y-coordinate. This approach was e.g. applied in preliminary results presented in [StarCraft II: A New Challenge for
-Reinforcement Learning](https://arxiv.org/pdf/1708.04782.pdf) since StarCraft has a similar action space. 
+```python 
+# Environment
+env_size = 1  # Options are 1,3,5,7,11
+env_name = f"botbowl-{env_size}"
+env_conf = EnvConf(size=env_size, pathfinding=False)
 
-Instead of using branching, we believe it is more efficient to unroll the entire action space into one branch. In this 
-approach, we have one action for each non-spatial action as well as W * H actions for each spatial action type, 
-where W and H is the width and height of the spatial feature layers which are equal to the board 
-size plus a one-tile padding, since push actions can be out of bounds.  
- 
-![Single-branch action space](img/action-space.png?raw=true "Single-branch action space")
-
-We compute batches of action masks from the spatial feature layers that represent the available spatial actions. 
-Action masks are computed as vectors of the same size as the one-branch action space as seen above:
-
-```python
-def compute_action_masks(observations):
-    masks = []
-    m = False
-    for ob in observations:
-        mask = np.zeros(action_space)
-        i = 0
-        for action_type in non_spatial_action_types:
-            mask[i] = ob['available-action-types'][action_type.name]
-            i += 1
-        for action_type in spatial_action_types:
-            if ob['available-action-types'][action_type.name] == 0:
-                mask[i:i+board_squares] = 0
-            elif ob['available-action-types'][action_type.name] == 1:
-                position_mask = ob['board'][f"{action_type.name.replace('_', ' ').lower()} positions"]
-                position_mask_flatten = np.reshape(position_mask, (1, board_squares))
-                for j in range(board_squares):
-                    mask[i + j] = position_mask_flatten[0][j]
-            i += board_squares
-        assert 1 in mask
-        if m:
-            print(mask)
-        masks.append(mask)
-    return masks
+def make_env():
+    env = BotBowlEnv(env_conf)
+    if ppcg:
+        env = PPCGWrapper(env)
+    env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    env = RewardWrapper(env, home_reward_func=A2C_Reward())
+    return env
 ```
+The pathfinding option is explored in [Reinforcement Learning V: Pathfinding Assistance](a2c-pathfinding.md)
 
-We use the followin function to convert back to the original action space.
+## Reward Shaping
+
+The default rewards in botbowl are based on the game outcome. To ease the learning, we will shape the reward function in 
+several ways. First, we define the reward value of certain events. E.g. if the agent scores a touchdown it is rewarded with a value of 1 and if 
+the opponent scores it is rewarded (punished) with a value of -1.
+
+Additionally, we give the agent a reward for moving the ball toward the opponent endzone. Here, we give a reward of 0.005 for 
+every square the ball is moved closer. The reward function itself is defined like this:
 
 ```python
-def compute_action(action_idx):
-    if action_idx < len(non_spatial_action_types):
-        return non_spatial_action_types[action_idx], 0, 0
-    spatial_idx = action_idx - num_non_spatial_action_types
-    spatial_pos_idx = spatial_idx % board_squares
-    spatial_y = int(spatial_pos_idx / board_dim[1])
-    spatial_x = int(spatial_pos_idx % board_dim[1])
-    spatial_action_type_idx = int(spatial_idx / board_squares)
-    spatial_action_type = spatial_action_types[spatial_action_type_idx]
-    return spatial_action_type, spatial_x, spatial_y
+# found in examples/a2c/a2c_env.py 
+from botbowl.core.game import Game 
+from botbowl.core.table import OutcomeType
+
+class A2C_Reward:
+    # --- Reward function ---
+    rewards_own = {
+        OutcomeType.TOUCHDOWN: 1,
+        OutcomeType.SUCCESSFUL_CATCH: 0.1,
+        OutcomeType.INTERCEPTION: 0.2,
+        OutcomeType.SUCCESSFUL_PICKUP: 0.1,
+        OutcomeType.FUMBLE: -0.1,
+        OutcomeType.KNOCKED_DOWN: -0.1,
+        OutcomeType.KNOCKED_OUT: -0.2,
+        OutcomeType.CASUALTY: -0.5
+    }
+    rewards_opp = {
+        OutcomeType.TOUCHDOWN: -1,
+        OutcomeType.SUCCESSFUL_CATCH: -0.1,
+        OutcomeType.INTERCEPTION: -0.2,
+        OutcomeType.SUCCESSFUL_PICKUP: -0.1,
+        OutcomeType.FUMBLE: 0.1,
+        OutcomeType.KNOCKED_DOWN: 0.1,
+        OutcomeType.KNOCKED_OUT: 0.2,
+        OutcomeType.CASUALTY: 0.5
+    }
+    ball_progression_reward = 0.005
+
+    def __init__(self):
+        self.last_report_idx = 0
+        self.last_ball_x = None
+        self.last_ball_team = None
+
+    def __call__(self, game: Game):
+        if len(game.state.reports) < self.last_report_idx:
+            self.last_report_idx = 0
+
+        r = 0.0
+        own_team = game.active_team
+        opp_team = game.get_opp_team(own_team)
+
+        for outcome in game.state.reports[self.last_report_idx:]:
+            team = None
+            if outcome.player is not None:
+                team = outcome.player.team
+            elif outcome.team is not None:
+                team = outcome.team
+            if team == own_team and outcome.outcome_type in A2C_Reward.rewards_own:
+                r += A2C_Reward.rewards_own[outcome.outcome_type]
+            if team == opp_team and outcome.outcome_type in A2C_Reward.rewards_opp:
+                r += A2C_Reward.rewards_opp[outcome.outcome_type]
+        self.last_report_idx = len(game.state.reports)
+
+        ball_carrier = game.get_ball_carrier()
+        if ball_carrier is not None:
+            if self.last_ball_team is own_team and ball_carrier.team is own_team:
+                ball_progress = self.last_ball_x - ball_carrier.position.x
+                if own_team is game.state.away_team:
+                    ball_progress *= -1  # End zone at max x coordinate
+                r += A2C_Reward.ball_progression_reward * ball_progress
+
+            self.last_ball_team = ball_carrier.team
+            self.last_ball_x = ball_carrier.position.x
+        else:
+            self.last_ball_team = None
+            self.last_ball_x = None
+
+        return r
 ```
 
 ## Policy Network
@@ -180,101 +220,59 @@ Notice that an action mask is used, i.e. we only sample for actions that are act
 unavailable actions, setting them to the value ```float('-inf')``` since softmax will compute such values to 0. Notice, that these functions are called 
 with batches of observations and thus batches of actions are returned.
  
-## Reward Shaping
-
-The default rewards in botbowl are based on the game outcome. To ease the learning, we will shape the reward function in 
-several ways. First, we define the reward value of certain events. E.g. if the agent scores a touchdown it is rewarded with a value of 1 and if 
-the opponent scores it is rewarded (punished) with a value of -1.
-
-```python
-# --- Reward function ---
-# You need to improve the reward function before it can learn anything on larger boards.
-# Outcomes achieved by the agent
-rewards_own = {
-    OutcomeType.TOUCHDOWN: 1,
-    OutcomeType.SUCCESSFUL_CATCH: 0.1,
-    OutcomeType.INTERCEPTION: 0.2,
-    OutcomeType.SUCCESSFUL_PICKUP: 0.1,
-    OutcomeType.FUMBLE: -0.1,
-    OutcomeType.KNOCKED_DOWN: -0.1,
-    OutcomeType.KNOCKED_OUT: -0.2,
-    OutcomeType.CASUALTY: -0.5
-}
-rewards_opp = {
-    OutcomeType.TOUCHDOWN: -1,
-    OutcomeType.SUCCESSFUL_CATCH: -0.1,
-    OutcomeType.INTERCEPTION: -0.2,
-    OutcomeType.SUCCESSFUL_PICKUP: -0.1,
-    OutcomeType.FUMBLE: 0.1,
-    OutcomeType.KNOCKED_DOWN: 0.1,
-    OutcomeType.KNOCKED_OUT: 0.2,
-    OutcomeType.CASUALTY: 0.5
-}
-# Outcomes achieved by the opponent
-ball_progression_reward = 0.005
-```
-
-Additionally, we give the agent a reward for moving the ball toward the opponent endzone. Here, we give a reward of 0.005 for 
-every square the ball is moved closer. The reward function itself is defined like this:
-
-```python
-def reward_function(env, info, shaped=False):
-    r = 0
-    for outcome in env.get_outcomes():
-        if not shaped and outcome.outcome_type != OutcomeType.TOUCHDOWN:
-            continue
-        team = None
-        if outcome.player is not None:
-            team = outcome.player.team
-        elif outcome.team is not None:
-            team = outcome.team
-        if team == env.own_team and outcome.outcome_type in rewards_own:
-            r += rewards_own[outcome.outcome_type]
-        if team == env.opp_team and outcome.outcome_type in rewards_opp:
-            r += rewards_opp[outcome.outcome_type]
-    if info['ball_progression'] > 0:
-        r += info['ball_progression'] * ball_progression_reward
-    return r
-```
-
-```env.get_outcomes()``` returns the outcomes since last step.
 
 ## Parallelization
 A2C uses parallel worker processes to speed up the collection of experiences. First, we define a worker function that 
 we will run in a new process:
 
 ```python
-def worker(remote, parent_remote, env, worker_id):
+# found in examples/a2c/a2c_example.py 
+from botbowl.ai.env import BotBowlWrapper 
+reset_steps = 3000
+
+def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
     parent_remote.close()
 
     steps = 0
     tds = 0
+    tds_opp = 0
 
     while True:
         command, data = remote.recv()
         if command == 'step':
             steps += 1
-            action = data
-            obs, reward, done, info = env.step(action)
-            tds_scored = info['touchdowns'] - tds
-            tds = info['touchdowns']
-            reward_shaped = reward_function(env, info, shaped=True)
+            action = data[0]
+
+            spatial_obs, reward, done, info = env.step(action)
+            non_spatial_obs = info['non_spatial_obs']
+            action_mask = info['action_mask']
+
+            game = env.game
+            tds_scored = game.state.home_team.state.score - tds
+            tds_opp_scored = game.state.away_team.state.score - tds_opp
+            tds = game.state.home_team.state.score
+            tds_opp = game.state.away_team.state.score
+
             if done or steps >= reset_steps:
-                # If we  get stuck or something - reset the environment
+                # If we get stuck or something - reset the environment
                 if steps >= reset_steps:
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
-                obs = env.reset()
+                env.reset()
+                spatial_obs, non_spatial_obs, action_mask = env.get_state()
                 steps = 0
                 tds = 0
-            remote.send((obs, reward, reward_shaped, tds_scored, done, info))
+                tds_opp = 0
+            remote.send((spatial_obs, non_spatial_obs, action_mask, reward, tds_scored, tds_opp_scored, done))
+
         elif command == 'reset':
             steps = 0
             tds = 0
-            obs = env.reset()
-            remote.send(obs)
-        elif command == 'render':
-            env.render()
+            tds_opp = 0
+            env.reset()
+            spatial_obs, non_spatial_obs, action_mask = env.get_state()
+            remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
+
         elif command == 'close':
             break
 ```
@@ -285,7 +283,12 @@ botbowl environments. We can thus call ```step()``` with a list of actions, one 
 future observations and rewards. This is practical as we can query our policy network with a batch of observations.
 
 ```python
-class VecEnv():
+# found in examples/a2c/a2c_example.py 
+
+from multiprocessing import Process, Pipe
+from typing import Iterable, Tuple
+
+class VecEnv:
     def __init__(self, envs):
         """
         envs: list of botbowl environments to run in subprocesses
@@ -303,38 +306,24 @@ class VecEnv():
         for remote in self.work_remotes:
             remote.close()
 
-    def step(self, actions):
-        cumul_rewards = None
-        cumul_shaped_rewards = None
-        cumul_tds_scored = None
-        cumul_dones = None
+    def step(self, actions: Iterable[int], difficulty=1.0) -> Tuple[np.ndarray, ...]:
+        """
+        Takes one step in each environment, returns the results as stacked numpy arrays
+        """
         for remote, action in zip(self.remotes, actions):
-            remote.send(('step', action))
+            remote.send(('step', [action, difficulty]))
         results = [remote.recv() for remote in self.remotes]
-        obs, rews, rews_shaped, tds, dones, infos = zip(*results)
-        if cumul_rewards is None:
-            cumul_rewards = np.stack(rews)
-            cumul_shaped_rewards = np.stack(rews_shaped)
-            cumul_tds_scored = np.stack(tds)
-        else:
-            cumul_rewards += np.stack(rews)
-            cumul_shaped_rewards += np.stack(rews_shaped)
-            cumul_tds_scored += np.stack(tds)
-        if cumul_dones is None:
-            cumul_dones = np.stack(dones)
-        else:
-            cumul_dones |= np.stack(dones)
-        return np.stack(obs), cumul_rewards, cumul_shaped_rewards, cumul_tds_scored, cumul_dones, infos
+        return tuple(map(np.stack, zip(*results)))
 
-    def reset(self):
+    def reset(self, difficulty=1.0):
         for remote in self.remotes:
-            remote.send(('reset', None))
-        return np.stack([remote.recv() for remote in self.remotes])
+            remote.send(('reset', difficulty))
+        results = [remote.recv() for remote in self.remotes]
+        return tuple(map(np.stack, zip(*results)))
 
-    def render(self):
+    def swap(self, agent):
         for remote in self.remotes:
-            remote.send(('render', None))
-        return
+            remote.send(('swap', agent))
 
     def close(self):
         if self.closed:
@@ -357,89 +346,65 @@ We use the following configurations:
 
 ```python
 # Training configuration
-num_steps = 10000000
+num_steps = 100000
 num_processes = 8
-steps_per_update = 20  # We take 20 steps in every environment before updating
+steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
 entropy_coef = 0.01
 value_loss_coef = 0.5
 max_grad_norm = 0.05
 log_interval = 50
-save_interval = 500
+save_interval = 10
 
-# Environment
-env_name = "botbowl-1-v2"
-# env_name = "botbowl-3-v2"
-# env_name = "botbowl-5-v2"
-# env_name = "botbowl-7-v2"
-# env_name = "botbowl-v2"
-
-reset_steps = 2000  # The environment is reset after this many steps it gets stuck
-
-# If set to False, the agent will only play as the home team and you would have to flip the state to play both sides.
-botbowlEnv.play_on_both_sides = False
 
 # Architecture
-num_hidden_nodes = 256
+num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
-
-model_name = env_name
-log_filename = "logs/" + model_name + ".dat"
 ```
 
-If ```botbowlEnv.play_on_both_sides = False```, then the agent will only play as the home team. If set to ```True```, it will 
-also play as the away team and thus has to deal with flipped observations. We set this to False for now. We believe it is 
-easier, in the future, to flip the observations data when playing as the away team rather learning how to play with on both sides.`
-
-If for some reason the game halts or the agent is unable to execute a valid action, the game is reset after 2000 steps (```reset_steps```).
 
 ## Training
 
 We make the code agnostic to which variant of botbowl we are using by first computing the size of action and observation space.
 
-```python
-def make_env(worker_id):
-    print("Initializing worker", worker_id, "...")
-    env = gym.make(env_name)
-    return env
-
-es = [make_env(i) for i in range(num_processes)]
-envs = VecEnv([es[i] for i in range(num_processes)])
-
-spatial_obs_space = es[0].observation_space.spaces['board'].shape
-board_dim = (spatial_obs_space[1], spatial_obs_space[2])
-board_squares = spatial_obs_space[1] * spatial_obs_space[2]
-
-non_spatial_obs_space = es[0].observation_space.spaces['state'].shape[0] + es[0].observation_space.spaces['procedures'].shape[0] + es[0].observation_space.spaces['available-action-types'].shape[0]
-non_spatial_action_types = botbowlEnv.simple_action_types + botbowlEnv.defensive_formation_action_types + botbowlEnv.offensive_formation_action_types
-num_non_spatial_action_types = len(non_spatial_action_types)
-spatial_action_types = botbowlEnv.positional_action_types
-num_spatial_action_types = len(spatial_action_types)
-num_spatial_actions = num_spatial_action_types * spatial_obs_space[1] * spatial_obs_space[2]
-action_space = num_non_spatial_action_types + num_spatial_actions
-```
-
 We then instantiate our policy model using the computed sizes and an [RMSprop](https://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf) optimizer. 
 A memory store is then created that will contain trajectories of our agent. Trajectories will be 20 steps long for each worker. 
 
 ```python
-# MODEL
-ac_agent = CNNPolicy(spatial_obs_space, non_spatial_obs_space, hidden_nodes=num_hidden_nodes, kernels=num_cnn_kernels, actions=action_space)
+def main():
+    envs = VecEnv([make_env() for _ in range(num_processes)])
 
-# OPTIMIZER
-optimizer = optim.RMSprop(ac_agent.parameters(), learning_rate)
+    env = make_env()
+    env.reset()
+    spat_obs, non_spat_obs, action_mask = env.get_state()
+    del env
+    spatial_obs_space = spat_obs.shape
+    non_spatial_obs_space = non_spat_obs.shape[0]
+    action_space = len(action_mask)
 
-# MEMORY STORE
-memory = Memory(steps_per_update, num_processes, spatial_obs_space, (1, non_spatial_obs_space), action_space)
+    # MODEL
+    ac_agent = CNNPolicy(spatial_obs_space,
+                         non_spatial_obs_space,
+                         hidden_nodes=num_hidden_nodes,
+                         kernels=num_cnn_kernels,
+                         actions=action_space)
 
-# Reset environments
-obs = envs.reset()
-spatial_obs, non_spatial_obs = update_obs(obs)
+    # OPTIMIZER
+    optimizer = optim.RMSprop(ac_agent.parameters(), learning_rate)
 
-# Add obs to memory
-memory.spatial_obs[0].copy_(spatial_obs)
-memory.non_spatial_obs[0].copy_(non_spatial_obs)
+    # MEMORY STORE
+    memory = Memory(steps_per_update, num_processes, spatial_obs_space, (1, non_spatial_obs_space), action_space)
+
+    # Reset environments
+    spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
+
+    # Add obs to memory
+    non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=1)
+    memory.spatial_obs[0].copy_(spatial_obs)
+    memory.non_spatial_obs[0].copy_(non_spatial_obs)
+    memory.action_masks[0].copy_(action_masks)
+
 ```
 
 When the memory is full (20 steps has been reached), reward values are discounted and training is performed on the data in the memory where after it is flushed.
