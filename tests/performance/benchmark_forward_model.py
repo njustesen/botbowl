@@ -12,6 +12,7 @@ import pstats
 
 
 config = load_config("gym-11")
+config.pathfinding_enabled = False
 ruleset = load_rule_set(config.ruleset)
 home = load_team_by_filename("human", ruleset)
 away = load_team_by_filename("human", ruleset)
