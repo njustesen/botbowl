@@ -550,6 +550,6 @@ class PPCGWrapper(BotBowlWrapper):
                 if distance_to_endzone <= extra_endzone_squares:
                     game.state.stack.push(Touchdown(game, ball_carrier))
                     game.set_available_actions()
-                    self.env.step(None, skip_observation=True)
+                    self.env.step(None, skip_observation=True)  # process the Touchdown-procedure
 
         return self.root_env.get_step_return(skip_observation=skip_observation)

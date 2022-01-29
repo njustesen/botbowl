@@ -40,24 +40,31 @@ on the 1-square wide endzone as in the real game.
 
 In the [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py), you can enable this feature by setting ```ppcg = True```.
 What it does is simply to run the ```Touchdown()``` procedure directly in the game when the agent has the ball while within a certain distance of the endzone.
-The is done on the worker process:
+This is done with the `PPCGWrapper`: 
 
 ```python
-def worker(remote, parent_remote, env, worker_id):
-    ...
-    while True:
-        command, data = remote.recv()
-        if command == 'step':
-            ...
-            ball_carrier = env.game.get_ball_carrier()
-            # PPCG
-            if dif < 1.0:
-                if ball_carrier and ball_carrier.team == env.game.state.home_team:
-                    extra_endzone_squares = int((1.0 - dif) * 25.0)
-                    distance_to_endzone = ball_carrier.position.x - 1
-                    if distance_to_endzone <= extra_endzone_squares:
-                        #reward_shaped += rewards_own[OutcomeType.TOUCHDOWN]
-                        env.game.state.stack.push(Touchdown(env.game, ball_carrier))
+class PPCGWrapper(BotBowlWrapper):
+    difficulty: float
+
+    def __init__(self, env, difficulty=1.0):
+        super().__init__(env)
+        self.difficulty = difficulty
+
+    def step(self, action: int, skip_observation: bool = False):
+        self.env.step(action, skip_observation=True)
+
+        if self.difficulty < 1.0:
+            game = self.game
+            ball_carrier = game.get_ball_carrier()
+            if ball_carrier and ball_carrier.team == game.state.home_team:
+                extra_endzone_squares = int((1.0 - self.difficulty) * 25.0)
+                distance_to_endzone = ball_carrier.position.x - 1
+                if distance_to_endzone <= extra_endzone_squares:
+                    game.state.stack.push(Touchdown(game, ball_carrier))
+                    game.set_available_actions()
+                    self.env.step(None, skip_observation=True)  # process the Touchdown-procedure 
+
+        return self.root_env.get_step_return(skip_observation=skip_observation)
 ````
 
 The difficulty is adjusted in the training loop like this:
@@ -80,6 +87,23 @@ for i in range(num_processes):
             difficulty = 1
 ```
 
+And the difficulity is sent to the worker and processed like this: 
+
+```python
+def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
+    # ... 
+    ppcg_wrapper: Optional[PPCGWrapper] = env.get_wrapper_with_type(PPCGWrapper)
+
+    while True:
+        command, data = remote.recv()
+        if command == 'step':
+            steps += 1
+            action, dif = data[0], data[1]
+            if ppcg_wrapper is not None:
+                ppcg_wrapper.difficulty = dif
+```
+
+
 Here, we use ```dif_delta = 0.01```. Note, that if ````ppcg = False```` we always set ```difficulty = 1``` so that a normal endzone is used.
 
 Let's see how the results are, again using _just_ 100M training steps.
@@ -101,33 +125,24 @@ scripted bots in our previous tutorials. In the constructor of our Agent class, 
 ...
 model_filename = "my-model"
 class A2CAgent(Agent):
+    env: BotBowlEnv
 
-    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True, exclude_pathfinding_moves=True):
+    def __init__(self, name,
+                 env_conf: EnvConf,
+                 scripted_func: Callable[[Game], Optional[Action]] = None,
+                 filename=model_filename,
+                 exclude_pathfinding_moves=True):
         super().__init__(name)
-        self.my_team = None
-        self.env = self.make_env(env_name)
-        self.copy_game = copy_game
+        self.env = BotBowlEnv(env_conf)
         self.exclude_pathfinding_moves = exclude_pathfinding_moves
-        self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
-        self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
-        self.board_squares = self.spatial_obs_space[1] * self.spatial_obs_space[2]
 
-        self.non_spatial_obs_space = self.env.observation_space.spaces['state'].shape[0] + \
-                                self.env.observation_space.spaces['procedures'].shape[0] + \
-                                self.env.observation_space.spaces['available-action-types'].shape[0]
-        self.non_spatial_action_types = botbowlEnv.simple_action_types + botbowlEnv.defensive_formation_action_types + botbowlEnv.offensive_formation_action_types
-        self.num_non_spatial_action_types = len(self.non_spatial_action_types)
-        self.spatial_action_types = botbowlEnv.positional_action_types
-        self.num_spatial_action_types = len(self.spatial_action_types)
-        self.num_spatial_actions = self.num_spatial_action_types * self.spatial_obs_space[1] * self.spatial_obs_space[2]
-        self.action_space = self.num_non_spatial_action_types + self.num_spatial_actions
-        self.is_home = True
+        self.scripted_func = scripted_func
+        self.action_queue = []
 
         # MODEL
         self.policy = torch.load(filename)
         self.policy.eval()
         self.end_setup = False
-    ...
 ```
 
 The env_name argument is particularly important as it should be the environment name that the model was trained on. 
@@ -135,28 +150,24 @@ If the model was trained on ```botbowl-11-v2``` (where pathfinding is disabled) 
 The agent can still play in games with pathfinding enabled. It will do this by excluding pathfinding-assisted move actions later.
 
 In the agent's ```act()``` implementation, we will steal a bit of code from our training loop that calls our neural network. 
-Additionally, if the agent is playing as the away team, we need to flip the spatial observation of the board, as it is now playing on 
-the opposite side of the board.
+
+Note that if the agent is playing as the away team, we need to flip the spatial observation of the board, as it is now playing on 
+the opposite side of the board. Luckily, the environment will do that for us, so we don't need to consider it here. And the environment 
+helps us flip any spatial action too. 
 
 ```python
-    def _flip(self, board):
-        flipped = {}
-        for name, layer in board.items():
-            flipped[name] = np.flip(layer, 1)
-        return flipped
-    
     def _filter_actions(self):
-    """
-    Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
-    """
-    if not self.pathfinding_enabled and self.env.game.config.pathfinding_enabled:
+        """
+        Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
+        """
         actions = []
         for action_choice in self.env.game.state.available_actions:
             if action_choice.action_type == ActionType.MOVE:
                 positions, block_dice, rolls = [], [], []
-                for i in range(action_choice.positions):
+                for i in range(len(action_choice.positions)):
                     position = action_choice.positions[i]
-                    roll = action_choice.rolls[i]
+                    roll = action_choice.paths[i].rolls[0]
+                    # Only include positions where there are not players
                     if self.env.game.get_player_at(position) is None:
                         positions.append(position)
                         rolls.append(roll)
@@ -165,55 +176,38 @@ the opposite side of the board.
                 actions.append(action_choice)
         self.env.game.state.available_actions = actions
 
-    def act(self, game):
+    @staticmethod
+    def _update_obs(array: np.ndarray):
+        return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
 
-        if self.end_setup:
-            self.end_setup = False
-            return botbowl.Action(ActionType.END_SETUP)
-        
-        # Update the game in our gym environment
-        self.env.game = deepcopy(game) if self.copy_game else game
+    def act(self, game):
+        if len(self.action_queue) > 0:
+            return self.action_queue.pop(0)
+
+        if self.scripted_func is not None:
+            scripted_action = self.scripted_func(game)
+            if scripted_action is not None:
+                return scripted_action
+
+        self.env.game = game
 
         # Filter out pathfinding-assisted move actions
-        self._filter_actions()
+        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
+            self._filter_actions()
 
-        # Get observation
-        self.env.game = game
-        observation = self.env.get_observation()
+        spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
+        non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
 
-        # Flip board observation if away team - we probably only trained as home team
-        if not self.is_home:
-            observation['board'] = self._flip(observation['board'])
+        _, actions = self.policy.act(
+            Variable(spatial_obs.float()),
+            Variable(non_spatial_obs.float()),
+            Variable(action_mask))
 
-        obs = [observation]
-        spatial_obs, non_spatial_obs = self._update_obs(obs)
+        action_idx = actions[0]
+        action_objects = self.env._compute_action(action_idx, flip=self.env._flip_x_axis())
 
-        action_masks = self._compute_action_masks(obs)
-        action_masks = torch.tensor(action_masks, dtype=torch.bool)
-
-        values, actions = self.policy.act(
-            Variable(spatial_obs),
-            Variable(non_spatial_obs),
-            Variable(action_masks))
-
-        # Create action from output
-        action = actions[0]
-        value = values[0]
-        action_type, x, y = self._compute_action(action.numpy()[0])
-        position = Square(x, y) if action_type in botbowlEnv.positional_action_types else None
-
-        # Flip position
-        if not self.is_home and position is not None:
-            position = Square(game.arena.width - 1 - position.x, position.y)
-
-        action = botbowl.Action(action_type, position=position, player=None)
-
-        # Let's just end the setup right after picking a formation
-        if action_type.name.lower().startswith('setup'):
-            self.end_setup = True
-
-        # Return action to the framework
-        return action
+        self.action_queue = action_objects
+        return self.action_queue.pop(0)
 ```
 
 The rest of the file should be familiar if you followed our tutorials on scripted bots.

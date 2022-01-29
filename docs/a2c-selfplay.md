@@ -17,12 +17,15 @@ This tutorial will demonstrate how we can do that in the small 1v1 variant of th
 
 First, we specify the settings of our self-play session:
 
-```pyython
-# Self-play
+```python
+make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
+
 selfplay = True  # Use this to enable/disable self-play
 selfplay_window = 1
 selfplay_save_steps = int(num_steps / 10)
 selfplay_swap_steps = selfplay_save_steps
+
+
 ``` 
 
 ```selfplay=False``` by default, so remember to set it to ```True```.
@@ -39,9 +42,11 @@ selfplay_next_save = selfplay_save_steps
 selfplay_next_swap = selfplay_swap_steps
 selfplay_models = 0
 if selfplay:
-    model_path = f"models/{model_name}_selfplay_0"
+    model_name = f"{exp_id}_selfplay_0.nn"
+    model_path = os.path.join(model_dir, model_name)
     torch.save(ac_agent, model_path)
-    envs.swap(A2CAgent(name=f"selfplay-0", env_name=env_name, filename=model_path))
+    self_play_agent = make_agent_from_model(name=model_name, filename=model_path)
+    envs.swap(self_play_agent)
     selfplay_models += 1
 ```
 
@@ -57,7 +62,7 @@ def worker(remote, parent_remote, env, worker_id):
             ...    
             if done or steps >= reset_steps:
                 ...
-                env.opp_actor = next_opp
+                env.root_env.away_agent = next_opp
                 ...
             remote.send((obs, reward, reward_shaped, tds_scored, tds_opp_scored, done, info))
         ...
@@ -88,9 +93,10 @@ if selfplay and all_steps >= selfplay_next_swap:
     selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
     lower = max(0, selfplay_models-1-(selfplay_window-1))
     i = random.randint(lower, selfplay_models-1)
-    model_path = f"models/{model_name}_selfplay_{i}"
+    model_name = f"{exp_id}_selfplay_{i}.nn"
+    model_path = os.path.join(model_dir, model_name)
     print(f"Swapping opponent to {model_path}")
-    envs.swap(A2CAgent(name=f"selfplay-{i}", env_name=env_name, filename=model_path))
+    envs.swap(make_agent_from_model(name=model_name, filename=model_path))
 ```
 
 ## Results
