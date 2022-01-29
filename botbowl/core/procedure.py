@@ -1655,7 +1655,7 @@ class KnockDown(Procedure):
         # Check fumble - does not handle throw-in
         ball = self.game.get_ball_at(self.player.position)
         if ball is not None:
-            if not self.game.is_out_of_bounds(self.player.position):
+            if not self.player.position.out_of_bounds:
                 Bounce(self.game, ball)
             self.game.report(Outcome(OutcomeType.FUMBLE, player=self.player, opp_player=self.inflictor))
 
@@ -3241,7 +3241,7 @@ class Push(Procedure):
 
             # Ball
             if self.game.has_ball(self.player):
-                if self.game.is_out_of_bounds(self.player.position):
+                if self.player.position.out_of_bounds:
                     ball = self.game.get_ball_at(self.player.position)
                     ThrowIn(self.game, ball, position=self.follow_to)
                 elif self.strip_ball_condition: 
@@ -4284,7 +4284,7 @@ class Reroll(Procedure):
         actions = []
         if self.skill is not None or self.loner is not None:
             return actions
-        if not self.game.get_team_agent(self.player.team).human:
+        if not self.game.get_team_agent(self.player.team).human:  # Actor is non-human agent, action accuired from agent.act(game)
             if self.can_use_pro:
                 actions = [
                     ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team),
@@ -4295,8 +4295,8 @@ class Reroll(Procedure):
                     ActionChoice(ActionType.USE_REROLL, team=self.player.team),
                     ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)
                 ]
-        else:
-            if len(self.block_actions) == 0 or self.context.favor != self.player.team:
+        else:  # actor is human agent. action supplied through game.step(action) 
+            if len(self.block_actions) == 0 or self.context.favor != self.player.team: 
                 if self.can_use_pro:
                     actions = [
                         ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team)
@@ -4308,7 +4308,7 @@ class Reroll(Procedure):
                         ActionChoice(ActionType.USE_REROLL, team=self.player.team),
                         ActionChoice(ActionType.DONT_USE_REROLL, team=self.player.team)
                     ]
-            else:
+            else: 
                 if self.can_use_pro:
                     actions = [
                         ActionChoice(ActionType.USE_SKILL, skill=Skill.PRO, team=self.game.state.current_team)

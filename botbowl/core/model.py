@@ -5,8 +5,13 @@ Year: 2018
 ==========================
 This module contains most of the model classes.
 """
+
+from botbowl.core.util import get_data_path, Stack, compare_iterable
+from botbowl.core.table import *
+from botbowl.core.forward_model import Immutable, Reversible, CallableStep, treat_as_immutable, immutable_after_init
+
 from abc import ABC, abstractmethod
-from copy import copy
+from copy import copy, deepcopy
 from typing import List, Optional, Set, Dict
 
 import numpy as np
@@ -15,10 +20,6 @@ import time
 import pickle
 from math import sqrt
 import os
-
-from botbowl.core.util import get_data_path, Stack, compare_iterable
-from botbowl.core.table import *
-from botbowl.core.forward_model import Immutable, Reversible, CallableStep
 
 
 class ReplayStep:
@@ -548,7 +549,8 @@ class Pitch(Reversible):
         self.balls = []
         self.bomb = None
         self.board = [[None for x in range(width)] for y in range(height)]
-        self.squares = [[Square(x, y) for x in range(width)] for y in range(height)]
+        self.squares = [[Square(x, y, x == 0 or x == width-1 or y == 0 or y == height-1)
+                         for x in range(width)] for y in range(height)]
         self.height = len(self.board)
         self.width = len(self.board[0])
 
@@ -566,7 +568,8 @@ class Pitch(Reversible):
         }
 
 
-class ActionChoice(Immutable):
+@immutable_after_init
+class ActionChoice:
     action_type: ActionType
     positions: List['Square']
     players: List['Player']
@@ -616,13 +619,13 @@ class ActionChoice(Immutable):
         }
 
 
-class Action(Reversible):
+@treat_as_immutable
+class Action:
     action_type: ActionType
     position: Optional['Square']
     player: Optional['Player']
 
     def __init__(self, action_type, position=None, player=None):
-        super().__init__()
         self.action_type = action_type
         self.position = position
         self.player = player
@@ -689,7 +692,8 @@ class Die(ABC):
         pass
 
 
-class DiceRoll(Reversible):
+@treat_as_immutable
+class DiceRoll:
     dice: List[Die]
     modifiers: int
     target: Optional[int]
@@ -702,7 +706,6 @@ class DiceRoll(Reversible):
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True,
                  target_lower=False, highest_succeed=True, lowest_fail=True):
-        super().__init__()
         self.dice = dice
         self.sum = 0
         self.d68 = d68
@@ -982,7 +985,6 @@ class Catchable(Piece):
     def move(self, x, y):
         # This is unfortunately way slower than below, but Square is Immutable
         self.position = Square(self.position.x + x, self.position.y + y)
-
         # self.position.x += x
         # self.position.y += y
 
@@ -1027,7 +1029,7 @@ class Ball(Catchable, Reversible):
                f"is_carried={self.is_carried})"
 
 
-class Bomb(Catchable):
+class Bomb(Catchable, Reversible):
 
     def __init__(self, position, on_ground=True, is_carried=False):
         super().__init__(position, on_ground, is_carried)
@@ -1181,27 +1183,21 @@ class Player(Piece, Reversible):
         return f"Player(position={self.position if self.position is not None else 'None'}, {self.role.name}, state={self.state})"
 
 
-class Square(Immutable):
+@immutable_after_init
+class Square:
+    x: int
+    y: int
+    _out_of_bounds: Optional[bool]
 
-    def __init__(self, x, y):
-        self._x = x
-        self._y = y
-
-    @property
-    def x(self):
-        return self._x
-
-    @x.setter
-    def x(self, x):
-        raise AttributeError("Squares is immutable, how dare you?!")
+    def __init__(self, x: int, y: int, _out_of_bounds=None):
+        self.x = x
+        self.y = y
+        self._out_of_bounds = _out_of_bounds
 
     @property
-    def y(self):
-        return self._y
-
-    @y.setter
-    def y(self, y):
-        raise AttributeError("Squares is immutable, how dare you?!")
+    def out_of_bounds(self):
+        assert self._out_of_bounds is not None  # This assertion can be removed when we trust the unit tests more
+        return self._out_of_bounds
 
     def to_json(self):
         return {
@@ -1229,7 +1225,7 @@ class Square(Immutable):
         return self.distance(other, manhattan) == 1
 
     def __repr__(self):
-        return f"Square({self.x}, {self.y})"
+        return f"Square({self.x}, {self.y}, out={self._out_of_bounds if self._out_of_bounds is not None else 'None'})"
 
 
 class Race:
@@ -1286,7 +1282,8 @@ class Team(Reversible):
         return self.team_id
 
 
-class Outcome(Immutable):
+@immutable_after_init
+class Outcome:
     outcome_type: OutcomeType
     position: Optional[Square]
     player: Optional[Player]

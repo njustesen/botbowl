@@ -75,7 +75,7 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
 
     def assert_square_type(obj: Position) -> Square:
         if type(obj) == Square:
-            return obj
+            return game.get_square(obj.x, obj.y)
         else:
             return game.get_square(obj[0], obj[1])
 

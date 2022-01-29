@@ -27,7 +27,7 @@ def test_negatrait_pass_allows_player_action(trait):
         assert not player.state.really_stupid
 
     # check the player can continue move
-    to = Square(player.position.x, player.position.y + 1)
+    to = game.get_adjacent_squares(player.position, occupied=False)[0]
     game.step(Action(ActionType.MOVE, player=player, position=to))
     assert player.position == to
 

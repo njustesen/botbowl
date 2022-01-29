@@ -5,11 +5,25 @@ Year: 2021
 ==========================
 Classes and method for recursively tracing changes to objects.
 """
-from copy import deepcopy, copy
+from abc import ABC, abstractmethod
+from copy import copy
 from enum import Enum
+from typing import Any, List
+
+
+class Step(ABC):
+    @abstractmethod
+    def undo(self):
+        pass
+
+    @abstractmethod
+    def redo(self):
+        pass
 
 
 class Reversible:
+    _trajectory: 'Trajectory'
+    _ignored_keys: set
 
     def __init__(self, ignored_keys=None):
         if ignored_keys is None:
@@ -25,7 +39,7 @@ class Reversible:
             self.log_this(AssignmentStep(self, key, from_value, to_value))
         super().__setattr__(key, to_value)
 
-    def log_this(self, entry):
+    def log_this(self, entry: Any):
         self._trajectory.log_state_change(entry)
 
     def reset_to(self, key, value):
@@ -51,51 +65,35 @@ class Reversible:
 
 
 class Trajectory:
+    action_log: List[Step]
+    enabled: bool
+
     def __init__(self):
-        self.action_log = [[]]
-        self.current_step = 0
+        self.action_log = []
         self.enabled = False
 
-    def log_state_change(self, log_entry):
+    def __len__(self):
+        return len(self.action_log)
+
+    def log_state_change(self, log_entry: Any):
         if self.enabled:
-            self.action_log[self.current_step].append(log_entry)
+            self.action_log.append(log_entry)
 
-    def revert(self, to_step=0):
-        assert to_step <= self.current_step
+    def revert(self, to_step: int) -> List[Step]:
+        assert 0 <= to_step <= len(self.action_log)
 
-        revert_actions = reversed([log_entry for step in self.action_log[to_step:] for log_entry in step])
-        for log_entry in revert_actions:
+        reverted_steps = self.action_log[to_step:]
+        self.action_log = self.action_log[:to_step]
+
+        for log_entry in reversed(reverted_steps):
             log_entry.undo()
 
-        self.current_step = to_step
+        return reverted_steps
 
-        # Reset log to current step
-        self.action_log = self.action_log[:to_step]
-        self.action_log.append([])
-
-    def step_forward(self, to_step):
-        raise NotImplementedError()
-
-        assert to_step >= self.current_step
-
-        revert_actions = [log_entry for step in self.action_log[self.current_step:to_step + 1] for log_entry in step]
-
-        for log_entry in revert_actions:
+    def step_forward(self, steps: List[Step]):
+        for log_entry in steps:
             log_entry.redo()
-        self.current_step = to_step
-
-    def next_step(self):
-        if self.enabled:
-            self.action_log.append([])
-            self.current_step += 1
-
-
-class Step:
-    def undo(self):
-        raise NotImplementedError("Method to be overwritten by subclass")
-
-    def redo(self):
-        raise NotImplementedError("Method to be overwritten by subclass")
+        self.action_log.extend(steps)
 
 
 class CallableStep(Step):
@@ -223,13 +221,14 @@ class ReversibleList(list, Reversible):
         list.remove(self, value)
 
     def __reduce__(self):
-        func = ReversibleList.init_ReversibleList
+        func = ReversibleList.init_reversible_list
         values = []
         values.extend(self)
         return func, (values, self._trajectory)
 
-    def init_ReversibleList(values, trajectory):  # Static method
-        logged_list =  ReversibleList(values)
+    @staticmethod
+    def init_reversible_list(values, trajectory):
+        logged_list = ReversibleList(values)
         object.__setattr__(logged_list, "_trajectory", trajectory)
         return logged_list
 
@@ -270,12 +269,13 @@ class ReversibleSet(set, Reversible):
         raise NotImplementedError()
 
     def __reduce__(self):
-        func = ReversibleSet.init_ReversibleSet
+        func = ReversibleSet.init_reversible_set
         values = set()
         values.update(self)
         return func, (values, self._trajectory)
 
-    def init_ReversibleSet(values, trajectory):  # Static method
+    @staticmethod
+    def init_reversible_set(values, trajectory):  # Static method
         logged_set = ReversibleSet(values)
         object.__setattr__(logged_set, "_trajectory", trajectory)
         return logged_set
@@ -313,12 +313,13 @@ class ReversibleDict(dict, Reversible):
         raise NotImplementedError()
 
     def __reduce__(self):
-        func = ReversibleDict.init_ReversibleDict
+        func = ReversibleDict.init_reversible_dict
         values = {}
         values.update(self)
         return func, (values, self._trajectory)
 
-    def init_ReversibleDict(values, trajectory):  # Static method
+    @staticmethod
+    def init_reversible_dict(values, trajectory):  # Static method
         logged_dict = ReversibleDict(values)
         object.__setattr__(logged_dict, "_trajectory", trajectory)
         return logged_dict
@@ -363,3 +364,30 @@ class Immutable:
             raise AttributeError(f"{self} is an Immutable object. Its values can't be reassigned.")
         else:
             super().__setattr__(key, value)
+
+
+def immutable_after_init(cls):
+    """ Used as decorator to disallow attribute assignments after init"""
+
+    old_init = cls.__init__
+
+#    def setattr_error(self, attr_name, value):
+#        raise AttributeError(f"Can't assign new value to {self} because class is immutable after init")
+
+
+    def _setattr(self, key, value):
+        if self.__setattr__ is None:
+            raise AttributeError()
+        object.__setattr__(self, key, value)
+
+
+    def init(self, *args, **kwargs):
+        old_init(self, *args, **kwargs)
+        self.__setattr__ = None
+
+    cls.__init__ = init
+    cls.__setattr__ = _setattr
+    treat_as_immutable(cls)
+    return cls
+
+
