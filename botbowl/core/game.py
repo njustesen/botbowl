@@ -524,6 +524,14 @@ class Game:
             if clock.is_running():
                 clock.pause()
 
+    def resume_clocks(self) -> None:
+        """
+        Resume all clocks.
+        """
+        for clock in self.state.clocks:
+            if not clock.is_running():
+                clock.resume()
+
     def add_secondary_clock(self, team: Team) -> None:
         """
         Adds a secondary clock for quick decisions.

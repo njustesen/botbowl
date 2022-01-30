@@ -14,20 +14,6 @@ import glob
 import uuid
 
 
-class Save:
-
-    def __init__(self, game, team_id):
-        self.game = game
-        game.pause_clocks()
-        self.team_id = team_id
-
-    def to_json(self):
-        return {
-            'game': self.game.to_json(),
-            'team_id': self.team_id
-        }
-
-
 class InMemoryHost:
 
     def __init__(self):
@@ -45,16 +31,22 @@ class InMemoryHost:
     def get_games(self):
         return list(self.games.values())
 
-    def save_game(self, game_id, name, team_id):
+    def save_game(self, game_id, name):
         game = self.get_game(game_id)
-        filename = os.path.join(get_data_path("saves/"), name+".botbowl")
+        data_path = get_data_path("saves/")
+        if not os.path.exists(data_path):
+            os.mkdir(data_path)
+        filename = os.path.join(data_path, name+".bb")
         print("Saving game")
+        game.pause_clocks()
         pickle.dump(game, open(filename, "wb"))
-        game_clone = pickle.load(open(filename, "rb"))
-        game_clone.game_id = str(uuid.uuid1())
-        save = Save(game, team_id=team_id)
-        pickle.dump(save, open(filename, "wb"))
-        print("Game saved")
+        game.resume_clocks()
+
+    def delete_saved_game(self, name):
+        data_path = get_data_path("saves/")
+        filename = os.path.join(data_path, name + ".bb")
+        if os.path.exists(filename):
+            os.remove(filename)
 
     # loads Save object from file
     def load_file(self, filename):
@@ -63,26 +55,24 @@ class InMemoryHost:
         print("Game loaded")
         return save
 
-    # creates Game from Save
     def load_game(self, name):
-        save = self.load_file(get_data_path("saves/" + name.lower() + ".botbowl"))
-        self.games[save.game.game_id] = save.game
-        return save
+        game = self.load_file(get_data_path("saves/" + name.lower() + ".bb"))
+        game.game_id = str(uuid.uuid1())
+        self.games[game.game_id] = game
+        game.resume_clocks()
+        return game
 
     def get_savenames(self):
-        files = glob.glob(get_data_path("saves/*"))
+        files = glob.glob(get_data_path("saves/*.bb"))
         out = []
         for file in files:
             file = file.lower()
-            if ".botbowl" not in file:
-                continue
             file = os.path.split(file)[1].split(".")[0]
             out.append(file)
         return out
 
     def get_saved_games(self):
-        games = [self.load_file(filename) for filename in glob.glob(get_data_path("saves/*"))]
-        return zip(games, self.get_savenames())
+        return [(os.path.basename(filename).replace(".bb", ""), self.load_file(filename)) for filename in glob.glob(get_data_path("saves/*.bb"))]
 
     def get_replay_ids(self):
         replays = [filename.split('/')[-1].split('.rep')[0] for filename in glob.glob(get_data_path("replays") + "/*.rep")]
