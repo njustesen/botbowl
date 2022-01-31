@@ -10,13 +10,14 @@ from botbowl.core.procedure import *
 from botbowl.core.game import Game
 
 
-class FeatureLayer:
+class FeatureLayer(ABC):
 
     def __init__(self):
         self.cache = {}
 
+    @abstractmethod
     def name(self):
-        raise NotImplementedError("Must be overridden by subclass")
+        pass
 
     def get(self, game: Game):
         """
@@ -36,81 +37,54 @@ class FeatureLayer:
         :return: a unique key for each possible layer outcome.
         """
         return None
-        
+
+    @abstractmethod
     def produce(self, game):
         """
         :param game:
         :return: a newly generated 2D 1-hot feature layer.
         """
         raise NotImplementedError("Must be overridden by subclass")
-        
 
-class OccupiedLayer(FeatureLayer):
+
+class PlayerFeatureLayer(FeatureLayer, ABC):
+
+    @abstractmethod
+    def produce_player_state(self, player, active_team):
+        pass
 
     def produce(self, game):
+        return self.get(game)
+
+    def get(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
-
-        for player in game.state.home_team.players + game.state.home_team.players:
-            if player.position is not None:
-                x = player.position.x
-                y = player.position.y
-                out[y][x] = 1.0 
-
+        active_team = game.active_team
+        for player in game.get_players_on_pitch():
+            out[player.position.y][player.position.x] = self.produce_player_state(player, active_team)
         return out
 
-    def key(self, game):
-        return None
+class OccupiedLayer(PlayerFeatureLayer):
+
+    def produce_player_state(self, player, active_team):
+        return 1.0
 
     def name(self):
         return "occupied"
 
 
-class OwnPlayerLayer(FeatureLayer):
+class OwnPlayerLayer(PlayerFeatureLayer):
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        
-        for p in active_team.players: 
-            if p.position is not None: 
-                x = p.position.x 
-                y = p.position.y 
-                out[y][x] = 1.0
-
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * (player.team is active_team)
 
     def name(self):
         return "own players"
 
 
-class OppPlayerLayer(FeatureLayer):
+class OppPlayerLayer(PlayerFeatureLayer):
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        
-        if active_team == game.state.home_team: 
-            target_team = game.state.away_team 
-        else: 
-            target_team = game.state.home_team 
-        
-        for p in target_team.players: 
-            if p.position is not None: 
-                x = p.position.x 
-                y = p.position.y 
-                out[y][x] = 1.0
-
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * (player.team is not active_team)
 
     def name(self):
         return "opp players"
@@ -120,7 +94,7 @@ class OwnTackleZoneLayer(FeatureLayer):
 
     def produce(self, game):
         out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
+        active_team = game.active_team
         if active_team is None:
             return out
         for player in active_team.players:
@@ -158,67 +132,28 @@ class OppTackleZoneLayer(FeatureLayer):
         return "opp tackle zones"
 
 
-class UsedLayer(FeatureLayer):
+class UsedLayer(PlayerFeatureLayer):
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.used else 0.0
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.used else 0.0
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * player.state.used
 
     def name(self):
         return "used players"
 
 
-class UpLayer(FeatureLayer):
+class UpLayer(PlayerFeatureLayer):
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.up else 0.0
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.up else 0.0
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * player.state.up
 
     def name(self):
         return "standing players"
 
 
-class StunnedLayer(FeatureLayer):
+class StunnedLayer(PlayerFeatureLayer):
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.stunned else 0.0
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1.0 if player.state.stunned else 0.0
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * player.state.stunned
 
     def name(self):
         return "stunned players"
@@ -361,115 +296,46 @@ class BlockDiceLayer(FeatureLayer):
         return "block dice"
 
 
-class MALayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_ma() * 0.1
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_ma() * 0.1
-        return out
-
-    def key(self, game):
-        return None
+class MALayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        return 0.1 * player.get_ma()
 
     def name(self):
         return "movement allowence"
 
 
-class STLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_st() * 0.1
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_st() * 0.1
-        return out
-
-    def key(self, game):
-        return None
+class STLayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        return 0.1 * player.get_st()
 
     def name(self):
         return "strength"
 
 
-class AGLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_ag() * 0.1
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_ag() * 0.1
-        return out
-
-    def key(self, game):
-        return None
+class AGLayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        return 0.1 * player.get_ag()
 
     def name(self):
         return "agility"
 
 
-class AVLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_av() * 0.1
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = player.get_av() * 0.1
-        return out
-
-    def key(self, game):
-        return None
+class AVLayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        return 0.1 * player.get_av()
 
     def name(self):
         return "armor value"
 
 
-class SkillLayer(FeatureLayer):
+class SkillLayer(PlayerFeatureLayer):
 
     def __init__(self, skill):
         super().__init__()
         self.skill = skill
 
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1 if player.has_skill(self.skill) else 0.0
-        for player in game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = 1 if player.has_skill(self.skill) else 0.0
-        return out
-
-    def key(self, game):
-        return None
+    def produce_player_state(self, player, active_team):
+        return 1.0 * player.has_skill(self.skill)
 
     def name(self):
         return self.skill.name.replace("_", " ").lower()
@@ -525,9 +391,7 @@ class OwnTouchdownLayer(FeatureLayer):
         return out
 
     def key(self, game):
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        home = active_team == game.state.home_team
-        return str(home)
+        return game.active_team == game.state.home_team
         
     def name(self):
         return "own touchdown"
@@ -546,9 +410,7 @@ class OppTouchdownLayer(FeatureLayer):
         return out
 
     def key(self, game):
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        home = active_team == game.state.home_team
-        return str(home)    
+        return game.active_team == game.state.home_team
         
     def name(self):
         return "opp touchdown"
@@ -570,35 +432,18 @@ class CrowdLayer(FeatureLayer):
         return "opp crowd"
 
 
-class MovementLeftLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players + game.get_opp_team(active_team).players:
-            if player.position is not None:
-                out[player.position.y][player.position.x] = max(0, (player.get_ma() - player.state.moves) * 0.1)
-        return out
+class MovementLeftLayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        return 0.1 * player.num_moves_left(include_gfi=False)
 
     def name(self):
         return "movement left"
 
 
-class GFIsLeftLayer(FeatureLayer):
-
-    def produce(self, game):
-        out = np.zeros((game.arena.height, game.arena.width))
-        active_team = game.state.available_actions[0].team if len(game.state.available_actions) > 0 else None
-        if active_team is None:
-            return out
-        for player in active_team.players + game.get_opp_team(active_team).players:
-            if player.position is not None:
-                num_max_gfis = 3 if player.has_skill(Skill.SPRINT) else 2
-                out[player.position.y][player.position.x] = \
-                    min(0.1 * num_max_gfis, (player.get_ma() + num_max_gfis - player.state.moves) * 0.1)
-        return out
+class GFIsLeftLayer(PlayerFeatureLayer):
+    def produce_player_state(self, player, active_team):
+        num_max_gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+        return 0.1 * min(num_max_gfis, player.num_moves_left(include_gfi=True))
 
     def name(self):
         return "gfi left"
