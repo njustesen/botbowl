@@ -349,8 +349,6 @@ class Game:
                             ActionType.SELECT_PUSH, ActionType.SELECT_BOTH_DOWN, ActionType.DONT_USE_REROLL,
                             ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
-                if action_type == ActionType.END_SETUP and not self.is_setup_legal(self.get_agent_team(self.actor)):
-                    continue
                 if action.action_type == action_type:
                     return Action(action_type)
         # Take random action
@@ -1357,14 +1355,14 @@ class Game:
         """
         min_players_checked = min(min_players, len(self.get_reserves(team)) + len(self.get_players_on_pitch(team)))
         cnt = 0
-        for y in range(len(self.state.pitch.board)):
-            for x in range(len(self.state.pitch.board[y])):
-                if not self.is_team_side(self.get_square(x, y), team):
-                    continue
-                if tile is None or self.arena.board[y][x] == tile:
-                    piece = self.state.pitch.board[y][x]
-                    if isinstance(piece, Player) and piece.team == team:
-                        cnt += 1
+
+        if tile is None:
+            cnt = len(self.get_players_on_pitch(team=team))
+        else:
+            for player in self.get_players_on_pitch(team=team):
+                if self.arena.board[player.position.y][player.position.x] is tile:
+                    cnt += 1
+
         if cnt > max_players or cnt < min_players_checked:
             return False
         return True
