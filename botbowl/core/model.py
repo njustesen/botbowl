@@ -1145,13 +1145,7 @@ class Player(Piece, Reversible):
         return self.role.skills + self.extra_skills
 
     def num_gfis_left(self):
-        ma = self.num_moves_left()
-        gfis_used = 0 if ma >= 0 else -ma
-        if self.has_skill(Skill.SPRINT):
-            return 3 - gfis_used
-        elif self.state.taken_root:
-            return 0
-        return 2 - gfis_used
+        return self.num_moves_left(include_gfi=True) - self.num_moves_left(include_gfi=False)
 
     def has_tackle_zone(self):
         if self.has_skill(Skill.TITCHY):
@@ -1168,21 +1162,15 @@ class Player(Piece, Reversible):
         return self.state.up and not self.state.bone_headed and not self.state.hypnotized and not self.state.really_stupid
 
     def num_moves_left(self, include_gfi: bool = False):
-        if self.state.taken_root:
+        if self.state.taken_root or self.state.used or self.state.stunned:
             return 0
-        if self.state.used or self.state.stunned:
-            moves = 0
-        else:
-            moves = self.get_ma()
-            # if not self.state.up and not self.has_skill(Skill.JUMP_UP):
-            #    moves = max(0, moves - 3)
-            moves = moves - self.state.moves
-            if include_gfi:
-                if self.has_skill(Skill.SPRINT):
-                    moves = moves + 3
-                else:
-                    moves = moves + 2
-        return max(0, moves)
+        moves = self.get_ma() - self.state.moves
+        if include_gfi:
+            if self.has_skill(Skill.SPRINT):
+                moves = moves + 3
+            else:
+                moves = moves + 2
+        return moves
 
     def __eq__(self, other):
         return isinstance(other, Player) and other.player_id == self.player_id

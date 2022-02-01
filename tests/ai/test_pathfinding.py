@@ -331,13 +331,11 @@ def test_all_blitz_paths_two(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_after_gfi(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.away_team)[0]
+    game, (player, other_player) = get_custom_game_turn(player_positions=[(1, 1), (2, 2)],
+                                                        ball_position=(1, 1))
     player.role.ma = 6
     player.state.moves = 8
-    game.put(player, Square(1, 1))
-    other_player = game.get_reserves(game.state.away_team)[1]
-    game.put(other_player, Square(2, 2))
+
     pathfinder = pf.Pathfinder(game,
                                player,
                                can_handoff=True)
@@ -349,14 +347,12 @@ def test_handoff_after_gfi(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_foul_after_gfi(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.away_team)[0]
+    game, (player, opp_player) = get_custom_game_turn(player_positions=[(1, 1)],
+                                                      opp_player_positions=[(2, 2)])
     player.role.ma = 6
     player.state.moves = 8
-    game.put(player, Square(1, 1))
-    opp_player = game.get_reserves(game.state.home_team)[0]
     opp_player.state.up = False
-    game.put(opp_player, Square(2, 2))
+
     pathfinder = pf.Pathfinder(game,
                                player,
                                can_foul=True)
