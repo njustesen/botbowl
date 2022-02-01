@@ -111,16 +111,16 @@ cdef class Path:
 
     def __reduce__(self):
         # Need custom reduce() because built in reduce() can't handle the c++ objects
-        def recreate_self():
+        def recreate_self(steps, rolls, block_dice, foul_roll, handoff_roll, prob):
             path = Path()
-            path._steps = self._steps
-            path._rolls = self._rolls
-            path.block_dice = self.block_dice
-            path.foul_roll = self.foul_roll
-            path.handoff_roll = self.handoff_roll
-            path.prob = self.prob
+            path._steps = steps
+            path._rolls = rolls
+            path.block_dice = block_dice
+            path.foul_roll = foul_roll
+            path.handoff_roll = handoff_roll
+            path.prob = prob
             return path
-        return recreate_self, ()
+        return recreate_self, (self.steps, self.rolls, self.block_dice, self.foul_roll, self.handoff_roll, self.prob)
 
     def __eq__(self, other):
         return  self.prob == other.prob and \
@@ -154,7 +154,7 @@ cdef class Pathfinder:
 
     def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
 
-        self.players_on_pitch = game.state.pitch.board.flatten()
+        self.players_on_pitch = game.state.pitch.board
 
         self.game = game
         self.pitch_width = self.game.arena.width - 1
@@ -312,7 +312,7 @@ cdef class Pathfinder:
         to_pos = node.get().position + direction
         if not (1 <= to_pos.x < self.pitch_width and 1 <= to_pos.y < self.pitch_height): 
             return NodePtr()
-        player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
+        player_at = self.players_on_pitch[to_pos.y][to_pos.x]
 
         if player_at is not None:
             if node.get().can_handoff and player_at.team == self.player.team and player_at.can_catch():
@@ -382,7 +382,7 @@ cdef class Pathfinder:
             object player_at
         best_node = self.nodes[to_pos.y][to_pos.x]
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
-        player_at = self.players_on_pitch[to_pos.y * 28 + to_pos.x]
+        player_at = self.players_on_pitch[to_pos.y][to_pos.x]
 
         next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
         target = self._get_handoff_target(player_at)

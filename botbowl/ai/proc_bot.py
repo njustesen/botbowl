@@ -5,7 +5,8 @@ Year: 2018
 ==========================
 This module contains an example bot that takes random actions.
 """
-from botbowl.core.model import Agent
+from botbowl.core.model import Agent, Action
+from botbowl.core.game import Game, InvalidActionError
 from botbowl.core.procedure import *
 
 
@@ -14,75 +15,95 @@ class ProcBot(Agent):
     def __init__(self, name):
         super().__init__(name)
 
-    def act(self, game):
+    def act(self, game: Game):
 
         # Get current procedure
         proc = game.get_procedure()
         # print(type(proc))
-
+        
+        action: Optional[Action] = None
+        
         # Call private function
         if isinstance(proc, CoinTossFlip):
-            return self.coin_toss_flip(game)
-        if isinstance(proc, CoinTossKickReceive):
-            return self.coin_toss_kick_receive(game)
-        if isinstance(proc, Setup):
-            return self.setup(game)
-        if isinstance(proc, Ejection):
-            return self.use_bribe(game)
-        if isinstance(proc, Reroll):
+            action = self.coin_toss_flip(game)
+        elif isinstance(proc, CoinTossKickReceive):
+            action = self.coin_toss_kick_receive(game)
+        elif isinstance(proc, Setup):
+            if proc.reorganize:
+                action = self.perfect_defense(game)
+            else:
+                action = self.setup(game)
+        elif isinstance(proc, Ejection):
+            action = self.use_bribe(game)
+        elif isinstance(proc, Reroll):
             if proc.can_use_pro:
-                return self.use_pro(game)
-            return self.reroll(game)
-        if isinstance(proc, PlaceBall):
-            return self.place_ball(game)
-        if isinstance(proc, HighKick):
-            return self.high_kick(game)
-        if isinstance(proc, Touchback):
-            return self.touchback(game)
-        if isinstance(proc, Turn) and proc.quick_snap:
-            return self.quick_snap(game)
-        if isinstance(proc, Turn) and proc.blitz:
-            return self.blitz(game)
-        if isinstance(proc, Turn):
-            return self.turn(game)
-        if isinstance(proc, MoveAction):
-            return self.player_action(game)
-        if isinstance(proc, MoveAction):
-            return self.player_action(game)
-        if isinstance(proc, BlockAction):
-            return self.player_action(game)
-        if isinstance(proc, PassAction):
-            return self.player_action(game)
-        if isinstance(proc, HandoffAction):
-            return self.player_action(game)
-        if isinstance(proc, BlitzAction):
-            return self.player_action(game)
-        if isinstance(proc, FoulAction):
-            return self.player_action(game)
-        if isinstance(proc, ThrowBombAction):
-            return self.player_action(game)
-        if isinstance(proc, Block):
+                action = self.use_pro(game)
+            else:
+                action = self.reroll(game)
+        elif isinstance(proc, PlaceBall):
+            action = self.place_ball(game)
+        elif isinstance(proc, HighKick):
+            action = self.high_kick(game)
+        elif isinstance(proc, Touchback):
+            action = self.touchback(game)
+        elif isinstance(proc, Turn) and proc.quick_snap:
+            action = self.quick_snap(game)
+        elif isinstance(proc, Turn) and proc.blitz:
+            action = self.blitz(game)
+        elif isinstance(proc, Turn):
+            action = self.turn(game)
+        elif isinstance(proc, MoveAction):
+            action = self.player_action(game)
+        elif isinstance(proc, MoveAction):
+            action = self.player_action(game)
+        elif isinstance(proc, BlockAction):
+            action = self.player_action(game)
+        elif isinstance(proc, PassAction):
+            action = self.player_action(game)
+        elif isinstance(proc, HandoffAction):
+            action = self.player_action(game)
+        elif isinstance(proc, BlitzAction):
+            action = self.player_action(game)
+        elif isinstance(proc, FoulAction):
+            action = self.player_action(game)
+        elif isinstance(proc, ThrowBombAction):
+            action = self.player_action(game)
+        elif isinstance(proc, Block):
             if proc.waiting_juggernaut:
-                return self.use_juggernaut(game)
-            if proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
-                return self.use_wrestle(game)
-            return self.block(game)
-        if isinstance(proc, Push):
+                action = self.use_juggernaut(game)
+            elif proc.waiting_wrestle_attacker or proc.waiting_wrestle_defender:
+                action = self.use_wrestle(game)
+            else:
+                action = self.block(game)
+        elif isinstance(proc, Push):
             if proc.waiting_stand_firm:
-                return self.use_stand_firm(game)
-            return self.push(game)
-        if isinstance(proc, FollowUp):
-            return self.follow_up(game)
-        if isinstance(proc, Apothecary):
-            return self.apothecary(game)
-        if isinstance(proc, Interception):
-            return self.interception(game)
-        if isinstance(proc, BloodLustBlockOrMove):
-            return self.blood_lust_block_or_move(game)
-        if isinstance(proc, EatThrall):
-            return self.eat_thrall(game)
+                action = self.use_stand_firm(game)
+            else:
+                action = self.push(game)
+        elif isinstance(proc, FollowUp):
+            action = self.follow_up(game)
+        elif isinstance(proc, Apothecary):
+            action = self.apothecary(game)
+        elif isinstance(proc, Interception):
+            action = self.interception(game)
+        elif isinstance(proc, BloodLustBlockOrMove):
+            action = self.blood_lust_block_or_move(game)
+        elif isinstance(proc, EatThrall):
+            action = self.eat_thrall(game)
+        else:
+            raise Exception("Unknown procedure")
 
-        raise Exception("Unknown procedure")
+        if action is None:
+            assert action is not None
+
+        # handle illegal action. if handle_illegal_action() returns a new legal action, return that.
+        if not game._is_action_allowed(action):
+            new_action = self.handle_illegal_action(game, action)
+            assert isinstance(new_action, Action)
+            assert game._is_action_allowed(new_action)
+            return new_action
+
+        return action
 
     def use_pro(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
@@ -161,3 +182,43 @@ class ProcBot(Agent):
 
     def eat_thrall(self, game):
         raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def perfect_defense(self, game):
+        raise NotImplementedError("This method must be overridden by non-human subclasses")
+
+    def handle_illegal_action(self, game: Game, action: Action) -> Optional[Action]:
+        """
+        :param game: current game object
+        :param action: action that was illegal
+        :return: this particular implementation does not return, it raises an error with some
+        helpful debug information. But if you override it in a subclass you may return a safe action
+        e.g. pick a random action for the list of available action or used game._forced_action()
+        """
+
+        error_message = f"{action} is not allowed. "
+        allowed_action_types = {action_choice.action_type for action_choice in game.get_available_actions()}
+        if action.action_type not in allowed_action_types:
+            allowed_action_types_names = ", ".join(action_type.name for action_type in allowed_action_types)
+            error_message += f"Allowed action types are: {allowed_action_types_names}"
+            set_trace()
+            raise InvalidActionError(error_message)
+
+        # Find the relevant action choice
+        target_action_choice: Optional[ActionChoice] = None
+        for action_choice in game.get_available_actions():
+            if action_choice.action_type == action.action_type:
+                target_action_choice = action_choice
+                break
+
+        if len(target_action_choice.positions) > 0:
+            allowed_positions = ', '.join(map(str, target_action_choice.positions))
+            if action.position is None and None not in target_action_choice.positions:
+                error_message += f"position=None not allowed! Available positions are {allowed_positions}"
+            elif action.position not in target_action_choice.positions:
+                error_message += f"wrong position. Available positions are {allowed_positions}"
+        else:
+            error_message += "Other error, no details, sorry"
+
+        raise InvalidActionError(error_message)
+
+

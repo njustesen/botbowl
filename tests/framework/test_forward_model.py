@@ -1,48 +1,36 @@
 from itertools import cycle
-from random import random
 
 from tests.util import *
 import pytest
 from copy import deepcopy
-from botbowl.core.table import *
-from botbowl.core.util import *
-from botbowl.core.forward_model import *
-
+from botbowl.core.forward_model import ReversibleSet
 from botbowl.ai.registry import make_bot
 
 
-def test_deepcopy_of_game_is_correct():
-    game = get_game(fast_mode=True, human_agents=True)
-    game_copy = deepcopy(game)
-
-    for actions in range(1, 30):
-        assert_game_states(game, game_copy, equal=True)
-
-        game.step(get_random_action(game))
-        assert_game_states(game, game_copy, equal=False)
-
-        game_copy = deepcopy(game)
-
-        if game.state.game_over:
-            return
-
-
-def test_forward_model_revert_multiple_times():
+def test_revert_and_forward():
     game = get_game(fast_mode=True, human_agents=True)
 
-    step = game.get_step()
-    init_state = deepcopy(game)
-    assert_game_states(game, init_state, equal=True)
+    for actions in range(1, 10):
+        game_before_actions = deepcopy(game)
+        assert_game_states(game, game_before_actions, equal=True)
+        prev_step = game.get_step()
 
-    for i in range(1, 10):
-        for _ in range(i):
+        for _ in range(actions):
             game.step(get_random_action(game))
             if game.state.game_over:
                 return
 
-        assert_game_states(game, init_state, equal=False)
-        game.revert(to_step=step)
-        assert_game_states(game, init_state, equal=True)
+        assert_game_states(game, game_before_actions, equal=False)
+
+        game_after_actions = deepcopy(game)
+        undone_steps = game.revert(prev_step)
+
+        assert_game_states(game, game_before_actions, equal=True)
+
+        game.forward(undone_steps)
+        assert_game_states(game, game_after_actions, equal=True)
+
+        game = game_after_actions
 
 
 def test_logged_state():
@@ -52,26 +40,25 @@ def test_logged_state():
             self.set_trajectory(log)
             self.data = data
 
-    class Cant_log_this:
+    class CantLogThis:
         pass
 
-    log = Trajectory()
-    log.enabled = True
+    trajectory = Trajectory()
+    trajectory.enabled = True
 
-    ms = MyState("immutable", log)
-    ms.data = "new immutable"
-    log.revert()
-    assert ms.data == "immutable"
+    ms = MyState("OLD_STATE", trajectory)
+    ms.data = "NEW STATE"
 
-    ms = MyState(["mutable", "object"], log)
+    steps = trajectory.revert(0)
+    assert ms.data == "OLD_STATE"
 
-    exception_caught = False
-    try:
-        ms.data = Cant_log_this()
-    except AttributeError:
-        exception_caught = True
+    trajectory.step_forward(steps)
+    assert ms.data == "NEW STATE"
 
-    assert exception_caught
+    ms = MyState(["mutable", "object"], trajectory)
+
+    with pytest.raises(AttributeError):
+        ms.data = CantLogThis()
 
 
 def test_logged_set():
@@ -85,7 +72,6 @@ def test_logged_set():
     assert 123 in logged_set
     assert len(logged_set) == 1
 
-    traj.next_step()
     logged_set.clear()
     assert len(logged_set) == 0
 
@@ -102,15 +88,16 @@ def test_forward_model_revert_every_step():
     game = get_game(fast_mode=True, human_agents=True)
     game.config.pathfinding_enabled = False
 
-    def avail_actions_str(game):
-        return "-".join([action_choice.action_type.name for action_choice in game.state.available_actions])
+    def avail_actions_str(game_):
+        return "-".join([action_choice.action_type.name for action_choice in game_.state.available_actions])
 
-    def stack_str(game):
-        return "-".join([type(proc).__name__ for proc in game.state.stack.items])
+    def stack_str(game_):
+        return "-".join([type(proc).__name__ for proc in game_.state.stack.items])
 
-    def position_str(game):
-        positions = [player.position for team in game.state.teams for player in team.players] + [game.get_ball_position()]
-        return "-".join([f"{pos.x},{pos.y}" if pos is not None else "None" for pos in positions])
+    def position_str(game_):
+        positions = [player.position for team in game_.state.teams for player in team.players] + \
+                    [game_.get_ball_position()]
+        return "-".join([f"{pos}" if pos is not None else "None" for pos in positions])
 
     cycled_counter = cycle(range(10))
     tmp_game = None
@@ -185,3 +172,11 @@ def test_actor_correctly_reset():
     game.revert(root)
     assert game.actor == actor1
 
+
+def test_immutability():
+    sq = Square(1, 2)
+    sq2 = Square(3, 2)
+
+    with pytest.raises(AttributeError):
+        sq.x = 2
+    assert sq.x == 1

@@ -2,6 +2,9 @@ from botbowl.core.game import *
 from botbowl.ai.bots.random_bot import *
 from copy import deepcopy
 
+from typing import List, Optional, Tuple, Union, Iterable, Any
+from contextlib import contextmanager
+
 game_turn_empty = {}
 game_turn_full = {}
 
@@ -44,6 +47,64 @@ def get_game_turn(seed=0, empty=False):
     else:
         game_turn_full[seed] = deepcopy(game)
     return game
+
+
+Position = Union[Square, Tuple[int, int]]
+
+
+def get_custom_game_turn(player_positions: List[Position], opp_player_positions: Optional[List[Position]] = None,
+                         ball_position: Optional[Position] = None, weather: WeatherType = WeatherType.NICE,
+                         rerolls: int = 0, forward_model_enabled=False, pathfinding_enabled=False) \
+        -> Tuple[Game, Tuple[Player, ...]]:
+    """
+    :param player_positions: places human linemen of active team in these squares
+    :param opp_player_positions: places human linemen of not active team in these squares
+    :param ball_position: places ball in this square.
+    :param weather:
+    :param rerolls: number of rerolls
+    :param forward_model_enabled:
+    :param pathfinding_enabled:
+    :return: tuple with created game object followed by all the placed players
+    """
+    game = get_game_turn(empty=True)
+    team = game.get_agent_team(game.actor)
+    team_players = [player for player in team.players if player.role.name == "Lineman"]
+
+    game.state.weather = weather
+    game.state.teams[0].state.rerolls = rerolls
+
+    def assert_square_type(obj: Position) -> Square:
+        if type(obj) == Square:
+            return game.get_square(obj.x, obj.y)
+        else:
+            return game.get_square(obj[0], obj[1])
+
+    added_players = []
+
+    for i, sq in enumerate(player_positions):
+        player = team_players[i]
+        game.put(player, assert_square_type(sq))
+        added_players.append(player)
+
+    if opp_player_positions is not None:
+        opp_team_players = [player for player in game.get_opp_team(team).players if player.role.name == "Lineman"]
+        for i, sq in enumerate(opp_player_positions):
+            player = opp_team_players[i]
+            game.put(player, assert_square_type(sq))
+            added_players.append(player)
+
+    if ball_position is not None:
+        game.get_ball().move_to(assert_square_type(ball_position))
+        game.get_ball().is_carried = game.get_player_at(assert_square_type(ball_position)) is not None
+
+    game.config.pathfinding_enabled = pathfinding_enabled
+    game.set_available_actions()
+    game.state.reports.clear()
+
+    if forward_model_enabled:
+        game.enable_forward_model()
+
+    return game, tuple(added_players)
 
 
 def get_game_kickoff(seed=0):
@@ -164,3 +225,62 @@ def get_block_players(game, team):
             defender = adjacent[0]
             break
     return attacker, defender
+
+
+@contextmanager
+def only_fixed_rolls(game: botbowl.Game,
+                     assert_no_prev_fixes: bool = True,
+                     assert_fixes_consumed: bool = True,
+                     d3: Optional[Iterable[int]] = None,
+                     d6: Optional[Iterable[int]] = None,
+                     d8: Optional[Iterable[int]] = None,
+                     block_dice: Optional[Iterable[BBDieResult]] = None):
+    """
+    Context manager that ensures that
+      1) There are no fixes and the fixes rolls according to arguments
+      2) No roll other than the fixed rolls are used i.e. no randomness
+      3) All fixed rolls are consumed
+    Example usage:
+    > with only_fixed_rolls(game, block_dice=[BBDieResult.DEFENDER_DOWN], d6=[6, 6]):
+    >     game.step(...)
+    """
+    if assert_no_prev_fixes:
+        assert len(botbowl.D3.FixedRolls) == 0, f"There are fixed D3 rolls={botbowl.D3.FixedRolls}"
+        assert len(botbowl.D6.FixedRolls) == 0, f"There are fixed D6 rolls={botbowl.D6.FixedRolls}"
+        assert len(botbowl.D8.FixedRolls) == 0, f"There are fixed D8 rolls={botbowl.D8.FixedRolls}"
+        assert len(botbowl.BBDie.FixedRolls) == 0, f"There are fixed BBDie rolls={botbowl.BBDie.FixedRolls}"
+
+    if d3 is not None:
+        for roll in d3:
+            assert roll in {1, 2, 3}
+            botbowl.D3.fix(roll)
+    if d6 is not None:
+        for roll in d6:
+            assert roll in {1, 2, 3, 4, 5, 6}
+            botbowl.D6.fix(roll)
+    if d8 is not None:
+        for roll in d8:
+            assert roll in {1, 2, 3, 4, 5, 6, 7, 8}
+            botbowl.D8.fix(roll)
+    if block_dice is not None:
+        for roll in block_dice:
+            assert roll in BBDieResult
+            botbowl.BBDie.fix(roll)
+
+    rnd = game.rnd
+    game.rnd = None
+
+    try:
+        yield
+
+        if assert_fixes_consumed:
+            assert len(botbowl.D3.FixedRolls) == 0, "Not all fixed D3 rolls were consumed"
+            assert len(botbowl.D6.FixedRolls) == 0, "Not all fixed D6 rolls were consumed"
+            assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
+            assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
+    finally:
+        game.rnd = rnd
+
+
+
+

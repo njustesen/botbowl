@@ -1,5 +1,6 @@
 import os
 import gym
+import botbowl
 from botbowl import BotBowlEnv
 from torch.autograd import Variable
 import torch.optim as optim
