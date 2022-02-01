@@ -10,7 +10,13 @@ try:
     import Cython.Compiler.Options
     Cython.Compiler.Options.annotate = True
     compile_available = True
-    new_compiler().initialize()  # test if there's a compiler. Method is ot bulletproof, but rainproof maybe?
+
+    if platform.system() == "Windows":
+        new_compiler().initialize()  # test if there's a compiler. Method is ot bulletproof, but rainproof maybe?
+    else:
+        compile_available = 'CXX' in sysconfig.get_config_vars()
+        if not compile_available:
+            error_msg = "No compiler found"
 
 except ImportError:
     error_msg = "Cython could not be imported"
