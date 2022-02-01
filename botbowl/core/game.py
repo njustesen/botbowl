@@ -1691,8 +1691,7 @@ class Game:
 
         squares = []
         for xx,yy in directions:
-            #sq = self.get_square(position.x + xx, position.y + yy)
-            sq = self.square_shortcut[position.y + yy][position.x + xx]
+            sq = self.get_square(position.x + xx, position.y + yy)
             if not out and sq.out_of_bounds:
                 continue
             if not occupied and self.get_player_at(sq) is not None:
