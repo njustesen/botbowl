@@ -5,8 +5,7 @@ Year: 2018
 ==========================
 This module contains the Game class, which is the main class and interface used to interact with a game in botbowl.
 """
-from itertools import chain
-from typing import Optional, Tuple, List, Union, Any
+import itertools
 
 from botbowl.core.load import *
 from botbowl.core.procedure import *
@@ -982,7 +981,7 @@ class Game:
         :return: Players on the pitch who's on team.
         """
         if team is None:
-            iter_players = chain(self.state.home_team.players, self.state.away_team.players)
+            iter_players = itertools.chain(self.state.home_team.players, self.state.away_team.players)
         else:
             iter_players = iter(team.players)
 
@@ -1680,21 +1679,27 @@ class Game:
         :param distance: distance of adjacency. E.g. use distance 2 when checking for leap.
         :return:
         """
+
+        if distance>1:
+            directions = list(itertools.product(*itertools.tee(range(-distance, distance+1))))
+            directions.pop(directions.index((0, 0)))
+        else:
+            directions = _directions
+
+        if not diagonal:
+            directions = [(x, y) for x, y in directions if x == 0 or y == 0]
+
         squares = []
-        r = range(-distance, distance + 1)
-        for yy in r:
-            for xx in r:
-                if yy == 0 and xx == 0:
-                    continue
-                sq = self.get_square(position.x + xx, position.y + yy)
-                if not out and sq.out_of_bounds:
-                    continue
-                if not occupied and self.get_player_at(sq) is not None:
-                    continue
-                if diagonal:
-                    squares.append(sq)
-                elif xx == 0 or yy == 0:
-                    squares.append(sq)
+        for xx,yy in directions:
+            #sq = self.get_square(position.x + xx, position.y + yy)
+            sq = self.square_shortcut[position.y + yy][position.x + xx]
+            if not out and sq.out_of_bounds:
+                continue
+            if not occupied and self.get_player_at(sq) is not None:
+                continue
+            squares.append(sq)
+
+        assert position not in squares
         return squares
 
     def get_adjacent_opponents(self, player: Player, diagonal=True, down=True, standing=True, stunned=True, skill=None) -> List[Player]:
@@ -2597,3 +2602,13 @@ class Game:
         if player.has_skill(Skill.TIMMMBER):
             return len([p for p in self.get_adjacent_teammates(player, down=False) if self.num_tackle_zones_in(p) == 0])
         return 0
+
+
+_directions = [(1, 1),
+              (1, 0),
+              (1, -1),
+              (0, 1),
+              (0, -1),
+              (-1, 1),
+              (-1, 0),
+              (-1, -1)]
