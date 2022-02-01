@@ -12,7 +12,11 @@ try:
     compile_available = True
 
     if platform.system() == "Windows":
-        new_compiler().initialize()  # test if there's a compiler. Method is ot bulletproof, but rainproof maybe?
+        try:
+            new_compiler().initialize()
+        except AttributeError:
+            compile_available = False
+            error_msg = "No compatible windows compiler"
     else:
         compile_available = 'CXX' in sysconfig.get_config_vars()
         if not compile_available:
@@ -22,9 +26,11 @@ except ImportError:
     error_msg = "Cython could not be imported"
     compile_available = False
 except DistutilsPlatformError:
-    # new_compiler().initialize() failed.
+    # 'new_compiler().initialize()' failed.
     error_msg = "No compiler found"
     compile_available = False
+
+#compile_available = False  # uncomment this to force the compilation.
 
 files_to_compile = ["botbowl/core/pathfinding/cython_pathfinding.pyx"]
 
@@ -76,5 +82,5 @@ if compile_available:
     #                                              f"but {copied_files} was copied. Probably a bug!"
     print("\nYou've built botbowl with cython.")
 else:
-    print(f"You've built botbowl without cython compilation because {error_msg}. "
+    print(f"You've built botbowl without cython compilation, error message='{error_msg}'. "
           f"Check docs/installation.md for details.")
