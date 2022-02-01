@@ -193,8 +193,8 @@ class Pathfinder:
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
-        self.ma = player.get_ma() - player.state.moves
-        self.gfis = 3 if player.has_skill(Skill.SPRINT) else 2
+        self.ma = player.num_moves_left()
+        self.gfis = player.num_gfis_left()
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
         self.nodes = np.full((game.arena.height, game.arena.width), None)
         self.tzones = np.zeros((game.arena.height, game.arena.width), dtype=np.uint8)
@@ -214,17 +214,18 @@ class Pathfinder:
         return None
 
     def get_paths(self, target=None):
-
-        ma = self.player.get_ma() - self.player.state.moves
-        self.ma = max(0, ma)
-        gfis_used = 0 if ma >= 0 else -ma
-        self.gfis = 3-gfis_used if self.player.has_skill(Skill.SPRINT) else 2-gfis_used
-
+        self.gfis = self.player.num_gfis_left()
+        self.ma = self.player.num_moves_left()
         can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(Skill.SURE_HANDS)
-        rr_states = {(self.trr, can_dodge, can_sure_feet, can_sure_hands): 1}
-        node = Node(None, self.player.position, self.ma, self.gfis, euclidean_distance=0, rr_states=rr_states,
+        rr_states = {(self.trr, can_dodge, can_sure_feet, can_sure_hands): 1}  # RRs left and probability of success
+        node = Node(None,
+                    position=self.player.position,
+                    moves_left=self.ma,
+                    gfis_left=self.gfis,
+                    euclidean_distance=0,
+                    rr_states=rr_states,
                     can_foul=self.can_foul,
                     can_handoff=self.can_handoff,
                     can_block=self.can_block)
@@ -301,7 +302,7 @@ class Pathfinder:
             return
 
         out_of_moves = False
-        if node.moves_left + node.gfis_left == 0:
+        if node.moves_left + node.gfis_left <= 0:
             if not node.can_handoff and not node.can_foul:
                 return
             out_of_moves = True

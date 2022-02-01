@@ -209,11 +209,8 @@ cdef class Pathfinder:
             int ma, gfis_used
             bint can_dodge, can_sure_feet, can_sure_hands
 
-        ma = self.player.get_ma() - self.player.state.moves
-        gfis_used = 0 if ma >= 0 else -ma
-
-        self.ma = max(0, ma)
-        self.gfis = 3-gfis_used if self.player.has_skill(table.Skill.SPRINT) else 2-gfis_used
+        self.ma = self.player.num_moves_left()
+        self.gfis = self.player.num_gfis_left()
 
         start_square = from_botbowl_Square(self.player.position)
 
@@ -254,13 +251,13 @@ cdef class Pathfinder:
         return min(6, max(2, target))
 
     cdef void _expand(self, NodePtr node):
-        cdef bint out_of_moves = node.get().moves_left + node.get().gfis_left == 0
+        cdef bint out_of_moves = node.get().moves_left + node.get().gfis_left <= 0
         cdef NodePtr next_node
         cdef double rounded_p
         cdef Node * parent = <Node *> node.get().parent.get()
         cdef Square to_square
 
-        if node.get().parent.use_count() == 0:
+        if node.get().parent.use_count() == 0 or node.get().parent.get().position == node.get().position:
             parent = NULL
 
         if self.has_target:

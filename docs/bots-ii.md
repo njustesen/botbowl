@@ -71,7 +71,7 @@ We will start by describing the steps needed to move the playing into the endzon
 td_path = pf.get_safest_path_to_endzone(game, ball_carrier, allow_team_reroll=True)
 if td_path is not None and td_path.prob >= 0.7:
     self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
-    self.actions.extend(path_to_move_actions(game, td_path))
+    self.actions.extend(path_to_move_actions(game, ball_carrier, td_path))
     return
 ```
 
@@ -81,7 +81,7 @@ will have a probability of success in [0,1] and a list of steps. Here, we decide
 yet checked if we can make any blitzes to clear the path for a safer option. Nevertheless, we will settle for this simple
 solution.
 
-Finally we are introduced to the function `path_to_move_actions()` which takes the game object and a path as arguments. It returns a list of actions corresponding to the steps in the path.  
+Finally we are introduced to the function `path_to_move_actions()` which takes the game object, a player and a path as arguments. It returns a list of actions corresponding to the steps in the path. If the player is down, the first action will be to stand up.  
 
 If we can't score with the ball carrier, or it is too risky, we will check to see if we can hand off the ball to another
 player in scoring range.
@@ -117,7 +117,7 @@ if game.is_handoff_available():
     # Hand-off if high probability or last turn
     if handoff_path is not None and (handoff_p >= 0.7 or self.my_team.state.turn == 8):
         self.actions.append(Action(ActionType.START_HANDOFF, player=ball_carrier))
-        self.actions.extend(path_to_move_actions(game, handoff_path))
+        self.actions.extend(path_to_move_actions(game, ball_carrier, handoff_path))
         return
 ```
 
@@ -147,7 +147,7 @@ if game.num_tackle_zones_in(ball_carrier) == 0:
             best_distance = distance_to_endzone
     if best_path is not None:
         self.actions.append(Action(ActionType.START_MOVE, player=ball_carrier))
-        self.actions.extend(path_to_move_actions(game, best_path))
+        self.actions.extend(path_to_move_actions(game, ball_carrier, best_path))
         #print(f"Move ball carrier {ball_carrier.role.name}")
         return
 ```
@@ -202,9 +202,7 @@ if game.get_ball_carrier() is None:
                         pickup_path = path
     if pickup_player is not None and pickup_p > 0.33:
         self.actions.append(Action(ActionType.START_MOVE, player=pickup_player))
-        if not pickup_player.state.up:
-            self.actions.append(Action(ActionType.STAND_UP))
-        self.actions.extend(path_to_move_actions(game, pickup_path))
+        self.actions.extend(path_to_move_actions(game, pickup_player, pickup_path))
         #print(f"Pick up the ball with {pickup_player.role.name}, p={pickup_p}")
         # Find safest path towards endzone
         if game.num_tackle_zones_at(pickup_player, game.get_ball_position()) == 0 and game.get_opp_endzone_x(self.my_team) != game.get_ball_position().x:
@@ -218,7 +216,7 @@ if game.get_ball_carrier() is None:
                     best_path = path
                     best_distance = distance_to_endzone
             if best_path is not None:
-                self.actions.extend(path_to_move_actions(game, best_path, do_assertions=False))
+                self.actions.extend(path_to_move_actions(game, pickup_player, best_path, do_assertions=False))
                 #print(f"- Move ball carrier {pickup_player.role.name}")
         return
 ```
@@ -253,9 +251,7 @@ for player in open_players:
                 best_distance = distance_to_endzone
         if best_path is not None:
             self.actions.append(Action(ActionType.START_MOVE, player=player))
-            if not player.state.up:
-                self.actions.append(Action(ActionType.STAND_UP))
-            self.actions.extend(path_to_move_actions(game, best_path))
+            self.actions.extend(path_to_move_actions(game, player, best_path))
             return
 ```
 
@@ -301,7 +297,7 @@ if game.is_blitz_available():
                     best_blitz_path = path
     if best_blitz_attacker is not None and best_blitz_score >= 1.25:
         self.actions.append(Action(ActionType.START_BLITZ, player=best_blitz_attacker))
-        self.actions.extend(path_to_move_actions(game, best_blitz_path))
+        self.actions.extend(path_to_move_actions(game, best_blitz_attacker, best_blitz_path))
         return
 
 ```
@@ -333,7 +329,7 @@ if ball_carrier is not None:
                 path = pf.get_safest_path(game, player, cage_position)
                 if path is not None and path.prob > 0.94:
                     self.actions.append(Action(ActionType.START_MOVE, player=player))
-                    self.actions.extend(path_to_move_actions(game, path))
+                    self.actions.extend(path_to_move_actions(game, player, path))
                     return
 
 ```
@@ -368,7 +364,7 @@ for player in open_players:
         if path.prob < 1.0 or path.get_last_step() not in assist_positions:
             continue
         self.actions.append(Action(ActionType.START_MOVE, player=player))
-        self.actions.extend(path_to_move_actions(game, path))
+        self.actions.extend(path_to_move_actions(game, player, path))
         return
 ```
 
@@ -402,7 +398,7 @@ for player in open_players:
 
     if path is not None:
         self.actions.append(Action(ActionType.START_MOVE, player=player))
-        self.actions.extend(path_to_move_actions(game, path))
+        self.actions.extend(path_to_move_actions(game, player, path))
         return
 ```
 

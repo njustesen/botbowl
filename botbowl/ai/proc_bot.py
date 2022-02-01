@@ -200,7 +200,6 @@ class ProcBot(Agent):
         if action.action_type not in allowed_action_types:
             allowed_action_types_names = ", ".join(action_type.name for action_type in allowed_action_types)
             error_message += f"Allowed action types are: {allowed_action_types_names}"
-            set_trace()
             raise InvalidActionError(error_message)
 
         # Find the relevant action choice
@@ -220,5 +219,3 @@ class ProcBot(Agent):
             error_message += "Other error, no details, sorry"
 
         raise InvalidActionError(error_message)
-
-
