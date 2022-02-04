@@ -1170,7 +1170,7 @@ class Player(Piece, Reversible):
                 moves = moves + 3
             else:
                 moves = moves + 2
-        return moves
+        return max(0, moves)
 
     def __eq__(self, other):
         return isinstance(other, Player) and other.player_id == self.player_id
