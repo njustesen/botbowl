@@ -2710,7 +2710,7 @@ class MoveAction(Procedure):
         for action_type, action_paths in paths_by_type.items():
             if len(action_paths) > 0:
                 positions = [path.get_last_step() for path in action_paths]
-                block_dice = [path.block_dice for path in action_paths]
+                block_dice = [path.block_dice for path in action_paths if path.block_dice is not None]
                 rolls = []
                 if action_type == ActionType.HANDOFF:
                     rolls = [path.handoff_roll for path in action_paths]

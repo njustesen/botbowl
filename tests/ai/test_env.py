@@ -92,13 +92,13 @@ def test_reward_and_scripted_wrapper():
         own_tds.append(env.game.state.home_team.state.score)
         opp_tds.append(env.game.state.away_team.state.score)
 
-
-def test_observation_ranges():
+@pytest.mark.parametrize("pathfinding", [True, False])
+def test_observation_ranges(pathfinding):
     def find_first_index(array_: np.ndarray, value_: float):
         indices = (array_ == value_).nonzero()
         return [x[0] for x in indices]
 
-    env = BotBowlEnv()
+    env = BotBowlEnv(EnvConf(pathfinding=pathfinding))
 
     for _ in range(2):
         done = False
