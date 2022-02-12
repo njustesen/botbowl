@@ -3050,13 +3050,12 @@ class BlitzAction(MoveAction):
                 move_needed = 1
                 if not self.player.state.up:
                     move_needed += 0 if self.player.has_skill(Skill.JUMP_UP) else 3
-                else:
-                    self.player.state.moves += move_needed
 
-                gfis = 3 if self.player.has_skill(Skill.SPRINT) else 2
-                gfi = self.player.state.moves + move_needed > self.player.get_ma()
-                gfi_frenzy = self.player.state.moves + move_needed + 1 > self.player.get_ma()
-                frenzy_allowed = self.player.state.moves + move_needed + 1 < self.player.get_ma() + gfis
+                gfi = self.player.num_moves_left() < move_needed
+                gfi_frenzy = self.player.num_moves_left() < move_needed + 1
+                frenzy_allowed = self.player.num_moves_left(include_gfi=True) >= move_needed + 1
+
+                self.player.state.moves += move_needed
 
                 if action.action_type == ActionType.BLOCK:
                     # Frenzy second block
