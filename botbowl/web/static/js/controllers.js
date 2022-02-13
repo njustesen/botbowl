@@ -15,8 +15,8 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
         });
 
         $scope.loadGame = function loadGame(name){
-            GameService.load(name).success(function(data) {
-                 $window.location.href = '/#/game/play/' + data.game.game_id + '/' + data.team_id + '/'
+            GameService.load(name).success(function(game) {
+                window.location.reload();
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
@@ -36,13 +36,19 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
             if (id != undefined) {
 
                 GameService.delete(id).success(function(data) {
-                    var games = $scope.games;
-                    for (var gameKey in games) {
-                        if (games[gameKey]._id == id) {
-                            $scope.games.splice(gameKey, 1);
-                            break;
-                        }
-                    }
+                    window.location.reload();
+                }).error(function(status, data) {
+                    console.log(status);
+                    console.log(data);
+                });
+            }
+        };
+
+        $scope.deleteSavedGame = function deletegame(name) {
+            if (name != undefined) {
+
+                GameService.deleteSaved(name).success(function(data) {
+                    window.location.reload();
                 }).error(function(status, data) {
                     console.log(status);
                     console.log(data);
@@ -51,6 +57,8 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
         };
     }
 ]);
+
+
 
 appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
     function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
