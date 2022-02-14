@@ -1,6 +1,6 @@
 import botbowl
 
-config = botbowl.load_config("bot-bowl-iii")
+config = botbowl.load_config("bot-bowl")
 config.competition_mode = False
 config.pathfinding_enabled = False # disabled for speed
 ruleset = botbowl.load_rule_set(config.ruleset, all_rules=False)  # We don't need all the rules
