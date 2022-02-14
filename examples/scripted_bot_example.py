@@ -734,7 +734,7 @@ botbowl.register_bot('scripted', MyScriptedBot)
 
 def main():
     # Load configurations, rules, arena and teams
-    config = botbowl.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl")
     config.competition_mode = False
     config.pathfinding_enabled = True
     # config = get_config("gym-7.json")
@@ -768,6 +768,7 @@ def main():
         tds += game.state.home_team.state.score
     print(f"won {wins}/{num_games}")
     print(f"Own TDs per game={tds/num_games}")
+
 
 if __name__ == "__main__":
     main()

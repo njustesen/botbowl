@@ -4,7 +4,7 @@ from scripted_bot_example import *
 import botbowl as botbowl
 import time as time
 
-config = botbowl.load_config("bot-bowl-iii")
+config = botbowl.load_config("bot-bowl")
 config.competition_mode = False
 config.pathfinding_enabled = True
 config.debug_mode = False

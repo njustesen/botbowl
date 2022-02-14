@@ -1,11 +1,11 @@
 ![Bot Bowl III](img/botbowl-iii.png?raw=true "Bot Bowl III")
 
-Bot Bowl III was the third AI competition in Blood Bowl and and happened (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). 
+Bot Bowl III was the third AI competition in Blood Bowl and happened (virtually) at the [IEEE Conference of Games 2021](https://ieee-cog.org/2021/index.html). 
 
 **See the results** further down on this page or watch [the announcement](https://youtu.be/A_7tgr3r5IA) from the Conference of Games.
 
 # Format
-Bot Bowl III will have the same format as last year while the framework offers a few new features that will empower bot developers. 
+Bot Bowl III had the same format as last year while the framework offers a few new features that will empower bot developers. 
 
 Each bot will play 10 matches of Blood Bowl against each other and the winner will determined based on the following point system:
 3 points for winning, 1 point for a draw, 0 points for a loss. If the bot crashes and are unable to recover, the game will 
