@@ -16,7 +16,7 @@ from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 1  # Options are 1,3,5,7,11
+env_size = 3  # Options are 1,3,5,7,11
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size, pathfinding=False)
 
@@ -50,7 +50,7 @@ ppcg = False
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
 # Self-play
-selfplay = False  # Use this to enable/disable self-play
+selfplay = True  # Use this to enable/disable self-play
 selfplay_window = 1
 selfplay_save_steps = int(num_steps / 10)
 selfplay_swap_steps = selfplay_save_steps
@@ -134,9 +134,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             if ppcg_wrapper is not None:
                 ppcg_wrapper.difficulty = dif
 
-            spatial_obs, reward, done, info = env.step(action)
-            non_spatial_obs = info['non_spatial_obs']
-            action_mask = info['action_mask']
+            (spatial_obs, non_spatial_obs, action_mask), reward, done, info = env.step(action)
 
             game = env.game
             tds_scored = game.state.home_team.state.score - tds
@@ -150,8 +148,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
                 env.root_env.away_agent = next_opp
-                env.reset()
-                spatial_obs, non_spatial_obs, action_mask = env.get_state()
+                spatial_obs, non_spatial_obs, action_mask = env.reset()
                 steps = 0
                 tds = 0
                 tds_opp = 0
@@ -162,8 +159,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             tds = 0
             tds_opp = 0
             env.root_env.away_agent = next_opp
-            env.reset()
-            spatial_obs, non_spatial_obs, action_mask = env.get_state()
+            spatial_obs, non_spatial_obs, action_mask = env.reset()
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
 
         elif command == 'swap':
@@ -228,12 +224,11 @@ def main():
     envs = VecEnv([make_env() for _ in range(num_processes)])
 
     env = make_env()
-    env.reset()
-    spat_obs, non_spat_obs, action_mask = env.get_state()
-    del env
+    spat_obs, non_spat_obs, action_mask = env.reset()
     spatial_obs_space = spat_obs.shape
     non_spatial_obs_space = non_spat_obs.shape[0]
     action_space = len(action_mask)
+    del env, non_spat_obs, action_mask  # remove from scope to avoid confusion further down
 
     # MODEL
     ac_agent = CNNPolicy(spatial_obs_space,

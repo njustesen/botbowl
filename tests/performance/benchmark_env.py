@@ -7,17 +7,14 @@ def run_env():
     env = BotBowlEnv()
     steps = 0
     for _ in range(2):
-        env.reset()
-
         done = False
-        _, _, mask = env.get_state()
+        _, _, mask = env.reset()
 
         while not done:
             steps += 1
             aa = np.where(mask > 0.0)[0]
             action_idx = np.random.choice(aa, 1)[0]
-            obs, reward, done, info = env.step(action_idx)
-            mask = info['action_mask']
+            (_, _, mask), reward, done, _ = env.step(action_idx)
 
     return steps
 
