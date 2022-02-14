@@ -2595,12 +2595,13 @@ class MoveAction(Procedure):
         self.paths = {}
         self.steps = None
         self.orig_action_type = None
-        self.can_undo = self.game.get_team_agent(player.team).human
+        self.can_undo = False
 
     def start(self):
         if self.player_action_type == PlayerActionType.MOVE:
             self.game.report(Outcome(OutcomeType.MOVE_ACTION_STARTED, player=self.player))
             self.game.state.player_action_type = PlayerActionType.MOVE
+        self.can_undo = self.game.get_team_agent(self.player.team).human and not self.player.state.failed_nega_trait_this_turn
 
     def step(self, action):
 
@@ -2722,8 +2723,6 @@ class MoveAction(Procedure):
     def available_actions(self):
         if self.steps is not None and len(self.steps) > 0:
             return []  # No actions -> Continue path
-        if self.player.state.taken_root:
-            return [ActionChoice(ActionType.END_PLAYER_TURN, team=self.player.team)]
         actions = []
         if self.game.is_quick_snap() or not self.game.config.pathfinding_enabled:
             actions = self.game.get_adjacent_move_actions(self.player)
@@ -2884,10 +2883,12 @@ class ThrowBombAction(Procedure):
         super().__init__(game)
         self.player = player
         self.game.put_bomb(Bomb(self.player.position))
+        self.can_undo = False
 
     def start(self):
         self.game.report(Outcome(OutcomeType.THROW_BOMB_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.THROW_BOMB
+        self.can_undo = self.game.get_team_agent(self.player.team).human
 
     def step(self, action):
         if action.action_type == ActionType.THROW_BOMB:
@@ -2961,11 +2962,12 @@ class BlockAction(Procedure):
     def __init__(self, game, player):
         super().__init__(game)
         self.player = player
-        self.can_undo = True
+        self.can_undo = False
 
     def start(self):
         self.game.report(Outcome(OutcomeType.BLOCK_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.BLOCK
+        self.can_undo = self.game.get_team_agent(self.player.team).human
 
     def step(self, action):
 
@@ -3980,6 +3982,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
 
     def trigger_failure(self):
         self.apply_fail_state()
+        self.player.state.failed_nega_trait_this_turn = True
         if self.ends_turn:
             self.end_turn()
 
