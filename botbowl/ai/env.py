@@ -13,10 +13,16 @@ from botbowl.ai.registry import registry as bot_registry
 from botbowl.ai.layers import *
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
+from typing import Tuple, Iterable, Union, Callable, List, Optional
+import numpy as np
+
 import gym
 import uuid
 from itertools import count
 from copy import deepcopy
+
+EnvObs = Tuple[np.ndarray, np.ndarray, np.ndarray]
+EnvStepReturn = Tuple[EnvObs, float, bool, dict]
 
 
 def take(n: int, iterable) -> None:
@@ -205,18 +211,23 @@ class BotBowlEnv(gym.Env):
         self.rnd = np.random.RandomState(self._seed)
 
         # Setup gym shapes
-        spat_obs = self.reset()
+        spat_obs, _, _ = self.reset()
         self.action_space = gym.spaces.Discrete(len(self.env_conf.action_types))
         self.observation_space = gym.spaces.Box(low=0, high=1, shape=spat_obs.shape)
 
         self._renderer = None
 
-    def get_state(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_state(self, flip: Optional[bool] = None) -> EnvObs:
         """
+        :param flip: flips the observation and action mask on the x-axis.
+                     If flip=None it flips if the away team is active
         :return: tuple with np arrays
                      spatial observation with shape=(num_layers, height, width)
                      non spatial observation with shape=(num_non_spatial_observations)
                      action mask with shape = (action_space, )"""
+
+        if flip is None:
+            flip = self.away_team_active()
 
         game = self.game
         active_team = game.active_team
@@ -225,7 +236,7 @@ class BotBowlEnv(gym.Env):
 
         # Spatial state
         spatial_obs = np.stack([layer.get(game) for layer in self.env_conf.layers])
-        if self._flip_x_axis():
+        if flip:
             spatial_obs = np.flip(spatial_obs, axis=2)
 
         # Non spatial state
@@ -335,34 +346,34 @@ class BotBowlEnv(gym.Env):
 
         return spatial_obs, non_spatial_obs, action_mask
 
-    def step(self, action_idx: Optional[int], skip_observation: bool = False):
+    def step(self, action_idx: Optional[int], skip_observation: bool = False) -> EnvStepReturn:
         # Convert to Action object
-        action_objects = self._compute_action(action_idx, flip=self._flip_x_axis())
+        action_objects = self._compute_action(action_idx)
 
         for action in action_objects:
             self.game.step(action)
 
         return self.get_step_return(skip_observation)
 
-    def get_step_return(self, skip_observation):
+    def get_step_return(self, skip_observation) -> EnvStepReturn:
         done = self.game.state.game_over
 
         if done or skip_observation:
-            spatial_observation, non_spatial_observation, action_mask = None, None, None
+            obs = None, None, None
         else:
-            spatial_observation, non_spatial_observation, action_mask = self.get_state()
+            obs = self.get_state()
 
-        info = {'non_spatial_obs': non_spatial_observation,
-                'action_mask': action_mask}
+        info = {}
+        reward = 0.0
 
-        return spatial_observation, 0.0, done, info
+        return obs, reward, done, info
 
     def render(self, mode='human', feature_layers=False):
         if self._renderer is None:
             self._renderer = EnvRenderer(self, feature_layers)
         self._renderer.render()
 
-    def reset(self, skip_observation=False):
+    def reset(self, skip_observation=False) -> EnvObs:
         seed = self.rnd.randint(0, 2 ** 31)
 
         self.game = Game(game_id=str(uuid.uuid1()),
@@ -375,8 +386,10 @@ class BotBowlEnv(gym.Env):
                          seed=seed)
 
         self.game.init()
-        spatial_observation = None if skip_observation else self.get_state()[0]
-        return spatial_observation
+        if skip_observation:
+            return None
+        else:
+            return self.get_state()
 
     def close(self):
         pass
@@ -387,13 +400,24 @@ class BotBowlEnv(gym.Env):
             self.rnd = np.random.RandomState(self._seed)
         return self._seed
 
-    def _flip_x_axis(self) -> bool:
-        """Returns true if x-axis should be flipped"""
+    def home_team_active(self) -> bool:
+        """
+        Returns true if home team is active.
+        """
+        return self.game.active_team is self.game.state.home_team
+
+    def away_team_active(self) -> bool:
+        """
+        Returns true if away team is active.
+        """
         return self.game.active_team is self.game.state.away_team
 
-    def _compute_action(self, action_idx: Optional[int], flip: bool) -> List[Optional[Action]]:
+    def _compute_action(self, action_idx: Optional[int], flip: Optional[bool] = None) -> List[Optional[Action]]:
         if action_idx is None:
             return [None]
+
+        if flip is None:
+            flip = self.away_team_active()
 
         if action_idx < len(self.env_conf.simple_action_types):
             if action_idx >= len(self.env_conf.simple_action_types) - len(self.env_conf.formations):
@@ -412,12 +436,18 @@ class BotBowlEnv(gym.Env):
         spatial_action_type = self.env_conf.positional_action_types[spatial_idx // self.board_squares]
         return [Action(spatial_action_type, self.game.get_square(spatial_x, spatial_y))]
 
-    def _compute_action_idx(self, action: Action) -> int:
+    def _compute_action_idx(self, action: Action, flip: Optional[bool] = None) -> int:
+        if flip is None:
+            flip = self.away_team_active()
+
         if action.action_type in self.env_conf.simple_action_types:
             return self.env_conf.simple_action_types.index(action.action_type)
         elif action.action_type in self.env_conf.positional_action_types:
             position = action.position if action.position is not None else action.player.position
-            spatial_index = position.x + position.y * self.width
+            x, y = position.x, position.y
+            if flip:
+                x = self.width - x - 1
+            spatial_index = x + y * self.width
             position_action_index = self.env_conf.positional_action_types.index(action.action_type)
             return len(self.env_conf.simple_action_types) + self.board_squares * position_action_index + spatial_index
         else:
@@ -448,13 +478,13 @@ class BotBowlWrapper:
     def get_state(self):
         return self.env.get_state()
 
-    def step(self, action: Optional[int], skip_observation: bool = False):
+    def step(self, action: Optional[int], skip_observation: bool = False) -> EnvStepReturn:
         return self.env.step(action, skip_observation)
 
     def render(self, mode='human'):
         return self.env.render(mode)
 
-    def reset(self):
+    def reset(self) -> EnvObs:
         return self.env.reset()
 
     def close(self):
@@ -510,18 +540,17 @@ class ScriptedActionWrapper(BotBowlWrapper):
         super().__init__(env)
         self.scripted_func = scripted_func
 
-    def step(self, action: int, skip_observation: bool = False):
+    def step(self, action: int, skip_observation: bool = False) -> EnvStepReturn:
         self.env.step(action, skip_observation=True)
         self.do_scripted_actions()
         return self.root_env.get_step_return(skip_observation)
 
-    def reset(self):
+    def reset(self) -> EnvObs:
         self.env.reset()
         self.do_scripted_actions()
-        obs, _, _ = self.root_env.get_state()
-        return obs
+        return self.root_env.get_state()
 
-    def do_scripted_actions(self):
+    def do_scripted_actions(self) -> None:
         game = self.game
         while not game.state.game_over and len(game.state.stack.items) > 0:
             action = self.scripted_func(game)
@@ -533,11 +562,11 @@ class ScriptedActionWrapper(BotBowlWrapper):
 class PPCGWrapper(BotBowlWrapper):
     difficulty: float
 
-    def __init__(self, env, difficulty=1.0):
+    def __init__(self, env: Union[BotBowlEnv, BotBowlWrapper], difficulty: float = 1.0):
         super().__init__(env)
         self.difficulty = difficulty
 
-    def step(self, action: int, skip_observation: bool = False):
+    def step(self, action: int, skip_observation: bool = False) -> EnvStepReturn:
         self.env.step(action, skip_observation=True)
 
         if self.difficulty < 1.0:
