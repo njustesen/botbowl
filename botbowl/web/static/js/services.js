@@ -14,7 +14,11 @@ appServices.factory('GameService', function($http) {
         },
 
         delete: function(id) {
-            return $http.delete(options.api.base_url + '/games/' + id + "/delete");
+            return $http.delete(options.api.base_url + '/game/' + id + "/delete");
+        },
+
+        deleteSaved: function(name) {
+            return $http.delete(options.api.base_url + '/save/' + name + "/delete");
         },
 
         create: function(game) {

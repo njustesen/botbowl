@@ -19,9 +19,10 @@
                     <td class="text-left"><a href="#/game/play/{{game.game_id}}/{{game.state.away_team.team_id}}" style="width: 100%" class="btn btn-danger btn-team" ng-disabled="!game.away_agent.human"><span class="glyphicon glyphicon-{{game.away_agent.human ? 'user' : ''}}"></span> {{game.state.away_team.name}} ({{game.away_agent.name}})</a></td>
                     <td class="text-center">{{game.state.away_team.state.score}} - {{game.state.home_team.state.score}}</td>
                     <td class="text-left"><a href="#/game/play/{{game.game_id}}/{{game.state.home_team.team_id}}" style="width: 100%" class="btn btn-primary btn-team" ng-disabled="!game.home_agent.human"><span class="glyphicon glyphicon-{{game.home_agent.human ? 'user' : ''}}"></span> {{game.state.home_team.name}} ({{game.home_agent.name}})</a></td>
-                    <td class="text-right">
-                        <a href="#/game/hotseat/{{game.game_id}}" class="btn btn-default" ng-disabled="!game.home_agent.human || !game.away_agent.human"> Hot-seat</a>
-                        <a href="#/game/spectate/{{game.game_id}}" class="btn btn-default"> Spectate</a>
+                    <td class="">
+                        <a href="#/game/hotseat/{{game.game_id}}" class="btn btn-default" ng-disabled="!game.home_agent.human || !game.away_agent.human">Hot-seat</a>
+                        <a href="#/game/spectate/{{game.game_id}}" class="btn btn-default">Spectate</a>
+                        <a href="#" ng-click="deleteGame(game.game_id)" class="btn btn-danger">Delete</a>
                     </td>
                 </tr>
             </tbody>
@@ -52,14 +53,14 @@
                 </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="save in savedGames" ng-click='openGame(game.game_id)'>
+                <tr ng-repeat="save in savedGames">
                     <td class="text-left">{{save.name}}</td>
-                    <td class="text-center">{{save.game.game.state.away_team.name}}</td>
-                    <td class="text-center">{{save.game.game.state.away_team.state.score}} - {{save.game.game.state.home_team.state.score}}</td>
-                    <td class="text-center">{{save.game.game.state.home_team.name}}</td>
-                    <td class="text-right">
-                        <a href="#" ng-click="loadGame(save.name)" class="btn btn-success btn"><span class="glyphicon glyphicon-play"></span> Play</a>
-                        <!--<button class="btn btn-danger btn-xs" ng-click="deleteGame(game.game_id)"><span class="glyphicon glyphicon-trash"></span> Concede</button>-->
+                    <td class="text-left"><a href="#" style="width: 100%" class="btn btn-danger btn-team" ng-disabled="true"><span class="glyphicon glyphicon-{{save.game.away_agent.human ? 'user' : ''}}"></span> {{save.game.state.away_team.name}} ({{save.game.away_agent.name}})</a></td>
+                    <td class="text-center">{{save.game.state.away_team.state.score}} - {{save.game.state.home_team.state.score}}</td>
+                    <td class="text-left"><a href="#" style="width: 100%" class="btn btn-primary btn-team" ng-disabled="true"><span class="glyphicon glyphicon-{{save.game.home_agent.human ? 'user' : ''}}"></span> {{save.game.state.home_team.name}} ({{save.game.home_agent.name}})</a></td>
+                    <td class="">
+                        <a href="#" ng-click="loadGame(save.name)" class="btn btn-default"> Load</a>
+                        <a href="#" ng-click="deleteSavedGame(save.name)" class="btn btn-danger"> Delete</a>
                     </td>
                 </tr>
             </tbody>
