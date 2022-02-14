@@ -7,13 +7,13 @@ This module contains the BotBowlEnv class; implementing the Open AI Gym interfac
 """
 
 
-from botbowl.core.model import *
-from botbowl.core import ActionType, Action, WeatherType, Skill, PlayerActionType, Agent
 import botbowl.core.procedure as procedures
 from botbowl.ai.bots import RandomBot
 from botbowl.ai.env_render import EnvRenderer
 from botbowl.ai.registry import registry as bot_registry
-import botbowl.ai.layers as Layers
+from botbowl.ai.layers import *
+from botbowl.core.model import *
+from botbowl.core import ActionType, Action, WeatherType, Skill, PlayerActionType, Agent
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
 from typing import Tuple, Iterable, Union, Callable, List, Optional
@@ -46,14 +46,14 @@ class EnvConf:
     simple_action_types: List[Union[ActionType, Formation]]
     positional_action_types: List[ActionType]
     action_types: List[Union[ActionType, Formation]]
-    layers: List[Layers.FeatureLayer]
+    layers: List[FeatureLayer]
     procedures: List[procedures.Procedure]
     formations: List[Formation]
     pathfinding: bool
 
     def __init__(self, size=11,
                  extra_formations: Optional[Iterable[Formation]] = None,
-                 extra_feature_layers: Optional[Iterable[Layers.FeatureLayer]] = None,
+                 extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
                  pathfinding=False):
 
         self.config: Configuration = load_config(f"gym-{size}")
@@ -109,35 +109,35 @@ class EnvConf:
 
         self.action_types = self.simple_action_types + self.positional_action_types
 
-        self.layers = [Layers.AvailablePositionLayer(action_type) for action_type in self.positional_action_types]
+        self.layers = [AvailablePositionLayer(action_type) for action_type in self.positional_action_types]
         self.layers.extend([
-            Layers.OccupiedLayer(),
-            Layers.OwnPlayerLayer(),
-            Layers.OppPlayerLayer(),
-            Layers.OwnTackleZoneLayer(),
-            Layers.OppTackleZoneLayer(),
-            Layers.UpLayer(),
-            Layers.StunnedLayer(),
-            Layers.UsedLayer(),
-            Layers.RollProbabilityLayer(),
-            Layers.BlockDiceLayer(),
-            Layers.ActivePlayerLayer(),
-            Layers.TargetPlayerLayer(),
-            Layers.MALayer(),
-            Layers.STLayer(),
-            Layers.AGLayer(),
-            Layers.AVLayer(),
-            Layers.MovementLeftLayer(),
-            Layers.GFIsLeftLayer(),
-            Layers.BallLayer(),
-            Layers.OwnHalfLayer(),
-            Layers.OwnTouchdownLayer(),
-            Layers.OppTouchdownLayer(),
-            Layers.SkillLayer(Skill.BLOCK),
-            Layers.SkillLayer(Skill.DODGE),
-            Layers.SkillLayer(Skill.SURE_HANDS),
-            Layers.SkillLayer(Skill.CATCH),
-            Layers.SkillLayer(Skill.PASS)
+            OccupiedLayer(),
+            OwnPlayerLayer(),
+            OppPlayerLayer(),
+            OwnTackleZoneLayer(),
+            OppTackleZoneLayer(),
+            UpLayer(),
+            StunnedLayer(),
+            UsedLayer(),
+            RollProbabilityLayer(),
+            BlockDiceLayer(),
+            ActivePlayerLayer(),
+            TargetPlayerLayer(),
+            MALayer(),
+            STLayer(),
+            AGLayer(),
+            AVLayer(),
+            MovementLeftLayer(),
+            GFIsLeftLayer(),
+            BallLayer(),
+            OwnHalfLayer(),
+            OwnTouchdownLayer(),
+            OppTouchdownLayer(),
+            SkillLayer(Skill.BLOCK),
+            SkillLayer(Skill.DODGE),
+            SkillLayer(Skill.SURE_HANDS),
+            SkillLayer(Skill.CATCH),
+            SkillLayer(Skill.PASS)
         ])
         if extra_feature_layers is not None:
             self.layers.extend(extra_feature_layers)
@@ -174,7 +174,7 @@ class BotBowlEnv(gym.Env):
     Environment for Bot Bowl IV targeted at reinforcement learning algorithms
     """
     env_conf: EnvConf
-    layers: Layers.FeatureLayer
+    layers: FeatureLayer
     width: int
     height: int
     board_squares: int
