@@ -41,6 +41,9 @@ We would like to thank Mattias Bermell for his awesome work on pathfinding modul
 ## Forward Model
 A forward model was introduced in Bot Bowl III. This year, the model is faster, has more features, and is more robust.
 We hope to see a few search-based bots in Bot Bowl IV!
+
+We would like to thank Mattias Bermell for his awesome work on the forward model!
+
 Check out the tutorial [how to use the forward model](forward-model.md) and [how to implement a search-based bot](search-based.md) to learn more.
 
 # Important Dates
