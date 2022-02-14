@@ -3,14 +3,17 @@
 Author: Niels Justesen
 Year: 2018
 ==========================
-This module contains the botbowlEnv class; botbowl implementing the Open AI Gym interface.
+This module contains the BotBowlEnv class; implementing the Open AI Gym interface.
 """
-from typing import Tuple, Iterable, Union, Callable
 
+
+from botbowl.core.model import *
+from botbowl.core import ActionType, Action, WeatherType, Skill, PlayerActionType, Agent
+import botbowl.core.procedure as procedures
 from botbowl.ai.bots import RandomBot
 from botbowl.ai.env_render import EnvRenderer
 from botbowl.ai.registry import registry as bot_registry
-from botbowl.ai.layers import *
+import botbowl.ai.layers as Layers
 from botbowl.core import Game, load_rule_set, load_config, load_team_by_filename, load_arena, load_formation
 
 from typing import Tuple, Iterable, Union, Callable, List, Optional
@@ -43,15 +46,15 @@ class EnvConf:
     simple_action_types: List[Union[ActionType, Formation]]
     positional_action_types: List[ActionType]
     action_types: List[Union[ActionType, Formation]]
-    layers: List[FeatureLayer]
-    procedures: List[Procedure]
+    layers: List[Layers.FeatureLayer]
+    procedures: List[procedures.Procedure]
     formations: List[Formation]
     pathfinding: bool
 
     def __init__(self, size=11,
                  extra_formations: Optional[Iterable[Formation]] = None,
-                 extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
-                 pathfinding = False):
+                 extra_feature_layers: Optional[Iterable[Layers.FeatureLayer]] = None,
+                 pathfinding=False):
 
         self.config: Configuration = load_config(f"gym-{size}")
         self.config.pathfinding_enabled = pathfinding
@@ -106,64 +109,64 @@ class EnvConf:
 
         self.action_types = self.simple_action_types + self.positional_action_types
 
-        self.layers = [AvailablePositionLayer(action_type) for action_type in self.positional_action_types]
+        self.layers = [Layers.AvailablePositionLayer(action_type) for action_type in self.positional_action_types]
         self.layers.extend([
-            OccupiedLayer(),
-            OwnPlayerLayer(),
-            OppPlayerLayer(),
-            OwnTackleZoneLayer(),
-            OppTackleZoneLayer(),
-            UpLayer(),
-            StunnedLayer(),
-            UsedLayer(),
-            RollProbabilityLayer(),
-            BlockDiceLayer(),
-            ActivePlayerLayer(),
-            TargetPlayerLayer(),
-            MALayer(),
-            STLayer(),
-            AGLayer(),
-            AVLayer(),
-            MovementLeftLayer(),
-            GFIsLeftLayer(),
-            BallLayer(),
-            OwnHalfLayer(),
-            OwnTouchdownLayer(),
-            OppTouchdownLayer(),
-            SkillLayer(Skill.BLOCK),
-            SkillLayer(Skill.DODGE),
-            SkillLayer(Skill.SURE_HANDS),
-            SkillLayer(Skill.CATCH),
-            SkillLayer(Skill.PASS)
+            Layers.OccupiedLayer(),
+            Layers.OwnPlayerLayer(),
+            Layers.OppPlayerLayer(),
+            Layers.OwnTackleZoneLayer(),
+            Layers.OppTackleZoneLayer(),
+            Layers.UpLayer(),
+            Layers.StunnedLayer(),
+            Layers.UsedLayer(),
+            Layers.RollProbabilityLayer(),
+            Layers.BlockDiceLayer(),
+            Layers.ActivePlayerLayer(),
+            Layers.TargetPlayerLayer(),
+            Layers.MALayer(),
+            Layers.STLayer(),
+            Layers.AGLayer(),
+            Layers.AVLayer(),
+            Layers.MovementLeftLayer(),
+            Layers.GFIsLeftLayer(),
+            Layers.BallLayer(),
+            Layers.OwnHalfLayer(),
+            Layers.OwnTouchdownLayer(),
+            Layers.OppTouchdownLayer(),
+            Layers.SkillLayer(Skill.BLOCK),
+            Layers.SkillLayer(Skill.DODGE),
+            Layers.SkillLayer(Skill.SURE_HANDS),
+            Layers.SkillLayer(Skill.CATCH),
+            Layers.SkillLayer(Skill.PASS)
         ])
         if extra_feature_layers is not None:
             self.layers.extend(extra_feature_layers)
 
         # Procedures that require actions
         self.procedures = [
-            StartGame,
-            CoinTossFlip,
-            CoinTossKickReceive,
-            Setup,
-            PlaceBall,
-            HighKick,
-            Touchback,
-            Turn,
-            MoveAction,
-            BlockAction,
-            BlitzAction,
-            PassAction,
-            HandoffAction,
-            FoulAction,
-            ThrowBombAction,
-            Block,
-            Push,
-            FollowUp,
-            Apothecary,
-            PassAttempt,
-            Interception,
-            Reroll,
-            Ejection]
+            procedures.StartGame,
+            procedures.CoinTossFlip,
+            procedures.CoinTossKickReceive,
+            procedures.Setup,
+            procedures.PlaceBall,
+            procedures.HighKick,
+            procedures.Touchback,
+            procedures.Turn,
+            procedures.MoveAction,
+            procedures.BlockAction,
+            procedures.BlitzAction,
+            procedures.PassAction,
+            procedures.HandoffAction,
+            procedures.FoulAction,
+            procedures.ThrowBombAction,
+            procedures.Block,
+            procedures.Push,
+            procedures.FollowUp,
+            procedures.Apothecary,
+            procedures.PassAttempt,
+            procedures.Interception,
+            procedures.Reroll,
+            procedures.Ejection]
 
 
 class BotBowlEnv(gym.Env):
@@ -171,7 +174,7 @@ class BotBowlEnv(gym.Env):
     Environment for Bot Bowl IV targeted at reinforcement learning algorithms
     """
     env_conf: EnvConf
-    layers: FeatureLayer
+    layers: Layers.FeatureLayer
     width: int
     height: int
     board_squares: int
@@ -321,7 +324,7 @@ class BotBowlEnv(gym.Env):
         # Available action types
         aa_types = np.zeros(len(self.env_conf.action_types))
         game_aa_types = set(action_choice.action_type for action_choice in game.get_available_actions())
-        is_setup: bool = type(self.game.get_procedure()) == Setup
+        is_setup: bool = type(self.game.get_procedure()) == procedures.Setup
         for i, action_type in enumerate(self.env_conf.action_types):
             if action_type is ActionType.END_SETUP and not game.is_setup_legal(active_team):
                 continue  # Ignore end setup action if setup is illegal
@@ -466,16 +469,18 @@ class BotBowlEnv(gym.Env):
         elif isinstance(agent_option, Agent):
             return agent_option
         else:
-            raise AttributeError(f"Not regonized bot name: {agent_option}")
+            raise AttributeError(f"Not recognized bot name: {agent_option}")
 
 
 class BotBowlWrapper:
-    env: BotBowlEnv
+    env: Union[BotBowlEnv, 'BotBowlWrapper']
+    _root_env: Optional[BotBowlEnv]
 
-    def __init__(self, env):
+    def __init__(self, env: Union[BotBowlEnv, 'BotBowlWrapper']):
         self.env = env
+        self._root_env = None
 
-    def get_state(self):
+    def get_state(self) -> EnvObs:
         return self.env.get_state()
 
     def step(self, action: Optional[int], skip_observation: bool = False) -> EnvStepReturn:
@@ -495,9 +500,14 @@ class BotBowlWrapper:
 
     @property
     def root_env(self) -> BotBowlEnv:
+        # functools.cache is available in python 3.9
+        if self._root_env is not None:
+            return self._root_env
+
         env = self.env
         while True:
             if type(env) is BotBowlEnv:
+                self._root_env = env
                 return env
             env = env.env
 
@@ -576,7 +586,7 @@ class PPCGWrapper(BotBowlWrapper):
                 extra_endzone_squares = int((1.0 - self.difficulty) * 25.0)
                 distance_to_endzone = ball_carrier.position.x - 1
                 if distance_to_endzone <= extra_endzone_squares:
-                    game.state.stack.push(Touchdown(game, ball_carrier))
+                    game.state.stack.push(procedures.Touchdown(game, ball_carrier))
                     game.set_available_actions()
                     self.env.step(None, skip_observation=True)  # process the Touchdown-procedure
 
