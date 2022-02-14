@@ -55,9 +55,17 @@ def save_game_exists(name):
     return False
 
 
-def save_game(game_id, name, team_id):
+def save_game(game_id, name):
     name = name.replace("/", "").replace(".", "").lower()
-    host.save_game(game_id, name, team_id)
+    host.save_game(game_id, name)
+
+
+def delete_game(game_id):
+    host.end_game(game_id)
+
+
+def delete_save(name):
+    host.delete_saved_game(name)
 
 
 def get_game(game_id):
