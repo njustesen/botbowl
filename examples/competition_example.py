@@ -35,7 +35,7 @@ hostname = socket.gethostname()
 time.sleep(2)
 
 # Load configurations, rules, arena and teams
-config = botbowl.load_config("bot-bowl-iii")
+config = botbowl.load_config("bot-bowl")
 
 ruleset = botbowl.load_rule_set(config.ruleset)
 arena = botbowl.load_arena(config.arena)
