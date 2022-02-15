@@ -19,7 +19,7 @@ In case of a tie, the bot with the highest score, and then inflicted casualties 
 Each match will use the following configurations:
 
 - The BB2016 ruleset
-- Only a fixed human teams
+- Only a fixed human team is available
 - Time limit of 2 minutes per turn and 15 seconds per decision in the opponent's turn
 - Pathfinding-assistance enabled
 
