@@ -23,7 +23,7 @@ Each match will be using the following configurations:
 - Time limit of 2 minutes per turn and 15 seconds per decision in the opponent's turn
 - Pathfinding-assistance enabled
 
-If a bot crashes and are unable to recover, the game will continue and the bot will simply timeout and not do anything during their turn.
+If a bot crashes and is unable to recover, the game will continue and the bot will simply timeout and not do anything during their turn.
 
 # Prizes
 Will be announced soon!
@@ -32,7 +32,7 @@ Will be announced soon!
 
 ## Faster Pathfinding
 The pathfinding module in the bot bowl framework has been improved significantly by compiling the python code to cython and through some other optimizations.
-The algorithm is estimated to be __ times faster compared to last year!
+The algorithm is estimated to be 20x faster compared to last year!
 This will make it easier for reinforcement learning bots to learn the game with pathfinding enabled.
 Check out the tutorial [pathfinding-assistance in reinforcement learning](a2c-pathfinding.md) to learn more.
 
