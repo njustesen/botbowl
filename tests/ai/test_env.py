@@ -1,15 +1,13 @@
-from multiprocessing import Process, Pipe
-
-from itertools import chain
-from random import randint
-from typing import Optional
-
 import pytest
 
-from botbowl import Action, Square, Formation, Game, ActionType
-from botbowl.ai.env import BotBowlEnv, ScriptedActionWrapper, RewardWrapper, EnvConf
+from multiprocessing import Process, Pipe
+import itertools
+from random import randint
+from typing import Optional
 import numpy as np
 
+import botbowl
+from botbowl.ai.env import BotBowlEnv, ScriptedActionWrapper, RewardWrapper, EnvConf
 from examples.a2c.a2c_env import A2C_Reward
 import gym
 
@@ -22,31 +20,27 @@ import gym
                                   'botbowl-1-v4'])
 def test_gym_registry(name):
     env = gym.make(name)
-    env.reset()
-
+    _, _, mask = env.reset()
     done = False
-    _, _, mask = env.get_state()
-
     while not done:
         aa = np.where(mask > 0.0)[0]
         action_idx = np.random.choice(aa, 1)[0]
-        obs, reward, done, info = env.step(action_idx)
-        mask = info['action_mask']
+        (_, _, mask), _, done, _ = env.step(action_idx)
 
 
 def test_compute_action():
     env = BotBowlEnv()
 
-    for action_type in chain(env.env_conf.positional_action_types, env.env_conf.simple_action_types):
-        if type(action_type) is Formation:
+    for action_type in itertools.chain(env.env_conf.positional_action_types, env.env_conf.simple_action_types):
+        if type(action_type) is botbowl.Formation:
             continue
 
         sq = None
         if action_type in env.env_conf.positional_action_types:
-            sq = Square(x=randint(0, env.width-1), y=randint(0, env.height-1))
+            sq = botbowl.Square(x=randint(0, env.width-1), y=randint(0, env.height-1))
 
-        action = Action(action_type, position=sq)
-        same_action = env._compute_action(env._compute_action_idx(action), flip=False)[0]
+        action = botbowl.Action(action_type, position=sq)
+        same_action = env._compute_action(env._compute_action_idx(action))[0]
         assert action.action_type == same_action.action_type, f"Wrong type: {action} != {same_action}"
         assert action.position == same_action.position, f"Wrong position: {action} != {same_action}"
 
@@ -55,14 +49,14 @@ def test_reward_and_scripted_wrapper():
 
     reward_func = A2C_Reward()
 
-    def scripted_func(game) -> Optional[Action]:
+    def scripted_func(game) -> Optional[botbowl.Action]:
         available_action_types = [action_choice.action_type for action_choice in game.get_available_actions()]
 
         if len(available_action_types) == 1 and len(game.get_available_actions()[0].positions) == 0 and len(game.get_available_actions()[0].players) == 0:
-            return Action(available_action_types[0])
+            return botbowl.Action(available_action_types[0])
 
-        if ActionType.END_PLAYER_TURN in available_action_types and randint(1, 5) == 2:
-            return Action(ActionType.END_PLAYER_TURN)
+        if botbowl.ActionType.END_PLAYER_TURN in available_action_types and randint(1, 5) == 2:
+            return botbowl.Action(botbowl.ActionType.END_PLAYER_TURN)
 
         return None
 
@@ -75,22 +69,20 @@ def test_reward_and_scripted_wrapper():
     opp_tds = []
 
     for _ in range(10):
-        env.reset()
+        _, _, mask = env.reset()
         done = False
-        _, _, mask = env.get_state()
-
         ep_reward = 0.0
 
         while not done:
             aa = np.where(mask)[0]
             action_idx = np.random.choice(aa, 1)[0]
-            obs, reward, done, info = env.step(action_idx)
+            (_, _, mask), reward, done, _ = env.step(action_idx)
             ep_reward += reward
-            mask = info['action_mask']
 
         rewards.append(ep_reward)
         own_tds.append(env.game.state.home_team.state.score)
         opp_tds.append(env.game.state.away_team.state.score)
+
 
 @pytest.mark.parametrize("pathfinding", [True, False])
 def test_observation_ranges(pathfinding):
@@ -102,15 +94,14 @@ def test_observation_ranges(pathfinding):
 
     for _ in range(2):
         done = False
-        env.reset()
+        spatial_obs, non_spatial_obs, mask = env.reset()
 
         while not done:
-            _, non_spatial_obs, mask = env.get_state()
 
             # Spatial observation are within [0, 1]
-            for layer in env.env_conf.layers:
+            for layer, array in zip(env.env_conf.layers, spatial_obs):
                 layer_name = layer.name()
-                array = layer.produce(env.game)
+                #array = layer.produce(env.game)
 
                 max_val = np.max(array)
                 min_val = np.min(array)
@@ -130,9 +121,9 @@ def test_observation_ranges(pathfinding):
             assert max_val <= 1.0, \
                 f"non_spatial_obs[{find_first_index(non_spatial_obs, max_val)}] is too high ({max_val})"
 
-            aa = np.where(mask > 0.0)[0]
+            aa = np.where(mask)[0]
             action_idx = np.random.choice(aa, 1)[0]
-            _, _, done, _ = env.step(action_idx, skip_observation=True)
+            (spatial_obs, non_spatial_obs, mask), reward, done, _ = env.step(action_idx)
 
     env.close()
 
@@ -142,22 +133,23 @@ def worker(remote, parent_remote, env: BotBowlEnv):
     seed = env._seed
     rnd = np.random.RandomState(seed)
     steps = 0
-    env.reset()
+    _, _, mask = env.reset()
     while True:
         command = remote.recv()
         if command == 'step':
-            _, _, mask = env.get_state()
             aa = np.where(mask > 0.0)[0]
             action_idx = rnd.choice(aa, 1)[0]
-
             obs, reward, done, info = env.step(action_idx)
+            mask = obs[2]
             steps += 1
             if done:
                 obs = env.reset()
             remote.send((obs, reward, done, info))
         elif command == 'reset':
             obs = env.reset()
+            mask = obs[2]
             done = False
+            remote.send(obs)
         elif command == 'close':
             env.close()
             break

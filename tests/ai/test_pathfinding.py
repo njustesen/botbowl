@@ -469,3 +469,19 @@ def test_straight_paths(pf):
             assert all(step.x==7 for step in path.steps)
         if path.get_last_step().y == 7:
             assert all(step.y == 7 for step in path.steps)
+
+@pytest.mark.parametrize("pf_enabled", [False, True])
+def test_blitz_one_move_left(pf_enabled):
+    game, (player, opp_player) = get_custom_game_turn(player_positions=[(5, 5)],
+                                                      opp_player_positions=[(6, 6)],
+                                                      pathfinding_enabled=pf_enabled)
+
+    player.role.ma = 1
+
+    game.step(Action(ActionType.START_BLITZ, player=player))
+    assert player.num_moves_left() == 1
+
+    game.step(Action(ActionType.BLOCK, position=opp_player.position))
+
+    assert not game.has_report_of_type(botbowl.OutcomeType.FAILED_GFI)
+    assert not game.has_report_of_type(botbowl.OutcomeType.SUCCESSFUL_GFI)

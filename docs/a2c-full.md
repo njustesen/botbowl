@@ -204,7 +204,7 @@ helps us flip any spatial action too.
             Variable(action_mask))
 
         action_idx = actions[0]
-        action_objects = self.env._compute_action(action_idx, flip=self.env._flip_x_axis())
+        action_objects = self.env._compute_action(action_idx)
 
         self.action_queue = action_objects
         return self.action_queue.pop(0)

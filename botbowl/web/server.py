@@ -6,7 +6,7 @@ Year: 2018
 Run this script to start a Flask server locally. The server will start a Host, which will manage games.
 """
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from botbowl.web import api
 from botbowl.core.load import *
 import json
@@ -50,25 +50,31 @@ def create():
 def save():
     game_id = json.loads(request.data)['game_id']
     name = json.loads(request.data)['name']
-    # todo: team_id needed?
-    team_id = ""  # json.loads(request.data)['team_id']
 
     if len(name) > 2 and len(name) < 40 and not api.save_game_exists(name):
-        api.save_game(game_id, name, team_id)
+        api.save_game(game_id, name)
         return json.dumps("Game was successfully saved")
     else:
         raise Exception("Cannot save this game")
 
 
+@app.route('/game/<game_id>/delete', methods=['DELETE'])
+def delete(game_id):
+    api.delete_game(game_id)
+    return f"{game_id} deleted"
+
+
+@app.route('/save/<name>/delete', methods=['DELETE'])
+def delete_saved(name):
+    api.delete_save(name)
+    return f"{name} deleted"
+
+
 @app.route('/games/', methods=['GET'])
 def get_all_games():
-    games = api.get_games()
-    saved_games = api.get_saved_games()
-    game_list = [game.to_json() for game in games]
-    saved_game_list = [{'game': save[0].to_json(), 'name': save[1]} for save in saved_games]
     return json.dumps({
-        'games': game_list,
-        'saved_games': saved_game_list
+        'games': [game.to_json() for game in api.get_games()],
+        'saved_games': [{'name': name, 'game': game.to_json()} for (name, game) in api.get_saved_games()]
     })
 
 
@@ -126,15 +132,12 @@ def get_steps(replay_id, from_idx, num_steps):
     return steps_str
 
 
-@app.route('/game/load/<name>', methods=['GET'])
+@app.route('/game/load/<name>/', methods=['GET'])
 def load_game(name):
-    save = api.load_game(name)
+    game = api.load_game(name)
+    game.set_seed(random.randint(0, 2**32-1))
+    return json.dumps(game.to_json())
 
-    # Reset seed
-    seed = random.randint(0, 2**32-1)
-    save.game.set_seed(seed)
-
-    return json.dumps(save.to_json())
 
 @app.route('/bots/', methods=['GET'])
 def get_bots():
