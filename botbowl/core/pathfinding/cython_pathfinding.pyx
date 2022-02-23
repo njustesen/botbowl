@@ -152,6 +152,13 @@ cdef class Pathfinder:
     cdef priority_queue[NodePtr] open_set
     cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
+    def __dealloc__(self):
+        cdef NodePtr empty_ptr
+        for i in range(17):
+            for j in range(28):
+                self.locked_nodes[i][j] = empty_ptr
+                self.nodes[i][j] = empty_ptr
+
     def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
 
         self.players_on_pitch = game.state.pitch.board
