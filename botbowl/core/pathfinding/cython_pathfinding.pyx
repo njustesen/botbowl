@@ -140,8 +140,8 @@ cdef Path create_path(NodePtr node):
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
-    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty
-    cdef int ma, gfis, dodge_target, pitch_width, pitch_height
+    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty, carries_ball
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -166,6 +166,8 @@ cdef class Pathfinder:
         else:
             self.ball_pos = Square(-1, -1)
 
+        self.carries_ball = False
+        self.endzone_x = -1
         self.has_target = False
         self.target_is_int = False
         self.target_is_square = False
@@ -208,6 +210,9 @@ cdef class Pathfinder:
             NodePtr node
             int ma, gfis_used
             bint can_dodge, can_sure_feet, can_sure_hands
+
+        self.carries_ball = self.player is self.game.get_ball_carrier()
+        self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
 
         self.ma = self.player.num_moves_left()
         self.gfis = self.player.num_gfis_left()
@@ -273,6 +278,9 @@ cdef class Pathfinder:
                 return
 
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
+            return
+
+        if self.carries_ball and node.get().position.x == self.endzone_x:
             return
 
         if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):

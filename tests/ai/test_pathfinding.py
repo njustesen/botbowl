@@ -331,8 +331,8 @@ def test_all_blitz_paths_two(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff_after_gfi(pf):
-    game, (player, other_player) = get_custom_game_turn(player_positions=[(1, 1), (2, 2)],
-                                                        ball_position=(1, 1))
+    game, (player, other_player) = get_custom_game_turn(player_positions=[(2, 2), (3, 3)],
+                                                        ball_position=(2, 2))
     player.role.ma = 6
     player.state.moves = 8
 
@@ -391,8 +391,8 @@ def test_foul(pf):
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_handoff(pf):
-    game, (player, teammate_1, teammate_2) = get_custom_game_turn(player_positions=[(1, 1), (1, 2), (1, 3)],
-                                                                  ball_position=(1, 1))
+    game, (player, teammate_1, teammate_2) = get_custom_game_turn(player_positions=[(2, 2), (2, 3), (2, 4)],
+                                                                  ball_position=(2, 2))
 
     player.role.ma = 1
     pathfinder = pf.Pathfinder(game,
@@ -485,3 +485,38 @@ def test_blitz_one_move_left(pf_enabled):
 
     assert not game.has_report_of_type(botbowl.OutcomeType.FAILED_GFI)
     assert not game.has_report_of_type(botbowl.OutcomeType.SUCCESSFUL_GFI)
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+@pytest.mark.parametrize("as_home", [True, False])
+def test_scoring_paths(pf, as_home):
+    home_positions = [(2, 1),
+                      (2, 2),
+                      (3, 1),
+                      (3, 2)]
+
+    away_positions = [(25, 1),
+                      (25, 2),
+                      (24, 1),
+                      (24, 2)]
+
+    ball_pos = home_positions[0] if as_home else away_positions[0]
+    end_zone_x = 1 if as_home else 26
+
+    game, _ = get_custom_game_turn(player_positions=home_positions,
+                                   opp_player_positions=away_positions,
+                                   ball_position=ball_pos)
+
+    ball_carrier = game.get_ball_carrier()
+
+    paths = pf.get_all_paths(game, ball_carrier)
+
+    assert len(paths) == 2
+
+    for path in paths:
+        # we make sure that there are no steps after passing home_td zone
+        found_td = False
+        for step in path.steps:
+            assert not found_td
+            if step.x == end_zone_x:
+                found_td = True

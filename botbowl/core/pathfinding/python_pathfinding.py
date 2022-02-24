@@ -193,6 +193,8 @@ class Pathfinder:
         self.can_block = can_block
         self.can_handoff = can_handoff
         self.can_foul = can_foul
+        self.carries_ball = None
+        self.endzone_x = None
         self.ma = player.num_moves_left()
         self.gfis = player.num_gfis_left()
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
@@ -216,6 +218,9 @@ class Pathfinder:
     def get_paths(self, target=None):
         self.gfis = self.player.num_gfis_left()
         self.ma = self.player.num_moves_left()
+        self.carries_ball = self.player is self.game.get_ball_carrier()
+        self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
+
         can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
         can_sure_hands = self.player.has_skill(Skill.SURE_HANDS)
@@ -299,6 +304,9 @@ class Pathfinder:
                 return
 
         if node.block_dice is not None or node.handoff_roll is not None:
+            return
+
+        if self.carries_ball and node.position.x == self.endzone_x:
             return
 
         out_of_moves = False

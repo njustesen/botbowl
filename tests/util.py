@@ -9,21 +9,23 @@ game_turn_empty = {}
 game_turn_full = {}
 
 
-def get_game_turn(seed=0, empty=False):
+def get_game_turn(seed=0, empty=False, home_team: str = 'human', away_team: str = 'orc'):
     D3.FixedRolls = []
     D6.FixedRolls = []
     D8.FixedRolls = []
     BBDie.FixedRolls = []
+
+    key = f"{seed} {home_team} {away_team}"
     if empty:
-        if seed in game_turn_empty:
-            return deepcopy(game_turn_empty[seed])
+        if key in game_turn_empty:
+            return deepcopy(game_turn_empty[key])
     else:
-        if seed in game_turn_full:
-            return deepcopy(game_turn_full[seed])
+        if key in game_turn_full:
+            return deepcopy(game_turn_full[key])
     config = load_config("gym-11")
     ruleset = load_rule_set(config.ruleset)
-    home = load_team_by_filename("human", ruleset)
-    away = load_team_by_filename("orc", ruleset)
+    home = load_team_by_filename(home_team, ruleset)
+    away = load_team_by_filename(away_team, ruleset)
     home_agent = Agent("human1", human=True)
     away_agent = Agent("human2", human=True)
     game = Game(1, home, away, home_agent, away_agent, config)
@@ -43,9 +45,9 @@ def get_game_turn(seed=0, empty=False):
     if empty:
         game.clear_board()
     if empty:
-        game_turn_empty[seed] = deepcopy(game)
+        game_turn_empty[key] = deepcopy(game)
     else:
-        game_turn_full[seed] = deepcopy(game)
+        game_turn_full[key] = deepcopy(game)
     return game
 
 
@@ -66,7 +68,7 @@ def get_custom_game_turn(player_positions: List[Position], opp_player_positions:
     :param pathfinding_enabled:
     :return: tuple with created game object followed by all the placed players
     """
-    game = get_game_turn(empty=True)
+    game = get_game_turn(empty=True, home_team='human', away_team='human')
     team = game.get_agent_team(game.actor)
     team_players = [player for player in team.players if player.role.name == "Lineman"]
 
