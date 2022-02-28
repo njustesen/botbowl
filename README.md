@@ -35,7 +35,7 @@ Or download the examples folder and run:
 ```
 python examples/server_example.py
 ```
-Go to: http://127.0.0.1:1234/
+Go to: http://127.0.0.1:5000/
 
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
