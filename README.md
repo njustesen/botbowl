@@ -29,13 +29,13 @@ Head over to our [tutorials](docs/tutorials.md) to learn about how to use the Bo
 
 ### Run botbowl's Web Server
 ```
-python -c "import botbowl.web.server as server;server.start_server(debug=True, use_reloader=False, port=5000)"
+python -c "import botbowl.web.server as server;server.start_server(debug=True, use_reloader=False, port=1234)"
 ```
 Or download the examples folder and run:
 ```
 python examples/server_example.py
 ```
-Go to: http://127.0.0.1:5000/
+Go to: http://127.0.0.1:1234/
 
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
