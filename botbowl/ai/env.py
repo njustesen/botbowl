@@ -49,7 +49,6 @@ class EnvConf:
     layers: List[FeatureLayer]
     procedures: List[procedures.Procedure]
     formations: List[Formation]
-    pathfinding: bool
 
     def __init__(self, size=11,
                  extra_formations: Optional[Iterable[Formation]] = None,
