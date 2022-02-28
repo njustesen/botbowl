@@ -22,7 +22,7 @@ Then run:
 ```
 pip install git+https://github.com/njustesen/botbowl
 ```
-If python detects a C++ compiler in your system it compile the pathfinding algorithm which makes it faster. If you used `git clone` you have to manually compile. Here's a more [detailed guide](docs/installation.md) on how to set up the Bot Bowl framework.
+If python detects a C++ compiler in your system it compiles the pathfinding algorithm which makes it faster. If you used `git clone` you have to manually compile. Here's a more [detailed guide](docs/installation.md) on how to set up the Bot Bowl framework.
 
 ## Tutorials
 Head over to our [tutorials](docs/tutorials.md) to learn about how to use the Bot Bowl framework.
