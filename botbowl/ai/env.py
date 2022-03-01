@@ -540,7 +540,7 @@ class RewardWrapper(BotBowlWrapper):
         if game.active_team == game.state.home_team:
             reward += self.home_reward_func(game)
         elif game.active_team == game.state.away_team and self.away_reward_func is not None:
-            reward += self.home_reward_func(game)
+            reward += self.away_reward_func(game)
         return obs, reward, done, info
 
 
