@@ -283,6 +283,9 @@ cdef class Pathfinder:
         if self.carries_ball and node.get().position.x == self.endzone_x:
             return
 
+        if (not self.carries_ball) and node.get().position == self.ball_pos:
+            return
+
         if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):
             return
 

@@ -309,6 +309,9 @@ class Pathfinder:
         if self.carries_ball and node.position.x == self.endzone_x:
             return
 
+        if (not self.carries_ball) and node.position == self.game.get_ball_position():
+            return
+
         out_of_moves = False
         if node.moves_left + node.gfis_left <= 0:
             if not node.can_handoff and not node.can_foul:

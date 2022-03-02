@@ -520,3 +520,13 @@ def test_scoring_paths(pf, as_home):
             assert not found_td
             if step.x == end_zone_x:
                 found_td = True
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_forced_pickup_path(pf):
+    game, (player1, player2, player3) = get_custom_game_turn(player_positions=[(1, 1), (1, 2), (2, 2)],
+                                                             ball_position=(2, 1),
+                                                             pathfinding_enabled=True)
+    paths = pf.get_all_paths(game, player1)
+    assert len(paths) == 1
+    assert paths[0].get_last_step() == game.get_ball_position()
