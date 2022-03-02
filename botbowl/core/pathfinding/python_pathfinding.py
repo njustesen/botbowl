@@ -69,6 +69,12 @@ class Path:
                self.handoff_roll == other.handoff_roll and \
                self.foul_roll == other.foul_roll
 
+    def __repr__(self):
+        block = f", block_dice={self.block_dice}" if self.block_dice is not None else ""
+        handoff = f", handoff_roll={self.handoff_roll}" if self.handoff_roll is not None else ""
+        foul = f", foul_roll={self.foul_roll}" if self.foul_roll is not None else ""
+        return f"Path(target={self.steps[-1]}, prob={self.prob}, {block}{handoff}{foul})"
+
 
 class Node:
 
