@@ -167,9 +167,9 @@ cdef class Pathfinder:
         self.pitch_width = self.game.arena.width - 1
         self.pitch_height = game.arena.height -1
         self.start_pos = from_botbowl_Square( player.position )
-        ball = self.game.get_ball_position()
-        if ball is not None:
-            self.ball_pos = from_botbowl_Square(ball)
+        ball = self.game.get_ball()
+        if ball is not None and ball.on_ground:
+            self.ball_pos = from_botbowl_Square(ball.position)
         else:
             self.ball_pos = Square(-1, -1)
 

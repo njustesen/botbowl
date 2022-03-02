@@ -201,6 +201,7 @@ class Pathfinder:
         self.can_foul = can_foul
         self.carries_ball = None
         self.endzone_x = None
+        self.ball_position = None
         self.ma = player.num_moves_left()
         self.gfis = player.num_gfis_left()
         self.locked_nodes = np.full((game.arena.height, game.arena.width), None)
@@ -225,6 +226,7 @@ class Pathfinder:
         self.gfis = self.player.num_gfis_left()
         self.ma = self.player.num_moves_left()
         self.carries_ball = self.player is self.game.get_ball_carrier()
+        self.ball_position = self.game.get_ball_position() if self.game.get_ball().on_ground else None
         self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
 
         can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
@@ -315,7 +317,7 @@ class Pathfinder:
         if self.carries_ball and node.position.x == self.endzone_x:
             return
 
-        if (not self.carries_ball) and node.position == self.game.get_ball_position():
+        if (not self.carries_ball) and node.position == self.ball_position:
             return
 
         out_of_moves = False
@@ -372,7 +374,7 @@ class Pathfinder:
         if self.tzones[node.position.y][node.position.x] > 0:
             target = self._get_dodge_target(node.position, to_pos)
             next_node.apply_dodge(target)
-        if self.game.get_ball_position() == to_pos:
+        if self.ball_position == to_pos:
             target = self._get_pickup_target(to_pos)
             next_node.apply_pickup(target)
         if best_before is not None and self._dominant(next_node, best_before) == best_before:
