@@ -23,7 +23,8 @@ install_requires_packages = [
           'requests',
           'Cython >= 3.0a7',
           'pytest',
-          'matplotlib'
+          'matplotlib',
+          'more_itertools'
 ]
 
 kwargs = {
