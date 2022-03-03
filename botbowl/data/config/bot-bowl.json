@@ -1,7 +1,7 @@
 {
-    "name": "Bot Bowl I",
+    "name": "Bot Bowl",
     "arena": "ff-pitch-11.txt",
-    "ruleset": "LRB5-Experimental",
+    "ruleset": "BB2016",
     "dungeon": false,
     "roster_size": 16,
     "pitch_max": 11,
@@ -12,7 +12,7 @@
     "kick_off_table": true,
     "fast_mode": true,
     "debug_mode": false,
-    "competition_mode": false,
+    "competition_mode": true,
     "kick_scatter_dice": "d6",
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
@@ -21,5 +21,9 @@
         "secondary": 5,
         "init": 20,
         "end": 10
+    },
+    "pathfinding": {
+        "enabled": true,
+        "directly_to_adjacent": true
     }
 }

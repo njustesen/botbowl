@@ -43,7 +43,7 @@ botbowl.register_bot('my-random-bot', MyRandomBot)
 if __name__ == "__main__":
 
     # Load configurations, rules, arena and teams
-    config = botbowl.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl")
     config.competition_mode = False
     config.pathfinding_enabled = False
     ruleset = botbowl.load_rule_set(config.ruleset)
