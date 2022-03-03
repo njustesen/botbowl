@@ -130,6 +130,13 @@ cdef class Path:
                 self.handoff_roll == other.handoff_roll and \
                 self.foul_roll == other.foul_roll
 
+    def __repr__(self):
+        block = f", block_dice={self.block_dice}" if self.block_dice is not None else ""
+        handoff = f", handoff_roll={self.handoff_roll}" if self.handoff_roll is not None else ""
+        foul = f", foul_roll={self.foul_roll}" if self.foul_roll is not None else ""
+        return f"Path(target={self.steps[-1]}, prob={self.prob}, {block}{handoff}{foul})"
+
+
 # Make the forward model treat Path as an immutable type.
 forward_model.immutable_types.add(Path)
 
@@ -140,8 +147,8 @@ cdef Path create_path(NodePtr node):
 
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
-    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty
-    cdef int ma, gfis, dodge_target, pitch_width, pitch_height
+    cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty, carries_ball
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -160,12 +167,14 @@ cdef class Pathfinder:
         self.pitch_width = self.game.arena.width - 1
         self.pitch_height = game.arena.height -1
         self.start_pos = from_botbowl_Square( player.position )
-        ball = self.game.get_ball_position()
-        if ball is not None:
-            self.ball_pos = from_botbowl_Square(ball)
+        ball = self.game.get_ball()
+        if ball is not None and ball.on_ground:
+            self.ball_pos = from_botbowl_Square(ball.position)
         else:
             self.ball_pos = Square(-1, -1)
 
+        self.carries_ball = False
+        self.endzone_x = -1
         self.has_target = False
         self.target_is_int = False
         self.target_is_square = False
@@ -208,6 +217,9 @@ cdef class Pathfinder:
             NodePtr node
             int ma, gfis_used
             bint can_dodge, can_sure_feet, can_sure_hands
+
+        self.carries_ball = self.player is self.game.get_ball_carrier()
+        self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
 
         self.ma = self.player.num_moves_left()
         self.gfis = self.player.num_gfis_left()
@@ -273,6 +285,12 @@ cdef class Pathfinder:
                 return
 
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
+            return
+
+        if self.carries_ball and node.get().position.x == self.endzone_x:
+            return
+
+        if (not self.carries_ball) and node.get().position == self.ball_pos:
             return
 
         if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):
