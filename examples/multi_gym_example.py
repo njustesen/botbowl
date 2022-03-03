@@ -2,83 +2,48 @@
 
 import gym
 import numpy as np
-import botbowl
 from multiprocessing import Process, Pipe
-import botbowl
+from botbowl.ai.env_render import EnvRenderer
 
 
 def worker(remote, parent_remote, env):
     parent_remote.close()
 
-    # Get observations space (layer, height, width)
-    obs_space = env.observation_space
-
-    # Get action space
-    act_space = env.action_space
-
     # Create random state for action selection
-    seed = env.get_seed()
-    rnd = np.random.RandomState(seed)
-
-    # Play 10 games
-    steps = 0
+    rnd = np.random.RandomState(env.seed())
 
     # Reset environment
-    obs = env.reset()
-
+    spatial_obs, non_spatial_obs, mask = env.reset()
     while True:
         command = remote.recv()
 
         if command == 'step':
-
-            # Sample random action type
-            action_types = env.available_action_types()
-            action_type = rnd.choice(action_types)
-
-            # Sample random position - if any
-            available_positions = env.available_positions(action_type)
-            pos = rnd.choice(available_positions) if len(available_positions) > 0 else None
-
-            # Create action object
-            action = {
-                'action-type': action_type,
-                'x': pos.x if pos is not None else None,
-                'y': pos.y if pos is not None else None
-            }
-
-            # Gym step function
-            obs, reward, done, info = env.step(action)
-            steps += 1
-
-            # Render - Does not work when running multiple processes
-            # env.render(feature_layers=False)
+            aa = np.where(mask > 0.0)[0]
+            action_idx = rnd.choice(aa, 1)[0]
+            (spatial_obs, non_spatial_obs, mask), reward, done, info = env.step(action_idx)
 
             if done:
-                obs = env.reset()
-
-            remote.send((obs, reward, done, info))
+                spatial_obs, non_spatial_obs, mask = env.reset()
+            remote.send(env.game)
 
         elif command == 'reset':
-
-            # Reset environment
-            obs = env.reset()
-            done = False
+            spatial_obs, non_spatial_obs, mask = env.reset()
+            remote.send(env.game)
 
         elif command == 'close':
-
-            # Close environment
             env.close()
             break
 
 
-if __name__ == "__main__":
+def main():
+    nenvs = 4
+    envs = []
+    renderers = []
 
-    renderer = botbowl.Renderer()
-
-    nenvs = 8
-    envs = [gym.make("botbowl-1-v3") for _ in range(nenvs)]
-    for i in range(len(envs)):
-        envs[i].seed()
+    for _ in range(nenvs):
+        env = gym.make("botbowl-1-v4")
+        envs.append(env)
+        renderers.append(EnvRenderer(env))
 
     remotes, work_remotes = zip(*[Pipe() for _ in range(nenvs)])
 
@@ -96,13 +61,18 @@ if __name__ == "__main__":
         print(i)
         for remote in remotes:
             remote.send('step')
-        results = [remote.recv() for remote in remotes]
-        for j in range(len(results)):
-            obs, reward, done, info = results[j]
-            renderer.render(obs, j)
+        received_games = [remote.recv() for remote in remotes]
+
+        for game, renderer in zip(received_games, renderers):
+            renderer.env.game = game
+            renderer.render()
 
     for remote in remotes:
         remote.send('close')
 
     for p in ps:
         p.join()
+
+
+if __name__ == "__main__":
+    main()
