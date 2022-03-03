@@ -16,12 +16,13 @@ from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 3  # Options are 1,3,5,7,11
+env_size = 1  # Options are 1,3,5,7,11
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size, pathfinding=False)
 
 
-make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
+make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions,
+                                exclude_pathfinding_moves=not env_conf.config.pathfinding_enabled)
 
 
 def make_env():

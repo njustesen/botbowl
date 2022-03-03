@@ -49,7 +49,6 @@ class EnvConf:
     layers: List[FeatureLayer]
     procedures: List[procedures.Procedure]
     formations: List[Formation]
-    pathfinding: bool
 
     def __init__(self, size=11,
                  extra_formations: Optional[Iterable[Formation]] = None,
@@ -541,7 +540,7 @@ class RewardWrapper(BotBowlWrapper):
         if game.active_team == game.state.home_team:
             reward += self.home_reward_func(game)
         elif game.active_team == game.state.away_team and self.away_reward_func is not None:
-            reward += self.home_reward_func(game)
+            reward += self.away_reward_func(game)
         return obs, reward, done, info
 
 
