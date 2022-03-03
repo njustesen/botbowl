@@ -4,7 +4,7 @@ from .env import BotBowlEnv, EnvConf, BotBowlWrapper, RewardWrapper, ScriptedAct
 from .layers import *
 from .registry import *
 from .competition import *
-from .renderer import *
+from .env_render import *
 from .proc_bot import *
 from .bots import *
 
