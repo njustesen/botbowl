@@ -2,14 +2,14 @@
 botbowl is a pip-installable python package. We recommend installing with [Anaconda](https://docs.anaconda.com/anaconda/install/) but it is not a requirement. 
 
 ## Python version
-botbowl currently works with python 3.6 - 3.9  
+botbowl currently works with python 3.6 - 3.10 
 Verify your python version with 
 ```
 python --version
 ```
 If you just installed Anaconda, create and activate a new environment. 
 ```
-conda create --name botbowl python=3.7
+conda create --name botbowl python=3.8
 conda activate botbowl
 ```
 
@@ -45,10 +45,36 @@ If you ran into issues, please seek help at our [Discord server](https://discord
 ## Compiling with Cython
 "[Cython](https://github.com/cython/cython) is a language that makes writing C extensions for Python as easy as Python itself."
 
-Some of the botbowl modules are prepared for compilation with Cython. Compiling them will make the framework run faster. You need to have a C++ compiler available. Check the [Cython documentation](https://cython.readthedocs.io/en/latest/) for more information. 
+Some of the botbowl modules are prepared for compilation with Cython. Compiling them will make the framework run faster. 
 
-Installation through pip will automatically build with Cython if possible. If you cloned the repository with git, you need to manually call the build script by standing in the root of the repo and running:
+Installation through pip will automatically build with Cython if possible. You can test if botbowl was compiled successfully by running `import botbowl.core.pathfinding.cython_pathfinding` in a python prompt. If it doesn't raise an error, you're good to go.  
+
+If you cloned the repository with git, you need to manually call the build script by standing in the root of the repo and running:
 ```
 python setup.py build 
 ```
-You get a message confirming that botbowl was built with Cython. To test simply try to import one of the compiled modules with `import botbowl.core.pathfinding.cython_pathfinding`. You're good to go! 
+If you get the following message ```You've built botbowl without cython compilation, error message=<error message here>```, 
+something went wrong (you can still use botbowl, just not with the speedup). Possible error messages and solutions: 
+
+* **"No compiler found"** - the distutils module did not find a compiler. See the section below about how to install one.
+* **"Cython could not be imported"** - python could not import the cython module, in should be installed when you run `pip install -e .`. If that's not working try manually installing it via pip, double check [requirements.txt](../requirements.txt) for the version botbowl uses.
+* **"No compatible windows compiler"** - the installation script is built to use the MS Visual Studio C++ compiler. Other compiler (e.g. Clang) could raise this error. Try installing Visual Studio with the instructions below. 
+ 
+If you're still stuck, come ask in the [Discord server](https://discord.gg/MTXMuae), we're happy to help!     
+
+### Installing a compiler 
+**Windows**
+
+Install [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2019) (you find it on the bottom of the page under Tools for Visual Studio 2022).
+
+**Linux (Ubuntu/Debian)**
+
+```
+apt install g++
+```
+
+**MacOS**
+
+```
+xcode-select –install
+```

@@ -1,15 +1,37 @@
 from setuptools import setup, find_packages
 import os, shutil, platform
 import sysconfig
+from distutils.ccompiler import new_compiler
+from distutils.errors import DistutilsPlatformError
 
 try:
+    error_msg = None
     from Cython.Build import cythonize
     import Cython.Compiler.Options
     Cython.Compiler.Options.annotate = True
-    compile_available = 'CXX' in sysconfig.get_config_vars() # Is c++ compiler available?
+    compile_available = True
+
+    if platform.system() == "Windows":
+        try:
+            new_compiler().initialize()
+        except AttributeError:
+            compile_available = False
+            error_msg = "No compatible windows compiler"
+    else:
+        compile_available = 'CXX' in sysconfig.get_config_vars()
+        if not compile_available:
+            error_msg = "No compiler found"
+
 except ImportError:
+    error_msg = "Cython could not be imported"
     compile_available = False
-    
+except DistutilsPlatformError:
+    # 'new_compiler().initialize()' failed.
+    error_msg = "No compiler found"
+    compile_available = False
+
+#compile_available = False  # uncomment this to force the compilation.
+
 files_to_compile = ["botbowl/core/pathfinding/cython_pathfinding.pyx"]
 
 install_requires_packages = [
@@ -48,6 +70,8 @@ if compile_available:
     for root, dirs, files in os.walk('./build/'):
         for file in files:
             if file.endswith(compiled_file_type):
+                if platform.system() == "Windows":
+                    root = root.replace('\\', '/')
                 from_file = f"{root}/{file}"
                 to_file = "./botbowl/" + root.split('/botbowl/')[1] + "/" + str(file)
                 print(f"copying '{from_file}' -> '{to_file}'")
@@ -59,4 +83,5 @@ if compile_available:
     #                                              f"but {copied_files} was copied. Probably a bug!"
     print("\nYou've built botbowl with cython.")
 else:
-    print("You've built botbowl without cython compilation. Check docs/installation.md for details.")
+    print(f"You've built botbowl without cython compilation, error message='{error_msg}'. "
+          f"Check docs/installation.md for details.")
