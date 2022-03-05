@@ -13,8 +13,9 @@ from examples.a2c.a2c_env import a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Architecture
-model_name = '585f6180-7f54-11eb-918b-acde48001122'
-env_name = 'botbowl-v3'
+model_name = '0862df3e-9cc9-11ec-9d4e-faffc23fefdb'
+env_size = 1
+env_name = f'botbowl-{env_size}'
 model_filename = f"models/{env_name}/{model_name}.nn"
 log_filename = f"logs/{env_name}/{env_name}.dat"
 
@@ -116,11 +117,9 @@ class A2CAgent(Agent):
     def __init__(self, name,
                  env_conf: EnvConf,
                  scripted_func: Callable[[Game], Optional[Action]] = None,
-                 filename=model_filename,
-                 exclude_pathfinding_moves=True):
+                 filename=model_filename):
         super().__init__(name)
         self.env = BotBowlEnv(env_conf)
-        self.exclude_pathfinding_moves = exclude_pathfinding_moves
 
         self.scripted_func = scripted_func
         self.action_queue = []
@@ -132,26 +131,6 @@ class A2CAgent(Agent):
 
     def new_game(self, game, team):
         pass
-
-    def _filter_actions(self):
-        """
-        Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
-        """
-        actions = []
-        for action_choice in self.env.game.state.available_actions:
-            if action_choice.action_type == ActionType.MOVE:
-                positions, block_dice, rolls = [], [], []
-                for i in range(len(action_choice.positions)):
-                    position = action_choice.positions[i]
-                    roll = action_choice.paths[i].rolls[0]
-                    # Only include positions where there are not players
-                    if self.env.game.get_player_at(position) is None:
-                        positions.append(position)
-                        rolls.append(roll)
-                actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
-            else:
-                actions.append(action_choice)
-        self.env.game.state.available_actions = actions
 
     @staticmethod
     def _update_obs(array: np.ndarray):
@@ -169,8 +148,8 @@ class A2CAgent(Agent):
         self.env.game = game
 
         # Filter out pathfinding-assisted move actions
-        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
-            self._filter_actions()
+        #if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
+        #    self._filter_actions()
 
         spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
         non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
@@ -190,19 +169,15 @@ class A2CAgent(Agent):
         pass
 
 
-def _make_my_a2c_bot(name):
-    return A2CAgent(name=name,
-                    env_conf=EnvConf(size=11),
-                    scripted_func=a2c_scripted_actions,
-                    filename=model_filename,
-                    exclude_pathfinding_moves=True)
-
-
-# Register the bot to the framework
-botbowl.register_bot('my-a2c-bot', _make_my_a2c_bot)
-
-
 def main():
+    # Register the bot to the framework
+    def _make_my_a2c_bot(name, env_size=env_size):
+        return A2CAgent(name=name,
+                        env_conf=EnvConf(size=env_size),
+                        scripted_func=a2c_scripted_actions,
+                        filename=model_filename)
+    botbowl.register_bot('my-a2c-bot', _make_my_a2c_bot)
+
     # Load configurations, rules, arena and teams
     config = botbowl.load_config("bot-bowl-iii")
     config.competition_mode = False
