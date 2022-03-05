@@ -22,14 +22,14 @@ Then run:
 ```
 pip install git+https://github.com/njustesen/botbowl
 ```
-If python detects a C++ compiler in your system it compile the pathfinding algorithm which makes it faster. If you used `git clone` you have to manually compile. Here's a more [detailed guide](docs/installation.md) on how to set up the Bot Bowl framework.
+If python detects a C++ compiler in your system it compiles the pathfinding algorithm which makes it faster. If you used `git clone` you have to manually compile. Here's a more [detailed guide](docs/installation.md) on how to set up the Bot Bowl framework.
 
 ## Tutorials
 Head over to our [tutorials](docs/tutorials.md) to learn about how to use the Bot Bowl framework.
 
 ### Run botbowl's Web Server
 ```
-python -c "import botbowl.web.server as server;server.start_server(debug=True, use_reloader=False, port=5000)"
+python -c "import botbowl.web.server as server;server.start_server(debug=True, use_reloader=False, port=1234)"
 ```
 Or download the examples folder and run:
 ```
@@ -40,7 +40,7 @@ Go to: http://127.0.0.1:1234/
 The main page lists active games. For each active game you can click on a team to play it. If a team is disabled it is controlled by a bot and cannot be selected. Click hot-seat to play human vs. human on the same machine.
 
 ## Bot Bowl - the compitition
-Bot Bowl is an AI competition using the Bot Bowl framework. Go read all about the results of [Bot Bowl III](docs/bot-bowl-iii.md). Not to be confused with 'botbowl' which refers to the module/repo. 
+Bot Bowl is an AI competition using the botbowl framework. Go read all about the results of [Bot Bowl III](docs/bot-bowl-iii.md). Not to be confused with 'botbowl' which refers to the module/repo. 
 
 ## Get involved 
 We'd love you to join us in creating really good bots for Blood Bowl! There are mainly two ways. First is developing your own bot to compete in the competition. Head over to the [tutorials](docs/tutorials.md) to get started creating your own awesome bot. The second way is contributing to the project itself with development. Head over to [Development.md](docs/development.md) to learn more.  
