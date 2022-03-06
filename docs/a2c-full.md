@@ -124,6 +124,7 @@ scripted bots in our previous tutorials. In the constructor of our Agent class, 
 ```python
 ...
 model_filename = "my-model"
+...
 class A2CAgent(Agent):
     env: BotBowlEnv
 
@@ -151,31 +152,7 @@ The agent can still play in games with pathfinding enabled. It will do this by e
 
 In the agent's ```act()``` implementation, we will steal a bit of code from our training loop that calls our neural network. 
 
-Note that if the agent is playing as the away team, we need to flip the spatial observation of the board, as it is now playing on 
-the opposite side of the board. Luckily, the environment will do that for us, so we don't need to consider it here. And the environment 
-helps us flip any spatial action too. 
-
 ```python
-    def _filter_actions(self):
-        """
-        Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
-        """
-        actions = []
-        for action_choice in self.env.game.state.available_actions:
-            if action_choice.action_type == ActionType.MOVE:
-                positions, block_dice, rolls = [], [], []
-                for i in range(len(action_choice.positions)):
-                    position = action_choice.positions[i]
-                    roll = action_choice.paths[i].rolls[0]
-                    # Only include positions where there are not players
-                    if self.env.game.get_player_at(position) is None:
-                        positions.append(position)
-                        rolls.append(roll)
-                actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
-            else:
-                actions.append(action_choice)
-        self.env.game.state.available_actions = actions
-
     @staticmethod
     def _update_obs(array: np.ndarray):
         return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
@@ -190,10 +167,6 @@ helps us flip any spatial action too.
                 return scripted_action
 
         self.env.game = game
-
-        # Filter out pathfinding-assisted move actions
-        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
-            self._filter_actions()
 
         spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
         non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
