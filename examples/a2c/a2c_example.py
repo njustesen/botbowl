@@ -27,7 +27,7 @@ def make_env():
     env = BotBowlEnv(env_conf)
     if ppcg:
         env = PPCGWrapper(env)
-    env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
     env = RewardWrapper(env, home_reward_func=A2C_Reward())
     return env
 

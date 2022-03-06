@@ -30,7 +30,8 @@ In future tutorials, we will attempt to:
 
 ## Environment 
 We will use the [default observation space and action space](gym.md) in botbowl, we'll use a reward wrapper to define 
-our custom reward (more details in the next section). For now we won't use the scripted wrapper. 
+our custom reward (more details in the next section). 
+For now we won't use the scripted wrapper but you can enable it and extend it if you want. 
 
 ```python 
 # Environment
@@ -42,7 +43,7 @@ def make_env():
     env = BotBowlEnv(env_conf)
     if ppcg:
         env = PPCGWrapper(env)
-    env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
     env = RewardWrapper(env, home_reward_func=A2C_Reward())
     return env
 ```
