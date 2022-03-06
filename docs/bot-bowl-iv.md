@@ -50,7 +50,7 @@ Check out the tutorial [how to use the forward model](forward-model.md) and [how
 
 *March 7th, 2022:* We will publish a new release of the bot bowl framework that developers should use when working towards Bot Bowl IV.
 
-*May 15th, 2022:* We aim to freeze the code base until the competition and will make _final_ release. If very critical bugs are found, we will only fix them after coordinating with everyone on the [Fantasy Football AI Discord server](https://discord.gg/MTXMuae).
+*May 15th, 2022:* We aim to freeze the code base until the competition and will make _final_ release. If very critical bugs are found, we will only fix them after coordinating with everyone on the [Bot Bowl Discord server](https://discord.gg/MTXMuae).
 
 *July 15th, 2022:* Submission Deadline: [How to submit](submit.md).
 
