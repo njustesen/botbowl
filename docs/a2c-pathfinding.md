@@ -10,7 +10,7 @@ during a blitz move. Similarly, the catch roll target is given for handoff moves
 The pathfinding-assisted move actions are disabled by default in the botbowl gym environments but can be enabled by calling:
 
 ```python
-env.config.pathfinding_enabled = True
+env_conf = EnvConf(..., pathfinding=True)
 ```
 
 In examples/a2c_examples.py, simply set the ```pathfinding_enabled = True``` in the variables at the top.
@@ -45,6 +45,8 @@ Maybe our intuition was wrong, or maybe we were missing important information in
 We challenge you to find better ways to use the pathfinding assistance in RL.
 
 # Training Time
+
+**ToDo: re-run training with compiled pathfinding. Should be many times faster.** 
 
 We forgot to time the experiments, but the effect of having pathfinding-assistance enabled were roughly this:
 

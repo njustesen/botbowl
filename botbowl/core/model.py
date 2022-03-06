@@ -1406,19 +1406,24 @@ class Formation(Immutable):
         return players[0]
 
     def actions(self, game, team):
+        reorganize = game.get_procedure().reorganize
+
         home = team == game.state.home_team
         actions = []
         # Move all player on the pitch back to the reserves
         player_on_pitch = []
         for player in team.players:
             if player.position is not None:
-                actions.append(Action(ActionType.PLACE_PLAYER, position=None, player=player))
+                if not reorganize:
+                    actions.append(Action(ActionType.PLACE_PLAYER, position=None, player=player))
                 player_on_pitch.append(player)
 
         # Go through formation from scrimmage to touchdown zone
-        players = [player for player in game.get_reserves(team) + player_on_pitch]
+        players = player_on_pitch
+        if not reorganize:
+            players += game.get_reserves(team)
 
-        positions_used = []
+        positions_used = set()
 
         # setup on scrimmage
         for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
@@ -1437,7 +1442,7 @@ class Formation(Immutable):
                 player = self._get_player(players, t)
                 players.remove(player)
                 actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
-                positions_used.append(position)
+                positions_used.add(position)
 
         for t in ['S', 's', 'p', 'b', 'c', 'm', 'a', 'v', 'd', '0', 'x']:
             for y in range(len(self.formation)):
@@ -1455,7 +1460,7 @@ class Formation(Immutable):
                     player = self._get_player(players, t)
                     players.remove(player)
                     actions.append(Action(ActionType.PLACE_PLAYER, position=position, player=player))
-                    positions_used.append(position)
+                    positions_used.add(position)
         return actions
 
     def compare(self, other, path):

@@ -2710,12 +2710,14 @@ class MoveAction(Procedure):
         for action_type, action_paths in paths_by_type.items():
             if len(action_paths) > 0:
                 positions = [path.get_last_step() for path in action_paths]
-                block_dice = [path.block_dice for path in action_paths]
                 rolls = []
                 if action_type == ActionType.HANDOFF:
                     rolls = [path.handoff_roll for path in action_paths]
                 elif action_type == ActionType.FOUL:
                     rolls = [path.foul_roll for path in action_paths]
+                block_dice = []
+                if action_type == ActionType.BLOCK:
+                    block_dice = [path.block_dice for path in action_paths]
                 actions.append(ActionChoice(action_type=action_type, team=self.player.team, positions=positions,
                                             paths=action_paths, block_dice=block_dice, rolls=rolls))
         return actions

@@ -1,20 +1,20 @@
-import os
+from typing import Callable
+
 import gym
-import botbowl
-from botbowl import BotBowlEnv
-from torch.autograd import Variable
-import torch.optim as optim
-from multiprocessing import Process, Pipe
-from botbowl.ai.layers import *
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
-import sys
+from torch.autograd import Variable
+
+import botbowl
+from botbowl.ai.env import EnvConf, BotBowlEnv
+from examples.a2c.a2c_env import a2c_scripted_actions
+from botbowl.ai.layers import *
 
 # Architecture
-model_name = '585f6180-7f54-11eb-918b-acde48001122'
-env_name = 'botbowl-v3'
+model_name = '260d8284-9d44-11ec-b455-faffc23fefdb'
+env_name = f'botbowl-11'
 model_filename = f"models/{env_name}/{model_name}.nn"
 log_filename = f"logs/{env_name}/{env_name}.dat"
 
@@ -40,6 +40,7 @@ class CNNPolicy(nn.Module):
         self.critic = nn.Linear(hidden_nodes, 1)
         self.actor = nn.Linear(hidden_nodes, actions)
 
+        self.train()
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -56,6 +57,7 @@ class CNNPolicy(nn.Module):
         The forward functions defines how the data flows through the graph (layers)
         """
         # Spatial input through two convolutional layers
+
         x1 = self.conv1(spatial_input)
         x1 = F.relu(x1)
         x1 = self.conv2(x1)
@@ -109,27 +111,17 @@ class CNNPolicy(nn.Module):
 
 
 class A2CAgent(Agent):
+    env: BotBowlEnv
 
-    def __init__(self, name, env_name=env_name, filename=model_filename, copy_game=True, exclude_pathfinding_moves=True):
+    def __init__(self, name,
+                 env_conf: EnvConf,
+                 scripted_func: Callable[[Game], Optional[Action]] = None,
+                 filename=model_filename):
         super().__init__(name)
-        self.my_team = None
-        self.env = self.make_env(env_name)
-        self.copy_game = copy_game
-        self.exclude_pathfinding_moves = exclude_pathfinding_moves
-        self.spatial_obs_space = self.env.observation_space.spaces['board'].shape
-        self.board_dim = (self.spatial_obs_space[1], self.spatial_obs_space[2])
-        self.board_squares = self.spatial_obs_space[1] * self.spatial_obs_space[2]
+        self.env = BotBowlEnv(env_conf)
 
-        self.non_spatial_obs_space = self.env.observation_space.spaces['state'].shape[0] + \
-                                self.env.observation_space.spaces['procedures'].shape[0] + \
-                                self.env.observation_space.spaces['available-action-types'].shape[0]
-        self.non_spatial_action_types = BotBowlEnv.simple_action_types + BotBowlEnv.defensive_formation_action_types + BotBowlEnv.offensive_formation_action_types
-        self.num_non_spatial_action_types = len(self.non_spatial_action_types)
-        self.spatial_action_types = BotBowlEnv.positional_action_types
-        self.num_spatial_action_types = len(self.spatial_action_types)
-        self.num_spatial_actions = self.num_spatial_action_types * self.spatial_obs_space[1] * self.spatial_obs_space[2]
-        self.action_space = self.num_non_spatial_action_types + self.num_spatial_actions
-        self.is_home = True
+        self.scripted_func = scripted_func
+        self.action_queue = []
 
         # MODEL
         self.policy = torch.load(filename)
@@ -137,166 +129,52 @@ class A2CAgent(Agent):
         self.end_setup = False
 
     def new_game(self, game, team):
-        self.my_team = team
-        self.is_home = self.my_team == game.state.home_team
+        pass
 
-    def _flip(self, board):
-        flipped = {}
-        for name, layer in board.items():
-            flipped[name] = np.flip(layer, 1)
-        return flipped
-
-    def _filter_actions(self):
-        """
-        Remove pathfinding-assisted non-adjacent or block move actions if pathfinding is disabled.
-        """
-        actions = []
-        for action_choice in self.env.game.state.available_actions:
-            if action_choice.action_type == ActionType.MOVE:
-                positions, block_dice, rolls = [], [], []
-                for i in range(len(action_choice.positions)):
-                    position = action_choice.positions[i]
-                    roll = action_choice.paths[i].rolls[0]
-                    # Only include positions where there are not players
-                    if self.env.game.get_player_at(position) is None:
-                        positions.append(position)
-                        rolls.append(roll)
-                actions.append(ActionChoice(ActionType.MOVE, team=action_choice.team, positions=positions, rolls=rolls))
-            else:
-                actions.append(action_choice)
-        self.env.game.state.available_actions = actions
+    @staticmethod
+    def _update_obs(array: np.ndarray):
+        return torch.unsqueeze(torch.from_numpy(array.copy()), dim=0)
 
     def act(self, game):
+        if len(self.action_queue) > 0:
+            return self.action_queue.pop(0)
 
-        if self.end_setup:
-            self.end_setup = False
-            return botbowl.Action(ActionType.END_SETUP)
+        if self.scripted_func is not None:
+            scripted_action = self.scripted_func(game)
+            if scripted_action is not None:
+                return scripted_action
 
         self.env.game = game
 
-        # Filter out pathfinding-assisted move actions
-        if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
-            self._filter_actions()
+        spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
+        non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
 
-        # Get observation
-        observation = self.env.get_observation()
+        _, actions = self.policy.act(
+            Variable(spatial_obs.float()),
+            Variable(non_spatial_obs.float()),
+            Variable(action_mask))
 
-        # Flip board observation if away team - we probably only trained as home team
-        if not self.is_home:
-            observation['board'] = self._flip(observation['board'])
+        action_idx = actions[0]
+        action_objects = self.env._compute_action(action_idx)
 
-        obs = [observation]
-        spatial_obs, non_spatial_obs = self._update_obs(obs)
-
-        action_masks = self._compute_action_masks(obs)
-        action_masks = torch.tensor(action_masks, dtype=torch.bool)
-
-        values, actions = self.policy.act(
-            Variable(spatial_obs),
-            Variable(non_spatial_obs),
-            Variable(action_masks))
-
-        # Create action from output
-        action = actions[0]
-        value = values[0]
-        action_type, x, y = self._compute_action(action.numpy()[0])
-        position = Square(x, y) if action_type in BotBowlEnv.positional_action_types else None
-
-        # Flip position
-        if not self.is_home and position is not None:
-            position = Square(game.arena.width - 1 - position.x, position.y)
-
-        action = botbowl.Action(action_type, position=position, player=None)
-
-        # Let's just end the setup right after picking a formation
-        if action_type.name.lower().startswith('setup'):
-            self.end_setup = True
-
-        # Return action to the framework
-        return action
+        self.action_queue = action_objects
+        return self.action_queue.pop(0)
 
     def end_game(self, game):
         pass
 
-    def _compute_action_masks(self, observations):
-        masks = []
-        m = False
-        for ob in observations:
-            mask = np.zeros(self.action_space)
-            i = 0
-            for action_type in self.non_spatial_action_types:
-                mask[i] = ob['available-action-types'][action_type.name]
-                i += 1
-            for action_type in self.spatial_action_types:
-                if ob['available-action-types'][action_type.name] == 0:
-                    mask[i:i+self.board_squares] = 0
-                elif ob['available-action-types'][action_type.name] == 1:
-                    position_mask = ob['board'][f"{action_type.name.replace('_', ' ').lower()} positions"]
-                    position_mask_flatten = np.reshape(position_mask, (1, self.board_squares))
-                    for j in range(self.board_squares):
-                        mask[i + j] = position_mask_flatten[0][j]
-                i += self.board_squares
-            assert 1 in mask
-            if m:
-                print(mask)
-            masks.append(mask)
-        return masks
 
-    def _compute_action(self, action_idx):
-        if action_idx < len(self.non_spatial_action_types):
-            return self.non_spatial_action_types[action_idx], 0, 0
-        spatial_idx = action_idx - self.num_non_spatial_action_types
-        spatial_pos_idx = spatial_idx % self.board_squares
-        spatial_y = int(spatial_pos_idx / self.board_dim[1])
-        spatial_x = int(spatial_pos_idx % self.board_dim[1])
-        spatial_action_type_idx = int(spatial_idx / self.board_squares)
-        spatial_action_type = self.spatial_action_types[spatial_action_type_idx]
-        return spatial_action_type, spatial_x, spatial_y
-
-    def _update_obs(self, observations):
-        """
-        Takes the observation returned by the environment and transforms it to an numpy array that contains all of
-        the feature layers and non-spatial info.
-        """
-        spatial_obs = []
-        non_spatial_obs = []
-
-        for obs in observations:
-            spatial_ob = np.stack(obs['board'].values())
-
-            state = list(obs['state'].values())
-            procedures = list(obs['procedures'].values())
-            actions = list(obs['available-action-types'].values())
-
-            non_spatial_ob = np.stack(state+procedures+actions)
-
-            # feature_layers = np.expand_dims(feature_layers, axis=0)
-            non_spatial_ob = np.expand_dims(non_spatial_ob, axis=0)
-
-            spatial_obs.append(spatial_ob)
-            non_spatial_obs.append(non_spatial_ob)
-
-        return torch.from_numpy(np.stack(spatial_obs)).float(), torch.from_numpy(np.stack(non_spatial_obs)).float()
-
-    def make_env(self, env_name):
-        env = gym.make(env_name)
-        return env
-
-
-# Register the bot to the framework
-botbowl.register_bot('my-a2c-bot', A2CAgent)
-
-'''
-import botbowl.web.server as server
-
-if __name__ == "__main__":
-    server.start_server(debug=True, use_reloader=False)
-'''
-
-if __name__ == "__main__":
+def main():
+    # Register the bot to the framework
+    def _make_my_a2c_bot(name, env_size=11):
+        return A2CAgent(name=name,
+                        env_conf=EnvConf(size=env_size),
+                        scripted_func=a2c_scripted_actions,
+                        filename=model_filename)
+    botbowl.register_bot('my-a2c-bot', _make_my_a2c_bot)
 
     # Load configurations, rules, arena and teams
-    config = botbowl.load_config("bot-bowl-iii")
+    config = botbowl.load_config("bot-bowl")
     config.competition_mode = False
     config.pathfinding_enabled = False
     ruleset = botbowl.load_rule_set(config.ruleset)
@@ -306,11 +184,10 @@ if __name__ == "__main__":
     config.competition_mode = False
     config.debug_mode = False
 
-    # Play 100 games
-    game_times = []
+    # Play 10 games
     wins = 0
     draws = 0
-    n = 100
+    n = 10
     is_home = True
     tds_away = 0
     tds_home = 0
@@ -343,3 +220,7 @@ if __name__ == "__main__":
     print(f"Home/Draws/Away: {wins}/{draws}/{n-wins-draws}")
     print(f"Home TDs per game: {tds_home/n}")
     print(f"Away TDs per game: {tds_away/n}")
+
+
+if __name__ == "__main__":
+    main()

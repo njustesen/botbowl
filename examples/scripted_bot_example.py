@@ -498,9 +498,11 @@ class MyScriptedBot(ProcBot):
 
     def player_action(self, game):
         # Execute planned actions if any
-        if len(self.actions) > 0:
+        while len(self.actions) > 0:
             action = self._get_next_action()
-            return action
+            if game._is_action_allowed(action):
+                return action
+
         ball_carrier = game.get_ball_carrier()
         if ball_carrier == game.get_active_player():
             td_path = pf.get_safest_path_to_endzone(game, ball_carrier)
