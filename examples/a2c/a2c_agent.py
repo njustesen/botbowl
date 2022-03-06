@@ -13,9 +13,8 @@ from examples.a2c.a2c_env import a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Architecture
-model_name = '0862df3e-9cc9-11ec-9d4e-faffc23fefdb'
-env_size = 1
-env_name = f'botbowl-{env_size}'
+model_name = '260d8284-9d44-11ec-b455-faffc23fefdb'
+env_name = f'botbowl-11'
 model_filename = f"models/{env_name}/{model_name}.nn"
 log_filename = f"logs/{env_name}/{env_name}.dat"
 
@@ -147,10 +146,6 @@ class A2CAgent(Agent):
 
         self.env.game = game
 
-        # Filter out pathfinding-assisted move actions
-        #if self.exclude_pathfinding_moves and self.env.game.config.pathfinding_enabled:
-        #    self._filter_actions()
-
         spatial_obs, non_spatial_obs, action_mask = map(A2CAgent._update_obs, self.env.get_state())
         non_spatial_obs = torch.unsqueeze(non_spatial_obs, dim=0)
 
@@ -171,7 +166,7 @@ class A2CAgent(Agent):
 
 def main():
     # Register the bot to the framework
-    def _make_my_a2c_bot(name, env_size=env_size):
+    def _make_my_a2c_bot(name, env_size=11):
         return A2CAgent(name=name,
                         env_conf=EnvConf(size=env_size),
                         scripted_func=a2c_scripted_actions,
@@ -189,11 +184,10 @@ def main():
     config.competition_mode = False
     config.debug_mode = False
 
-    # Play 100 games
-    game_times = []
+    # Play 10 games
     wins = 0
     draws = 0
-    n = 100
+    n = 10
     is_home = True
     tds_away = 0
     tds_home = 0
