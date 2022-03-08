@@ -19,7 +19,7 @@ import copy
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
-from libcpp.memory cimport shared_ptr
+from libcpp.memory cimport shared_ptr, make_shared
 
 import cython
 cimport cython
@@ -238,7 +238,7 @@ cdef class Pathfinder:
         can_sure_hands = self.player.has_skill(table.Skill.SURE_HANDS)
 
         # Create root node
-        node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff))
+        node = make_shared[Node](start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff)
 
         if not self.player.state.up:
             node = self._expand_stand_up(node)
@@ -373,7 +373,7 @@ cdef class Pathfinder:
             if total_moves_left <= best_total_moves_left:
                 return NodePtr()
 
-        next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
+        next_node = make_shared[Node](node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
             next_node.get().apply_gfi()
         if self.tzones[node.get().position.y][node.get().position.x] > 0:
@@ -395,7 +395,7 @@ cdef class Pathfinder:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_botbowl_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance) )
+        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance) )
         next_node.get().apply_foul(target)
 
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
@@ -413,7 +413,7 @@ cdef class Pathfinder:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         player_at = self.players_on_pitch[to_pos.y][to_pos.x]
 
-        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
+        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance)
         target = self._get_handoff_target(player_at)
         next_node.get().apply_handoff(target)
 
@@ -436,7 +436,7 @@ cdef class Pathfinder:
         gfi = node.get().moves_left == 0
         moves_left_next = node.get().moves_left - 1 if not gfi else node.get().moves_left
         gfis_left_next = node.get().gfis_left - 1 if gfi else node.get().gfis_left
-        next_node = NodePtr( new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice))
+        next_node = make_shared[Node](node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice)
         next_node.get().can_block = False
 
         if gfi:
@@ -453,13 +453,13 @@ cdef class Pathfinder:
             NodePtr next_node
 
         if self.player.has_skill(table.Skill.JUMP_UP):
-            return NodePtr (new Node(node, from_botbowl_Square(self.player.position), self.ma, self.gfis, 0))
+            return make_shared[Node](node, from_botbowl_Square(self.player.position), self.ma, self.gfis, 0)
         elif self.ma < 3:
             target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
-            next_node = NodePtr (new Node(node, from_botbowl_Square(self.player.position), 0, self.gfis, 0))
+            next_node = make_shared[Node](node, from_botbowl_Square(self.player.position), 0, self.gfis, 0)
             next_node.get().apply_stand_up(target)
             return next_node
-        next_node = NodePtr (new Node(node, self.start_pos, self.ma - 3, self.gfis, 0))
+        next_node = make_shared[Node](node, self.start_pos, self.ma - 3, self.gfis, 0)
         return next_node
 
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
