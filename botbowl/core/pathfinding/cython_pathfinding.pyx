@@ -66,7 +66,7 @@ cdef class Path:
         public double prob
         public object block_dice, handoff_roll, foul_roll
 
-    def __cinit__(NodePtr n):
+    def __cinit__(self, NodePtr n):
         self.final_node = n
         self.prob = n.get().prob
         self.block_dice = None if n.get().block_dice == 0 else n.get().block_dice
