@@ -14,4 +14,4 @@ The Bot Bowl competitions are organized by [Niels Justesen](http://www.njustesen
 Bot Bowl is not affiliated with or endorsed by any company and/or trademark. Bot Bowl is an open research framework and the authors have no commercial interests in this project. The web interface in Bot Bowl currently uses a small set of icons from the Fantasy Football Client. These icons are not included in the license of Bot Bowl. If you are the author of these icons and don't want us to use them in this project, please contact us at njustesen at gmail dot com, and we will replace them ASAP. The team icons are from FUMBBL and are used with permission. The license described in [LICENSE](LICENSE) only covers the source code - not any of the graphics files.
 
 ## Get Involved
-Do you want implement a Bow Bowl bot or perhaps help us test, develop, and/or organize AI competitions? Join the [Fantasy Football AI Discord server](https://discord.gg/MTXMuae).
+Do you want implement a Bow Bowl bot or perhaps help us test, develop, and/or organize AI competitions? Join the [bot bowl Discord server](https://discord.gg/MTXMuae).
