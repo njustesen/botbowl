@@ -62,16 +62,9 @@ agi_table[10] = 1
 cdef class Path:
     cdef:
         NodePtr final_node
-        public object _steps, _rolls
+        public tuple _steps, _rolls
         public double prob
         public object block_dice, handoff_roll, foul_roll
-
-    def __cinit__(self, NodePtr n):
-        self.final_node = n
-        self.prob = n.get().prob
-        self.block_dice = None if n.get().block_dice == 0 else n.get().block_dice
-        self.handoff_roll = None if n.get().handoff_roll == 0 else n.get().handoff_roll
-        self.foul_roll = None if n.get().foul_roll == 0 else n.get().foul_roll
 
     cdef void set_node(self, NodePtr n):
         self.final_node = n
@@ -113,8 +106,8 @@ cdef class Path:
             steps.append( to_botbowl_Square(node.get().position) )
             rolls.append(node.get().rolls)
             node = node.get().parent
-        self._steps = list(reversed(steps))
-        self._rolls = list(reversed(rolls))
+        self._steps = tuple(reversed(steps))
+        self._rolls = tuple(reversed(rolls))
 
     def __reduce__(self):
         # Need custom reduce() because built in reduce() can't handle the c++ objects
@@ -155,7 +148,7 @@ cdef Path create_path(NodePtr node):
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
     cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty, carries_ball
-    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x, gfi_target
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -167,11 +160,10 @@ cdef class Pathfinder:
     cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
     def __dealloc__(self):
-        cdef NodePtr empty_ptr
         for i in range(17):
             for j in range(28):
-                self.locked_nodes[i][j] = empty_ptr
-                self.nodes[i][j] = empty_ptr
+                self.locked_nodes[i][j].reset()
+                self.nodes[i][j].reset()
 
     def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
 
@@ -234,7 +226,7 @@ cdef class Pathfinder:
 
         self.carries_ball = self.player is self.game.get_ball_carrier()
         self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
-
+        self.gfi_target = 3 if self.game.state.weather is table.WeatherType.BLIZZARD else 2
         self.ma = self.player.num_moves_left()
         self.gfis = self.player.num_gfis_left()
 
@@ -382,7 +374,7 @@ cdef class Pathfinder:
 
         next_node = make_shared[Node](node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
-            next_node.get().apply_gfi()
+            next_node.get().apply_gfi(self.gfi_target)
         if self.tzones[node.get().position.y][node.get().position.x] > 0:
             target = self._get_dodge_target(node.get().position, to_pos)
             next_node.get().apply_dodge(target)
@@ -447,7 +439,7 @@ cdef class Pathfinder:
         next_node.get().can_block = False
 
         if gfi:
-            next_node.get().apply_gfi()
+            next_node.get().apply_gfi(self.gfi_target)
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
             return NodePtr()
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:

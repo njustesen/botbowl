@@ -560,13 +560,12 @@ def test_snow_for_it(pf):
 
     assert len(paths) == 15
     path1 = first(filter(lambda p: p.get_last_step() == Square(3, 3), paths))
-    assert path1.rolls == [[], [3]]
+    assert path1.rolls == ([], [3])
     assert path1.prob == approx(4/6)  # prob of 3+
 
-
-    path2 = first(filter(lambda p: p.get_last_step() == Square(3, 3), paths))
-    assert path2.rolls == [[], [3], [3]]
-    assert path1.prob == approx((4 / 6)**2)  # prob of 3+ 3+
+    path2 = first(filter(lambda p: p.get_last_step() == Square(4, 4), paths))
+    assert path2.rolls == ([], [3], [3])
+    assert path2.prob == approx((4 / 6)**2)  # prob of 3+ 3+
 
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
@@ -577,7 +576,7 @@ def test_pouring_rain_pickup(pf):
 
     paths = pf.get_all_paths(game, player)
     path = first(filter(lambda p: p.get_last_step() == Square(3, 3), paths))
-    assert path.rolls == [[], [4]]
+    assert path.rolls == ([], [4])
     assert path.prob == approx(0.5)  # corresponding to 4+
 
 
@@ -590,5 +589,5 @@ def test_pouring_rain_handoff(pf):
     paths = pf.Pathfinder(game, player, can_handoff=True).get_paths()
     assert len(paths) > 0
     path = first(filter(lambda p: p.get_last_step() == catcher.position, paths))
-    assert path.rolls == [[], []]
+    assert path.rolls == ([], [])
     assert path.handoff_roll == 4

@@ -82,9 +82,9 @@ namespace node_ns {
         new_states[fail_state] += fail_state_p; // if fail_state not in new states, it is init as 0
     }
 
-    void Node::apply_gfi(){
-        rolls.push_back(2);
-        _apply_roll(5.0/6.0, SURE_FEET, TRR);
+    void Node::apply_gfi(int target){
+        rolls.push_back(target);
+        _apply_roll((7.0-target)/6.0, SURE_FEET, TRR);
     }
     void Node::apply_dodge(int target){
         rolls.push_back(target);
