@@ -30,7 +30,7 @@ ctypedef shared_ptr[Node] NodePtr
 
 
 cdef object to_botbowl_Square(Square sq):
-    return model.Square(sq.x, sq.y)
+    return model.Square(sq.x, sq.y, )
 
 cdef Square from_botbowl_Square(object sq):
     return Square(sq.x, sq.y)
@@ -65,6 +65,13 @@ cdef class Path:
         public object _steps, _rolls
         public double prob
         public object block_dice, handoff_roll, foul_roll
+
+    def __cinit__(NodePtr n):
+        self.final_node = n
+        self.prob = n.get().prob
+        self.block_dice = None if n.get().block_dice == 0 else n.get().block_dice
+        self.handoff_roll = None if n.get().handoff_roll == 0 else n.get().handoff_roll
+        self.foul_roll = None if n.get().foul_roll == 0 else n.get().foul_roll
 
     cdef void set_node(self, NodePtr n):
         self.final_node = n
@@ -395,7 +402,7 @@ cdef class Pathfinder:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_botbowl_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance) )
+        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance)
         next_node.get().apply_foul(target)
 
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
