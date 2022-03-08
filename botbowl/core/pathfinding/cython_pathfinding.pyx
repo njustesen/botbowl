@@ -291,24 +291,31 @@ cdef class Pathfinder:
                 self.target_found = True
                 return
 
+        # stop after blocking or handing off
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
             return
 
+        # stop if touchdown
         if self.carries_ball and node.get().position.x == self.endzone_x:
             return
 
+        # stop if pickup
         if (not self.carries_ball) and node.get().position == self.ball_pos:
             return
 
+        # stop if out of moves and can't handoff or foul
         if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):
             return
 
         for direction in DIRECTIONS:
             if parent is not NULL:
                 to_square = direction + node.get().position
+
+                # stop if going back to parent position
                 if parent.position == to_square:
                     continue
 
+                # stop if doing a detour that we know has better alternative
                 if parent.position.distance(to_square) < 2 and \
                         (self.tzones[to_square.y][to_square.x] == 0 or \
                         self.tzones[parent.position.y][parent.position.x] == 0 ):
@@ -433,7 +440,7 @@ cdef class Pathfinder:
         next_node.get().can_block = False
 
         if gfi:
-            node.get().apply_gfi()
+            next_node.get().apply_gfi()
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
             return NodePtr()
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
@@ -450,7 +457,7 @@ cdef class Pathfinder:
         elif self.ma < 3:
             target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
             next_node = NodePtr (new Node(node, from_botbowl_Square(self.player.position), 0, self.gfis, 0))
-            node.get().apply_stand_up(target)
+            next_node.get().apply_stand_up(target)
             return next_node
         next_node = NodePtr (new Node(node, self.start_pos, self.ma - 3, self.gfis, 0))
         return next_node
