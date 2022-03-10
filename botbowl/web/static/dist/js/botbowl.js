@@ -19,9 +19,14 @@ app.config(['$locationProvider', '$routeProvider',
             templateUrl: 'static/partials/game.list.html',
             controller: 'GameListCtrl'
         }).
-        when('/game/create', {
+        when('/game/create/:mode', {
             templateUrl: 'static/partials/game.create.html',
             controller: 'GameCreateCtrl',
+            access: { requiredAuthentication: true }
+        }).
+        when('/game/create-mode', {
+            templateUrl: 'static/partials/game.create.mode.html',
+            controller: 'GameModeCtrl',
             access: { requiredAuthentication: true }
         }).
         when('/game/play/:id/:team_id', {
@@ -111,16 +116,28 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
 ]);
 
 
+appControllers.controller('GameModeCtrl', ['$scope', '$window', 'GameService',
+    function GameModeCtrl($scope, $window, GameService) {
+        $scope.gameModes = [];
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
+        GameService.findAllModes().success(function(data) {
+            $scope.gameModes = data;
+        });
+
+    }
+]);
+
+appControllers.controller('GameCreateCtrl', ['$scope', '$routeParams', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $routeParams, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
         $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
-        TeamService.findAll().success(function(data) {
+        $scope.game_mode = $routeParams.mode;
+
+        TeamService.findAll($scope.game_mode).success(function(data) {
             $scope.teams = data;
         });
 
@@ -157,13 +174,14 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
-            GameService.create(game).success(function(data) {
+            GameService.create(game, $scope.game_mode).success(function(data) {
                 $location.path("/");
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
             });
         };
+
     }
 ]);
 
@@ -1665,6 +1683,10 @@ appServices.factory('GameService', function($http) {
             return $http.get(options.api.base_url + '/games/');
         },
 
+        findAllModes: function() {
+            return $http.get(options.api.base_url + '/game-modes/');
+        },
+
         act: function(id, action) {
             return $http.post(options.api.base_url + '/games/' + id + '/act', {'action': action});
         },
@@ -1677,8 +1699,8 @@ appServices.factory('GameService', function($http) {
             return $http.delete(options.api.base_url + '/save/' + name + "/delete");
         },
 
-        create: function(game) {
-            return $http.put(options.api.base_url + '/game/create', {'game': game});
+        create: function(game, mode) {
+            return $http.put(options.api.base_url + '/game/create', {'game': game, 'mode': mode});
         },
 
         save: function(game, name, team_id) {
@@ -1711,8 +1733,8 @@ appServices.factory('ReplayService', function($http) {
 
 appServices.factory('TeamService', function($http) {
     return {
-        findAll: function() {
-            return $http.get(options.api.base_url + '/teams/');
+        findAll: function(mode) {
+            return $http.get(options.api.base_url + '/teams/' + mode);
         }
     };
 });

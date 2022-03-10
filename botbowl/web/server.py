@@ -26,6 +26,7 @@ def home():
 def create():
     data = json.loads(request.data)
     bot_list = api.get_bots()
+    game_mode = data['mode']
     # make_bot or Agent depending on choice... (unknown name => human)
     homePlayer = data['game']['home_player']
     num_human_players = 0
@@ -42,7 +43,12 @@ def create():
         num_human_players += 1
         awayAgent = Agent(f"Player {num_human_players}", human=True)
 
-    game = api.new_game(home_team_name=data['game']['home_team_name'], away_team_name=data['game']['away_team_name'], home_agent=homeAgent, away_agent=awayAgent)
+    game = api.new_game(home_team_name=data['game']['home_team_name'],
+                        away_team_name=data['game']['away_team_name'],
+                        home_agent=homeAgent,
+                        away_agent=awayAgent,
+                        game_mode=game_mode)
+
     return json.dumps(game.to_json())
 
 
@@ -78,6 +84,11 @@ def get_all_games():
     })
 
 
+@app.route('/game-modes/', methods=['GET'])
+def get_all_game_modes():
+    return json.dumps(list(api.game_modes.keys()))
+
+
 @app.route('/replays/', methods=['GET'])
 def get_all_replays():
     replays = api.get_replay_ids()
@@ -85,11 +96,9 @@ def get_all_replays():
         'replays': replays
     })
 
-@app.route('/teams/', methods=['GET'])
-@app.route('/teams/<ruleset_name>', methods=['GET'])
-def get_all_teams(ruleset_name = 'BB2016'):
-    ruleset = load_rule_set(ruleset_name)
-    teams = api.get_teams(ruleset)
+@app.route('/teams/<game_mode>', methods=['GET'])
+def get_all_teams(game_mode='standard'):
+    teams = api.get_teams(game_mode)
     team_list = []
     for team in teams:
         team_list.append(team.to_json())

@@ -59,16 +59,28 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
 ]);
 
 
+appControllers.controller('GameModeCtrl', ['$scope', '$window', 'GameService',
+    function GameModeCtrl($scope, $window, GameService) {
+        $scope.gameModes = [];
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
+        GameService.findAllModes().success(function(data) {
+            $scope.gameModes = data;
+        });
+
+    }
+]);
+
+appControllers.controller('GameCreateCtrl', ['$scope', '$routeParams', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $routeParams, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
         $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
-        TeamService.findAll().success(function(data) {
+        $scope.game_mode = $routeParams.mode;
+
+        TeamService.findAll($scope.game_mode).success(function(data) {
             $scope.teams = data;
         });
 
@@ -105,13 +117,14 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
-            GameService.create(game).success(function(data) {
+            GameService.create(game, $scope.game_mode).success(function(data) {
                 $location.path("/");
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
             });
         };
+
     }
 ]);
 

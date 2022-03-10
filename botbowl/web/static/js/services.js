@@ -9,6 +9,10 @@ appServices.factory('GameService', function($http) {
             return $http.get(options.api.base_url + '/games/');
         },
 
+        findAllModes: function() {
+            return $http.get(options.api.base_url + '/game-modes/');
+        },
+
         act: function(id, action) {
             return $http.post(options.api.base_url + '/games/' + id + '/act', {'action': action});
         },
@@ -21,8 +25,8 @@ appServices.factory('GameService', function($http) {
             return $http.delete(options.api.base_url + '/save/' + name + "/delete");
         },
 
-        create: function(game) {
-            return $http.put(options.api.base_url + '/game/create', {'game': game});
+        create: function(game, mode) {
+            return $http.put(options.api.base_url + '/game/create', {'game': game, 'mode': mode});
         },
 
         save: function(game, name, team_id) {
@@ -55,8 +59,8 @@ appServices.factory('ReplayService', function($http) {
 
 appServices.factory('TeamService', function($http) {
     return {
-        findAll: function() {
-            return $http.get(options.api.base_url + '/teams/');
+        findAll: function(mode) {
+            return $http.get(options.api.base_url + '/teams/' + mode);
         }
     };
 });
