@@ -1142,6 +1142,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
         };
 
+        $scope.isDisabled = function isDisabled(x, y) {
+            if (x === 0 || y === 0 || x === $scope.local_state.board[0].length-1 || y === $scope.local_state.board.length-1){
+                return !$scope.local_state.board[y][x].available;
+            }
+            return false;
+        }
+
         $scope.squareHover = function squareHover(square) {
             if (square.player != null){
                 $scope.hover_player = square.player;

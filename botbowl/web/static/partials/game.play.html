@@ -165,7 +165,7 @@
             </span>
         </div>
 
-        <div class="square-row">
+        <div class="square-row" style="z-index: 10000; position: absolute; margin-left: 150px; margin-top: -30px;">
             <div class="row-divider" >
                 <span ng-repeat="action in game.state.available_actions">
                     <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{ action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
@@ -310,7 +310,7 @@
             </div>
         </div>
 
-        <div class="gameboard">
+        <div class="gameboard" style="margin-top: 30px">
             <div class="dugout away">
                 <div class="square-row" ng-repeat="n in [] | range:15">
                     <div class="square away {{ $index < 8 ? '' : ($index < 12 ? 'kod' : 'casualties' ) }} {{ local_state.away_dugout[$index][0].selected ? 'selected' : '' }} {{ local_state.away_dugout[$index][0].available ? 'green' : '' }}" ng-click="square(local_state.away_dugout[$index][0])" ng-mouseover="squareHover(local_state.away_dugout[$index][0])">
@@ -330,10 +330,9 @@
                 <div id="squares" style="margin-top: -30px; margin-left: -28px; width: {{ local_state.board[0].length*30 }}px; position: absolute;">
                     <div class="square-row" ng-repeat="y in [] | range:local_state.board.length">
                         <div class="row-divider">
-                            <div class="square {{ gridClass }} {{ local_state.board[$parent.$index][$index].selected ? 'selected' : '' }} {{ getAvailable(local_state.board[$parent.$index][$index]) ? 'green' + getAgiRolls(local_state.board[$parent.$index][$index], true)[0] : '' }}"
+                            <div class="square {{ gridClass }} {{ local_state.board[$parent.$index][$index].selected ? 'selected' : '' }} {{ isDisabled($index, $parent.$index) ? 'disabled' : '' }} {{ getAvailable(local_state.board[$parent.$index][$index]) ? 'green' + getAgiRolls(local_state.board[$parent.$index][$index], true)[0] : '' }}"
                                  ng-repeat="x in [] | range:local_state.board[$index].length" ng-click="square(local_state.board[$parent.$index][$index])"
                                  ng-mouseover="squareHover(local_state.board[$parent.$index][$index])"
-                                 ng-disabled="$parent.$index == 0 || $parent.$index == local_state.board[$index].length-1"
                                  style="{{ getCursor(local_state.board[$parent.$index][$index]) }}">
                                 <div class="player-action-bar {{ playerStartAction($parent.$index, $parent.$parent.$index, 'throw_bomb') ? 'bomb' : '' }}" ng-if="(team_id === undefined || team_id === local_state.current_team_id) && playerStartAction($index, $parent.$index, '')">
                                     <span class="action-dot {{ playerStartAction($parent.$index, $parent.$parent.$index, 'move') ? 'active' : 'transparent'}}">
