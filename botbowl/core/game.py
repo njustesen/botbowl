@@ -349,8 +349,15 @@ class Game:
                             ActionType.DONT_USE_APOTHECARY]:
             for action in self.state.available_actions:
                 if action.action_type == action_type:
-                    return Action(action_type)
+                    if action_type == ActionType.END_SETUP:
+                        if self.is_setup_legal(self.get_agent_team(self.actor)):
+                            return Action(action_type)
         # Take random action
+        while True:
+            action_choice = self.rnd.choice(self.state.available_actions)
+            # Ignore PLACE_PLAYER actions
+            if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
+                break
         action_choice = self.rnd.choice(self.state.available_actions)
         position = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
         player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
