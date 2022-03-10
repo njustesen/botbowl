@@ -14,15 +14,12 @@ import botbowl.core.table as table
 import botbowl.core.model as model
 import botbowl.core.forward_model as forward_model
 from .python_pathfinding import _alter_state, _reset_state
-import copy
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
 from libcpp.memory cimport shared_ptr, make_shared
 
-import cython
-cimport cython
 from cython.operator import dereference
 
 from .pathing_node cimport Node, Square
@@ -30,7 +27,7 @@ ctypedef shared_ptr[Node] NodePtr
 
 
 cdef object to_botbowl_Square(Square sq):
-    return model.Square(sq.x, sq.y, )
+    return model.Square(sq.x, sq.y)
 
 cdef Square from_botbowl_Square(object sq):
     return Square(sq.x, sq.y)
