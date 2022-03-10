@@ -1,5 +1,9 @@
 # Mac
 .DS_Store
+*.DS_Store
+
+# Bot Bowl replay files
+*.bb
 
 # Byte-compiled / optimized / DLL files 
 __pycache__/
