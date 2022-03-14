@@ -1,6 +1,6 @@
 {
     "name": "botbowl Web App",
-    "arena": "ff-pitch-1.txt",
+    "arena": "ff-pitch-3.txt",
     "ruleset": "BB2016",
     "dungeon": false,
     "roster_size": 4,

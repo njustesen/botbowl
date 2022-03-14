@@ -679,6 +679,9 @@ a:hover {
   border: solid 1px #555;
   /* background-image: url("@{img-url}/arenas/bb_pitch/dots/pitch_good.jpg"); */
   background-color: #222;
+  /***** 26x15 *****/
+  /***** 20x9 *****/
+  /***** 20x9 *****/
 }
 .gamecontent .gameboard .dugout {
   width: 60px;
@@ -744,6 +747,41 @@ a:hover {
   width: 600px;
   height: 270px;
   margin: 91px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-16x9 {
+  background-image: url("../../img/arenas/pitch/heat-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.verysunny-16x9 {
+  background-image: url("../../img/arenas/pitch/sunny-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.blizzard-16x9 {
+  background-image: url("../../img/arenas/pitch/blizzard-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.nice-16x9 {
+  background-image: url("../../img/arenas/pitch/nice-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.pouringrain-16x9 {
+  background-image: url("../../img/arenas/pitch/rain-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
 }
 .gamecontent .gameboard .playericon {
   line-height: 28px;
