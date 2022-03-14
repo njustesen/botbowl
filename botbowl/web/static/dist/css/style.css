@@ -682,6 +682,8 @@ a:hover {
   /***** 26x15 *****/
   /***** 20x9 *****/
   /***** 20x9 *****/
+  /***** 12x5 *****/
+  /***** 4x3 *****/
 }
 .gamecontent .gameboard .dugout {
   width: 60px;
@@ -782,6 +784,76 @@ a:hover {
   height: 270px;
   margin-left: 151px;
   margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-12x5 {
+  background-image: url("../../img/arenas/pitch/heat-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.verysunny-12x5 {
+  background-image: url("../../img/arenas/pitch/sunny-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.blizzard-12x5 {
+  background-image: url("../../img/arenas/pitch/blizzard-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.nice-12x5 {
+  background-image: url("../../img/arenas/pitch/nice-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.pouringrain-12x5 {
+  background-image: url("../../img/arenas/pitch/rain-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-4x3 {
+  background-image: url("../../img/arenas/pitch/heat-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.verysunny-4x3 {
+  background-image: url("../../img/arenas/pitch/sunny-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.blizzard-4x3 {
+  background-image: url("../../img/arenas/pitch/blizzard-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.nice-4x3 {
+  background-image: url("../../img/arenas/pitch/nice-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.pouringrain-4x3 {
+  background-image: url("../../img/arenas/pitch/rain-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
 }
 .gamecontent .gameboard .playericon {
   line-height: 28px;
