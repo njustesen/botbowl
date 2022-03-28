@@ -55,7 +55,7 @@ def get_list_of_actions(self, game: botbowl.Game) -> List[botbowl.Action]:
         self.end_setup = True 
         
         for ac in game.get_available_actions(): 
-            if ac.action_type not in {ActionType.END_SETUP, ActionType.PLACE_PLAYER}}:
+            if ac.action_type not in {ActionType.END_SETUP, ActionType.PLACE_PLAYER}:
                 actions.append(Action(ac.action_type)) 
         
         return actions
