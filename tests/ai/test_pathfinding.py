@@ -4,6 +4,7 @@ import pytest
 import unittest.mock
 import numpy as np
 import botbowl.core.procedure
+import pickle
 
 import botbowl.core.pathfinding.python_pathfinding as python_pathfinding
 pathfinding_modules_to_test = [python_pathfinding]
@@ -546,3 +547,13 @@ def test_forced_pickup_path(pf):
     path: python_pathfinding.Path = first(filter(lambda p: p.get_last_step() == ball.position, paths))
 
     assert path.prob == 1
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_pickle_path(pf):
+    game, (player,) = get_custom_game_turn(player_positions=[(1, 1)],
+                                           ball_position=(3, 3),
+                                           pathfinding_enabled=True)
+    game.step(Action(ActionType.START_MOVE, position=player.position))
+    paths = game.get_available_actions()[0].paths
+    pickled_bytes = pickle.dumps(paths)
