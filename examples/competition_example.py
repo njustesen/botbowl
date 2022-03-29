@@ -18,42 +18,44 @@ def run_agent(registration_name, port, token):
     server = PythonSocketServer(agent, port, token)
     server.run()
 
-# Run servers
-token_a = secrets.token_hex(32)
-print(f"Token A: {token_a}")
-process_a = Process(target=run_agent, args=('random', 5100, token_a))
-process_a.start()
-token_b = secrets.token_hex(32)
-print(f"Token B: {token_b}")
-process_b = Process(target=run_agent, args=('random', 5200, token_b))
-process_b.start()
 
-# Specify the host running the agents (localhost)
-hostname = socket.gethostname()
+if __name__ == '__main__':
+    # Run servers
+    token_a = secrets.token_hex(32)
+    print(f"Token A: {token_a}")
+    process_a = Process(target=run_agent, args=('random', 5100, token_a))
+    process_a.start()
+    token_b = secrets.token_hex(32)
+    print(f"Token B: {token_b}")
+    process_b = Process(target=run_agent, args=('random', 5200, token_b))
+    process_b.start()
 
-# Make sure the agents are running
-time.sleep(2)
+    # Specify the host running the agents (localhost)
+    hostname = socket.gethostname()
 
-# Load configurations, rules, arena and teams
-config = botbowl.load_config("bot-bowl")
+    # Make sure the agents are running
+    time.sleep(2)
 
-ruleset = botbowl.load_rule_set(config.ruleset)
-arena = botbowl.load_arena(config.arena)
-team_a = botbowl.load_team_by_filename("human", ruleset)
-team_b = botbowl.load_team_by_filename("human", ruleset)
+    # Load configurations, rules, arena and teams
+    config = botbowl.load_config("bot-bowl")
 
-# Make proxy agents
-hostname = socket.gethostname()
-client_a = PythonSocketClient("Player A", hostname, 5100, token=token_a)
-client_b = PythonSocketClient("Player B", hostname, 5200, token=token_b)
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    team_a = botbowl.load_team_by_filename("human", ruleset)
+    team_b = botbowl.load_team_by_filename("human", ruleset)
 
-# Run competition
-competition = botbowl.Competition(client_a, client_b, team_a, team_b, config=config, ruleset=ruleset, arena=arena, n=2, record=True)
-competition.run()
-competition.results.print()
+    # Make proxy agents
+    hostname = socket.gethostname()
+    client_a = PythonSocketClient("Player A", hostname, 5100, token=token_a)
+    client_b = PythonSocketClient("Player B", hostname, 5200, token=token_b)
 
-# Shut down everything
-process_a.terminate()
-process_a.join()
-process_b.terminate()
-process_b.join()
+    # Run competition
+    competition = botbowl.Competition(client_a, client_b, team_a, team_b, config=config, ruleset=ruleset, arena=arena, n=2, record=True)
+    competition.run()
+    competition.results.print()
+
+    # Shut down everything
+    process_a.terminate()
+    process_a.join()
+    process_b.terminate()
+    process_b.join()
