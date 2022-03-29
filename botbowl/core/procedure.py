@@ -2763,6 +2763,7 @@ class HandoffAction(MoveAction):
         self.game.use_handoff_action()
         self.game.report(Outcome(OutcomeType.HANDOFF_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.HANDOFF
+        super().start()
 
     def step(self, action):
         # Continue moving along path
@@ -2814,6 +2815,7 @@ class PassAction(MoveAction):
         self.game.use_pass_action()
         self.game.report(Outcome(OutcomeType.PASS_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.PASS
+        super().start()
 
     def step(self, action):
 
@@ -2920,6 +2922,7 @@ class FoulAction(MoveAction):
         self.game.use_foul_action()
         self.game.report(Outcome(OutcomeType.FOUL_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.FOUL
+        super().start()
 
     def step(self, action):
         # Continue moving along path
@@ -3024,6 +3027,7 @@ class BlitzAction(MoveAction):
         self.game.report(Outcome(OutcomeType.BLITZ_ACTION_STARTED, player=self.player))
         self.game.state.player_action_type = PlayerActionType.BLITZ
         self.game.use_blitz_action()
+        super().start()
 
     def step(self, action):
 
