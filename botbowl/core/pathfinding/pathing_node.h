@@ -58,7 +58,7 @@ namespace node_ns {
 
             void _apply_roll(double p, int skill_rr, int team_rr);
             void _add_fail_state(rr_state & new_states, rr_used & prev_state, double prev_state_p, double p, int index);
-            void apply_gfi();
+            void apply_gfi(int target);
             void apply_dodge(int target);
             void apply_pickup(int target);
             void apply_handoff(int target);

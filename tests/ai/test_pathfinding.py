@@ -1,4 +1,6 @@
 from more_itertools import first
+from pytest import approx
+
 from tests.util import Square, get_game_turn, Skill, Action, ActionType, get_custom_game_turn
 import pytest
 import unittest.mock
@@ -546,3 +548,46 @@ def test_forced_pickup_path(pf):
     path: python_pathfinding.Path = first(filter(lambda p: p.get_last_step() == ball.position, paths))
 
     assert path.prob == 1
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_snow_for_it(pf):
+    game, (player, ) = get_custom_game_turn(player_positions=[(1, 1)],
+                                            weather=botbowl.WeatherType.BLIZZARD)
+
+    player.role.ma = 1
+    paths = pf.get_all_paths(game, player)
+
+    assert len(paths) == 15
+    path1 = first(filter(lambda p: p.get_last_step() == Square(3, 3), paths))
+    assert path1.rolls == ([], [3])
+    assert path1.prob == approx(4/6)  # prob of 3+
+
+    path2 = first(filter(lambda p: p.get_last_step() == Square(4, 4), paths))
+    assert path2.rolls == ([], [3], [3])
+    assert path2.prob == approx((4 / 6)**2)  # prob of 3+ 3+
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_pouring_rain_pickup(pf):
+    game, (player, ) = get_custom_game_turn(player_positions=[(1, 1)],
+                                            ball_position=(3, 3),
+                                            weather=botbowl.WeatherType.POURING_RAIN)
+
+    paths = pf.get_all_paths(game, player)
+    path = first(filter(lambda p: p.get_last_step() == Square(3, 3), paths))
+    assert path.rolls == ([], [4])
+    assert path.prob == approx(0.5)  # corresponding to 4+
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_pouring_rain_handoff(pf):
+    game, (player, catcher) = get_custom_game_turn(player_positions=[(2, 2), (4, 4)],
+                                                   ball_position=(2, 2),
+                                                   weather=botbowl.WeatherType.POURING_RAIN)
+
+    paths = pf.Pathfinder(game, player, can_handoff=True).get_paths()
+    assert len(paths) > 0
+    path = first(filter(lambda p: p.get_last_step() == catcher.position, paths))
+    assert path.rolls == ([], [])
+    assert path.handoff_roll == 4
