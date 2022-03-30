@@ -180,7 +180,7 @@ class BotBowlEnv(gym.Env):
     num_actions: int
     game: Game
     _seed: int
-    rnd: np.random.RandomState
+    rng: np.random.RandomState
     ruleset: RuleSet
     home_team: Team
     away_team: Team
@@ -210,7 +210,7 @@ class BotBowlEnv(gym.Env):
 
         # Gym stuff
         self._seed = np.random.randint(0, 2 ** 31) if seed is None else seed
-        self.rnd = np.random.RandomState(self._seed)
+        self.rng = np.random.RandomState(self._seed)
 
         # Setup gym shapes
         spat_obs, _, _ = self.reset()
@@ -376,7 +376,7 @@ class BotBowlEnv(gym.Env):
         self._renderer.render()
 
     def reset(self, skip_observation=False) -> EnvObs:
-        seed = self.rnd.randint(0, 2 ** 31)
+        seed = self.rng.randint(0, 2 ** 31)
 
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
@@ -399,7 +399,7 @@ class BotBowlEnv(gym.Env):
     def seed(self, seed=None):
         if seed is not None:
             self._seed = seed
-            self.rnd = np.random.RandomState(self._seed)
+            self.rng = np.random.RandomState(self._seed)
         return self._seed
 
     def home_team_active(self) -> bool:

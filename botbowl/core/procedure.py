@@ -72,7 +72,7 @@ class Regeneration(Procedure):
 
     def step(self, action):
         if self.player.has_skill(Skill.REGENERATION):
-            regen_roll = DiceRoll([D6(self.game.rnd)], target=4, roll_type=RollType.REGENERATION_ROLL)
+            regen_roll = DiceRoll([D6(self.game.rng)], target=4, roll_type=RollType.REGENERATION_ROLL)
             if regen_roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_REGENERATION, player=self.player, rolls=[regen_roll]))
                 # self.game.pitch_to_reserves(self.player)
@@ -130,7 +130,7 @@ class Apothecary(Procedure):
 
             if action.action_type == ActionType.USE_APOTHECARY:
 
-                self.roll_second = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], roll_type=RollType.CASUALTY_ROLL)
+                self.roll_second = DiceRoll([D6(self.game.rng), D8(self.game.rng)], roll_type=RollType.CASUALTY_ROLL)
                 result = self.roll_second.get_sum()
                 n = min(61, max(38, result))
                 self.casualty_second = CasualtyType(n)
@@ -194,7 +194,7 @@ class Armor(Procedure):
     def step(self, action):
 
         # Roll
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.ARMOR_ROLL)
+        roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.ARMOR_ROLL)
         roll.modifiers = self.modifiers
         roll.target = self.player.get_av() + 1
         result = roll.get_sum() + self.modifiers
@@ -275,7 +275,7 @@ class Stab(Procedure):
             return False
 
         # Stab!
-        self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], lowest_fail=False, highest_succeed=False)
+        self.roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], lowest_fail=False, highest_succeed=False)
         self.roll.target = self.defender.get_av()
         if self.attacker.has_skill(Skill.STAKES) and self.defender.team.race in \
                 ['Khemri', 'Necromantic', 'Undead', 'Vampire']:
@@ -299,7 +299,7 @@ class FoulAppearance(Procedure):
 
     def step(self, action):
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll = DiceRoll([D6(self.game.rng)])
             self.roll.target = 2
             self.game.report(
                 Outcome(OutcomeType.SKILL_USED, skill=Skill.FOUL_APPEARANCE, player=self.attacker, rolls=[self.roll]))
@@ -427,7 +427,7 @@ class Block(Procedure):
             # Assists
             if self.defender.get_st() > self.attacker.get_st() and self.attacker.has_skill(Skill.DAUNTLESS) \
                     and self.dauntless_roll is None:
-                self.dauntless_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.STRENGTH_ROLL)
+                self.dauntless_roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.STRENGTH_ROLL)
                 self.dauntless_success = self.dauntless_roll.get_sum() + self.attacker.get_st() > self.defender.get_st()
                 self.game.report(Outcome(OutcomeType.DAUNTLESS_USED, team=self.attacker.team, player=self.attacker,
                                          rolls=[self.dauntless_roll], n=True))
@@ -445,7 +445,7 @@ class Block(Procedure):
             self.roll = DiceRoll([], roll_type=RollType.BLOCK_ROLL)
 
             for i in range(abs(dice)):
-                self.roll.dice.append(BBDie(self.game.rnd))
+                self.roll.dice.append(BBDie(self.game.rng))
 
             self.game.report(Outcome(OutcomeType.BLOCK_ROLL, player=self.attacker, opp_player=self.defender,
                                      rolls=[self.roll]))
@@ -614,7 +614,7 @@ class Bounce(Procedure):
             self.piece.is_carried = False
 
         # Roll
-        roll_scatter = DiceRoll([D8(self.game.rnd)], roll_type=RollType.BOUNCE_ROLL)
+        roll_scatter = DiceRoll([D8(self.game.rng)], roll_type=RollType.BOUNCE_ROLL)
         result = roll_scatter.get_sum()
 
         # Bounce
@@ -702,7 +702,7 @@ class Casualty(Procedure):
             self.regeneration = None
 
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd), D8(self.game.rnd)], d68=True, roll_type=RollType.CASUALTY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng), D8(self.game.rng)], d68=True, roll_type=RollType.CASUALTY_ROLL)
             cas_rolls = None
             if self.blood_lust: 
                 result = 38
@@ -788,7 +788,7 @@ class Catch(Procedure):
                 return True
 
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = self.game.get_catch_modifiers(self.player, accurate=self.accurate, handoff=self.handoff)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             if self.roll.is_d6_success():
@@ -848,7 +848,7 @@ class Intercept(Procedure):
         # If waiting for interception re-roll due to Safe Throw skill
         if self.waiting_safe_throw:
             # Make agility roll for passer
-            self.safe_throw_roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.safe_throw_roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.safe_throw_roll.target = Rules.agility_table[self.passer.get_ag()]
             self.game.report(
                 Outcome(OutcomeType.SKILL_USED, player=self.passer, skill=Skill.SAFE_THROW, rolls=[self.safe_throw_roll]))
@@ -886,7 +886,7 @@ class Intercept(Procedure):
                 return True
 
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = self.game.get_catch_modifiers(self.interceptor, interception=True)
             self.roll.target = Rules.agility_table[self.interceptor.get_ag()]
             if self.roll.is_d6_success():
@@ -936,14 +936,14 @@ class CoinTossFlip(Procedure):
 
     def step(self, action):
         if action.action_type == ActionType.HEADS:
-            if self.game.rnd.rand(1)[0] >= 0.5:
+            if self.game.rng.rand(1)[0] >= 0.5:
                 self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.HEADS_WON))
             else:
                 self.game.state.coin_toss_winner = self.game.state.home_team
                 self.game.report(Outcome(OutcomeType.TAILS_LOSS))
         elif action.action_type == ActionType.TAILS:
-            if self.game.rnd.rand(1)[0] >= 0.5:
+            if self.game.rng.rand(1)[0] >= 0.5:
                 self.game.state.coin_toss_winner = self.game.state.away_team
                 self.game.report(Outcome(OutcomeType.TAILS_WON))
             else:
@@ -1013,7 +1013,7 @@ class Ejection(Procedure):
             if action.action_type == ActionType.USE_BRIBE:
                 self.player.team.state.bribes -= 1
                 self.game.report(Outcome(OutcomeType.BRIBE_USED, team=self.player.team, player=self.player))
-                die = D6(self.game.rnd)
+                die = D6(self.game.rng)
                 roll = DiceRoll([die], roll_type=RollType.BRIBE_ROLL)
                 roll.target = 2
                 if roll.is_d6_success():
@@ -1156,7 +1156,7 @@ class Injury(Procedure):
         # TODO: Necromancer
 
         # Roll
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.INJURY_ROLL)
+        roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.INJURY_ROLL)
         self.injury_rolled = True
 
         # Skill modifiers
@@ -1254,7 +1254,7 @@ class Touchback(Procedure):
     def step(self, action):
         player = None
         if len(self.players_on_pitch_standing) == 0:
-            position = self.game.rnd.choice(self.game.get_team_side(self.game.state.receiving_this_drive))
+            position = self.game.rng.choice(self.game.get_team_side(self.game.state.receiving_this_drive))
             self.ball.is_carried = False
         else:
             player = action.player
@@ -1322,7 +1322,7 @@ class Fans(Procedure):
         rolls = []
         spectators = []
         for team in self.game.state.teams:
-            roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.FANS_ROLL)
+            roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.FANS_ROLL)
             rolls.append(roll)
             fans = (roll.get_sum() + team.fan_factor) * 1000
             spectators.append(fans)
@@ -1399,7 +1399,7 @@ class Riot(Procedure):
         elif receiving_turn == 0:
             self.effect = 1
         else:
-            roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.RIOT_ROLL)
+            roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.RIOT_ROLL)
             if roll.get_sum() <= 3:
                 self.effect = 1
             else:
@@ -1464,7 +1464,7 @@ class CheeringFans(Procedure):
         rolls = []
         cheers = []
         for team in self.game.state.teams:
-            roll = DiceRoll([D3(self.game.rnd)], roll_type=RollType.CHEERING_FANS_ROLL)
+            roll = DiceRoll([D3(self.game.rng)], roll_type=RollType.CHEERING_FANS_ROLL)
             rolls.append(roll)
             roll.modifiers = team.state.fame + team.cheerleaders
             cheers.append(roll.get_result())
@@ -1493,7 +1493,7 @@ class BrilliantCoaching(Procedure):
         rolls = []
         brilliant_coaches = []
         for team in self.game.state.teams:
-            roll = DiceRoll([D3(self.game.rnd)], roll_type=RollType.BRILLIANT_COACHING_ROLL)
+            roll = DiceRoll([D3(self.game.rng)], roll_type=RollType.BRILLIANT_COACHING_ROLL)
             rolls.append(roll)
             roll.modifiers = team.state.fame + team.ass_coaches
             brilliant_coaches.append(roll.get_result())
@@ -1522,7 +1522,7 @@ class ThrowARock(Procedure):
 
         rolls = []
         for team in self.game.state.teams:
-            roll = DiceRoll([D3(self.game.rnd)], roll_type=RollType.THROW_A_ROCK_ROLL)
+            roll = DiceRoll([D3(self.game.rng)], roll_type=RollType.THROW_A_ROCK_ROLL)
             roll.modifiers = team.state.fame
             rolls.append(roll.get_result())
             self.game.report(Outcome(OutcomeType.THROW_A_ROCK_ROLL, team=team, rolls=[roll]))
@@ -1532,7 +1532,7 @@ class ThrowARock(Procedure):
             if rolls[i] == np.min(rolls):
                 players = self.game.get_players_on_pitch(team)
                 if len(players) > 0:
-                    player = self.game.rnd.choice(players)
+                    player = self.game.rng.choice(players)
                     KnockDown(self.game, player, armor_roll=False)
                     self.game.report(Outcome(OutcomeType.HIT_BY_ROCK, player=player))
 
@@ -1550,7 +1550,7 @@ class PitchInvasionRoll(Procedure):
         self.player = player
 
     def step(self, action):
-        roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.PITCH_INVASION_ROLL)
+        roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.PITCH_INVASION_ROLL)
         roll.modifiers = self.game.get_opp_team(self.team).state.fame
         if roll.get_result() >= 6 and roll.get_sum() != 1:
             if self.player.has_skill(Skill.BALL_AND_CHAIN):
@@ -1578,7 +1578,7 @@ class KickoffTable(Procedure):
 
     def step(self, action):
 
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.KICKOFF_ROLL)
+        roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.KICKOFF_ROLL)
         roll.result = roll.get_sum()
 
         if roll.result == 2:  # Get the ref!
@@ -1711,7 +1711,7 @@ class Leap(Procedure):
         if self.roll is None:
 
             # Agility roll
-            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll = DiceRoll([D6(self.game.rng)])
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             self.roll.modifiers = self.game.get_leap_modifiers(self.player)
 
@@ -1773,7 +1773,7 @@ class Shadowing(Procedure):
             return True
 
         if self.roll is None and action.action_type == ActionType.USE_SKILL:
-            self.roll = DiceRoll(dice=[D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.SHADOWING_ROLL, highest_succeed=False)
+            self.roll = DiceRoll(dice=[D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.SHADOWING_ROLL, highest_succeed=False)
             self.roll.target = 7
             self.roll.modifiers = self.player.get_ma() - self.shadower.get_ma()
             self.roll.target_higher = False
@@ -1829,7 +1829,7 @@ class Tentacles(Procedure):
     def step(self, action):
 
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)])
+            self.roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)])
             self.roll.target = 5
             self.roll.modifiers = self.player.get_st() - self.tentacler.get_st()
             if self.roll.is_d6_success():
@@ -1932,7 +1932,7 @@ class GFI(Procedure):
         if self.roll is None:
 
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.GFI_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.GFI_ROLL)
             self.roll.target = 2
             self.roll.modifiers = 1 if self.game.state.weather == WeatherType.BLIZZARD else 0
 
@@ -2032,7 +2032,7 @@ class Dodge(Procedure):
             # TODO: Auto-use other skills
 
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = self.game.get_dodge_modifiers(self.player, self.position, include_diving_tackle=(self.diving_tackler is not None))
 
             agility_target = Rules.agility_table[self.player.get_ag()]
@@ -2143,7 +2143,7 @@ class Explode(Procedure):
         position = self.bomb.position
         self.game.remove(self.bomb)
         for player in self.game.get_adjacent_players(position):
-            die = D6(self.game.rnd)
+            die = D6(self.game.rng)
             roll = DiceRoll(die, RollType.BOMB_ROLL, target=4)
             if roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.BOMB_HIT, position=self.bomb.position, player=self.player, rolls=[roll]))
@@ -2164,7 +2164,7 @@ class Land(Procedure):
 
     def step(self, action):
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)], RollType.LAND_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], RollType.LAND_ROLL)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             self.roll.modifiers = self.game.get_landing_modifiers(self.player)
             if self.roll.is_d6_success():
@@ -2243,7 +2243,7 @@ class PassAttempt(Procedure):
                     return False
 
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.target = Rules.agility_table[self.passer.get_ag()]
             self.roll.modifiers = self.game.get_pass_modifiers(self.passer, self.pass_distance, ttm=self.ttm)
             result = self.roll.get_sum()
@@ -2346,7 +2346,7 @@ class Pickup(Procedure):
         # Otherwise roll if player hasn't rolled
         if self.roll is None:
 
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             self.roll.modifiers = self.game.get_pickup_modifiers(self.player, self.ball.position)
 
@@ -2392,7 +2392,7 @@ class StandUp(Procedure):
     def step(self, action):
         if self.roll_required and self.roll is None:
             modifier = self.game.get_stand_up_modifier(self.player)
-            self.roll = DiceRoll([D6(self.game.rnd)], target=4, modifiers=modifier, roll_type=RollType.STAND_UP_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], target=4, modifiers=modifier, roll_type=RollType.STAND_UP_ROLL)
             if self.roll.is_d6_success():
                 self.player.state.up = True
                 self.game.report(Outcome(OutcomeType.STAND_UP, rolls=[self.roll], player=self.player))
@@ -2477,7 +2477,7 @@ class JumpUpToBlock(Procedure):
     def step(self, action):
 
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             self.roll.modifiers = 2
             if self.roll.is_d6_success():
@@ -2511,7 +2511,7 @@ class EscapeBeingEaten(Procedure):
     def step(self, action):
 
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll = DiceRoll([D6(self.game.rng)])
             self.roll.target = 2
             if self.roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_ESCAPE_BEING_EATEN, player=self.hungry_player,
@@ -2550,7 +2550,7 @@ class AlwaysHungry(Procedure):
     def step(self, action):
 
         if self.roll is None:
-            self.roll = DiceRoll([D6(self.game.rnd)])
+            self.roll = DiceRoll([D6(self.game.rng)])
             self.roll.target = 2
             if self.roll.is_d6_success():
                 self.game.report(Outcome(OutcomeType.SUCCESSFUL_ALWAYS_HUNGRY, player=self.hungry_player,
@@ -3159,7 +3159,7 @@ class PreKickoff(Procedure):
         # Check KOed
         for player in self.game.get_knocked_out(self.team):
             if player not in self.checked:
-                roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.KO_READY_ROLL)
+                roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.KO_READY_ROLL)
                 if roll.get_sum() >= 4:
                     self.game.kod_to_reserves(player)
                     self.checked.append(player)
@@ -3382,7 +3382,7 @@ class Scatter(Procedure):
             return True
 
         n = 3 if self.is_pass else 1
-        rolls = [DiceRoll([D8(self.game.rnd)], roll_type=RollType.SCATTER_ROLL) for _ in range(n)]
+        rolls = [DiceRoll([D8(self.game.rng)], roll_type=RollType.SCATTER_ROLL) for _ in range(n)]
 
         for s in range(n):
 
@@ -3404,10 +3404,10 @@ class Scatter(Procedure):
             if self.kick and not self.gentle_gust:
                 # D2 is a special dice with sides 0 and 1
                 if self.game.config.kick_scatter_dice == 'd2':
-                    distance_roll = DiceRoll.from_string('d6')
+                    distance_roll = DiceRoll.from_string('d6', rng=self.game.rng)
                     d2 = True
                 else:
-                    distance_roll = DiceRoll.from_string(self.game.config.kick_scatter_dice)
+                    distance_roll = DiceRoll.from_string(self.game.config.kick_scatter_dice, rng=self.game.rng)
                     d2 = False
                 distance_roll.roll_type = RollType.DISTANCE_ROLL
                 rolls += [distance_roll]
@@ -3524,7 +3524,7 @@ class ClearBoard(Procedure):
                     self.game.pitch_to_reserves(player)
                     # Check if heat exhausted
                     if self.game.state.weather == WeatherType.SWELTERING_HEAT:
-                        roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.SWELTERING_HEAT_ROLL)
+                        roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.SWELTERING_HEAT_ROLL)
                         if roll.get_sum() == 1:
                             player.state.heated = True
                             self.game.report(Outcome(OutcomeType.PLAYER_HEATED, player=player, rolls=[roll]))
@@ -3646,8 +3646,8 @@ class ThrowIn(Procedure):
         self.ball.carried = False
 
         # Roll
-        roll_direction = DiceRoll([D3(self.game.rnd)], roll_type=RollType.SCATTER_ROLL)
-        roll_distance = DiceRoll.from_string(self.game.config.throw_in_dice)
+        roll_direction = DiceRoll([D3(self.game.rng)], roll_type=RollType.SCATTER_ROLL)
+        roll_distance = DiceRoll.from_string(self.game.config.throw_in_dice, rng=self.game.rng)
         roll_distance.roll_type = RollType.DISTANCE_ROLL
 
         # Scatter
@@ -3942,7 +3942,7 @@ class WeatherTable(Procedure):
         self.kickoff = kickoff
 
     def step(self, action):
-        roll = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.WEATHER_ROLL)
+        roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.WEATHER_ROLL)
         if roll.get_sum() == 2:
             self.game.state.weather = WeatherType.SWELTERING_HEAT
             self.game.report(Outcome(OutcomeType.WEATHER_SWELTERING_HEAT, rolls=[roll]))
@@ -4001,7 +4001,7 @@ class Negatrait(Procedure, metaclass=ABCMeta):
         # If player hasn't rolled
         if not self.rolled:
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=self.roll_type)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=self.roll_type)
             self.roll.target = self.get_target()
             self.rolled = True
 
@@ -4353,7 +4353,7 @@ class Pro(Procedure):
     def step(self, action):
         if self.roll is None:
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.PRO)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.PRO)
             self.roll.target = 4
 
             if self.roll.is_d6_success():
@@ -4389,7 +4389,7 @@ class Loner(Procedure):
     def step(self, action):
         if self.roll is None:
             # Roll
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.LONER_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.LONER_ROLL)
             self.roll.target = 4
 
             if self.roll.is_d6_success():
@@ -4471,7 +4471,7 @@ class HypnoticGaze(Procedure):
     def step(self, action): 
         if self.roll is None: 
             #agility roll with tz modifiers except target_player
-            self.roll = DiceRoll([D6(self.game.rnd)], roll_type=RollType.AGILITY_ROLL)
+            self.roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.AGILITY_ROLL)
             self.roll.modifiers = self.game.get_hypno_modifier(self.player)
             self.roll.target = Rules.agility_table[self.player.get_ag()]
             

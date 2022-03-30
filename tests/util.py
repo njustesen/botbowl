@@ -269,8 +269,8 @@ def only_fixed_rolls(game: botbowl.Game,
             assert roll in BBDieResult
             botbowl.BBDie.fix(roll)
 
-    rnd = game.rnd
-    game.rnd = None
+    rnd = game.rng
+    game.rng = None
 
     try:
         yield
@@ -281,7 +281,7 @@ def only_fixed_rolls(game: botbowl.Game,
             assert len(botbowl.D8.FixedRolls) == 0, "Not all fixed D8 rolls were consumed"
             assert len(botbowl.BBDie.FixedRolls) == 0, "Not all fixed BBDie rolls were consumed"
     finally:
-        game.rnd = rnd
+        game.rng = rnd
 
 
 

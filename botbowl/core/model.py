@@ -701,7 +701,6 @@ class Die(ABC):
     def to_json(self):
         pass
 
-
     @staticmethod
     def from_string(string: str, rng=None):
         if string == "d3":

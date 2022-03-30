@@ -138,6 +138,10 @@ def test_foul_success_assist():
     D6.fix(d)
     D6.fix(defender.get_av() - d)
 
+    # Injury
+    D6.fix(1)
+    D6.fix(2)
+
     game.step(Action(ActionType.START_FOUL, player=fouler))
     assert game.has_report_of_type(OutcomeType.FOUL_ACTION_STARTED)
     game.step(Action(ActionType.FOUL, position=defender.position))

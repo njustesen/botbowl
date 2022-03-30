@@ -154,14 +154,14 @@ which are the available actions in this situation:
 By iterating the available actions, we can easily select one that we like. For our random bot, we first sample a random ```ÀctionType```:
 
 ```python
-action_choice = self.rnd.choice(game.state.available_actions)
+action_choice = self.rng.choice(game.state.available_actions)
 ```
 
 We do not want to sample the ActionType.PLACE_PLAYER, which is used during the setup phase, as we don’t want to rely in our bot to randomly come up with a valid starting formation. Instead, we allow it to select one of the built-in starting formations that are available as actions. After selecting an action type, we can sample a position or player if it is needed:
 
 ```python
-pos = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
-player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+pos = self.rng.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+player = self.rng.choice(action_choice.players) if len(action_choice.players) > 0 else None
 ```
 
 Finally, we can instantiate the Action object and return it:
