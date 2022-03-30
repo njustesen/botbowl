@@ -690,9 +690,6 @@ class TwoPlayerArena:
 class Die(ABC):
     value: str
 
-    def __init__(self, rng):
-        self.rng = rng if rng is not None else np.random.RandomState()
-
     @abstractmethod
     def get_value(self):
         pass
@@ -702,7 +699,7 @@ class Die(ABC):
         pass
 
     @staticmethod
-    def from_string(string: str, rng=None):
+    def from_string(string: str, rng):
         if string == "d3":
             return D3(rng)
         if string == "d6":
@@ -727,7 +724,7 @@ class DiceRoll:
     lowest_fail: bool
 
     @staticmethod
-    def from_string(string: str, rng=None):
+    def from_string(string: str, rng):
         try:
             if "d" in string:
                 before_d = string.split("d")[0]
@@ -839,12 +836,11 @@ class D3(Die):
         else:
             raise ValueError("Fixed result of D3 must be between 1 and 3")
 
-    def __init__(self, rng=None):
-        super().__init__(rng)
+    def __init__(self, rng):
         if len(D3.FixedRolls) > 0:
             self.value = D3.FixedRolls.pop(0)
         else:
-            self.value = self.rng.randint(1, 4)
+            self.value = rng.randint(1, 4)
 
     def __repr__(self):
         return f"D3({self.value})"
@@ -883,12 +879,11 @@ class D6(Die, Immutable):
         else:
             raise ValueError("Fixed result of D6 must be between 1 and 6")
 
-    def __init__(self, rng=None):
-        super().__init__(rng)
+    def __init__(self, rng):
         if len(D6.FixedRolls) > 0:
             self.value = D6.FixedRolls.pop(0)
         else:
-            self.value = self.rng.randint(1, 7)
+            self.value = rng.randint(1, 7)
 
     def __repr__(self):
         return f"D6({self.value})"
@@ -913,12 +908,11 @@ class D8(Die, Immutable):
         else:
             raise ValueError("Fixed result of D8 must be between 1 and 8")
 
-    def __init__(self, rng=None):
-        super().__init__(rng)
+    def __init__(self, rng):
         if len(D8.FixedRolls) > 0:
             self.value = D8.FixedRolls.pop(0)
         else:
-            self.value = self.rng.randint(1, 9)
+            self.value = rng.randint(1, 9)
 
     def __repr__(self):
         return f"D8({self.value})"
@@ -948,12 +942,11 @@ class BBDie(Die, Immutable):
     def clear_fixes():
         BBDie.FixedRolls.clear()
 
-    def __init__(self, rng=None):
-        super().__init__(rng)
+    def __init__(self, rng):
         if len(BBDie.FixedRolls) > 0:
             self.value = BBDie.FixedRolls.pop(0)
         else:
-            r = self.rng.randint(1, 7)
+            r = rng.randint(1, 7)
             if r == 6:
                 r = 3
             self.value = BBDieResult(r)
