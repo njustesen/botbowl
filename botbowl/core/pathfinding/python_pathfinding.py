@@ -5,6 +5,7 @@ Year: 2020
 ==========================
 This module contains pathfinding functionalities for botbowl.
 """
+from typing import Tuple, List, Optional
 
 from botbowl.core.table import Rules
 from botbowl.core.model import Square
@@ -17,6 +18,13 @@ from queue import PriorityQueue
 
 @treat_as_immutable
 class Path:
+    final_node: 'Node'
+    _steps: Tuple[Square]
+    _rolls: Tuple[List[int]]
+    prob: float
+    block_dice: Optional[int]
+    handoff_roll: Optional[int]
+    foul_roll: Optional[int]
 
     def __init__(self, node: 'Node'):
         super().__init__()
@@ -29,13 +37,13 @@ class Path:
         self.foul_roll = node.foul_roll
 
     @property
-    def steps(self):
+    def steps(self) -> Tuple[Square]:
         if self._steps is None:
             self.collect_path()
         return self._steps
 
     @property
-    def rolls(self):
+    def rolls(self) -> Tuple[List[int]]:
         if self._rolls is None:
             self.collect_path()
         return self._rolls
@@ -50,16 +58,16 @@ class Path:
         return len(self) == 0
 
     def collect_path(self):
-        steps = []
-        rolls = []
+        steps: List[Square] = []
+        rolls: List[List[int]] = []
         node = self.final_node
 
         while node.parent is not None:
             steps.append(node.position)
             rolls.append(node.rolls)
             node = node.parent
-        self._steps = list(reversed(steps))
-        self._rolls = list(reversed(rolls))
+        self._steps = tuple(reversed(steps))
+        self._rolls = tuple(reversed(rolls))
 
     def __eq__(self, other):
         return self.prob == other.prob and \
@@ -154,9 +162,9 @@ class Node:
         else:
             new_states[fail_state] = fail_state_p
 
-    def apply_gfi(self):
-        self.rolls.append(2)
-        self._apply_roll(5 / 6, self.SURE_FEET, self.TRR)
+    def apply_gfi(self, target):
+        self.rolls.append(target)
+        self._apply_roll((7 - target) / 6, self.SURE_FEET, self.TRR)
 
     def apply_dodge(self, target):
         self.rolls.append(target)
@@ -215,6 +223,7 @@ class Pathfinder:
             if p.team != player.team and p.has_tackle_zone():
                 for square in game.get_adjacent_squares(p.position):
                     self.tzones[square.y][square.x] += 1
+        self.gfi_target = None
 
     def get_path(self, target):
         paths = self.get_paths(target)
@@ -228,6 +237,7 @@ class Pathfinder:
         self.carries_ball = self.player is self.game.get_ball_carrier()
         self.ball_position = self.game.get_ball_position() if self.game.get_ball().on_ground else None
         self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
+        self.gfi_target = 3 if self.game.state.weather is WeatherType.BLIZZARD else 2
 
         can_dodge = self.player.has_skill(Skill.DODGE) and Skill.DODGE not in self.player.state.used_skills
         can_sure_feet = self.player.has_skill(Skill.SURE_FEET) and Skill.SURE_FEET not in self.player.state.used_skills
@@ -370,7 +380,7 @@ class Pathfinder:
                 return None
         next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
-            next_node.apply_gfi()
+            next_node.apply_gfi(self.gfi_target)
         if self.tzones[node.position.y][node.position.x] > 0:
             target = self._get_dodge_target(node.position, to_pos)
             next_node.apply_dodge(target)
@@ -418,7 +428,7 @@ class Pathfinder:
         next_node = Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice=block_dice,
                          can_block=False)
         if gfi:
-            next_node.apply_gfi()
+            next_node.apply_gfi(self.gfi_target)
         if best_node is not None and self._best(next_node, best_node) == best_node:
             return None
         if best_before is not None and self._dominant(next_node, best_before) == best_before:

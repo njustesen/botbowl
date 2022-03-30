@@ -14,15 +14,12 @@ import botbowl.core.table as table
 import botbowl.core.model as model
 import botbowl.core.forward_model as forward_model
 from .python_pathfinding import _alter_state, _reset_state
-import copy
 
 from libcpp.map cimport map as mapcpp
 from libcpp.vector cimport vector
 from libcpp.queue cimport priority_queue
-from libcpp.memory cimport shared_ptr
+from libcpp.memory cimport shared_ptr, make_shared
 
-import cython
-cimport cython
 from cython.operator import dereference
 
 from .pathing_node cimport Node, Square
@@ -62,7 +59,7 @@ agi_table[10] = 1
 cdef class Path:
     cdef:
         NodePtr final_node
-        public object _steps, _rolls
+        public tuple _steps, _rolls
         public double prob
         public object block_dice, handoff_roll, foul_roll
 
@@ -106,8 +103,8 @@ cdef class Path:
             steps.append( to_botbowl_Square(node.get().position) )
             rolls.append(node.get().rolls)
             node = node.get().parent
-        self._steps = list(reversed(steps))
-        self._rolls = list(reversed(rolls))
+        self._steps = tuple(reversed(steps))
+        self._rolls = tuple(reversed(rolls))
 
     def __reduce__(self):
         # Need custom reduce() because built in reduce() can't handle the c++ objects
@@ -151,7 +148,7 @@ cdef Path create_path(NodePtr node):
 cdef class Pathfinder:
     cdef public object game, player, players_on_pitch
     cdef bint trr, can_block, can_handoff, can_foul, target_found, target_is_int, target_is_square, has_target, directly_to_adjacent, is_stunty, carries_ball
-    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x
+    cdef int ma, gfis, dodge_target, pitch_width, pitch_height, endzone_x, gfi_target
     cdef double current_prob
     cdef int tzones[17][28] # init as zero
     cdef Square ball_pos, start_pos
@@ -163,11 +160,10 @@ cdef class Pathfinder:
     cdef mapcpp[double, vector[NodePtr]] risky_sets 
 
     def __dealloc__(self):
-        cdef NodePtr empty_ptr
         for i in range(17):
             for j in range(28):
-                self.locked_nodes[i][j] = empty_ptr
-                self.nodes[i][j] = empty_ptr
+                self.locked_nodes[i][j].reset()
+                self.nodes[i][j].reset()
 
     def __init__(self, game, player, trr=False, directly_to_adjacent=False, can_block=False, can_handoff=False, can_foul=False):
 
@@ -230,7 +226,7 @@ cdef class Pathfinder:
 
         self.carries_ball = self.player is self.game.get_ball_carrier()
         self.endzone_x = 1 if self.player.team is self.game.state.home_team else self.game.arena.width - 2
-
+        self.gfi_target = 3 if self.game.state.weather is table.WeatherType.BLIZZARD else 2
         self.ma = self.player.num_moves_left()
         self.gfis = self.player.num_gfis_left()
 
@@ -241,7 +237,7 @@ cdef class Pathfinder:
         can_sure_hands = self.player.has_skill(table.Skill.SURE_HANDS)
 
         # Create root node
-        node = NodePtr(new Node(start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff))
+        node = make_shared[Node](start_square, self.ma, self.gfis, 0, self.trr, can_dodge, can_sure_feet, can_sure_hands, self.can_foul, self.can_block, self.can_handoff)
 
         if not self.player.state.up:
             node = self._expand_stand_up(node)
@@ -294,24 +290,31 @@ cdef class Pathfinder:
                 self.target_found = True
                 return
 
+        # stop after blocking or handing off
         if node.get().block_dice != 0 or node.get().handoff_roll != 0:
             return
 
+        # stop if touchdown
         if self.carries_ball and node.get().position.x == self.endzone_x:
             return
 
+        # stop if pickup
         if (not self.carries_ball) and node.get().position == self.ball_pos:
             return
 
+        # stop if out of moves and can't handoff or foul
         if out_of_moves and (not node.get().can_handoff) and (not node.get().can_foul):
             return
 
         for direction in DIRECTIONS:
             if parent is not NULL:
                 to_square = direction + node.get().position
+
+                # stop if going back to parent position
                 if parent.position == to_square:
                     continue
 
+                # stop if doing a detour that we know has better alternative
                 if parent.position.distance(to_square) < 2 and \
                         (self.tzones[to_square.y][to_square.x] == 0 or \
                         self.tzones[parent.position.y][parent.position.x] == 0 ):
@@ -369,9 +372,9 @@ cdef class Pathfinder:
             if total_moves_left <= best_total_moves_left:
                 return NodePtr()
 
-        next_node = NodePtr(new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance))
+        next_node = make_shared[Node](node, to_pos, moves_left_next, gfis_left_next, euclidean_distance)
         if gfi:
-            next_node.get().apply_gfi()
+            next_node.get().apply_gfi(self.gfi_target)
         if self.tzones[node.get().position.y][node.get().position.x] > 0:
             target = self._get_dodge_target(node.get().position, to_pos)
             next_node.get().apply_dodge(target)
@@ -391,7 +394,7 @@ cdef class Pathfinder:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         assists_from, assists_to = self.game.num_assists_at(self.player, player_at, to_botbowl_Square(node.get().position), foul=True)
         target = min(12, max(2, player_at.get_av() + 1 - assists_from + assists_to))
-        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance) )
+        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance)
         next_node.get().apply_foul(target)
 
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
@@ -409,7 +412,7 @@ cdef class Pathfinder:
         best_before = self.locked_nodes[to_pos.y][to_pos.x]
         player_at = self.players_on_pitch[to_pos.y][to_pos.x]
 
-        next_node = NodePtr( new Node(node, to_pos, 0, 0, node.get().euclidean_distance))
+        next_node = make_shared[Node](node, to_pos, 0, 0, node.get().euclidean_distance)
         target = self._get_handoff_target(player_at)
         next_node.get().apply_handoff(target)
 
@@ -432,11 +435,11 @@ cdef class Pathfinder:
         gfi = node.get().moves_left == 0
         moves_left_next = node.get().moves_left - 1 if not gfi else node.get().moves_left
         gfis_left_next = node.get().gfis_left - 1 if gfi else node.get().gfis_left
-        next_node = NodePtr( new Node(node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice))
+        next_node = make_shared[Node](node, to_pos, moves_left_next, gfis_left_next, euclidean_distance, block_dice)
         next_node.get().can_block = False
 
         if gfi:
-            node.get().apply_gfi()
+            next_node.get().apply_gfi(self.gfi_target)
         if best_node.use_count()>0 and self._best(next_node, best_node) == best_node:
             return NodePtr()
         if best_before.use_count()>0 and self._dominant(next_node, best_before) == best_before:
@@ -449,13 +452,13 @@ cdef class Pathfinder:
             NodePtr next_node
 
         if self.player.has_skill(table.Skill.JUMP_UP):
-            return NodePtr (new Node(node, from_botbowl_Square(self.player.position), self.ma, self.gfis, 0))
+            return make_shared[Node](node, from_botbowl_Square(self.player.position), self.ma, self.gfis, 0)
         elif self.ma < 3:
             target = max(2, min(6, 4-self.game.get_stand_up_modifier(self.player)))
-            next_node = NodePtr (new Node(node, from_botbowl_Square(self.player.position), 0, self.gfis, 0))
-            node.get().apply_stand_up(target)
+            next_node = make_shared[Node](node, from_botbowl_Square(self.player.position), 0, self.gfis, 0)
+            next_node.get().apply_stand_up(target)
             return next_node
-        next_node = NodePtr (new Node(node, self.start_pos, self.ma - 3, self.gfis, 0))
+        next_node = make_shared[Node](node, self.start_pos, self.ma - 3, self.gfis, 0)
         return next_node
 
     cdef NodePtr _best(self, NodePtr a, NodePtr b):
