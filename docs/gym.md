@@ -289,7 +289,7 @@ botbowl comes with five environments with various difficulty, use `EnvConf(size=
 
 - **botbowl-v4:** 11 players on a 26x15 pitch (traditional size)
 - **botbowl-7-v4:** 7 players on a 20x11 pitch
-- **botbowl-5-v4:** 5 players on a 16x8 pitch
+- **botbowl-5-v4:** 5 players on a 16x9 pitch
 - **botbowl-3-v4:** 3 players on a 12x5 pitch
 - **botbowl-1-v4:** 1 player on a 4x3 pitch
 

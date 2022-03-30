@@ -48,7 +48,7 @@ Check out the tutorial [how to use the forward model](forward-model.md) and [how
 
 # Important Dates
 
-*March 7th, 2022:* We will publish a new release of the bot bowl framework that developers should use when working towards Bot Bowl IV.
+*March 7th, 2022:* New version of the bot bowl framework [released](https://github.com/njustesen/botbowl/releases/tag/1.0.0) and on main.
 
 *May 15th, 2022:* We aim to freeze the code base until the competition and will make _final_ release. If very critical bugs are found, we will only fix them after coordinating with everyone on the [Bot Bowl Discord server](https://discord.gg/MTXMuae).
 
