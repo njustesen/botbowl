@@ -3386,29 +3386,34 @@ class Scatter(Procedure):
 
         for s in range(n):
 
-            # Roll
-            roll_scatter = rolls[s]
-            if self.kick and not self.gentle_gust:
-                if self.game.config.kick_scatter_dice == 'd6':
-                    distance_dice = D6(self.game.rnd)
-                elif self.game.config.kick_scatter_dice == 'd3':
-                    distance_dice = D6(self.game.rnd)
-                else:
-                    raise Exception("Unknown kick_roll_distance")
-                roll_distance = DiceRoll([distance_dice], roll_type=RollType.DISTANCE_ROLL)
-                rolls += [roll_distance]
-
+            # Scatter Roll
+            scatter_roll = rolls[s]
             x = 0
             y = 0
-            if roll_scatter.get_sum() in [1, 4, 6]:
+            if scatter_roll.get_sum() in [1, 4, 6]:
                 x = -1
-            if roll_scatter.get_sum() in [3, 5, 8]:
+            if scatter_roll.get_sum() in [3, 5, 8]:
                 x = 1
-            if roll_scatter.get_sum() in [1, 2, 3]:
+            if scatter_roll.get_sum() in [1, 2, 3]:
                 y = -1
-            if roll_scatter.get_sum() in [6, 7, 8]:
+            if scatter_roll.get_sum() in [6, 7, 8]:
                 y = 1
-            distance = 1 if not self.kick or self.gentle_gust else roll_distance.get_sum()
+
+            # Distance Roll
+            distance = 1
+            if self.kick and not self.gentle_gust:
+                # D2 is a special dice with sides 0 and 1
+                if self.game.config.kick_scatter_dice == 'd2':
+                    distance_roll = DiceRoll.from_string('d6')
+                    d2 = True
+                else:
+                    distance_roll = DiceRoll.from_string(self.game.config.kick_scatter_dice)
+                    d2 = False
+                distance_roll.roll_type = RollType.DISTANCE_ROLL
+                rolls += [distance_roll]
+                distance = distance_roll.get_sum()
+                if d2:
+                    distance = int((distance - 1) / 6)
 
             for i in range(distance):
                 # Move ball on square
@@ -3471,7 +3476,7 @@ class Scatter(Procedure):
 
                     if type(self.piece) is Player and player_at is not None:
                         self.game.report(Outcome(OutcomeType.PLAYER_HIT_PLAYER, position=self.piece.position,
-                                                 player=player_at, rolls=[roll_scatter]))
+                                                 player=player_at, rolls=[scatter_roll]))
                         Bounce(self.game, self.piece)
                         KnockDown(self.game, player=player_at, inflictor=self.piece)
                         if self.piece.team == player_at.team:
@@ -3480,18 +3485,18 @@ class Scatter(Procedure):
                     if catcher is not None and self.piece.is_catchable():
                         Catch(self.game, catcher, self.piece)
                         self.game.report(Outcome(OutcomeType.BALL_HIT_PLAYER, position=self.piece.position,
-                                                 player=catcher, rolls=[roll_scatter]))
+                                                 player=catcher, rolls=[scatter_roll]))
                         return True
 
         if self.kick:
             if self.gentle_gust:
                 # Wait for ball to land
                 self.game.report(Outcome(OutcomeType.GENTLE_GUST_IN_BOUNDS, position=self.piece.position,
-                                         rolls=[roll_scatter]))
+                                         rolls=[scatter_roll]))
             else:
                 # Wait for ball to land
                 self.game.report(Outcome(OutcomeType.KICK_IN_BOUNDS, position=self.piece.position,
-                                         rolls=[roll_scatter, roll_distance]))
+                                         rolls=[scatter_roll, distance_roll]))
         elif type(self.piece) is Player:
             Land(self.game, player=self.piece)
         elif type(self.piece) is Bomb:
@@ -3642,7 +3647,8 @@ class ThrowIn(Procedure):
 
         # Roll
         roll_direction = DiceRoll([D3(self.game.rnd)], roll_type=RollType.SCATTER_ROLL)
-        roll_distance = DiceRoll([D6(self.game.rnd), D6(self.game.rnd)], roll_type=RollType.DISTANCE_ROLL)
+        roll_distance = DiceRoll.from_string(self.game.config.throw_in_dice)
+        roll_distance.roll_type = RollType.DISTANCE_ROLL
 
         # Scatter
         x = 0

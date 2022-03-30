@@ -14,6 +14,7 @@
     "debug_mode": false,
     "competition_mode": false,
     "kick_scatter_dice": "d3",
+    "throw_in_dice": "d6",
     "defensive_formations": ["def_spread.txt"],
     "offensive_formations": ["off_wedge.txt"],
     "time_limits": {

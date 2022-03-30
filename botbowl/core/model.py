@@ -169,6 +169,7 @@ class Configuration:
         self.debug_mode = False
         self.competition_mode = False
         self.kick_scatter_distance = "d6"
+        self.throw_in_dice = "2d6"
         self.offensive_formations = []
         self.defensive_formations = []
         self.time_limits = None
@@ -261,10 +262,12 @@ class PlayerState(Reversible):
         self.used_skills.clear()
         self.squares_moved.clear()
         self.failed_nega_trait_this_turn = False
+        self.has_blocked = False
 
     def reset_turn(self):
         self.moves = 0
         self.used = False
+        self.has_blocked = False
         self.used_skills.clear()
         self.failed_nega_trait_this_turn = False
         self.squares_moved.clear()
@@ -687,6 +690,9 @@ class TwoPlayerArena:
 class Die(ABC):
     value: str
 
+    def __init__(self, rng):
+        self.rng = rng if rng is not None else np.random.RandomState()
+
     @abstractmethod
     def get_value(self):
         pass
@@ -694,6 +700,19 @@ class Die(ABC):
     @abstractmethod
     def to_json(self):
         pass
+
+
+    @staticmethod
+    def from_string(string: str, rng=None):
+        if string == "d3":
+            return D3(rng)
+        if string == "d6":
+            return D6(rng)
+        if string == "d8":
+            return D8(rng)
+        if string == "bb":
+            return BBDie(rng)
+        raise Exception(f"Unknown die {string}")
 
 
 @treat_as_immutable
@@ -707,6 +726,24 @@ class DiceRoll:
     target_lower: int
     highest_succeed: bool
     lowest_fail: bool
+
+    @staticmethod
+    def from_string(string: str, rng=None):
+        try:
+            if "d" in string:
+                before_d = string.split("d")[0]
+                if before_d == "":
+                    n = 1
+                else:
+                    n = int(before_d)
+                d = "d" + string.split("d")[1]
+            else:
+                n = 1
+                d = string
+            dice = [Die.from_string(d, rng) for _ in range(n)]
+            return DiceRoll(dice)
+        except Exception as e:
+            raise Exception("Not a valid dice format. Examples: d3, d6, d8, bb, 2d6")
 
     def __init__(self, dice, modifiers=0, target=None, d68=False, roll_type=RollType.AGILITY_ROLL, target_higher=True,
                  target_lower=False, highest_succeed=True, lowest_fail=True):
@@ -803,11 +840,12 @@ class D3(Die):
         else:
             raise ValueError("Fixed result of D3 must be between 1 and 3")
 
-    def __init__(self, rnd):
+    def __init__(self, rng=None):
+        super().__init__(rng)
         if len(D3.FixedRolls) > 0:
             self.value = D3.FixedRolls.pop(0)
         else:
-            self.value = rnd.randint(1, 4)
+            self.value = self.rng.randint(1, 4)
 
     def __repr__(self):
         return f"D3({self.value})"
@@ -846,11 +884,12 @@ class D6(Die, Immutable):
         else:
             raise ValueError("Fixed result of D6 must be between 1 and 6")
 
-    def __init__(self, rnd):
+    def __init__(self, rng=None):
+        super().__init__(rng)
         if len(D6.FixedRolls) > 0:
             self.value = D6.FixedRolls.pop(0)
         else:
-            self.value = rnd.randint(1, 7)
+            self.value = self.rng.randint(1, 7)
 
     def __repr__(self):
         return f"D6({self.value})"
@@ -875,11 +914,12 @@ class D8(Die, Immutable):
         else:
             raise ValueError("Fixed result of D8 must be between 1 and 8")
 
-    def __init__(self, rnd):
+    def __init__(self, rng=None):
+        super().__init__(rng)
         if len(D8.FixedRolls) > 0:
             self.value = D8.FixedRolls.pop(0)
         else:
-            self.value = rnd.randint(1, 9)
+            self.value = self.rng.randint(1, 9)
 
     def __repr__(self):
         return f"D8({self.value})"
@@ -909,11 +949,12 @@ class BBDie(Die, Immutable):
     def clear_fixes():
         BBDie.FixedRolls.clear()
 
-    def __init__(self, rnd):
+    def __init__(self, rng=None):
+        super().__init__(rng)
         if len(BBDie.FixedRolls) > 0:
             self.value = BBDie.FixedRolls.pop(0)
         else:
-            r = rnd.randint(1, 7)
+            r = self.rng.randint(1, 7)
             if r == 6:
                 r = 3
             self.value = BBDieResult(r)
