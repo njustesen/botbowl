@@ -108,16 +108,7 @@ cdef class Path:
 
     def __reduce__(self):
         # Need custom reduce() because built in reduce() can't handle the c++ objects
-        def recreate_self(steps, rolls, block_dice, foul_roll, handoff_roll, prob):
-            path = Path()
-            path._steps = steps
-            path._rolls = rolls
-            path.block_dice = block_dice
-            path.foul_roll = foul_roll
-            path.handoff_roll = handoff_roll
-            path.prob = prob
-            return path
-        return recreate_self, (self.steps, self.rolls, self.block_dice, self.foul_roll, self.handoff_roll, self.prob)
+        return recreate_path, (self.steps, self.rolls, self.block_dice, self.foul_roll, self.handoff_roll, self.prob)
 
     def __eq__(self, other):
         return  self.prob == other.prob and \
@@ -136,6 +127,18 @@ cdef class Path:
 
 # Make the forward model treat Path as an immutable type.
 forward_model.immutable_types.add(Path)
+
+
+def recreate_path(steps, rolls, block_dice, foul_roll, handoff_roll, prob):
+    path = Path()
+    path._steps = steps
+    path._rolls = rolls
+    path.block_dice = block_dice
+    path.foul_roll = foul_roll
+    path.handoff_roll = handoff_roll
+    path.prob = prob
+    return path
+
 
 cdef Path create_path(NodePtr node):
     cdef Path path = Path()
