@@ -6,6 +6,7 @@ Bot Bowl IV is the fourth AI competition in Blood Bowl and will happen (virtuall
 Bot Bowl IV will have the same format as last year but with a few minor changes. 
 The framework also offers a few new features and improvements that will empower bot developers. 
 Group submissions are allowed but each person can only be part of one bot submission.
+Each group must have a team leader that will receive any prize money they win and the lead will be responsible of sharing it with the group.
 
 ## Qualifiers
 Each bot will play 10 matches of against the random baseline. 
@@ -26,7 +27,13 @@ Each match will use the following [configurations](../botbowl/data/config/bot-bo
 If a bot crashes and is unable to recover, the game will continue and the bot will simply timeout and not do anything during their turn.
 
 # Prizes
-Will be announced soon!
+
+Bot Bowl IV has a prize pool of $1000 with the following two prizes:
+
+- $500 is awarded to the 1st place winner
+- $500 is awarded to the author(s) of the most innovative machine learning bot. This prize is sponsored by [modl.ai](modl.ai) and the winner will be selected by a jury consisting of Julian Togelius and Sebastian Risi.
+
+The same person or team is allowed to win both prizes.
 
 # New Features
 
@@ -48,7 +55,7 @@ Check out the tutorial [how to use the forward model](forward-model.md) and [how
 
 # Important Dates
 
-*March 7th, 2022:* New version of the bot bowl framework [released](https://github.com/njustesen/botbowl/releases/tag/1.0.0) and on main.
+*March 7th, 2022:* New version of the bot bowl framework [released](https://github.com/njustesen/botbowl/releases/tag/1.0.1) and on main.
 
 *May 15th, 2022:* We aim to freeze the code base until the competition and will make _final_ release. If very critical bugs are found, we will only fix them after coordinating with everyone on the [Bot Bowl Discord server](https://discord.gg/MTXMuae).
 
