@@ -1,0 +1,13 @@
+<div class="container col-sm-12">
+
+    <section class="post">
+        <h3>Create new game</h3>
+        <hr />
+        Select Game Mode
+        <div ng-repeat="gameMode in gameModes">
+            <a href="#/game/create/{{ gameMode }}" class="btn btn-default" style="float:left; margin-right: 6px; margin-top:8px">{{ gameMode }}</a>
+        </div>
+
+    </section>
+
+</div>

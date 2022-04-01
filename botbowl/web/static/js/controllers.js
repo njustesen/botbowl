@@ -59,16 +59,28 @@ appControllers.controller('GameListCtrl', ['$scope', '$window', 'GameService', '
 ]);
 
 
+appControllers.controller('GameModeCtrl', ['$scope', '$window', 'GameService',
+    function GameModeCtrl($scope, $window, GameService) {
+        $scope.gameModes = [];
 
-appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
-    function GameCreateCtrl($scope, $location, GameService, TeamService, IconService, BotService) {
+        GameService.findAllModes().success(function(data) {
+            $scope.gameModes = data;
+        });
+
+    }
+]);
+
+appControllers.controller('GameCreateCtrl', ['$scope', '$routeParams', '$location', 'GameService', 'TeamService', 'IconService', 'BotService',
+    function GameCreateCtrl($scope, $routeParams, $location, GameService, TeamService, IconService, BotService) {
 
         $scope.teams = [];
         $scope.bots = [];
         $scope.home_team_id = null;
         $scope.away_team_id = null;
 
-        TeamService.findAll().success(function(data) {
+        $scope.game_mode = $routeParams.mode;
+
+        TeamService.findAll($scope.game_mode).success(function(data) {
             $scope.teams = data;
         });
 
@@ -105,13 +117,14 @@ appControllers.controller('GameCreateCtrl', ['$scope', '$location', 'GameService
             game.home_player = $scope.home_player;
             game.away_player = $scope.away_player;
 
-            GameService.create(game).success(function(data) {
+            GameService.create(game, $scope.game_mode).success(function(data) {
                 $location.path("/");
             }).error(function(status, data) {
                 console.log(status);
                 console.log(data);
             });
         };
+
     }
 ]);
 
@@ -613,17 +626,6 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
                         $scope.local_state.board[position.y][position.x].action_type = $scope.main_action.action_type;
                     }
                 }
-                // Crowd in dugouts - available during pushes
-                if (position != null){
-                    if (position.x === 0 && position.y > 0 && position.y < $scope.local_state.board.length - 1){
-                        $scope.local_state.away_dugout[position.y-1][1].available = true;
-                        $scope.local_state.away_dugout[position.y-1][1].action_type = $scope.main_action.action_type;
-                    }
-                    if (position.x === $scope.local_state.board[0].length - 1 && position.y > 0 && position.y < $scope.local_state.board.length - 1){
-                        $scope.local_state.home_dugout[position.y-1][0].available = true;
-                        $scope.local_state.home_dugout[position.y-1][0].action_type = $scope.main_action.action_type;
-                    }
-                }
             }
 
             // Select player if only one available
@@ -1073,28 +1075,7 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
 
                     // If player is selected or only one player available
                     if ($scope.available_players.length <= 1 || $scope.selectedPlayer() != null){
-
-                        // Convert dugout squares to pitch (crowd) squares if push procedure
-                        let crowd = $scope.game.stack[$scope.game.stack.length-1] === "Push" && square.area.startsWith("dugout");
-                        let crowd_square = {
-                            y: square.y+1,
-                            area: 'pitch',
-                            action_type: square.action_type
-                        };
-                        if (crowd){
-                            if (square.area === "dugout-away"){
-                                crowd_square.x = 0;
-                            } else if (square.area === "dugout-home"){
-                                crowd_square.x = $scope.local_state.board[0].length-1;
-                            }
-                        }
-                        // Otherwise - send action
-                        let action = null;
-                        if (crowd){
-                            action = $scope.create_action(crowd_square);
-                        } else {
-                            action = $scope.create_action(square);
-                        }
+                        let action = $scope.create_action(square);
                         $scope.act(action);
                     } else if (square.player != null && $scope.selectedPlayer() != null && $scope.selectedPlayer().player_id === square.player.player_id){
                         // Only deselect if other players are available
@@ -1128,6 +1109,13 @@ appControllers.controller('GamePlayCtrl', ['$scope', '$routeParams', '$location'
             }
 
         };
+
+        $scope.isDisabled = function isDisabled(x, y) {
+            if (x === 0 || y === 0 || x === $scope.local_state.board[0].length-1 || y === $scope.local_state.board.length-1){
+                return !$scope.local_state.board[y][x].available;
+            }
+            return false;
+        }
 
         $scope.squareHover = function squareHover(square) {
             if (square.player != null){

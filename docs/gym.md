@@ -288,7 +288,7 @@ The `EnvConf` class can be used to modify the default list above. There are thre
 botbowl comes with five environments with various difficulty, use `EnvConf(size=3)` to get a 3 player pitch:
 
 - **botbowl-v4:** 11 players on a 26x15 pitch (traditional size)
-- **botbowl-7-v4:** 7 players on a 20x11 pitch
+- **botbowl-7-v4:** 7 players on a 20x9 pitch
 - **botbowl-5-v4:** 5 players on a 16x9 pitch
 - **botbowl-3-v4:** 3 players on a 12x5 pitch
 - **botbowl-1-v4:** 1 player on a 4x3 pitch

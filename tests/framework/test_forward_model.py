@@ -142,11 +142,11 @@ def get_game(fast_mode=True, human_agents=True):
 
 def get_random_action(game):
     while True:
-        action_choice = game.rnd.choice(game.state.available_actions)
+        action_choice = game.rng.choice(game.state.available_actions)
         if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
             break
-    position = game.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
-    player = game.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+    position = game.rng.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+    player = game.rng.choice(action_choice.players) if len(action_choice.players) > 0 else None
     return botbowl.Action(action_choice.action_type, position=position, player=player)
 
 

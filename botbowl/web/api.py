@@ -11,6 +11,7 @@ from botbowl.core.game import *
 from botbowl.core.load import *
 from botbowl.ai.registry import list_bots
 from copy import deepcopy
+import uuid
 
 # Create a game in-memory host
 host = InMemoryHost()
@@ -18,12 +19,27 @@ replay_cache = {}
 step_cache = {}
 
 
-def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, config_name="web.json", board_size=11):
+def get_config_name(board_size):
+    return f"web-{board_size}.json"
+
+
+ruleset = load_rule_set('BB2016', all_rules=False)
+
+game_modes = {
+    'standard': get_config_name(11),
+    '7v7': get_config_name(7),
+    '5v5': get_config_name(5),
+    '3v3': get_config_name(3),
+    '1v1': get_config_name(1)
+}
+
+
+def new_game(away_team_name, home_team_name, away_agent=None, home_agent=None, game_mode='Standard'):
     assert away_agent is not None
     assert home_agent is not None
+    config_name = game_modes[game_mode]
     config = load_config(config_name)
-    #config.competition_mode = True
-    ruleset = load_rule_set(config.ruleset, all_rules=False)
+    board_size = config.pitch_max
     home = load_team_by_name(home_team_name, ruleset, board_size=board_size)
     away = load_team_by_name(away_team_name, ruleset, board_size=board_size)
     game_id = str(uuid.uuid1())
@@ -127,7 +143,10 @@ def get_saved_games():
     return host.get_saved_games()
 
 
-def get_teams(ruleset, board_size=11):
+def get_teams(game_mode):
+    config_name = game_modes[game_mode]
+    config = load_config(config_name)
+    board_size = config.pitch_max
     return load_all_teams(ruleset, board_size=board_size)
 
 

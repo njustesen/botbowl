@@ -476,6 +476,9 @@ a:hover {
   float: left;
   position: relative;
 }
+.gamecontent .square .pitch-square {
+  z-index: 100;
+}
 .gamecontent .square:hover {
   background-color: rgba(255, 255, 255, 0.33);
   cursor: pointer;
@@ -676,6 +679,11 @@ a:hover {
   border: solid 1px #555;
   /* background-image: url("@{img-url}/arenas/bb_pitch/dots/pitch_good.jpg"); */
   background-color: #222;
+  /***** 26x15 *****/
+  /***** 20x9 *****/
+  /***** 20x9 *****/
+  /***** 12x5 *****/
+  /***** 4x3 *****/
 }
 .gamecontent .gameboard .dugout {
   width: 60px;
@@ -697,20 +705,155 @@ a:hover {
   height: 100%;
   float: left;
 }
-.gamecontent .gameboard .pitch.swelteringheat {
-  background-image: url("../../img/arenas/pitch/heat.jpg");
+.gamecontent .gameboard .pitch.swelteringheat-26x15 {
+  background-image: url("../../img/arenas/pitch/heat-26x15.jpg");
 }
-.gamecontent .gameboard .pitch.verysunny {
-  background-image: url("../../img/arenas/pitch/sunny.jpg");
+.gamecontent .gameboard .pitch.verysunny-26x15 {
+  background-image: url("../../img/arenas/pitch/sunny-26x15.jpg");
 }
-.gamecontent .gameboard .pitch.blizzard {
-  background-image: url("../../img/arenas/pitch/blizzard.jpg");
+.gamecontent .gameboard .pitch.blizzard-26x15 {
+  background-image: url("../../img/arenas/pitch/blizzard-26x15.jpg");
 }
-.gamecontent .gameboard .pitch.nice {
-  background-image: url("../../img/arenas/pitch/nice.jpg");
+.gamecontent .gameboard .pitch.nice-26x15 {
+  background-image: url("../../img/arenas/pitch/nice-26x15.jpg");
 }
-.gamecontent .gameboard .pitch.pouringrain {
-  background-image: url("../../img/arenas/pitch/rain.jpg");
+.gamecontent .gameboard .pitch.pouringrain-26x15 {
+  background-image: url("../../img/arenas/pitch/rain-26x15.jpg");
+}
+.gamecontent .gameboard .pitch.swelteringheat-20x9 {
+  background-image: url("../../img/arenas/pitch/heat-20x9.jpg");
+  width: 600px;
+  height: 270px;
+  margin: 91px;
+}
+.gamecontent .gameboard .pitch.verysunny-20x9 {
+  background-image: url("../../img/arenas/pitch/sunny-20x9.jpg");
+  width: 600px;
+  height: 270px;
+  margin: 91px;
+}
+.gamecontent .gameboard .pitch.blizzard-20x9 {
+  background-image: url("../../img/arenas/pitch/blizzard-20x9.jpg");
+  width: 600px;
+  height: 270px;
+  margin: 91px;
+}
+.gamecontent .gameboard .pitch.nice-20x9 {
+  background-image: url("../../img/arenas/pitch/nice-20x9.jpg");
+  width: 600px;
+  height: 270px;
+  margin: 91px;
+}
+.gamecontent .gameboard .pitch.pouringrain-20x9 {
+  background-image: url("../../img/arenas/pitch/rain-20x9.jpg");
+  width: 600px;
+  height: 270px;
+  margin: 91px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-16x9 {
+  background-image: url("../../img/arenas/pitch/heat-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.verysunny-16x9 {
+  background-image: url("../../img/arenas/pitch/sunny-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.blizzard-16x9 {
+  background-image: url("../../img/arenas/pitch/blizzard-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.nice-16x9 {
+  background-image: url("../../img/arenas/pitch/nice-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.pouringrain-16x9 {
+  background-image: url("../../img/arenas/pitch/rain-16x9.jpg");
+  width: 480px;
+  height: 270px;
+  margin-left: 151px;
+  margin-top: 91px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-12x5 {
+  background-image: url("../../img/arenas/pitch/heat-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.verysunny-12x5 {
+  background-image: url("../../img/arenas/pitch/sunny-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.blizzard-12x5 {
+  background-image: url("../../img/arenas/pitch/blizzard-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.nice-12x5 {
+  background-image: url("../../img/arenas/pitch/nice-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.pouringrain-12x5 {
+  background-image: url("../../img/arenas/pitch/rain-12x5.jpg");
+  width: 360px;
+  height: 150px;
+  margin-left: 211px;
+  margin-top: 151px;
+}
+.gamecontent .gameboard .pitch.swelteringheat-4x3 {
+  background-image: url("../../img/arenas/pitch/heat-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.verysunny-4x3 {
+  background-image: url("../../img/arenas/pitch/sunny-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.blizzard-4x3 {
+  background-image: url("../../img/arenas/pitch/blizzard-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.nice-4x3 {
+  background-image: url("../../img/arenas/pitch/nice-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
+}
+.gamecontent .gameboard .pitch.pouringrain-4x3 {
+  background-image: url("../../img/arenas/pitch/rain-4x3.jpg");
+  width: 120px;
+  height: 90px;
+  margin-left: 331px;
+  margin-top: 181px;
 }
 .gamecontent .gameboard .playericon {
   line-height: 28px;

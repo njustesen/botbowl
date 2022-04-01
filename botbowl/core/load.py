@@ -244,6 +244,7 @@ def load_config(name):
     config.debug_mode = data['debug_mode']
     config.competition_mode = data['competition_mode']
     config.kick_scatter_dice = data['kick_scatter_dice']
+    config.throw_in_dice = data['throw_in_dice']
     config.defensive_formations = [load_formation(formation, size=config.pitch_max) for formation in
                                    data['defensive_formations']]
     config.offensive_formations = [load_formation(formation, size=config.pitch_max) for formation in

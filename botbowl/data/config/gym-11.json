@@ -14,11 +14,12 @@
     "debug_mode": false,
     "competition_mode": false,
     "kick_scatter_dice": "d6",
+    "throw_in_dice": "2d6",
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
     "time_limits": {
         "turn": 240,
-        "secondary": 5,
+        "secondary": 20,
         "init": 10,
         "end": 10
     }

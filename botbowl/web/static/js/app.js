@@ -19,9 +19,14 @@ app.config(['$locationProvider', '$routeProvider',
             templateUrl: 'static/partials/game.list.html',
             controller: 'GameListCtrl'
         }).
-        when('/game/create', {
+        when('/game/create/:mode', {
             templateUrl: 'static/partials/game.create.html',
             controller: 'GameCreateCtrl',
+            access: { requiredAuthentication: true }
+        }).
+        when('/game/create-mode', {
+            templateUrl: 'static/partials/game.create.mode.html',
+            controller: 'GameModeCtrl',
             access: { requiredAuthentication: true }
         }).
         when('/game/play/:id/:team_id', {

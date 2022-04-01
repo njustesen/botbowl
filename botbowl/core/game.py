@@ -27,7 +27,7 @@ class Game:
     config: Configuration
     ruleset: RuleSet
     state: GameState
-    rnd: np.random.RandomState
+    rng: np.random.RandomState
     ff_map: Any #??
     start_time: Optional[float]
     end_time: Optional[float]
@@ -55,7 +55,7 @@ class Game:
         self.config = config
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
-        self.rnd = np.random.RandomState(seed)
+        self.rng = np.random.RandomState(seed)
         self.ff_map = None
         self.start_time = None
         self.end_time = None
@@ -352,13 +352,13 @@ class Game:
                         return Action(action_type)
         # Take random action
         while True:
-            action_choice = self.rnd.choice(self.state.available_actions)
+            action_choice = self.rng.choice(self.state.available_actions)
             # Ignore PLACE_PLAYER actions
             if action_choice.action_type != botbowl.ActionType.PLACE_PLAYER:
                 break
-        action_choice = self.rnd.choice(self.state.available_actions)
-        position = self.rnd.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
-        player = self.rnd.choice(action_choice.players) if len(action_choice.players) > 0 else None
+        action_choice = self.rng.choice(self.state.available_actions)
+        position = self.rng.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+        player = self.rng.choice(action_choice.players) if len(action_choice.players) > 0 else None
         return Action(action_choice.action_type, position=position, player=player)
 
     def _squares_moved(self) -> list:
@@ -615,7 +615,7 @@ class Game:
         Sets the random seed of the game.
         '''
         self.seed = seed
-        self.rnd = np.random.RandomState(self.seed)
+        self.rng = np.random.RandomState(self.seed)
 
     def set_available_actions(self) -> None:
         """

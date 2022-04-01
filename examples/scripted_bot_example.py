@@ -5,8 +5,9 @@ import botbowl
 from botbowl import Action, ActionType, Square, BBDieResult, Skill, Formation, ProcBot
 import botbowl.core.pathfinding as pf
 import time
-
+import math
 from botbowl.core.pathfinding.python_pathfinding import Path  # Only used for type checker
+
 
 class MyScriptedBot(ProcBot):
 
@@ -92,7 +93,9 @@ class MyScriptedBot(ProcBot):
         if self.setup_actions:
             action = self.setup_actions.pop(0)
             return action
-        else:
+
+        # If traditional board size
+        if game.arena.width == 28 and game.arena.height == 17:
             if game.get_receiving_team() == self.my_team:
                 self.setup_actions = self.off_formation.actions(game, self.my_team)
                 self.setup_actions.append(Action(ActionType.END_SETUP))
@@ -101,6 +104,16 @@ class MyScriptedBot(ProcBot):
                 self.setup_actions.append(Action(ActionType.END_SETUP))
             action = self.setup_actions.pop(0)
             return action
+
+        # If smaller variant - use built-in setup actions
+
+        for action_choice in game.get_available_actions():
+            if action_choice.action_type != ActionType.END_SETUP and action_choice.action_type != ActionType.PLACE_PLAYER:
+                self.setup_actions.append(Action(ActionType.END_SETUP))
+                return Action(action_choice.action_type)
+
+        # This should never happen
+        return None
 
     def perfect_defense(self, game):
         return Action(ActionType.END_SETUP)
@@ -142,8 +155,13 @@ class MyScriptedBot(ProcBot):
         """
         Place the ball when kicking.
         """
-        left_center = Square(7, 8)
-        right_center = Square(20, 8)
+        side_width = game.arena.width / 2
+        side_height = game.arena.height
+        squares_from_left = math.ceil(side_width / 2)
+        squares_from_right = math.ceil(side_width / 2)
+        squares_from_top = math.floor(side_height / 2)
+        left_center = Square(squares_from_left, squares_from_top)
+        right_center = Square(game.arena.width - 1 - squares_from_right, squares_from_top)
         if game.is_team_side(left_center, self.opp_team):
             return Action(ActionType.PLACE_BALL, position=left_center)
         return Action(ActionType.PLACE_BALL, position=right_center)

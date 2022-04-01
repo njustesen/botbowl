@@ -67,7 +67,7 @@ def run_game(nbr_of_games, enable_forward_model):
 
     seed = 0
     random_agent = botbowl.make_bot('random')
-    random_agent.rnd = np.random.RandomState(seed)
+    random_agent.rng = np.random.RandomState(seed)
 
     for _ in range(nbr_of_games):
         game = Game(seed, home, away, home_agent, away_agent, config)

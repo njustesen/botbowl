@@ -1,5 +1,5 @@
 {
-    "name": "botbowl Web App",
+    "name": "botbowl web app",
     "arena": "ff-pitch-11.txt",
     "ruleset": "BB2016",
     "dungeon": false,
@@ -14,6 +14,7 @@
     "debug_mode": false,
     "competition_mode": true,
     "kick_scatter_dice": "d6",
+    "throw_in_dice": "2d6",
     "defensive_formations": ["def_spread.txt", "def_zone.txt"],
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
     "time_limits": {
