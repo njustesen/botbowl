@@ -19,7 +19,7 @@
     "offensive_formations": ["off_wedge.txt", "off_line.txt"],
     "time_limits": {
         "turn": 240,
-        "secondary": 5,
+        "secondary": 20,
         "init": 10,
         "end": 10
     }

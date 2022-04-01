@@ -1,9 +1,5 @@
 {
-    "name": "botbowl Web App",
-    "arena": "ff-pitch-1.txt",
-    "ruleset": "BB2016",
-    "dungeon": false,
-    "name": "botbowl 7",
+    "name": "botbowl 7 web app",
     "arena": "ff-pitch-7.txt",
     "ruleset": "BB2016",
     "dungeon": false,
