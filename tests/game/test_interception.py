@@ -3,7 +3,7 @@ import pytest
 
 
 def test_interception_success():
-    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(1, 1), (10, 1)],
+    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(2, 1), (10, 1)],
                                                                 opp_player_positions=[(5, 1)],
                                                                 ball_position=(1, 1))
 
@@ -19,9 +19,9 @@ def test_interception_success():
 
 
 def test_interception_safe_throw_success():
-    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(1, 1), (10, 1)],
+    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(2, 1), (10, 1)],
                                                                 opp_player_positions=[(5, 1)],
-                                                                ball_position=(1, 1))
+                                                                ball_position=(2, 1))
     passer.extra_skills.append(Skill.SAFE_THROW)
 
     game.step(Action(ActionType.START_PASS, player=passer))
@@ -38,9 +38,9 @@ def test_interception_safe_throw_success():
 
 
 def test_interception_safe_throw_fail():
-    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(1, 1), (10, 1)],
+    game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(2, 1), (10, 1)],
                                                                 opp_player_positions=[(5, 1)],
-                                                                ball_position=(1, 1),
+                                                                ball_position=(2, 1),
                                                                 rerolls=1)
     passer.extra_skills.append(Skill.SAFE_THROW)
 
