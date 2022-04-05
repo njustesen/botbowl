@@ -5,7 +5,7 @@ import pytest
 def test_interception_success():
     game, (passer, catcher, interceptor) = get_custom_game_turn(player_positions=[(2, 1), (10, 1)],
                                                                 opp_player_positions=[(5, 1)],
-                                                                ball_position=(1, 1))
+                                                                ball_position=(2, 1))
 
     game.step(Action(ActionType.START_PASS, player=passer))
     game.step(Action(ActionType.PASS, position=catcher.position))
