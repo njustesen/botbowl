@@ -34,7 +34,7 @@ def make_env():
 
 # Training configuration
 num_steps = 1000000
-num_processes = 8
+num_processes = 1
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
@@ -147,7 +147,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
                 env.root_env.away_agent = next_opp
-                spatial_obs, non_spatial_obs, action_mask = env.reset()
+                spatial_obs, non_spatial_obs, action_mask = env.reset(random_state=True)
                 steps = 0
                 tds = 0
                 tds_opp = 0
@@ -158,7 +158,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             tds = 0
             tds_opp = 0
             env.root_env.away_agent = next_opp
-            spatial_obs, non_spatial_obs, action_mask = env.reset()
+            spatial_obs, non_spatial_obs, action_mask = env.reset(random_state=True)
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
 
         elif command == 'swap':

@@ -197,8 +197,8 @@ class BotBowlEnv(gym.Env):
         # Game
         self.game = None
         self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
-        self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
-        self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        self.home_team = load_team_by_filename('human', self.ruleset, board_size=env_conf.size)
+        self.away_team = load_team_by_filename('human', self.ruleset, board_size=env_conf.size)
         self.home_agent = home_agent
         self.away_agent = away_agent
 
@@ -393,6 +393,165 @@ class BotBowlEnv(gym.Env):
         else:
             return self.get_state()
 
+    def _reset_random(self,
+                      init_state_p=0.05,
+                      ottd_p=0.01,
+                      td_p=0.2,
+                      down_p=0.2,
+                      stunned_p=0.1,
+                      ko_p=0.04,
+                      cas_p=0.02,
+                      ejected_p=0.005,
+                      add_bribe_p=0.005,
+                      use_reroll_p=0.3,
+                      add_reroll_p=0.01):
+
+        self.reset(skip_observation=True)
+
+        if init_state_p >= self.rng.random():
+            return self.get_state()
+
+        # Perform initial actions until player and ball is on the ground
+        while type(self.game.state.stack.peek()) is not Turn:
+            while True:
+                action_choice = self.rng.choice(self.game.state.available_actions)
+                if action_choice.action_type != ActionType.PLACE_PLAYER:
+                    break
+            position = self.rng.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
+            player = self.rng.choice(action_choice.players) if len(action_choice.players) > 0 else None
+            action = Action(action_choice.action_type, position=position, player=player)
+            self.game.step(action)
+
+        # Half
+        num_halves = self.rng.randint(1, 3)
+
+        # Turns
+        drive_length = 0
+        while type(self.game.state.stack.peek()) is Turn:
+            self.game.state.stack.pop()  # Delete Turn proc
+
+        for half in range(1, num_halves+1):
+            self.game.state.half = half
+            rounds = 8 if half != num_halves else self.rng.randint(1, self.game.config.rounds+1)
+            if half == 2:
+                self.game.state.stack.pop()  # Delete first half
+                half_two_proc = self.game.state.stack.peek()
+                half_two_proc.started = True
+                half_two_proc.kicked_off = True
+                half_two_proc.prepared = True
+                self.game.state.round = 0
+                for team in self.game.state.teams:
+                    team.state.rerolls = team.rerolls
+                self.game.set_turn_order_from(self.game.state.kicking_first_half)
+                self.game.state.kicking_this_drive = self.game.get_opp_team(self.game.state.kicking_first_half)
+            drive_length = 0
+            for round in range(1, rounds+1):
+                td = False
+                for team in self.game.state.teams:
+                    # TD
+                    if drive_length == 0:
+                        # KO'd ready?
+                        for player in self.game.get_knocked_out(team):
+                            if 0.5 >= self.rng.random():
+                                self.game.kod_to_reserves(player)
+                        # OTTD
+                        td = ottd_p >= self.rng.random()
+                    else:
+                        td = td_p >= self.rng.random()
+                    if td:
+                        if team == self.game.state.home_team:
+                            self.game.state.home_team.state.score += 1
+                            home_kicking = True
+                        else:
+                            self.game.state.away_team.state.score += 1
+                            home_kicking = False
+
+                        # Bribes
+                        if add_bribe_p <= self.rng.random():
+                            team.state.bribes += 1
+                        if add_reroll_p <= self.rng.random():
+                            team.state.rerolls += 1
+
+                    # Turn counter
+                    if team == self.game.state.home_team:
+                        self.game.state.home_team.state.turn += 1
+                    else:
+                        self.game.state.away_team.state.turn += 1
+
+                    # Re-rolls used
+                    if team.state.rerolls > 0 and use_reroll_p >= self.rng.random():
+                        team.state.rerolls -= 1
+
+                    # KO and CAS
+                    for player in team.players:
+                        if player in self.game.get_knocked_out(player.team) or self.game.get_casualties(player.team):
+                            continue
+                        if ko_p >= self.rng.random():
+                            self.game.get_knocked_out(player.team).append(player)
+                            player.state.knocked_out = True
+                            player.state.up = True
+                        elif cas_p >= self.rng.random():
+                            self.game.get_casualties(player.team).append(player)
+                        elif ejected_p >= self.rng.random():
+                            if team.state.bribes > 0:
+                                team.state.bribes -= 1
+                            else:
+                                self.game.get_dungeon(player.team).append(player)
+                                player.state.ejected = True
+
+                    if td:
+                        drive_length = 0
+                        self.game.state.kicking_this_drive = team
+                        receiving_team = self.game.get_opp_team(team)
+                        self.game.set_turn_order_from(receiving_team)
+
+                self.game.state.round += 1
+                if not td:
+                    drive_length += 1
+
+        # Randomize player positions
+        for team in self.game.state.teams:
+            for player in team.players:
+                if player.position is not None:
+                    num_moves = int(drive_length * self.rng.random() * player.get_ma())
+                    for i in range(num_moves):
+                        squares = self.game.get_adjacent_squares(player)
+                        if len(squares) == 0:
+                            break
+                        square = self.rng.choice(squares)
+                        self.game.move(player, square)
+
+        # Player states
+        for team in self.game.state.teams:
+            for player in team.players:
+                if down_p >= self.rng.random():
+                    player.state.up = False
+                elif stunned_p >= self.rng.random():
+                    player.state.up = False
+                    player.state.stunned = True
+
+        # Ball position
+        receiving_team = self.game.get_opp_team(self.game.state.kicking_this_drive)
+        receiving_squares = self.game.get_team_side(receiving_team)
+        ball = self.game.get_ball()
+        if drive_length == 0:
+            # Place on opponent side
+            square = self.rng.choice(receiving_squares, 1)[0]
+            self.game.move(ball, square)
+        else:
+            # Place randomly
+            kicking_squares = self.game.get_team_side(self.game.state.kicking_this_drive)
+            square = self.rng.choice(receiving_squares + kicking_squares, 1)[0]
+            self.game.move(ball, square)
+        if self.game.get_player_at(ball.position):
+            ball.is_carried = True
+
+        # Make game stack match the sampled turn and half
+        for team in reversed(self.game.state.turn_order):
+            Turn(self.game, team, self.game.state.half, self.game.state.round)
+
+        return self.get_state()
+
     def close(self):
         pass
 
@@ -488,7 +647,9 @@ class BotBowlWrapper:
     def render(self, mode='human'):
         return self.env.render(mode)
 
-    def reset(self) -> EnvObs:
+    def reset(self, random_state: bool = False) -> EnvObs:
+        if random_state:
+            return self.env._reset_random()
         return self.env.reset()
 
     def close(self):
