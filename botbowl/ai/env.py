@@ -55,6 +55,7 @@ class EnvConf:
                  extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
                  pathfinding=False):
 
+        self.size = size
         self.config: Configuration = load_config(f"gym-{size}")
         self.config.pathfinding_enabled = pathfinding
 
@@ -197,8 +198,9 @@ class BotBowlEnv(gym.Env):
         # Game
         self.game = None
         self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
-        self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
-        self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        team_name = 'human' if self.env_conf.size == 11 else f'human-{self.env_conf.size}'
+        self.home_team = load_team_by_filename(team_name, self.ruleset, board_size=self.env_conf.size)
+        self.away_team = load_team_by_filename(team_name, self.ruleset, board_size=self.env_conf.size)
         self.home_agent = home_agent
         self.away_agent = away_agent
 
