@@ -10,27 +10,19 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 import botbowl
-from botbowl.ai.env import BotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper
+from botbowl.ai.env import BotBowlEnv, RewardWrapper, EnvConf, ScriptedActionWrapper, BotBowlWrapper, PPCGWrapper, RandomInitStateWrapper
 from examples.a2c.a2c_agent import A2CAgent, CNNPolicy
 from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 1  # Options are 1,3,5,7,11
+env_size = 3  # Options are 1,3,5,7,11
 env_name = f"botbowl-{env_size}"
 env_conf = EnvConf(size=env_size, pathfinding=False)
 
+# When using A2CAgent with a trained network, remember to set exclude_pathfinding_moves = False if you train with pathfinding_enabled = True
+
 make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
-
-
-def make_env():
-    env = BotBowlEnv(env_conf)
-    if ppcg:
-        env = PPCGWrapper(env)
-    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
-    env = RewardWrapper(env, home_reward_func=A2C_Reward())
-    return env
-
 
 # Training configuration
 num_steps = 1000000
@@ -44,21 +36,30 @@ max_grad_norm = 0.05
 log_interval = 50
 save_interval = 10
 ppcg = False
-
+random_state_init = True
+save_steps = int(num_steps / 10)
 
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
 
 # Self-play
 selfplay = False  # Use this to enable/disable self-play
 selfplay_window = 1
-selfplay_save_steps = int(num_steps / 10)
-selfplay_swap_steps = selfplay_save_steps
+selfplay_swap_steps = save_steps
 
 # Architecture
 num_hidden_nodes = 128
 num_cnn_kernels = [32, 64]
 
-# When using A2CAgent, remember to set exclude_pathfinding_moves = False if you train with pathfinding_enabled = True
+
+def make_env():
+    env = BotBowlEnv(env_conf)
+    if ppcg:
+        env = PPCGWrapper(env)
+    # env = ScriptedActionWrapper(env, scripted_func=a2c_scripted_actions)
+    env = RewardWrapper(env, home_reward_func=A2C_Reward())
+    if random_state_init:
+        env = RandomInitStateWrapper(env)
+    return env
 
 
 # Make directories
@@ -147,7 +148,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                     print("Max. number of steps exceeded! Consider increasing the number.")
                 done = True
                 env.root_env.away_agent = next_opp
-                spatial_obs, non_spatial_obs, action_mask = env.reset(random_state=True)
+                spatial_obs, non_spatial_obs, action_mask = env.reset()
                 steps = 0
                 tds = 0
                 tds_opp = 0
@@ -158,7 +159,7 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
             tds = 0
             tds_opp = 0
             env.root_env.away_agent = next_opp
-            spatial_obs, non_spatial_obs, action_mask = env.reset(random_state=True)
+            spatial_obs, non_spatial_obs, action_mask = env.reset()
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
 
         elif command == 'swap':
@@ -269,18 +270,18 @@ def main():
     log_mean_reward = []
     log_difficulty = []
 
-    # self-play
-    selfplay_next_save = selfplay_save_steps
-    selfplay_next_swap = selfplay_swap_steps
-    selfplay_models = 0
+    # Checkpoints
+    next_save = save_steps
+    next_swap = selfplay_swap_steps
+    num_checkpoint_models = 0
 
+    model_name = f"{exp_id}_0.nn"
+    model_path = os.path.join(model_dir, model_name)
+    torch.save(ac_agent, model_path)
+    num_checkpoint_models += 1
     if selfplay:
-        model_name = f"{exp_id}_selfplay_0.nn"
-        model_path = os.path.join(model_dir, model_name)
-        torch.save(ac_agent, model_path)
         self_play_agent = make_agent_from_model(name=model_name, filename=model_path)
         envs.swap(self_play_agent)
-        selfplay_models += 1
 
     # Reset environments
     spatial_obs, non_spatial_obs, action_masks, _, _, _, _ = map(torch.from_numpy, envs.reset(difficulty))
@@ -387,20 +388,20 @@ def main():
         # Steps
         all_steps += num_processes * steps_per_update
 
-        # Self-play save
-        if selfplay and all_steps >= selfplay_next_save:
-            selfplay_next_save = max(all_steps+1, selfplay_next_save+selfplay_save_steps)
-            model_name = f"{exp_id}_selfplay_{selfplay_models}.nn"
+        # Checkpoint save
+        if all_steps >= next_save:
+            next_save = max(all_steps+1, next_save+save_steps)
+            model_name = f"{exp_id}_{num_checkpoint_models}.nn"
             model_path = os.path.join(model_dir, model_name)
             print(f"Saving {model_path}")
             torch.save(ac_agent, model_path)
-            selfplay_models += 1
+            num_checkpoint_models += 1
 
         # Self-play swap
-        if selfplay and all_steps >= selfplay_next_swap:
-            selfplay_next_swap = max(all_steps + 1, selfplay_next_swap+selfplay_swap_steps)
-            lower = max(0, selfplay_models-1-(selfplay_window-1))
-            i = random.randint(lower, selfplay_models-1)
+        if selfplay and all_steps >= next_swap:
+            next_swap = max(all_steps + 1, next_swap+selfplay_swap_steps)
+            lower = max(0, num_checkpoint_models-1-(selfplay_window-1))
+            i = random.randint(lower, num_checkpoint_models-1)
             model_name = f"{exp_id}_selfplay_{i}.nn"
             model_path = os.path.join(model_dir, model_name)
             print(f"Swapping opponent to {model_path}")
