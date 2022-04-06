@@ -604,9 +604,14 @@ class RandomInitStateWrapper(BotBowlWrapper):
                     # TD
                     if drive_length == 0:
                         # KO'd ready?
+                        '''
                         for player in self.game.get_knocked_out(team):
+                            
                             if 0.5 >= self.env.rng.random():
                                 self.game.kod_to_reserves(player)
+                                position = self.rng.choice(self.game.get_team_side(player.team))
+                                self.game.reserves_to_pitch(player, position)
+                        '''
                         # OTTD
                         td = self.ottd_p >= self.env.rng.random()
                     else:
@@ -631,21 +636,16 @@ class RandomInitStateWrapper(BotBowlWrapper):
                         team.state.rerolls -= 1
 
                     # KO and CAS
-                    for player in team.players:
-                        if player in self.game.get_knocked_out(player.team) or self.game.get_casualties(player.team):
-                            continue
+                    for player in self.game.get_players_on_pitch(team):
                         if self.ko_p >= self.env.rng.random():
-                            self.game.get_knocked_out(player.team).append(player)
-                            player.state.knocked_out = True
-                            player.state.up = True
+                            self.game.pitch_to_kod(player)
                         elif self.cas_p >= self.env.rng.random():
-                            self.game.get_casualties(player.team).append(player)
+                            self.game.pitch_to_casualties(player)
                         elif self.ejected_p >= self.env.rng.random():
                             if team.state.bribes > 0:
                                 team.state.bribes -= 1
                             else:
-                                self.game.get_dungeon(player.team).append(player)
-                                player.state.ejected = True
+                                self.game.pitch_to_dungeon(player)
 
                     if td:
                         drive_length = 0
@@ -706,6 +706,13 @@ class RandomInitStateWrapper(BotBowlWrapper):
         # filename = os.path.join(data_path, self.game.game_id + ".bb")
         # self.game.pause_clocks()
         # pickle.dump(self.game, open(filename, "wb"))
+
+        # Check no players were duped
+        for team in self.game.state.teams:
+            player_names = set()
+            for player in self.game.get_reserves(team):
+                assert player.name not in player_names
+                player_names.add(player.name)
 
         return self.get_state()
 

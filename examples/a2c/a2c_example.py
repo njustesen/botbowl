@@ -25,7 +25,7 @@ env_conf = EnvConf(size=env_size, pathfinding=False)
 make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
 
 # Training configuration
-num_steps = 1000000
+num_steps = 10000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
