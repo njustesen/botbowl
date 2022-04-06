@@ -16,14 +16,15 @@ from examples.a2c.a2c_env import A2C_Reward, a2c_scripted_actions
 from botbowl.ai.layers import *
 
 # Environment
-env_size = 3  # Options are 1,3,5,7,11
+env_size = 1  # Options are 1,3,5,7,11
 env_name = f"botbowl-{env_size}"
-env_conf = EnvConf(size=env_size, pathfinding=False)
+pathfinding = False
+env_conf = EnvConf(size=env_size, pathfinding=pathfinding)
 
 # When using A2CAgent with a trained network, remember to set exclude_pathfinding_moves = False if you train with pathfinding_enabled = True
 
 # Training configuration
-num_steps = 10000000
+num_steps = 1000000
 num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
@@ -34,7 +35,7 @@ max_grad_norm = 0.05
 log_interval = 100
 save_interval = 10
 ppcg = False
-random_state_init = True
+random_state_init = False
 save_steps = int(num_steps / 10)
 
 reset_steps = 5000  # The environment is reset after this many steps it gets stuck
@@ -72,6 +73,12 @@ ensure_dir("logs/")
 ensure_dir("models/")
 ensure_dir("plots/")
 exp_id = str(uuid.uuid1())
+if random_state_init:
+    exp_id += "_RSI"
+if ppcg:
+    exp_id += "_PPCG"
+if pathfinding:
+    exp_id += "_PF"
 log_dir = f"logs/{env_name}/"
 model_dir = f"models/{env_name}/"
 plot_dir = f"plots/{env_name}/"
