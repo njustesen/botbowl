@@ -55,6 +55,7 @@ class EnvConf:
                  extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
                  pathfinding=False):
 
+        self.size = size
         self.config: Configuration = load_config(f"gym-{size}")
         self.config.pathfinding_enabled = pathfinding
 
@@ -197,8 +198,9 @@ class BotBowlEnv(gym.Env):
         # Game
         self.game = None
         self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
-        self.home_team = load_team_by_filename('human', self.ruleset, board_size=env_conf.size)
-        self.away_team = load_team_by_filename('human', self.ruleset, board_size=env_conf.size)
+        team_name = 'human' if self.env_conf.size == 11 else f'human-{self.env_conf.size}'
+        self.home_team = load_team_by_filename(team_name, self.ruleset, board_size=self.env_conf.size)
+        self.away_team = load_team_by_filename(team_name, self.ruleset, board_size=self.env_conf.size)
         self.home_agent = home_agent
         self.away_agent = away_agent
 
@@ -515,11 +517,12 @@ class BotBowlEnv(gym.Env):
                 if player.position is not None:
                     num_moves = int(drive_length * self.rng.random() * player.get_ma())
                     for i in range(num_moves):
-                        squares = self.game.get_adjacent_squares(player)
+                        squares = self.game.get_adjacent_squares(player.position)
                         if len(squares) == 0:
                             break
                         square = self.rng.choice(squares)
-                        self.game.move(player, square)
+                        if not self.game.get_player_at(square) and not self.game.is_out_of_bounds(square):
+                            self.game.move(player, square)
 
         # Player states
         for team in self.game.state.teams:

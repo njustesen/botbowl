@@ -34,7 +34,7 @@ def make_env():
 
 # Training configuration
 num_steps = 1000000
-num_processes = 1
+num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
