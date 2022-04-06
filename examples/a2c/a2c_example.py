@@ -22,18 +22,16 @@ env_conf = EnvConf(size=env_size, pathfinding=False)
 
 # When using A2CAgent with a trained network, remember to set exclude_pathfinding_moves = False if you train with pathfinding_enabled = True
 
-make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
-
 # Training configuration
-num_steps = 100000000
-num_processes = 1
+num_steps = 10000000
+num_processes = 8
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
 entropy_coef = 0.01
 value_loss_coef = 0.5
 max_grad_norm = 0.05
-log_interval = 50
+log_interval = 100
 save_interval = 10
 ppcg = False
 random_state_init = True
@@ -45,6 +43,7 @@ reset_steps = 5000  # The environment is reset after this many steps it gets stu
 selfplay = False  # Use this to enable/disable self-play
 selfplay_window = 1
 selfplay_swap_steps = save_steps
+selfplay_agent = partial(A2CAgent, env_conf=env_conf)
 
 # Architecture
 num_hidden_nodes = 128
@@ -282,7 +281,7 @@ def main():
     torch.save(ac_agent, model_path)
     num_checkpoint_models += 1
     if selfplay:
-        self_play_agent = make_agent_from_model(name=model_name, filename=model_path)
+        self_play_agent = selfplay_agent(name=model_name, filename=model_path)
         envs.swap(self_play_agent)
 
     # Reset environments
@@ -407,7 +406,7 @@ def main():
             model_name = f"{exp_id}_selfplay_{i}.nn"
             model_path = os.path.join(model_dir, model_name)
             print(f"Swapping opponent to {model_path}")
-            envs.swap(make_agent_from_model(name=model_name, filename=model_path))
+            envs.swap(selfplay_agent(name=model_name, filename=model_path))
 
         # Logging
         if all_updates % log_interval == 0 and len(episode_rewards) >= num_processes:
