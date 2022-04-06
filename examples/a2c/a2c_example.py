@@ -25,8 +25,8 @@ env_conf = EnvConf(size=env_size, pathfinding=False)
 make_agent_from_model = partial(A2CAgent, env_conf=env_conf, scripted_func=a2c_scripted_actions)
 
 # Training configuration
-num_steps = 10000000
-num_processes = 8
+num_steps = 100000000
+num_processes = 1
 steps_per_update = 20
 learning_rate = 0.001
 gamma = 0.99
@@ -150,16 +150,18 @@ def worker(remote, parent_remote, env: BotBowlWrapper, worker_id):
                 env.root_env.away_agent = next_opp
                 spatial_obs, non_spatial_obs, action_mask = env.reset()
                 steps = 0
-                tds = 0
-                tds_opp = 0
+                game = env.game
+                tds = game.state.home_team.state.score
+                tds_opp = game.state.away_team.state.score
             remote.send((spatial_obs, non_spatial_obs, action_mask, reward, tds_scored, tds_opp_scored, done))
 
         elif command == 'reset':
             steps = 0
-            tds = 0
-            tds_opp = 0
             env.root_env.away_agent = next_opp
             spatial_obs, non_spatial_obs, action_mask = env.reset()
+            game = env.game
+            tds = game.state.home_team.state.score
+            tds_opp = game.state.away_team.state.score
             remote.send((spatial_obs, non_spatial_obs, action_mask, 0.0, 0, 0, False))
 
         elif command == 'swap':
