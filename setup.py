@@ -45,6 +45,7 @@ install_requires_packages = [
           'requests',
           'Cython >= 3.0a7',
           'pytest',
+          'pyglet',
           'matplotlib',
           'more_itertools'
 ]
