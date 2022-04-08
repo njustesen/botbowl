@@ -289,7 +289,7 @@ class BotBowlEnv(gym.Env):
             non_spatial_obs[next(index)] = opp_team.state.cheerleaders / 8.0
             non_spatial_obs[next(index)] = opp_team.state.bribes / 4.0
             non_spatial_obs[next(index)] = opp_team.state.babes / 4.0
-            non_spatial_obs[next(index)] = active_team.state.apothecaries / 2
+            non_spatial_obs[next(index)] = opp_team.state.apothecaries / 2
             non_spatial_obs[next(index)] = 1.0 * (not opp_team.state.reroll_used)
             non_spatial_obs[next(index)] = opp_team.state.fame / 2
         else:
