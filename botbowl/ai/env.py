@@ -382,8 +382,8 @@ class BotBowlEnv(gym.Env):
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
                          away_team=deepcopy(self.away_team),
-                         home_agent=BotBowlEnv._create_agent(self.home_agent),
-                         away_agent=BotBowlEnv._create_agent(self.away_agent),
+                         home_agent=BotBowlEnv._create_agent(self.home_agent, seed),
+                         away_agent=BotBowlEnv._create_agent(self.away_agent, seed),
                          config=self.env_conf.config,
                          ruleset=self.ruleset,
                          seed=seed)
@@ -457,13 +457,13 @@ class BotBowlEnv(gym.Env):
             raise AttributeError(f"Can't convert {action} to an action index")
 
     @staticmethod
-    def _create_agent(agent_option) -> Agent:
+    def _create_agent(agent_option, seed=None) -> Agent:
         if isinstance(agent_option, Agent):
             return agent_option
         elif agent_option == "human":
             return Agent("Gym Learner", human=True)
         elif agent_option == "random":
-            return RandomBot("Random bot")
+            return RandomBot("Random bot", seed=seed)
         elif agent_option in bot_registry.list():
             return bot_registry.make(agent_option)
         elif isinstance(agent_option, Agent):
