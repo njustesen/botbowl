@@ -533,11 +533,11 @@ class Pathfinder:
                 return [Path(node)]
             return []
         paths = []
-        for y in range(self.game.arena.height):
-            for x in range(self.game.arena.width):
+        for x in range(self.game.arena.width):
+            if type(target) == int and not target == x:
+                continue
+            for y in range(self.game.arena.height):
                 if self.player.position.x == x and self.player.position.y == y:
-                    continue
-                if type(target) == int and not target == x:
                     continue
                 node = self.locked_nodes[y][x]
                 if node is not None:
