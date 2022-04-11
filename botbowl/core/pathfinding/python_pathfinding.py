@@ -228,17 +228,8 @@ class Pathfinder:
     def get_path(self, target):
         paths = self.get_paths(target)
         if len(paths) > 0:
-            return self._get_shortest(paths)
+            return min(paths, key=len)
         return None
-
-    def _get_shortest(self, paths):
-        d = None
-        p = None
-        for path in paths:
-            if d is None or len(path.steps) < d:
-                d = len(path.steps)
-                p = path
-        return p
 
     def get_paths(self, target=None):
         self.gfis = self.player.num_gfis_left()
