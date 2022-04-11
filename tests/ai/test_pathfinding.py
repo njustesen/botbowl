@@ -208,6 +208,45 @@ def test_path_to_endzone_away(pf):
 
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_path_to_endzone_away_top(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    position = Square(23, 1)
+    game.put(player, position)
+    path = pf.get_safest_path_to_endzone(game, player)
+    assert path is not None
+    assert len(path) == 3
+    assert path.steps[-1].x == 26
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_path_to_endzone_away_bottom(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.away_team)[0]
+    player.role.ma = 6
+    position = Square(23, 15)
+    game.put(player, position)
+    path = pf.get_safest_path_to_endzone(game, player)
+    assert path is not None
+    assert len(path) == 3
+    assert path.steps[-1].x == 26
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_path_to_endzone_home_bottom(pf):
+    game = get_game_turn(empty=True)
+    player = game.get_reserves(game.state.home_team)[0]
+    player.role.ma = 6
+    position = Square(4, 15)
+    game.put(player, position)
+    path = pf.get_safest_path_to_endzone(game, player)
+    assert path is not None
+    assert len(path) == 3
+    assert path.steps[-1].x == 1
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
 def test_all_paths(pf):
     game = get_game_turn(empty=True)
     player = game.get_reserves(game.state.away_team)[0]
