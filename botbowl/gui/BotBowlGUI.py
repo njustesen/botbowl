@@ -1,16 +1,32 @@
+import os
 import pyglet
 import time
 from multiprocessing import Process, Pipe
+from pyglet import image
 
 
 def worker(remote, parent_remote, config):
     parent_remote.close()
-    width = 800
-    height = 600
+    width = 1200
+    height = 800
     window = pyglet.window.Window(width, height)
     main_batch = pyglet.graphics.Batch()
 
-    text = pyglet.text.Label(text="", x=100, y=100, batch=main_batch)
+    file_dir = os.path.dirname(__file__)
+    image_path = os.path.join(file_dir, "../web/static/img/")
+
+    # text = pyglet.text.Label(text="", x=100, y=100, batch=main_batch)
+    pitch_img = image.load(os.path.join(image_path, 'arenas/pitch/nice-26x15.jpg'))
+    pitch_img.anchor_x = pitch_img.width // 2
+    pitch_img.anchor_y = pitch_img.height
+    dugout_left = image.load(os.path.join(image_path, 'arenas/dugouts/dugout-left.jpg'))
+    dugout_left.anchor_x = dugout_left.width
+    dugout_left.anchor_y = dugout_left.height
+    dugout_right = image.load(os.path.join(image_path, 'arenas/dugouts/dugout-right.jpg'))
+    dugout_right.anchor_x = 0
+    dugout_right.anchor_y = dugout_right.height
+
+    header_height = 140
 
     data = None
 
@@ -26,17 +42,9 @@ def worker(remote, parent_remote, config):
             return
         print("Drawing")
         window.clear()
-        bg = pyglet.shapes.Rectangle(x=0, y=0, width=width, height=height, color=(0, 0, 0), batch=main_batch)
-        circle = pyglet.shapes.Circle(100+20*data, 100, 100, color=(50, 225, 30), batch=main_batch)
-        text.text = str(data)
-        text.x = 100 + data * 20
-        square = pyglet.shapes.Rectangle(200, 200, 200, 200, color=(55, 55, 255), batch=main_batch)
-        rectangle = pyglet.shapes.Rectangle(250, 300, 400, 200, color=(255, 22, 20), batch=main_batch)
-        rectangle.opacity = 128
-        rectangle.rotation = 33
-        line = pyglet.shapes.Line(100, 100, 100, 200, width=19, batch=main_batch)
-        line2 = pyglet.shapes.Line(150, 150, 444, 111, width=4, color=(200, 20, 20), batch=main_batch)
-        star = pyglet.shapes.Star(800, 400, 60, 40, num_spikes=20, color=(255, 255, 0), batch=main_batch)
+        pitch_img.blit(width / 2, height - header_height)
+        dugout_left.blit(width / 2 - pitch_img.width / 2, height - header_height)
+        dugout_right.blit(width / 2 + pitch_img.width / 2, height - header_height)
         main_batch.draw()
 
     pyglet.clock.schedule_interval(refresh, 1 / 120.0)
