@@ -7,15 +7,15 @@ from typing import List
 from examples.hash_example import gamestate_hash
 
 
-def ucb1(node):
+def ucb1(node, c=0.707):
     best_node = None
     best_score = None
     maximize = True
-    if type(node) is ActionNode and node.opp:
+    if type(node) is ActionNode and node.opp():
         maximize = False
     for child in node.children:
-        mean_score = child.score() if maximize else -child.score()
-        ucb_score = mean_score + np.sqrt((2 * np.log(node.num_visits())) / child.num_visits())
+        mean_score = child.score() if maximize else 1-child.score()
+        ucb_score = mean_score + 2*c * np.sqrt((2 * np.log(node.num_visits())) / child.num_visits())
         if best_score is None or ucb_score > best_score:
             best_node = child
             best_score = ucb_score
@@ -59,9 +59,18 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
     opp_has_ball = False
     ball_carrier = game.get_ball_carrier()
     if ball_carrier is not None:
-        own_has_ball = ball_carrier.team == own_team
-        opp_has_ball = ball_carrier.team == opp_team
-    return own_score - opp_score + (opp_cas + opp_ejected)/3 - (own_cas + own_ejected)/3 + opp_kos/5 - own_kos/5 + opp_stunned/10 - own_stunned/10 + opp_down/20 + own_down/20 + own_has_ball/2 - opp_has_ball/2
+        own_has_ball = 1 if ball_carrier.team == own_team else 0
+        opp_has_ball = 1 if ball_carrier.team == opp_team else 0
+    own = own_score/10 + own_has_ball/20 - (own_cas + own_ejected)/30 - own_kos/50 - own_stunned/100 - own_down/200
+    opp = opp_score/10 + opp_has_ball/20 - (opp_cas + opp_ejected)/30 - opp_kos/50 - opp_stunned/100 - opp_down/200
+    if game.state.game_over:
+        if game.get_winner() == agent:
+            return 1
+        elif game.get_winner() is None:
+            return 0.5
+        else:
+            return -1
+    return 0.5 + own - opp
 
 
 class Node:
@@ -81,6 +90,9 @@ class Node:
     def print(self):
         raise NotImplementedError
 
+    def opp(self):
+        raise NotImplementedError
+
 
 class ActionNode(Node):
 
@@ -89,8 +101,11 @@ class ActionNode(Node):
         self.hash_key = hash_key
         self.available_actions = self._extract_actions(game)
         self.children: List[ChangeNode] = []
-        self.opp = opp
+        self._opp = opp
         self.terminal = game.state.game_over
+
+    def opp(self):
+        return self._opp
 
     def _extract_actions(self, game):
         actions = []
@@ -114,7 +129,7 @@ class ActionNode(Node):
 
     def print(self, tabs=0):
         t = ''.join(['\t' for _ in range(tabs)])
-        min_max = 'min' if self.opp else 'max'
+        min_max = 'min' if self.opp() else 'max'
         if len(self.children) == 0:
             print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}/>")
         else:
@@ -137,7 +152,7 @@ class ChangeNode(Node):
 
     def print(self, tabs=0):
         t = ''.join(['\t' for _ in range(tabs)])
-        min_max = 'min' if self.parent.opp else 'max'
+        min_max = 'min' if self.parent.opp() else 'max'
         if len(self.outcomes) == 0:
             print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action.to_json()}'/>")
         else:
@@ -146,6 +161,9 @@ class ChangeNode(Node):
                 child.print(tabs+1)
         if len(self.outcomes) > 0:
             print(f"{t}</ChanceNode>")
+
+    def opp(self):
+        return self.parent.opp()
 
 
 class MCTS:
@@ -161,19 +179,20 @@ class MCTS:
         t = time.time()
         hash_key = gamestate_hash(self.game)
         root = ActionNode(self.game, hash_key)
+        root_score = self.heuristic(self.game, self.agent)
         step = self.game.get_step()
         while time.time() < t + seconds:
             tree_trajectory = self._select_and_expand(root)
             self._rollout()
-            value = self.heuristic(self.game, self.agent)
-            self._backpropagate(tree_trajectory, value)
+            score = self.heuristic(self.game, self.agent)
+            self._backpropagate(tree_trajectory, score)
             self.game.revert(step)
             # root.print()
         return root
 
-    def _backpropagate(self, trajectory, value):
+    def _backpropagate(self, trajectory, score):
         for node in reversed(trajectory):
-            node.visit(value)
+            node.visit(score)
 
     def _rollout(self):
         turns = self.game.state.home_team.state.turn + self.game.state.away_team.state.turn
@@ -230,7 +249,7 @@ class MCTSBot(botbowl.Agent):
                  action_policy=random_policy,
                  final_policy=most_visited,
                  heuristic=simple_heuristic,
-                 seconds=2,
+                 seconds=5,
                  seed=None):
         super().__init__(name)
         self.my_team = None
@@ -277,24 +296,25 @@ class MCTSBot(botbowl.Agent):
 # Register the bot to the framework
 botbowl.register_bot('mcts', MCTSBot)
 
-# Load configurations, rules, arena and teams
-config = botbowl.load_config("gym-1")
-ruleset = botbowl.load_rule_set(config.ruleset)
-arena = botbowl.load_arena(config.arena)
-for i in range(10):
-    home = botbowl.load_team_by_filename("human", ruleset)
-    away = botbowl.load_team_by_filename("human", ruleset)
-    config.competition_mode = False
-    config.debug_mode = False
-    config.fast_mode = True
-    config.pathfinding_enabled = True
+for i in [1, 3, 5, 7, 11]:
+    print(f"Testing env {i}")
+    # Load configurations, rules, arena and teams
+    config = botbowl.load_config(f"gym-{i}")
+    ruleset = botbowl.load_rule_set(config.ruleset)
+    arena = botbowl.load_arena(config.arena)
+    for _ in range(10):
+        home = botbowl.load_team_by_filename("human", ruleset)
+        away = botbowl.load_team_by_filename("human", ruleset)
+        config.competition_mode = False
+        config.debug_mode = False
+        config.fast_mode = True
+        config.pathfinding_enabled = True
 
-    # Play a game
-    bot_a = botbowl.make_bot("mcts")
-    bot_b = botbowl.make_bot("random")
-    game = botbowl.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
-    print("Starting game")
-    game.init()
-    print("Game is over")
-    print(f"{game.home_agent.name} score: {game.state.home_team.state.score}")
-    print(f"{game.away_agent.name} score: {game.state.away_team.state.score}")
+        # Play a game
+        bot_a = botbowl.make_bot("mcts")
+        bot_b = botbowl.make_bot("random")
+        game = botbowl.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
+        print("Starting game")
+        game.init()
+        print(f"{game.home_agent.name} score: {game.state.home_team.state.score}")
+        print(f"{game.away_agent.name} score: {game.state.away_team.state.score}")
