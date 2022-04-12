@@ -8,7 +8,7 @@ temporal difference learning, and parallelization in RL. If you are unfamiliar w
 - Reinforcement Learning ([Richard Sutton's book Reinforcement Learning: An Introduction](https://www.google.com/search?q=richard+sutton+introduction+reinforcement+learning))
 - Asynchronous/Synchronous Advantage Actor-Critic methods ([Asynchronous Methods for Deep Reinforcement Learning by Mnih et al.](https://arxiv.org/pdf/1602.01783.pdf) and [OpenAI Baselines: ACKTR & A2C](https://openai.com/blog/baselines-acktr-a2c/)) 
 
-The code presented in this tutorial is based on [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
+The code presented in this tutorial is based on [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/main/examples/a2c/a2c_example.py) which is inspired by a [pytorch implementation 
 of A2C](https://github.com/p-kar/a2c-acktr-vizdoom) by Pratyush Kar and the [botbowl-A2C](https://github.com/lasseuth1/blood_bowl2) 
 repository by Lasse Møller Uth and Christopher Jakobsen, which is no longer compatible with the newer versions of botbowl. 
 
@@ -410,7 +410,7 @@ def main():
 
 When the memory is full (20 steps has been reached), reward values are discounted and training is performed on the data in the memory where after it is flushed.
 
-Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) to understand how the learning works. 
+Take a look for yourself at the remaining code in [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/main/examples/a2c/a2c_example.py) to understand how the learning works. 
 Because the neural network is written in pytorch, you can run the code in debug mode and go through the code line by line.
 
 ## Results

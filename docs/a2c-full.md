@@ -38,7 +38,7 @@ We keep the normal board structure but increase the width of the endzone such th
 the width of the endzone gets smaller and of course only for the learning agent, not the opponent. Hopefully, we can then reach the maximum difficulty such that the agent learns to score 
 on the 1-square wide endzone as in the real game.
 
-In the [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py), you can enable this feature by setting ```ppcg = True```.
+In the [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/main/examples/a2c/a2c_example.py), you can enable this feature by setting ```ppcg = True```.
 What it does is simply to run the ```Touchdown()``` procedure directly in the game when the agent has the ball while within a certain distance of the endzone.
 This is done with the `PPCGWrapper`: 
 
@@ -118,7 +118,7 @@ At the moment, the policy is just a neural network with some code around it so t
 Additionally, the bot was only trained to play as the home team and would not know how to play on the other side of the field. Let's fix these things so we can watch 
 our agent play, and even play against it. The code that will be presented can also be used to submit your own neural network based bot to the Bot Bowl competition.
 
-The [examples/a2c/a2c_agent.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
+The [examples/a2c/a2c_agent.py](https://github.com/njustesen/botbowl/blob/main/examples/a2c/a2c_agent.py) script implements the ```Agent``` class just like the 
 scripted bots in our previous tutorials. In the constructor of our Agent class, we load in our neural network policy.
 
 ```python
