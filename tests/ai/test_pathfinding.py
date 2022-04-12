@@ -184,27 +184,29 @@ def test_dodge_needed_path_long(pf):
 
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
-def test_path_to_endzone_home(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.home_team)[0]
-    player.role.ma = 6
-    position = Square(4, 4)
-    game.put(player, position)
-    path = pf.get_safest_path_to_endzone(game, player)
+@pytest.mark.parametrize("y_start", [1, 4, 15])
+def test_path_to_endzone_home(pf, y_start):
+    game, (player, ) = get_custom_game_turn(player_positions=[(4, y_start)],
+                                            ball_position=(4, y_start))
+
+    path: python_pathfinding.Path = pf.get_safest_path_to_endzone(game, player)
     assert path is not None
     assert len(path) == 3
+    assert path.get_last_step().x == 1
 
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
-def test_path_to_endzone_away(pf):
-    game = get_game_turn(empty=True)
-    player = game.get_reserves(game.state.away_team)[0]
-    player.role.ma = 6
-    position = Square(23, 4)
-    game.put(player, position)
-    path = pf.get_safest_path_to_endzone(game, player)
+@pytest.mark.parametrize("y_start", [1, 4, 15])
+def test_path_to_endzone_away(pf, y_start):
+    game, (player, ) = get_custom_game_turn(player_positions=[],
+                                            opp_player_positions=[(23, y_start)],
+                                            ball_position=(23, y_start))
+
+    path: python_pathfinding.Path = pf.get_safest_path_to_endzone(game, player)
+
     assert path is not None
     assert len(path) == 3
+    assert path.get_last_step().x == 26
 
 
 @pytest.mark.parametrize("pf", pathfinding_modules_to_test)
