@@ -356,7 +356,7 @@ Here, we select the most visited action which is a conservative but simple strat
 ## Performance
 
 Let's see how well our MCTS bot performs on various board sizes. 
-We played MCTS with a time budget of 5 seconds per decision against the Random bot.
+We played MCTS with a time budget of 5 seconds per decision 10 times against the Random bot.
 
 ![MCTS vs. Random](img/mcts-win.png?raw=true "MCTS vs. Random Win Rate")
 
