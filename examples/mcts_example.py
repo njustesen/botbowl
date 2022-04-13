@@ -29,6 +29,8 @@ def random_policy(game, team):
             continue
         if action_choice.action_type == botbowl.ActionType.PLACE_PLAYER:
             continue
+        if action_choice.action_type == botbowl.ActionType.UNDO:
+            continue
         break
     position = np.random.choice(action_choice.positions) if len(action_choice.positions) > 0 else None
     player = np.random.choice(action_choice.players) if len(action_choice.players) > 0 else None
@@ -37,7 +39,7 @@ def random_policy(game, team):
 
 
 def most_visited(node):
-    return max(node.children, key=lambda x: x.num_visits())
+    return max(node.children, key=lambda x: x.num_visits() + x.score())
 
 
 def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
@@ -179,7 +181,6 @@ class MCTS:
         t = time.time()
         hash_key = gamestate_hash(self.game)
         root = ActionNode(self.game, hash_key)
-        root_score = self.heuristic(self.game, self.agent)
         step = self.game.get_step()
         while time.time() < t + seconds:
             tree_trajectory = self._select_and_expand(root)
@@ -215,7 +216,7 @@ class MCTS:
             trajectory.append(best_child)
             hash_key = gamestate_hash(self.game)
             if hash_key not in best_child.outcomes:
-                node = ActionNode(self.game, hash_key, self.game.actor == self.agent)
+                node = ActionNode(self.game, hash_key, self.game.actor != self.agent)
                 best_child.outcomes[hash_key] = node
                 trajectory.append(node)
                 return trajectory
@@ -236,7 +237,7 @@ class MCTS:
         if "SETUP_" in action.action_type.name:
             self.game.step(Action(botbowl.ActionType.END_SETUP))
         hash_key = gamestate_hash(self.game)
-        node = ActionNode(self.game, hash_key, self.game.actor == self.agent)
+        node = ActionNode(self.game, hash_key, self.game.actor != self.agent)
         chance_node.outcomes[node.hash_key] = node
         return chance_node, node
 
@@ -271,6 +272,8 @@ class MCTSBot(botbowl.Agent):
             return action
         game_copy = deepcopy(game)
         game_copy.enable_forward_model()
+        game_copy.config.competition_mode = False
+        game_copy.config.fast_mode = True
         game_copy.home_agent.human = True
         game_copy.away_agent.human = True
         mcts = MCTS(game_copy,
@@ -279,7 +282,7 @@ class MCTSBot(botbowl.Agent):
                     action_policy=self.action_policy,
                     heuristic=self.heuristic)
         root = mcts.run(self.seconds)
-        # root.print()
+        root.print()
         best_node = self.final_policy(root)
         print(f"Found action {best_node.action.to_json()} with {root.num_visits()} rollouts.")
         action = best_node.action
@@ -295,6 +298,12 @@ class MCTSBot(botbowl.Agent):
 
 # Register the bot to the framework
 botbowl.register_bot('mcts', MCTSBot)
+
+import botbowl.web.server as server
+
+if __name__ == "__main__":
+    server.start_server(debug=True, use_reloader=False, port=1234)
+
 
 for i in [1, 3, 5, 7, 11]:
     print(f"-- Testing env {i} --")

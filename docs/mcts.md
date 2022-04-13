@@ -370,6 +370,70 @@ We also see that our MCTS is able to score on the full board!
 
 Considering that this is almost a vanilla implementation of MCTS, it looks promising. 
 
+## Game Example
+
+Let's take a look at how the MCTS does in the following game situation, playing as the blue team.
+
+![MCTS game](img/mcts-game.png?raw=true "MCTS Game")
+
+```xml
+<ActionNode p='max' visits=483 score=0.4984368530020704 actions=7>
+	<ChanceNode p='max' visits=68 score=0.4952450980392156 action='{'action_type': 'START_MOVE', ...}'/>
+	<ChanceNode p='max' visits=69 score=0.5004347826086958 action='{'action_type': 'START_BLOCK', ...}'>
+		<ActionNode p='max' visits=69 score=0.5004347826086958 actions=3>
+			<ChanceNode p='max' visits=23 score=0.5006521739130435 action='{'action_type': 'BLOCK', ...}'>
+				<ActionNode p='max' visits=3 score=0.5033333333333333 actions=2/>
+				<ActionNode p='max' visits=3 score=0.49833333333333335 actions=2/>
+				<ActionNode p='max' visits=3 score=0.5083333333333333 actions=2/>
+				<ActionNode p='max' visits=7 score=0.4985714285714286 actions=2/>
+				<ActionNode p='max' visits=7 score=0.4992857142857143 actions=2/>
+			</ChanceNode>
+			<ChanceNode p='max' visits=23 score=0.5049275362318841 action='{'action_type': 'END_PLAYER_TURN', ...}'/>
+		</ActionNode>
+	</ChanceNode>
+	<ChanceNode p='max' visits=70 score=0.5015238095238095 action='{'action_type': 'START_BLITZ', 'position': None, 'player_id': '91df3c08-bb32-11ec-ae08-acde48001122'}'>
+		<ActionNode p='max' visits=70 score=0.5015238095238095 actions=13>
+			<ChanceNode p='max' visits=5 score=0.49400000000000005 action='{'action_type': 'MOVE', 'position': {'x': 1, 'y': 1}, ...}'/>
+			<ChanceNode p='max' visits=5 score=0.49700000000000005 action='{'action_type': 'MOVE', 'position': {'x': 1, 'y': 2}, ...}'/>
+			<ChanceNode p='max' visits=5 score=0.496 action='{'action_type': 'MOVE', 'position': {'x': 1, 'y': 3}, ...}'/>
+			<ChanceNode p='max' visits=5 score=0.49800000000000005 action='{'action_type': 'MOVE', 'position': {'x': 2, 'y': 1}, ...}'/>
+			<ChanceNode p='max' visits=6 score=0.505 action='{'action_type': 'MOVE', 'position': {'x': 2, 'y': 3}, ...}'/>
+			<ChanceNode p='max' visits=5 score=0.496 action='{'action_type': 'MOVE', 'position': {'x': 3, 'y': 1}, ...}'/>
+			<ChanceNode p='max' visits=5 score=0.496 action='{'action_type': 'MOVE', 'position': {'x': 3, 'y': 3}, ...}'/>
+			<ChanceNode p='max' visits=6 score=0.5066666666666667 action='{'action_type': 'MOVE', 'position': {'x': 4, 'y': 1}, 'player_id': None}'/>
+			<ChanceNode p='max' visits=6 score=0.5325000000000001 action='{'action_type': 'MOVE', 'position': {'x': 4, 'y': 2}, 'player_id': None}'>
+				<ActionNode p='max' visits=1 score=0.55 actions=2/>
+				<ActionNode p='max' visits=2 score=0.55 actions=2>
+					<ChanceNode p='max' visits=1 score=0.55 action='{'action_type': 'USE_REROLL', 'position': None, 'player_id': None}'>
+						<ActionNode p='max' visits=1 score=0.55 actions=12/>
+					</ChanceNode>
+				</ActionNode>
+				<ActionNode p='max' visits=3 score=0.515 actions=12>
+					<ChanceNode p='max' visits=1 score=0.495 action='{'action_type': 'MOVE', 'position': {'x': 1, 'y': 1}, ...}'>
+						<ActionNode p='max' visits=1 score=0.495 actions=2/>
+					</ChanceNode>
+					<ChanceNode p='max' visits=1 score=0.495 action='{'action_type': 'MOVE', 'position': {'x': 1, 'y': 2}, ...}'>
+						<ActionNode p='max' visits=1 score=0.495 actions=2/>
+					</ChanceNode>
+				</ActionNode>
+			</ChanceNode>
+			<ChanceNode p='max' visits=5 score=0.4923333333333334 action='{'action_type': 'MOVE', 'position': {'x': 4, 'y': 3}, .../>
+			<ChanceNode p='max' visits=5 score=0.497 action='{'action_type': 'BLOCK', 'position': {'x': 2, 'y': 2}, .../>
+			<ChanceNode p='max' visits=6 score=0.5025 action='{'action_type': 'END_PLAYER_TURN', ...}'/>
+		</ActionNode>
+	</ChanceNode>
+	<ChanceNode p='max' visits=68 score=0.4944362745098039 action='{'action_type': 'START_PASS', ...}'/>
+	<ChanceNode p='max' visits=69 score=0.4978743961352657 action='{'action_type': 'START_HANDOFF', ...}'/>
+	<ChanceNode p='max' visits=69 score=0.4978743961352657 action='{'action_type': 'START_FOUL', ...}'/>
+	<ChanceNode p='max' visits=70 score=0.5014761904761904 action='{'action_type': 'END_TURN', ...}'/>
+</ActionNode>
+Found action {'action_type': 'START_BLITZ', 'position': None, 'player_id': '91df3c08-bb32-11ec-ae08-acde48001122'} with 483 rollouts.
+```
+
+By inspecting the game tree we notice that it prefers to start a Blitz action and then move towards the ball. 
+We can further see that it did a few rollouts trying to move to the endzone but it probably failed every time. 
+The alternative move it seriously considers is blocking the opponent but it's not clear that it will gain an advantage.
+
 ## Next Steps
 Here are some suggestions to further improve the MCTS bot:
 
