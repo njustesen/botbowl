@@ -364,7 +364,9 @@ We see that MCTS is able to win against the random baseline on all variants.
 
 ![MCTS vs. Random](img/mcts-td.png?raw=true "MCTS vs. Random TD Diff")
 
-The Number of TDs is not on par with our Reinforcement Learning agents on the smaller variants but is able to score on the full board.
+The Number of TDs is not on par with our Reinforcement Learning agents on the smaller variants, possibly because our heuristic is focused on the zero-sum score, so 
+whenever it can search to the end of the game and is in the lead it doesn't care some much about scoring.
+We also see that our MCTS is able to score on the full board!
 
 Considering that this is almost a vanilla implementation of MCTS, it looks promising. 
 
@@ -374,6 +376,7 @@ Here are some suggestions to further improve the MCTS bot:
 - Better time management. 
 - Better heuristics, e.g. with a learned game state evaluation model.
 - Better action sampling, e.g. with a learned policy model. 
+- Parallelization techniques.
 - Why not try out AlphaZero?
 - There are possibly several performance improvements to be made
 - Tweak and tune the parameters such as the exploration constant `c`, the rollout depth limit, etc.

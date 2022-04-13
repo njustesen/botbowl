@@ -281,7 +281,7 @@ class MCTSBot(botbowl.Agent):
         root = mcts.run(self.seconds)
         # root.print()
         best_node = self.final_policy(root)
-        # print(f"Found action {best_node.action.action_type} with {root.num_visits()} rollouts.")
+        print(f"Found action {best_node.action.to_json()} with {root.num_visits()} rollouts.")
         action = best_node.action
         if "SETUP_" in action.action_type.name:
             self.next_action = Action(botbowl.ActionType.END_SETUP)
@@ -297,7 +297,7 @@ class MCTSBot(botbowl.Agent):
 botbowl.register_bot('mcts', MCTSBot)
 
 for i in [1, 3, 5, 7, 11]:
-    print(f"Testing env {i}")
+    print(f"-- Testing env {i} --")
     # Load configurations, rules, arena and teams
     config = botbowl.load_config(f"gym-{i}")
     ruleset = botbowl.load_rule_set(config.ruleset)
