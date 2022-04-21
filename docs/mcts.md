@@ -1,6 +1,6 @@
 # Monte Carlo Tree Search
 
-In the previous tutorial, we implemented a simple one-step look-ahead search. 
+In [the previous tutorial](https://github.com/njustesen/botbowl/blob/main/docs/search-based.md), we implemented a simple one-step look-ahead search. 
 Let's extend that into the famous algorithm Monte Carlo Tree Search (MCTS). 
 If you are unfamiliar with the algorithm, check out the seminal paper introducing the algorithm ([Monte-carlo Tree Search: A New Framework for Game AI](https://ojs.aaai.org/index.php/AIIDE/article/download/18700/18475)) and perhaps this survey paper ([A Survey of Monte Carlo Tree Search Methods](http://repository.essex.ac.uk/4117/1/MCTS-Survey.pdf)).
 
@@ -63,16 +63,7 @@ class ActionNode(Node):
         return len(self.children) == len(self.available_actions)
 
     def print(self, tabs=0):
-        t = ''.join(['\t' for _ in range(tabs)])
-        min_max = 'min' if self.opp else 'max'
-        if len(self.children) == 0:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}/>")
-        else:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}>")
-            for child in self.children:
-                child.print(tabs+1)
-        if len(self.children) > 0:
-            print(f'{t}</ActionNode>')
+        ...
 
 
 class ChangeNode(Node):
@@ -86,16 +77,7 @@ class ChangeNode(Node):
         self.terminal = False
 
     def print(self, tabs=0):
-        t = ''.join(['\t' for _ in range(tabs)])
-        min_max = 'min' if self.parent.opp else 'max'
-        if len(self.outcomes) == 0:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action.to_json()}'/>")
-        else:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action.to_json()}'>")
-            for _, child in self.outcomes.items():
-                child.print(tabs+1)
-        if len(self.outcomes) > 0:
-            print(f"{t}</ChanceNode>")
+        ...
 ```
 
 A few interesting things are going on here. 
@@ -108,10 +90,10 @@ First, notice that we extract all the different actions as individual Action obj
 Because setup is tricky, we ignore PLACE_PLAYER and END_SETUP actions, leaving out the built-in formation actions.
 Later, we make sure that we automatically perform the END_SETUP action right after performing a formation action.
 
-Second, notice the `is_fully_expanded` function. 
+Second, notice the `is_fully_expanded()` function. 
 It will check if we have tried every action at least once which is important for our tree policy later.
 
-Finally, the `print` functions will come in handy if we want to inspect the search tree.
+Finally, the recursive `print()` functions will come in handy if we want to inspect the search tree.
 
 ## MCTS
 Now, let's write the actual search algorithm.
@@ -276,7 +258,7 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
     return 0.5 + own - opp
 ```
 
-We attempt have the value returned by heuristic to be between 0 and 1, which is an assumption made by UCB1, such that 1 is a guaranteed win and 0 is a guaranteed loss. 
+We aim to have the value returned by the heuristic to be between 0 and 1, which is an assumption made by UCB1, such that 1 is a guaranteed win and 0 is a guaranteed loss. 
 Our heuristic here is, however, a bit wonky but loosely follows that idea.
 
 ### Backpropagation
@@ -345,22 +327,27 @@ class MCTSBot(botbowl.Agent):
         pass
 ````
 
-Two things are important to consider here. 
+Two things are important to note here. 
 
-First, we implement a feature to fix the next action, which we will use to perform the `END_SETUP` action, which we will do after a formation action.
+First, we implement a feature to fix the next action, which we will use to perform the `END_SETUP` action after a formation action.
 
 Second, is the use of the `final_policy` that is used to select the action to perform after the search is over.
 Among common strategies are selecting the action with the highest value, highest visit count, or a combination.  
-Here, we select the most visited action which is a conservative but simple strategy.
+Here, we select the most visited action, which is a conservative but simple strategy, and add the ucb1 score as a tie breaker.
+
+````python
+def most_visited(node):
+    return max(node.children, key=lambda x: x.num_visits() + x.score())
+````
 
 ## Performance
 
 Let's see how well our MCTS bot performs on various board sizes. 
-We played two versions of MCTS with a time budget of 5 seconds per decision 10 times against the Random bot as home and 10 times as away.
+We played two versions of MCTS with a time budget of 5 seconds per decision, 10 times against the Random bot as home and 10 times as away.
 The first version uses rollouts until the next turn and the second version uses no rollouts.
 
 | Rollouts | Env | Home Wins | Home TDs | Away Wins | Away TDs | Total Wins | Total TDs | AVG Wins | AVG TDs | Iterations |
-|----------|-----|----------:|---------:|----------:|---------:|-----------:|----------:|---------:|--------:|-----------:|
+|----------|----:|----------:|---------:|----------:|---------:|-----------:|----------:|---------:|--------:|-----------:|
 | Yes      |   1 |      9/10 |       35 |     10/10 |       41 |      19/20 |        76 |     0.95 |     3.8 |       1592 |
 | No       |   1 |     10/10 |       50 |      8/10 |       48 |      18/20 |        98 |     0.90 |     4.9 |       2038 |
 | Yes      |   3 |      9/10 |       11 |      8/10 |        9 |      17/20 |        20 |     0.85 |       1 |        688 |
@@ -372,19 +359,19 @@ The first version uses rollouts until the next turn and the second version uses 
 
 We see that MCTS is able to score and win against random on all the board sizes. 
 It is, however, striking that MCTS plays a lot better as the home team than the away team.
-This is because actions actions expanded left to right and thus actions that moves players towards the away team's endzone, are prioritized first.
+This is because actions are expanded left to right and thus actions that moves players towards the away team's endzone are prioritized first.
 To improve our MCTS agent when playing as away, we either need to flip the board or have a better move ordering when we expand.
 
 Our results gives us another key insight: on medium and large board sizes, MCTS is better when we don't do rollouts.
 This is probably because a) rollouts are expensive in Blood Bowl and b) doing random actions is Blood Bowl is risky and more often than not results in failed dodges.
 
-The Number of TDs is not quite on par with our Reinforcement Learning agents on the smaller variants while our MCTS is able to score on the full board!
+The number of TDs is not quite on par with our Reinforcement Learning agents on the smaller variants while our MCTS is able to score on the full board!
 
 Considering that this is almost a vanilla implementation of MCTS, with just a few small enhancements, it already looks promising. 
 
-## Search Inspection
+## Search Tree Inspection
 
-Let's take a look at how the MCTS does in the following game situation, playing as the blue team.
+Let's take a look at how MCTS does in the following game situation, playing as the blue team.
 
 ![MCTS game](img/mcts-game.png?raw=true "MCTS Game")
 
