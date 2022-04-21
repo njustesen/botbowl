@@ -359,18 +359,16 @@ Let's see how well our MCTS bot performs on various board sizes.
 We played two versions of MCTS with a time budget of 5 seconds per decision 10 times against the Random bot as home and 10 times as away.
 The first version uses rollouts until the next turn and the second version uses no rollouts.
 
-| Rollouts | Env |   Home  |   Away  |  Total  |     AVG     | Iterations |
-|----------|-----|----|----|----|----|----|----|------|------|------------|
-|          |     | W  | TD | W  | TD | W  | TD |  W   |  TD  |            |
-|----------|-----|----|----|----|----|----|----|------|------|------------|
-| Yes      |   1 |  9 | 35 | 10 | 41 | 19 | 76 | 0.95 |  3.8 |       1592 |
-| No       |   1 | 10 | 50 |  8 | 48 | 18 | 98 | 0.90 |  4.9 |       2038 |
-| Yes      |   3 |  9 | 11 |  8 |  9 | 17 | 20 | 0.85 |    1 |        688 |
-| No       |   3 | 10 | 26 |  9 | 18 | 19 | 45 | 0.85 | 2.25 |       1735 |
-| Yes      |   5 |  6 |  7 |  0 |  0 |  6 |  7 | 0.30 | 0.35 |        555 |
-| No       |   5 | 10 | 23 |  5 |  5 | 15 | 28 | 0.75 |  1.4 |       1299 |
-| Yes      |  11 |  2 |  2 |  0 |  0 |  2 |  2 | 0.10 |  0.1 |        361 |
-| No       |  11 |  7 | 12 |  0 |  0 |  7 | 12 | 0.35 |  0.6 |        951 |
+| Rollouts | Env | Home Wins | Home TDs | Away Wins | Away TDs | Total Wins | Total TDs | AVG Wins | AVG TDs | Iterations |
+|----------|-----|-----------|----------|-----------|----------|------------|-----------|----------|---------|------------|
+| Yes      |   1 |      9/10 |       35 |     10/10 |       41 |      19/20 |        76 |     0.95 |     3.8 |       1592 |
+| No       |   1 |     10/10 |       50 |      8/10 |       48 |      18/20 |        98 |     0.90 |     4.9 |       2038 |
+| Yes      |   3 |      9/10 |       11 |      8/10 |        9 |      17/20 |        20 |     0.85 |       1 |        688 |
+| No       |   3 |     10/10 |       26 |      9/10 |       18 |      19/20 |        45 |     0.85 |    2.25 |       1735 |
+| Yes      |   5 |      6/10 |        7 |      0/10 |        0 |       6/20 |         7 |     0.30 |    0.35 |        555 |
+| No       |   5 |     10/10 |       23 |      5/10 |        5 |      15/20 |        28 |     0.75 |     1.4 |       1299 |
+| Yes      |  11 |      2/10 |        2 |      0/10 |        0 |       2/20 |         2 |     0.10 |     0.1 |        361 |
+| No       |  11 |      7/10 |       12 |      0/10 |        0 |       7/20 |        12 |     0.35 |     0.6 |        951 |
 
 We see that MCTS is able to score and win against random on all the board sizes. 
 It is, however, striking that MCTS plays a lot better as the home team than the away team.
