@@ -3,7 +3,11 @@ from botbowl.core import Action
 
 
 def player_hash(player: botbowl.core.model.Player) -> str:
-    return f"p[{hash(player.role)}-{hash(player.position)}-{hash(player.state)}]"
+    if player.position is None:
+        pos = None
+    else:
+        pos = hash(player.position)
+    return f"p[{player.name}-{pos}-{hash(player.state)}]"
 
 
 def team_hash(game: botbowl.Game, team: botbowl.Team):

@@ -67,11 +67,9 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
     opp = opp_score/10 + opp_has_ball/20 - (opp_cas + opp_ejected)/30 - opp_kos/50 - opp_stunned/100 - opp_down/200
     if game.state.game_over:
         if game.get_winner() == agent:
-            return 1
+            own += 0.1
         elif game.get_winner() is None:
-            return 0.5
-        else:
-            return -1
+            opp += 0.1
     return 0.5 + own - opp
 
 
@@ -94,6 +92,9 @@ class Node:
 
     def opp(self):
         raise NotImplementedError
+
+    def depth_stats(self):
+        pass
 
 
 class ActionNode(Node):
@@ -141,6 +142,19 @@ class ActionNode(Node):
         if len(self.children) > 0:
             print(f'{t}</ActionNode>')
 
+    def depth_stats(self):
+        if len(self.children) == 0:
+            return 0, 0, 0
+        min_depths = []
+        max_depths = []
+        avg_depths = []
+        for child in self.children:
+            min_d, max_d, avg_d = child.depth_stats()
+            min_depths.append(min_d)
+            max_depths.append(max_d)
+            avg_depths.append(avg_d)
+        return 1 + np.min(min_depths), 1 + np.max(max_depths), 1 + np.mean(avg_depths)
+
 
 class ChangeNode(Node):
 
@@ -167,6 +181,17 @@ class ChangeNode(Node):
     def opp(self):
         return self.parent.opp()
 
+    def depth_stats(self):
+        min_depths = []
+        max_depths = []
+        avg_depths = []
+        for key, child in self.outcomes.items():
+            min_d, max_d, avg_d = child.depth_stats()
+            min_depths.append(min_d)
+            max_depths.append(max_d)
+            avg_depths.append(avg_d)
+        return np.min(min_depths), np.max(max_depths), np.mean(avg_depths)
+
 
 class MCTS:
 
@@ -184,7 +209,7 @@ class MCTS:
         step = self.game.get_step()
         while time.time() < t + seconds:
             tree_trajectory = self._select_and_expand(root)
-            self._rollout()
+            # self._rollout()
             score = self.heuristic(self.game, self.agent)
             self._backpropagate(tree_trajectory, score)
             self.game.revert(step)
@@ -196,8 +221,8 @@ class MCTS:
             node.visit(score)
 
     def _rollout(self):
-        turns = self.game.state.home_team.state.turn + self.game.state.away_team.state.turn
-        while not self.game.state.game_over and turns == self.game.state.home_team.state.turn + self.game.state.away_team.state.turn:
+        max_turns = self.game.state.home_team.state.turn + self.game.state.away_team.state.turn
+        while not self.game.state.game_over and max_turns >= self.game.state.home_team.state.turn + self.game.state.away_team.state.turn:
             action = self.action_policy(self.game, self.game.get_agent_team(self.agent))
             self.game.step(action)
             if "SETUP_" in action.action_type.name:
@@ -261,6 +286,7 @@ class MCTSBot(botbowl.Agent):
         self.heuristic = heuristic
         self.seconds = seconds
         self.next_action = None
+        self.stats = []
 
     def new_game(self, game, team):
         self.my_team = team
@@ -282,9 +308,11 @@ class MCTSBot(botbowl.Agent):
                     action_policy=self.action_policy,
                     heuristic=self.heuristic)
         root = mcts.run(self.seconds)
-        root.print()
+        # root.print()
         best_node = self.final_policy(root)
-        print(f"Found action {best_node.action.to_json()} with {root.num_visits()} rollouts.")
+        # print(f"Found action {best_node.action.to_json()} with {root.num_visits()} rollouts.")
+        min_depth, max_depth, avg_depth = root.depth_stats()
+        self.stats.append((root.num_visits(), min_depth, max_depth, avg_depth))
         action = best_node.action
         if "SETUP_" in action.action_type.name:
             self.next_action = Action(botbowl.ActionType.END_SETUP)
@@ -299,31 +327,70 @@ class MCTSBot(botbowl.Agent):
 # Register the bot to the framework
 botbowl.register_bot('mcts', MCTSBot)
 
-import botbowl.web.server as server
-
 if __name__ == "__main__":
-    server.start_server(debug=True, use_reloader=False, port=1234)
+    # import botbowl.web.server as server
+    # server.start_server(debug=True, use_reloader=False, port=1234)
 
+    for i in [1, 3, 5, 11]:
+        print(f"-- Testing env {i} --")
+        # Load configurations, rules, arena and teams
+        config = botbowl.load_config(f"gym-{i}")
+        ruleset = botbowl.load_rule_set(config.ruleset)
+        arena = botbowl.load_arena(config.arena)
+        mcts_wins_env = 0
+        random_wins_env = 0
+        mcts_tds_env = 0
+        random_tds_env = 0
+        for as_home in [True, False]:
+            print("Playing as Home")
+            mcts_wins = 0
+            mcts_tds = 0
+            random_wins = 0
+            random_tds = 0
+            for _ in range(1):
+                home = botbowl.load_team_by_filename("human", ruleset, board_size=i)
+                away = botbowl.load_team_by_filename("human", ruleset, board_size=i)
+                config.competition_mode = False
+                config.debug_mode = False
+                config.fast_mode = True
+                config.pathfinding_enabled = True
 
-for i in [1, 3, 5, 7, 11]:
-    print(f"-- Testing env {i} --")
-    # Load configurations, rules, arena and teams
-    config = botbowl.load_config(f"gym-{i}")
-    ruleset = botbowl.load_rule_set(config.ruleset)
-    arena = botbowl.load_arena(config.arena)
-    for _ in range(10):
-        home = botbowl.load_team_by_filename("human", ruleset)
-        away = botbowl.load_team_by_filename("human", ruleset)
-        config.competition_mode = False
-        config.debug_mode = False
-        config.fast_mode = True
-        config.pathfinding_enabled = True
-
-        # Play a game
-        bot_a = botbowl.make_bot("mcts")
-        bot_b = botbowl.make_bot("random")
-        game = botbowl.Game(1, home, away, bot_a, bot_b, config, arena=arena, ruleset=ruleset)
-        print("Starting game")
-        game.init()
-        print(f"{game.home_agent.name} score: {game.state.home_team.state.score}")
-        print(f"{game.away_agent.name} score: {game.state.away_team.state.score}")
+                # Play a game
+                bot_a = botbowl.make_bot("mcts")
+                bot_b = botbowl.make_bot("random")
+                home_bot = bot_a if as_home else bot_b
+                away_bot = bot_b if as_home else bot_a
+                game = botbowl.Game(1, home, away, home_bot, away_bot, config, arena=arena, ruleset=ruleset)
+                print("Starting game")
+                game.init()
+                print(f"{game.home_agent.name} score: {game.state.home_team.state.score}")
+                print(f"{game.away_agent.name} score: {game.state.away_team.state.score}")
+                visits, min_depths, max_depths, avg_depths = np.mean(bot_a.stats, axis=0)
+                print(f"MCTS Visits: {visits}, Min Depth: {min_depths}, Max. Depth: {max_depths}, Avg. Depth: {avg_depths}")
+                if game.get_winner() == home_bot and as_home:
+                    mcts_wins += 1
+                elif game.get_winner() == away_bot and not as_home:
+                    mcts_wins += 1
+                elif game.get_winner() is not None:
+                    random_wins += 1
+                if as_home:
+                    mcts_tds += game.state.home_team.state.score
+                    random_tds += game.state.away_team.state.score
+                else:
+                    random_tds += game.state.home_team.state.score
+                    mcts_tds += game.state.away_team.state.score
+            print("--------------------------")
+            print(f"MCTS wins: {mcts_wins}")
+            print(f"Random wins: {random_wins}")
+            print(f"MCTS TDs: {mcts_tds}")
+            print(f"Random TDs: {random_tds}")
+            mcts_wins_env += mcts_wins
+            random_wins_env += random_wins
+            mcts_tds_env += mcts_tds
+            random_tds_env += random_tds
+            break
+        print(f"############ {i} ############")
+        print(f"MCTS wins: {mcts_wins_env}")
+        print(f"Random wins: {random_wins_env}")
+        print(f"MCTS TDs: {mcts_tds_env}")
+        print(f"Random TDs: {random_tds_env}")

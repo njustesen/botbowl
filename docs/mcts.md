@@ -356,21 +356,34 @@ Here, we select the most visited action which is a conservative but simple strat
 ## Performance
 
 Let's see how well our MCTS bot performs on various board sizes. 
-We played MCTS with a time budget of 5 seconds per decision 10 times against the Random bot.
+We played two versions of MCTS with a time budget of 5 seconds per decision 10 times against the Random bot as home and 10 times as away.
+The first version uses rollouts until the next turn and the second version uses no rollouts.
 
-![MCTS vs. Random](img/mcts-win.png?raw=true "MCTS vs. Random Win Rate")
+| Rollouts | Env |   Home  |   Away  |  Total  |     AVG     | Iterations |
+|          |     | W  | TD | W  | TD | W  | TD |  W   |  TD  |            |
+|----------|-----|----|----|----|----|----|----|------|------|------------|
+| Yes      |   1 |  9 | 35 | 10 | 41 | 19 | 76 | 0.95 |  3.8 |       1592 |
+| No       |   1 | 10 | 50 |  8 | 48 | 18 | 98 | 0.90 |  4.9 |       2038 |
+| Yes      |   3 |  9 | 11 |  8 |  9 | 17 | 20 | 0.85 |    1 |        688 |
+| No       |   3 | 10 | 26 |  9 | 18 | 19 | 45 | 0.85 | 2.25 |       1735 |
+| Yes      |   5 |  6 |  7 |  0 |  0 |  6 |  7 | 0.30 | 0.35 |        555 |
+| No       |   5 | 10 | 23 |  5 |  5 | 15 | 28 | 0.75 |  1.4 |       1299 |
+| Yes      |  11 |  2 |  2 |  0 |  0 |  2 |  2 | 0.10 |  0.1 |        361 |
+| No       |  11 |  7 | 12 |  0 |  0 |  7 | 12 | 0.35 |  0.6 |        951 |
 
-We see that MCTS is able to win against the random baseline on all variants.
+We see that MCTS is able to score and win against random on all the board sizes. 
+It is, however, striking that MCTS plays a lot better as the home team than the away team.
+This is because actions actions expanded left to right and thus actions that moves players towards the away team's endzone, are prioritized first.
+To improve our MCTS agent when playing as away, we either need to flip the board or have a better move ordering when we expand.
 
-![MCTS vs. Random](img/mcts-td.png?raw=true "MCTS vs. Random TD Diff")
+Our results gives us another key insight: on medium and large board sizes, MCTS is better when we don't do rollouts.
+This is probably because a) rollouts are expensive in Blood Bowl and b) doing random actions is Blood Bowl is risky and more often than not results in failed dodges.
 
-The Number of TDs is not on par with our Reinforcement Learning agents on the smaller variants, possibly because our heuristic is focused on the zero-sum score, so 
-whenever it can search to the end of the game and is in the lead it doesn't care some much about scoring.
-We also see that our MCTS is able to score on the full board!
+The Number of TDs is not quite on par with our Reinforcement Learning agents on the smaller variants while our MCTS is able to score on the full board!
 
-Considering that this is almost a vanilla implementation of MCTS, it looks promising. 
+Considering that this is almost a vanilla implementation of MCTS, with just a few small enhancements, it already looks promising. 
 
-## Game Example
+## Search Inspection
 
 Let's take a look at how the MCTS does in the following game situation, playing as the blue team.
 
@@ -437,10 +450,10 @@ The alternative move it seriously considers is blocking the opponent but it's no
 ## Next Steps
 Here are some suggestions to further improve the MCTS bot:
 
+- Better move ordering or action sampling, e.g. with a learned policy model. 
 - Better time management. 
 - Better heuristics, e.g. with a learned game state evaluation model.
-- Better action sampling, e.g. with a learned policy model. 
-- Parallelization techniques.
+- Apply parallelization techniques?
 - Why not try out AlphaZero?
 - There are possibly several performance improvements to be made
-- Tweak and tune the parameters such as the exploration constant `c`, the rollout depth limit, etc.
+- Tweak and tune the parameters such as the exploration constant `c`
