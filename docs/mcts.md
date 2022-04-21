@@ -360,6 +360,7 @@ We played two versions of MCTS with a time budget of 5 seconds per decision 10 t
 The first version uses rollouts until the next turn and the second version uses no rollouts.
 
 | Rollouts | Env |   Home  |   Away  |  Total  |     AVG     | Iterations |
+|----------|-----|----|----|----|----|----|----|------|------|------------|
 |          |     | W  | TD | W  | TD | W  | TD |  W   |  TD  |            |
 |----------|-----|----|----|----|----|----|----|------|------|------------|
 | Yes      |   1 |  9 | 35 | 10 | 41 | 19 | 76 | 0.95 |  3.8 |       1592 |
