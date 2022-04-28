@@ -170,9 +170,9 @@ class ChangeNode(Node):
         t = ''.join(['\t' for _ in range(tabs)])
         min_max = 'min' if self.parent.opp() else 'max'
         if len(self.outcomes) == 0:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action.to_json()}'/>")
+            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'/>")
         else:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action.to_json()}'>")
+            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'>")
             for _, child in self.outcomes.items():
                 child.print(tabs+1)
         if len(self.outcomes) > 0:
@@ -324,10 +324,11 @@ class MCTSBot(botbowl.Agent):
         pass
 
 
-# Register the bot to the framework
-botbowl.register_bot('mcts', MCTSBot)
+def main():
 
-if __name__ == "__main__":
+    # Register the bot to the framework
+    botbowl.register_bot('mcts', MCTSBot)
+
     # import botbowl.web.server as server
     # server.start_server(debug=True, use_reloader=False, port=1234)
 
@@ -347,7 +348,7 @@ if __name__ == "__main__":
             mcts_tds = 0
             random_wins = 0
             random_tds = 0
-            for _ in range(1):
+            for _ in range(10):
                 home = botbowl.load_team_by_filename("human", ruleset, board_size=i)
                 away = botbowl.load_team_by_filename("human", ruleset, board_size=i)
                 config.competition_mode = False
@@ -366,7 +367,7 @@ if __name__ == "__main__":
                 print(f"{game.home_agent.name} score: {game.state.home_team.state.score}")
                 print(f"{game.away_agent.name} score: {game.state.away_team.state.score}")
                 visits, min_depths, max_depths, avg_depths = np.mean(bot_a.stats, axis=0)
-                print(f"MCTS Visits: {visits}, Min Depth: {min_depths}, Max. Depth: {max_depths}, Avg. Depth: {avg_depths}")
+                print(f"MCTS Iterations: {visits}, Min Depth: {min_depths}, Max. Depth: {max_depths}, Avg. Depth: {avg_depths}")
                 if game.get_winner() == home_bot and as_home:
                     mcts_wins += 1
                 elif game.get_winner() == away_bot and not as_home:
@@ -388,9 +389,12 @@ if __name__ == "__main__":
             random_wins_env += random_wins
             mcts_tds_env += mcts_tds
             random_tds_env += random_tds
-            break
         print(f"############ {i} ############")
         print(f"MCTS wins: {mcts_wins_env}")
         print(f"Random wins: {random_wins_env}")
         print(f"MCTS TDs: {mcts_tds_env}")
         print(f"Random TDs: {random_tds_env}")
+
+
+if __name__ == "__main__":
+    main()
