@@ -11,7 +11,7 @@ from botbowl.core.table import *
 from botbowl.core.forward_model import Immutable, Reversible, CallableStep, treat_as_immutable, immutable_after_init
 
 from abc import ABC, abstractmethod
-from copy import copy, deepcopy
+from copy import copy
 from typing import List, Optional, Set, Dict
 
 import numpy as np
@@ -281,6 +281,24 @@ class PlayerState(Reversible):
                          [f"{attr}=True" for attr in PlayerState.show_if_true_attr if getattr(self, attr)]
         return f'PlayerState({", ".join(states_to_show)})'
 
+    def __hash__(self):
+        h = 1
+        for i, (attr, value) in enumerate(self.__dict__.items()):
+            if type(value) is bool:
+                b = 2**(i+1)
+                if value:
+                    h += b
+        h2 = 7
+        if self.spp_earned > 0:
+            h2 += self.spp_earned * 7
+        if self.moves > 0:
+            h2 += self.moves * 7**2
+        for injury in self.injuries_gained:
+            h2 += hash(injury) * 7**3
+        for skill in self.used_skills:
+            h2 += hash(skill) * 7**4
+        return h * h2
+
 
 class Agent:
     name: str
@@ -376,6 +394,23 @@ class TeamState(Reversible):
     def use_reroll(self):
         self.rerolls -= 1
         self.reroll_used = True
+
+    def __hash__(self):
+        h = 1
+        c = 0
+        for attr, value in self.__dict__.items():
+            if type(value) is bool:
+                c += 1
+                if value:
+                    h += 2 ** c
+        h2 = 7
+        c = 1
+        for attr, value in self.__dict__.items():
+            if type(value) is int:
+                c += 1
+                if value > 0:
+                    h2 += value * 7 ** c
+        return h * h2
 
 
 class Clock:

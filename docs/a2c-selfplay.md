@@ -101,7 +101,7 @@ if selfplay and all_steps >= selfplay_next_swap:
 
 ## Results
 
-We try running [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/master/examples/a2c/a2c_example.py) on the 1v1 variant ```botbowl-1-v2``` with the default self-play from above.
+We try running [examples/a2c/a2c_example.py](https://github.com/njustesen/botbowl/blob/main/examples/a2c/a2c_example.py) on the 1v1 variant ```botbowl-1-v2``` with the default self-play from above.
 Additionally, we set ```num_steps=5000000```.
 
 The results are quite interesting. We see that the agent's touchdown rate (blue line) gets beyond that when it trained against a random agent (~12 vs ~7.5). 

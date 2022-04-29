@@ -1579,40 +1579,40 @@ class KickoffTable(Procedure):
     def step(self, action):
 
         roll = DiceRoll([D6(self.game.rng), D6(self.game.rng)], roll_type=RollType.KICKOFF_ROLL)
-        roll.result = roll.get_sum()
+        result = roll.get_result()
 
-        if roll.result == 2:  # Get the ref!
+        if result == 2:  # Get the ref!
             GetTheRef(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_GET_THE_REF, rolls=[roll]))
-        elif roll.result == 3:  # Riot!
+        elif result == 3:  # Riot!
             Riot(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_RIOT, rolls=[roll]))
-        elif roll.result == 4:  # Perfect defense
+        elif result == 4:  # Perfect defense
             Setup(self.game, team=self.game.get_kicking_team(), reorganize=True)
             self.game.report(Outcome(OutcomeType.KICKOFF_PERFECT_DEFENSE, team=self.game.get_kicking_team(),
                                      rolls=[roll]))
-        elif roll.result == 5:  # High Kick
+        elif result == 5:  # High Kick
             HighKick(self.game, self.ball)
             self.game.report(Outcome(OutcomeType.KICKOFF_HIGH_KICK, rolls=[roll]))
-        elif roll.result == 6:  # Cheering fans
+        elif result == 6:  # Cheering fans
             CheeringFans(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_CHEERING_FANS, rolls=[roll]))
-        elif roll.result == 7:  # Changing Weather
+        elif result == 7:  # Changing Weather
             WeatherTable(self.game, kickoff=True)
             self.game.report(Outcome(OutcomeType.KICKOFF_CHANGING_WHEATHER, rolls=[roll]))
-        elif roll.result == 8:  # Brilliant Coaching
+        elif result == 8:  # Brilliant Coaching
             BrilliantCoaching(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_BRILLIANT_COACHING, rolls=[roll]))
-        elif roll.result == 9:  # Quick Snap
+        elif result == 9:  # Quick Snap
             Turn(self.game, self.game.get_receiving_team(), None, None, quick_snap=True)
             self.game.report(Outcome(OutcomeType.KICKOFF_QUICK_SNAP, rolls=[roll]))
-        elif roll.result == 10:  # Blitz
+        elif result == 10:  # Blitz
             Turn(self.game, self.game.get_kicking_team(), None, None, blitz=True)
             self.game.report(Outcome(OutcomeType.KICKOFF_BLITZ, rolls=[roll]))
-        elif roll.result == 11:  # Throw a Rock
+        elif result == 11:  # Throw a Rock
             ThrowARock(self.game)
             self.game.report(Outcome(OutcomeType.KICKOFF_THROW_A_ROCK, rolls=[roll]))
-        elif roll.result == 12:  # Pitch Invasion
+        elif result == 12:  # Pitch Invasion
             for team in reversed(self.game.state.teams):
                 for player in sorted(self.game.get_players_on_pitch(team), key=lambda p: p.nr, reverse=True):
                     PitchInvasionRoll(self.game, team, player)
