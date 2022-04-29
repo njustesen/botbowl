@@ -18,9 +18,10 @@ Welcome to our tutorials on how to use botbowl. These resources are sufficient t
 4. [**Reinforcement Learning IV: Self-play**](a2c-selfplay.md)
 5. [**Reinforcement Learning V: Pathfinding-assitance**](a2c-pathfinding.md)
 
-## Forward Model
+## Search-based Bots
 1. [**Forward Model I: The Forward Model**](forward-model.md)
 2. [**Forward Model II: Search-based Bots**](search-based.md)
+2. [**Forward Model III: Monte Carlo Tree Search**](mcts.md)
 
 ## Submit
 1. [**Submit to Bot Bowl**](submit.md)
