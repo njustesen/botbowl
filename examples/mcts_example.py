@@ -323,15 +323,10 @@ class MCTSBot(botbowl.Agent):
     def end_game(self, game):
         pass
 
+# Register the bot to the framework
+botbowl.register_bot('mcts', MCTSBot)
 
 def main():
-
-    # Register the bot to the framework
-    botbowl.register_bot('mcts', MCTSBot)
-
-    # import botbowl.web.server as server
-    # server.start_server(debug=True, use_reloader=False, port=1234)
-
     for i in [1, 3, 5, 11]:
         print(f"-- Testing env {i} --")
         # Load configurations, rules, arena and teams
