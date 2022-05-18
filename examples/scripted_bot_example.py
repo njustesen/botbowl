@@ -216,7 +216,7 @@ class MyScriptedBot(ProcBot):
         # Execute planned actions if any
         while len(self.actions) > 0:
             action = self._get_next_action()
-            if game._is_action_allowed(action):
+            if game.is_action_allowed(action):
                 return action
 
         # Split logic depending on offense, defense, and loose ball - and plan actions
@@ -518,7 +518,7 @@ class MyScriptedBot(ProcBot):
         # Execute planned actions if any
         while len(self.actions) > 0:
             action = self._get_next_action()
-            if game._is_action_allowed(action):
+            if game.is_action_allowed(action):
                 return action
 
         ball_carrier = game.get_ball_carrier()
@@ -735,7 +735,7 @@ def path_to_move_actions(game: botbowl.Game, player: botbowl.Player, path: Path,
 
     final_action = Action(action_type, position=path.get_last_step())
 
-    if game._is_action_allowed(final_action):
+    if game.is_action_allowed(final_action):
         return [final_action]
     else:
         actions = []

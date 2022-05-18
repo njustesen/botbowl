@@ -97,10 +97,10 @@ class ProcBot(Agent):
             assert action is not None
 
         # handle illegal action. if handle_illegal_action() returns a new legal action, return that.
-        if not game._is_action_allowed(action):
+        if not game.is_action_allowed(action):
             new_action = self.handle_illegal_action(game, action)
             assert isinstance(new_action, Action)
-            assert game._is_action_allowed(new_action)
+            assert game.is_action_allowed(new_action)
             return new_action
 
         return action
