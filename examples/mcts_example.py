@@ -70,7 +70,7 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
             own += 0.1
         elif game.get_winner() is None:
             opp += 0.1
-    return 0.5 + own - opp
+    return own - opp
 
 
 class Node:
@@ -134,10 +134,10 @@ class ActionNode(Node):
         t = ''.join(['\t' for _ in range(tabs)])
         min_max = 'min' if self.opp() else 'max'
         if len(self.children) == 0:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}/>")
+            print(f"{t}<ActionNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' actions='{len(self.available_actions)}'/>")
         else:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}>")
-            for child in self.children:
+            print(f"{t}<ActionNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' actions='{len(self.available_actions)}'>")
+            for child in sorted(self.children, key=lambda c: -c.score()):
                 child.print(tabs+1)
         if len(self.children) > 0:
             print(f'{t}</ActionNode>')
@@ -170,10 +170,10 @@ class ChangeNode(Node):
         t = ''.join(['\t' for _ in range(tabs)])
         min_max = 'min' if self.parent.opp() else 'max'
         if len(self.outcomes) == 0:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'/>")
+            print(f"{t}<ChanceNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' action='{self.action}'/>")
         else:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'>")
-            for _, child in self.outcomes.items():
+            print(f"{t}<ChanceNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' action='{self.action}'>")
+            for _, child in sorted(self.outcomes.items(), key=lambda c: -c[1].score()):
                 child.print(tabs+1)
         if len(self.outcomes) > 0:
             print(f"{t}</ChanceNode>")
