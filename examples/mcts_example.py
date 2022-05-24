@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 import time
 from typing import List
+import random
 from examples.hash_example import gamestate_hash
 
 
@@ -125,6 +126,7 @@ class ActionNode(Node):
                     actions.append(Action(action_choice.action_type, position=position))
             else:
                 actions.append(Action(action_choice.action_type))
+        random.shuffle(actions)
         return actions
 
     def is_fully_expanded(self):
