@@ -71,7 +71,7 @@ def simple_heuristic(game: botbowl.Game, agent:botbowl.Agent):
             own += 0.1
         elif game.get_winner() is None:
             opp += 0.1
-    return own - opp
+    return 0.5 + own - opp
 
 
 class Node:
@@ -126,7 +126,7 @@ class ActionNode(Node):
                     actions.append(Action(action_choice.action_type, position=position))
             else:
                 actions.append(Action(action_choice.action_type))
-        random.shuffle(actions)
+        # random.shuffle(actions)
         return actions
 
     def is_fully_expanded(self):
