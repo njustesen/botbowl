@@ -214,7 +214,7 @@ cdef class Pathfinder:
 
         paths = self.get_paths()
         if len(paths) > 0:
-            return paths[0]
+            return min(paths, key=len)
         return None
 
     cpdef object get_paths(self):
@@ -564,8 +564,10 @@ cdef class Pathfinder:
             return []
 
         paths = []
-        for y in range(17):
-            for x in range(28):
+        for x in range(28):
+            if self.target_is_int and x != self.target_x:
+                continue
+            for y in range(17):
                 if self.start_pos.x == x and self.start_pos.y == y:
                     continue
                 node = self.locked_nodes[y][x]

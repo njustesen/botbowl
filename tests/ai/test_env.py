@@ -1,5 +1,5 @@
 import pytest
-
+from numpy.random import RandomState
 from multiprocessing import Process, Pipe
 import itertools
 from random import randint
@@ -26,6 +26,36 @@ def test_gym_registry(name):
         aa = np.where(mask > 0.0)[0]
         action_idx = np.random.choice(aa, 1)[0]
         (_, _, mask), _, done, _ = env.step(action_idx)
+
+
+@pytest.mark.parametrize("envs", [('botbowl-v4', 11+1),
+                                  ('botbowl-11-v4', 11+1),
+                                  ('botbowl-7-v4', 7+1),
+                                  ('botbowl-5-v4', 5+1),
+                                  ('botbowl-3-v4', 3+1),
+                                  ('botbowl-1-v4', 1+1)])
+def test_team_sizes(envs):
+    env_name, num_players = envs
+    env = gym.make(env_name)
+    _, _, mask = env.reset()
+    for team in env.game.state.teams:
+        assert len(team.players) == num_players
+
+
+def test_seed():
+    report_strings = set()
+    for i in range(2):
+        env = gym.make('botbowl-3-v4')
+        env.seed(1)
+        policy_rng = RandomState(1)
+        done = False
+        spatial_obs, non_spatial_obs, mask = env.reset()
+        while not done:
+            aa = np.where(mask > 0.0)[0]
+            action_idx = policy_rng.choice(aa, 1)[0]
+            (spatial_obs, non_spatial_obs, mask), reward, done, info = env.step(action_idx)
+        report_strings.add("-".join([str(report.outcome_type.value) for report in env.game.state.reports]))
+    assert len(report_strings) == 1
 
 
 def test_compute_action():

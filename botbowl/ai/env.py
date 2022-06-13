@@ -55,6 +55,7 @@ class EnvConf:
                  extra_feature_layers: Optional[Iterable[FeatureLayer]] = None,
                  pathfinding=False):
 
+        self.size = size
         self.config: Configuration = load_config(f"gym-{size}")
         self.config.pathfinding_enabled = pathfinding
 
@@ -197,8 +198,8 @@ class BotBowlEnv(gym.Env):
         # Game
         self.game = None
         self.ruleset = load_rule_set(self.env_conf.config.ruleset, all_rules=False)
-        self.home_team = load_team_by_filename('human', self.ruleset, board_size=11)
-        self.away_team = load_team_by_filename('human', self.ruleset, board_size=11)
+        self.home_team = load_team_by_filename('human', self.ruleset, board_size=self.env_conf.size)
+        self.away_team = load_team_by_filename('human', self.ruleset, board_size=self.env_conf.size)
         self.home_agent = home_agent
         self.away_agent = away_agent
 
@@ -288,7 +289,7 @@ class BotBowlEnv(gym.Env):
             non_spatial_obs[next(index)] = opp_team.state.cheerleaders / 8.0
             non_spatial_obs[next(index)] = opp_team.state.bribes / 4.0
             non_spatial_obs[next(index)] = opp_team.state.babes / 4.0
-            non_spatial_obs[next(index)] = active_team.state.apothecaries / 2
+            non_spatial_obs[next(index)] = opp_team.state.apothecaries / 2
             non_spatial_obs[next(index)] = 1.0 * (not opp_team.state.reroll_used)
             non_spatial_obs[next(index)] = opp_team.state.fame / 2
         else:
@@ -381,8 +382,8 @@ class BotBowlEnv(gym.Env):
         self.game = Game(game_id=str(uuid.uuid1()),
                          home_team=deepcopy(self.home_team),
                          away_team=deepcopy(self.away_team),
-                         home_agent=BotBowlEnv._create_agent(self.home_agent),
-                         away_agent=BotBowlEnv._create_agent(self.away_agent),
+                         home_agent=BotBowlEnv._create_agent(self.home_agent, seed),
+                         away_agent=BotBowlEnv._create_agent(self.away_agent, seed),
                          config=self.env_conf.config,
                          ruleset=self.ruleset,
                          seed=seed)
@@ -456,13 +457,13 @@ class BotBowlEnv(gym.Env):
             raise AttributeError(f"Can't convert {action} to an action index")
 
     @staticmethod
-    def _create_agent(agent_option) -> Agent:
+    def _create_agent(agent_option, seed=None) -> Agent:
         if isinstance(agent_option, Agent):
             return agent_option
         elif agent_option == "human":
             return Agent("Gym Learner", human=True)
         elif agent_option == "random":
-            return RandomBot("Random bot")
+            return RandomBot("Random bot", seed=seed)
         elif agent_option in bot_registry.list():
             return bot_registry.make(agent_option)
         elif isinstance(agent_option, Agent):
