@@ -38,7 +38,7 @@ install_requires_packages = [
           'numpy',
           'untangle',
           'Flask',
-          'gym',
+          'gym==0.21.0',
           'Jinja2',
           'python-interface',
           'stopit',
