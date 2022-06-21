@@ -1,4 +1,4 @@
-# Submit Your Bot to Bot Bowl III
+# Submit Your Bot to Bot Bowl IV
 
 ## Bots as Servers
 
