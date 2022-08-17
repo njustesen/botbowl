@@ -165,7 +165,7 @@
             </span>
         </div>
 
-        <div class="square-row" style="z-index: 10000; position: absolute; margin-left: 150px; margin-top: -30px;">
+        <div class="square-row" style="z-index: 10000; position: absolute; margin-left: 150px; margin-top: {{ replaying ? '' : '-30px' }}">
             <div class="row-divider" >
                 <span ng-repeat="action in game.state.available_actions">
                     <button ng-if="showActionAsButton(action)" type="button" class="btn btn-sm btn-act {{ action.team_id == null ? 'btn-default' : (action.team_id == game.state.away_team.team_id ? 'btn-danger' : 'btn-primary')}}" ng-click="pickActionType(action)" ng-disabled="refreshing || action.disabled">
