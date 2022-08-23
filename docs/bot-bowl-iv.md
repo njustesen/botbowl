@@ -51,4 +51,4 @@ Check out the presentation of the results: https://www.youtube.com/watch?v=iizeI
 
 Congratulations to Drefsante by Frederic Bair for winning Bot Bowl IV and MotBot by Niaamo for winning the ML Prize!
 
-The replays and detailed results can be downloaded [here](https://drive.google.com/drive/folders/1q6AMkfrbN7wEFroaFn7Mpys2U0eirhjY?usp=sharing) and are compatible with [botbowl v1.0.2](https://github.com/njustesen/botbowl/releases/tag/1.0.1).
+The replays and detailed results can be downloaded [here](https://drive.google.com/drive/folders/1q6AMkfrbN7wEFroaFn7Mpys2U0eirhjY?usp=sharing) and are compatible with [botbowl v1.0.2](https://github.com/njustesen/botbowl/releases/tag/1.0.2).
