@@ -45,7 +45,7 @@ Check out the tutorial [how to use the forward model](forward-model.md) and [how
 
 # Results
 
-Check out the presentation of the results: https://www.youtube.com/watch?v=iizeI546zmI.
+Check out the presentation of the results on [YouTube](https://www.youtube.com/watch?v=iizeI546zmI).
 
 ![Bot Bowl IV Results](img/bot-bowl-iv-results.png?raw=true "Bot Bowl IV Results")
 
