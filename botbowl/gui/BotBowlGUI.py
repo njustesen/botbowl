@@ -34,7 +34,17 @@ def worker(remote, parent_remote, config):
 
     human_lineman1 = image.load(os.path.join(image_path, 'iconssmall/hlineman1.gif'))
 
-    data = None
+    game_data: Game = None
+    i = 0
+
+    def draw_text(text, font_size, x, y):
+        label = pyglet.text.Label(text,
+                                  font_name='Times New Roman',
+                                  font_size=font_size,
+                                  x=x, y=y,
+                                  anchor_x='center', anchor_y='center')
+        label.draw()
+        return label
 
     def draw_at(img, tile_x, tile_y, offset_x=0, offset_y=0):
         img.blit(tile_x * tile_size + img.anchor_x + offset_x,
@@ -60,30 +70,35 @@ def worker(remote, parent_remote, config):
             draw_player(player)
 
     def refresh(dt):
-        nonlocal data
-        print(f"refreshing game: {data}")
+        nonlocal game_data
+        nonlocal i
         if remote.poll():
             cmd, d = remote.recv()
-            print(f"Received command {cmd} with data {d}")
             if cmd == 'update':
-                data = d
-        if data is None:
+                game_data = d
+        if game_data is None:
             return
-        print("Drawing")
+
         window.clear()
 
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+        labels = []
+        label = draw_text(f"Half {game_data.state.half}", font_size=36, x=width//2, y=50)
+        labels.append(label)
+
         draw_at(pitch_img, 6, 5)
         draw_at(dugout_left, 4, 5)
         draw_at(dugout_right, 32, 5)
 
-        draw_game(data)
+        draw_game(game_data)
 
         lines = draw_grid(opacity=100)
 
         main_batch.draw()
+
+        i += 1
 
     pyglet.clock.schedule_interval(refresh, 1 / 120.0)
     pyglet.app.run()
@@ -99,7 +114,6 @@ class BotBowlGUI:
         self.process.start()
 
     def update(self, game):
-        print("Updating")
         self.remote.send(('update', game))
 
     def close(self):
@@ -121,23 +135,16 @@ def create_game(game_id):
     home_agent = botbowl.make_bot("random")
 
     game = botbowl.Game(game_id, home, away, home_agent, away_agent, config, arena=arena, ruleset=ruleset)
-    game.config.fast_mode = True
+    game.config.fast_mode = False
     return game
 
 
 if __name__ == '__main__':
     gui1 = BotBowlGUI(None)
-    gui2 = BotBowlGUI(None)
-    game1 = create_game("1")
-    game1.init()
-    game2 = create_game("2")
-    game2.init()
-    for i in range(1000):
-        gui1.update(game1)
-        gui2.update(game2)
-        time.sleep(0.1)
-        if not game1.state.game_over:
-            game1.step(None)
-        if not game2.state.game_over:
-            game2.step(None)
-
+    while True:
+        game1 = create_game("1")
+        game1.init()
+        while not game1.state.game_over:
+            gui1.update(game1)
+            if not game1.state.game_over:
+                game1.step(None)
