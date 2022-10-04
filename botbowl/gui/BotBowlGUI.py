@@ -7,6 +7,7 @@ from pyglet.shapes import Line
 from botbowl import Game
 from botbowl.core.model import Player
 import botbowl
+from pyglet.gl import *
 
 
 def worker(remote, parent_remote, config):
@@ -36,11 +37,11 @@ def worker(remote, parent_remote, config):
     data = None
 
     def draw_at(img, tile_x, tile_y, offset_x=0, offset_y=0):
-        img.blit(tile_x * tile_size + offset_x + img.width/2,
-                 height - tile_y * tile_size + offset_y)
+        img.blit(tile_x * tile_size + img.anchor_x + offset_x,
+                 height - (tile_y * tile_size + (img.height - img.anchor_y) + offset_y))
 
     def draw_on_pitch(img, tile_x, tile_y, offset_x=0, offset_y=0):
-        draw_at(img, tile_x+5, tile_y+5, offset_x, offset_y)
+        draw_at(img, tile_x+5, tile_y+4, offset_x, offset_y)
 
     def draw_grid(color=(0, 255, 0), opacity=255):
         lines = []
@@ -71,9 +72,12 @@ def worker(remote, parent_remote, config):
         print("Drawing")
         window.clear()
 
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
         draw_at(pitch_img, 6, 5)
-        draw_at(dugout_left, 5, 5)
-        draw_at(dugout_right, 31, 5)
+        draw_at(dugout_left, 4, 5)
+        draw_at(dugout_right, 32, 5)
 
         draw_game(data)
 
