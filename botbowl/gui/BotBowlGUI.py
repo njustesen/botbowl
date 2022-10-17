@@ -1,13 +1,12 @@
 import os
 import pyglet
-import time
 from multiprocessing import Process, Pipe
-from pyglet import image
 from pyglet.shapes import Line
 from botbowl import Game
 from botbowl.core.model import Player
 import botbowl
 from pyglet.gl import *
+from botbowl.gui.sprites import get_player_sprite, get_pitch_sprite, get_dugout_sprite, get_ball_sprite
 
 
 def worker(remote, parent_remote, config):
@@ -17,22 +16,6 @@ def worker(remote, parent_remote, config):
     height = tile_size * 25
     window = pyglet.window.Window(width, height)
     main_batch = pyglet.graphics.Batch()
-
-    file_dir = os.path.dirname(__file__)
-    image_path = os.path.join(file_dir, "../web/static/img/")
-
-    # text = pyglet.text.Label(text="", x=100, y=100, batch=main_batch)
-    pitch_img = image.load(os.path.join(image_path, 'arenas/pitch/nice-26x15.jpg'))
-    pitch_img.anchor_x = pitch_img.width // 2
-    pitch_img.anchor_y = pitch_img.height
-    dugout_left = image.load(os.path.join(image_path, 'arenas/dugouts/dugout-left.jpg'))
-    dugout_left.anchor_x = dugout_left.width
-    dugout_left.anchor_y = dugout_left.height
-    dugout_right = image.load(os.path.join(image_path, 'arenas/dugouts/dugout-right.jpg'))
-    dugout_right.anchor_x = 0
-    dugout_right.anchor_y = dugout_right.height
-
-    human_lineman1 = image.load(os.path.join(image_path, 'iconssmall/hlineman1.gif'))
 
     game_data: Game = None
     i = 0
@@ -62,12 +45,17 @@ def worker(remote, parent_remote, config):
             line.opacity = opacity
         return lines
 
-    def draw_player(player: Player):
-        draw_on_pitch(human_lineman1, player.position.x, player.position.y)
+    def draw_player(player: Player, is_home_team=False, is_active=False):
+        sprite = get_player_sprite(player, player.team.race, is_active, is_home_team)
+        draw_on_pitch(sprite, player.position.x, player.position.y)
 
     def draw_game(game: Game):
+        active_player = game.get_active_player()
         for player in game.get_players_on_pitch():
-            draw_player(player)
+            draw_player(player, is_home_team=game.is_home_team(player.team), is_active=active_player is player)
+        ball = game_data.get_ball()
+        if ball:
+            draw_on_pitch(get_ball_sprite(ball), ball.position.x, ball.position.y)
 
     def refresh(dt):
         nonlocal game_data
@@ -88,10 +76,9 @@ def worker(remote, parent_remote, config):
         label = draw_text(f"Half {game_data.state.half}", font_size=36, x=width//2, y=50)
         labels.append(label)
 
-        draw_at(pitch_img, 6, 5)
-        draw_at(dugout_left, 4, 5)
-        draw_at(dugout_right, 32, 5)
-
+        draw_at(get_pitch_sprite(game_data.state.weather.name.lower(), game_data.arena.width-2, game_data.arena.height-2), 6, 5)
+        draw_at(get_dugout_sprite(left=True), 4, 5)
+        draw_at(get_dugout_sprite(right=True), 32, 5)
         draw_game(game_data)
 
         lines = draw_grid(opacity=100)
