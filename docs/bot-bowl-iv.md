@@ -13,12 +13,12 @@ In a round-robing tournament, each bot plays 10 matches against each other and t
 In case of a tie, the bot with the highest score, and then inflicted casualties would win.
 
 ## Match Rules
-Each match used the following [configurations](../botbowl/data/config/bot-bowl.json):
+Each match used the following [configurations](https://github.com/njustesen/botbowl/blob/main/botbowl/data/config/bot-bowl.json):
 
 - The BB2016 ruleset
 - Time limit of 2 minutes per turn and 15 seconds per decision in the opponent's turn
 - Pathfinding-assistance enabled
-- Only a [fixed human team](../botbowl/data/teams/11/human.json) is available
+- Only a [fixed human team](https://github.com/njustesen/botbowl/blob/main/botbowl/data/teams/11/human.json) is available
 
 If a bot crashes and is unable to recover, the game will continue and the bot will simply timeout and not do anything during their turn.
 
