@@ -1,4 +1,4 @@
-![Bot Bowl V](img/botbowl-v.png?raw=true "Bot Bowl V")
+![Bot Bowl V](img/bot-bowl-v.png?raw=true "Bot Bowl V")
 
 Bot Bowl V is the fifth AI competition in Blood Bowl. The results will be announced at the [IEEE Conference of Games 2023](https://2023.ieee-cog.org/). 
 
