@@ -9,10 +9,6 @@ In the first week after the submission deadline (August 1st - 8th), authors will
 This is to confirm that we were able to set up and run the bot correctly. 
 If we run into issues running you bot, please be prepared to assist us in this week.
 
-# Sign up already to receive news and updates!
-
-TBA
-
 # Format
 Bot Bowl V has the same format as the previous years but we aim to have a few new tutorials ready for you. 
 Group submissions are allowed but each person can only be part of one bot submission.
@@ -35,14 +31,4 @@ However, if a bot crashes and is unable to recover, the matche sequence will con
 
 # Prizes
 
-Bot Bowl V had a prize pool of $1000 with the following two prizes:
-
-- $500 is awarded to the 1st place winner
-- $500 is awarded to the author(s) of the most innovative machine learning bot. This prize is sponsored by [modl.ai](modl.ai) and the winner will be selected by a jury consisting of Julian Togelius and Sebastian Risi.
-
-# New Features
-
-## Fast Forward Model in Rust
-
 TBA
-
