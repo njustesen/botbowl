@@ -18,7 +18,7 @@ Each group must have a team leader that will receive any prize money they win an
 
 ## Round-robin
 In a round-robing tournament, each bot plays 10 matches against each other and the tournament winner will be determined based on the following point system: 3 points for winning, 1 point for a draw, 0 points for a loss. 
-In case of a tie, the bot with the highest score, and then inflicted casualties will win.
+In case of a tie, the bot with the highest score difference, and then inflicted casualties will win.
 
 ## Match Rules
 Each match uses the following [configurations](https://github.com/njustesen/botbowl/blob/main/botbowl/data/config/bot-bowl.json):
