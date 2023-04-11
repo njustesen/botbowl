@@ -7,7 +7,7 @@ Bot Bowl V is the fifth AI competition in Blood Bowl. The results will be announ
 The submission deadline for Bot Bowl V is August 1st anywhere on earth.
 In the first week after the submission deadline (August 1st - 8th), authors will receive an email with results of 10 matches played against the random baseline. 
 This is to confirm that we were able to set up and run the bot correctly. 
-If we run into issues running you bot, please be prepared to assist us in this week.
+If we run into issues running you bot, please be prepared to assist us during this week.
 
 Submission link will appear at least one month before the deadline.
 
