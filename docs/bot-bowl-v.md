@@ -14,7 +14,7 @@ Submission link will appear at least one month before the deadline.
 # Format
 Bot Bowl V has the same format as the previous years but we aim to have a few new tutorials ready for you. 
 Group submissions are allowed but each person can only be part of one bot submission.
-Each group must have a team leader that will receive any prize money they win and the lead will be responsible of sharing it with the group.
+Each group must have a team leader that will receive any prize money they win and the lead will be responsible for sharing it with the group.
 
 ## Round-robin
 In a round-robing tournament, each bot plays 10 matches against each other and the tournament winner will be determined based on the following point system: 3 points for winning, 1 point for a draw, 0 points for a loss. 
