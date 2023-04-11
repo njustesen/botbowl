@@ -28,7 +28,7 @@ Each match uses the following [configurations](https://github.com/njustesen/botb
 - Pathfinding-assistance enabled
 - Only a [fixed human team](https://github.com/njustesen/botbowl/blob/main/botbowl/data/teams/11/human.json) is available
 
-Bots will run for entire 10-match sequence against it's opponent. This allows it to adapt without having to save anything to the file system in-between matches.
+Bots will run for the entire 10-match sequence against it's opponent. This allows it to adapt without having to save anything to the file system in-between matches.
 However, if a bot crashes and is unable to recover, the matche sequence will continue and the bot will simply timeout and not do anything during their turns.
 
 # Prizes
