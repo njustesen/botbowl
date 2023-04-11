@@ -9,6 +9,8 @@ In the first week after the submission deadline (August 1st - 8th), authors will
 This is to confirm that we were able to set up and run the bot correctly. 
 If we run into issues running you bot, please be prepared to assist us in this week.
 
+Submission link will appear at least one month before the deadline.
+
 # Format
 Bot Bowl V has the same format as the previous years but we aim to have a few new tutorials ready for you. 
 Group submissions are allowed but each person can only be part of one bot submission.
@@ -31,4 +33,7 @@ However, if a bot crashes and is unable to recover, the matche sequence will con
 
 # Prizes
 
-TBA
+We aim to have two prizes simlilar to last year:
+
+- 1st Place Prize will be announced later.
+- $500 Machine Learning Prize sponsored by modl.ai for the most insteresting bot that uses machine learning and/or search-based techniques.
