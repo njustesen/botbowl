@@ -62,7 +62,7 @@ install_requires_packages = [
 
 kwargs = {
     'name': 'botbowl',
-    'version': '1.0.3',
+    'version': '1.1.0',
     'include_package_data': True,
     'install_requires': install_requires_packages,
     'packages': find_packages(),

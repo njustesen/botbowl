@@ -27,7 +27,7 @@ Go to: http://127.0.0.1:1234/
 
 ### Installation with Pip
 
-[Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
+[Make sure python 3.8 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
 Then run:
 ```
 pip install git+https://github.com/njustesen/botbowl
