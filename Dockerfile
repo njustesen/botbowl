@@ -1,11 +1,12 @@
 FROM python:3.9
 
-WORKDIR /home/botbowl
-COPY . .
-
 RUN pip install --upgrade pip
 
-RUN pip install -e .
+WORKDIR /home/botbowl
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+COPY . .
 RUN python setup.py install
 
 WORKDIR /home/
