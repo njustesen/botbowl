@@ -40,6 +40,7 @@ install_requires_packages = [
           'Flask',
           'gym',
           'Jinja2',
+          'docker',
           'python-interface',
           'stopit',
           'requests',
@@ -51,7 +52,7 @@ install_requires_packages = [
 
 kwargs = {
     'name': 'botbowl',
-    'version': '0.4.0',
+    'version': '1.0.3',
     'include_package_data': True,
     'install_requires': install_requires_packages,
     'packages': find_packages(),
