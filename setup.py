@@ -4,6 +4,16 @@ import sysconfig
 from distutils.ccompiler import new_compiler
 from distutils.errors import DistutilsPlatformError
 
+# warn user if setup.py is run from a different directory
+dir_of_file = os.path.dirname(__file__)
+cwd = os.getcwd()
+if dir_of_file != cwd:
+    # We should make this warning obsolete..
+    print(f"WARNING: setup.py is being run from a different directory than the install script. This can cause strange errors"
+          f"Current directory='{cwd}', dir of file='{dir_of_file}'")
+
+
+
 try:
     error_msg = None
     from Cython.Build import cythonize
