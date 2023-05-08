@@ -45,19 +45,19 @@ except DistutilsPlatformError:
 files_to_compile = ["botbowl/core/pathfinding/cython_pathfinding.pyx"]
 
 install_requires_packages = [
-          'numpy',
-          'untangle',
-          'Flask',
-          'gym',
-          'Jinja2',
-          'docker',
-          'python-interface',
-          'stopit',
-          'requests',
-          'Cython >= 3.0a7',
-          'pytest',
-          'matplotlib',
-          'more_itertools'
+          'numpy==1.24.3',
+          'untangle==1.2.1',
+          'Flask==2.3.2',
+          'gym==0.26.2',
+          'Jinja2==3.1.2',
+          'docker==6.1.1',
+          'python-interface==1.6.1',
+          'stopit==1.1.2',
+          'requests==2.30.0',
+          'Cython==3.0.0b2',
+          'pytest==7.3.1',
+          'matplotlib==3.7.1',
+          'more_itertools==9.1.0'
 ]
 
 kwargs = {
