@@ -10,4 +10,4 @@ RUN python setup.py install
 
 WORKDIR /home/
 
-ENTRYPOINT ["python", "botbowl/examples/server_example.py"]
+CMD ["python botbowl/examples/server_example.py"]
