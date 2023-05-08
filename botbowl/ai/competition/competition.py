@@ -6,8 +6,9 @@ Year: 2019
 This module contains a competition class to handle a competition between two bots.
 """
 import numpy as np
+
 from botbowl.core.table import CasualtyType
-from botbowl.core import Game, InvalidActionError
+from botbowl.core import Game, InvalidActionError, Agent
 from botbowl.core import load_arena, load_rule_set
 
 
@@ -134,7 +135,7 @@ class TimeoutException(Exception): pass
 
 class Competition:
 
-    def __init__(self, agent_a, agent_b, team_a, team_b, config, ruleset, arena, n=2, record=False):
+    def __init__(self, agent_a: Agent, agent_b: Agent, team_a, team_b, config, ruleset, arena, n=2, record=False):
         self.agent_a = agent_a
         self.agent_b = agent_b
         self.team_a = team_a
@@ -178,3 +179,4 @@ class Competition:
                     game.step(game._forced_action())
             except InvalidActionError as e:
                 print(e)
+
