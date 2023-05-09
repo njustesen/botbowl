@@ -5,6 +5,7 @@ Year: 2020
 ==========================
 """
 from botbowl.core.procedure import *
+from botbowl.core.game import Game
 import socket
 import pickle
 import secrets
@@ -12,7 +13,9 @@ import docker
 import enum
 import time
 
-from typing import Union
+from typing import Union, Type, TypeVar
+
+T = TypeVar("T")
 
 HEADERSIZE = 10
 DEFAULT_PORT = 5100
@@ -58,16 +61,14 @@ def receive_data(socket, timeout=None) -> Response:
     if timeout is not None and timeout < 0:
         raise Exception("Timeout cannot be lower than 0")
     full_msg = b""
-    new_msg = True
+    msglen = None
     socket.settimeout(timeout)
     while True:
         msg = socket.recv(4096)
-        if new_msg:
+        if msglen is None:
             msglen = int(msg[:HEADERSIZE])
-            new_msg = False
         full_msg += msg
         if len(full_msg) - HEADERSIZE == msglen:
-            # TODO: should use json for this
             return pickle.loads(full_msg[HEADERSIZE:])
 
 
@@ -86,112 +87,42 @@ class PythonSocketClient(Agent):
         s.connect((self.host, self.port))
         sockets[self.agent_id] = s
 
-    def act(self, game):
-        seconds = game.get_seconds_left()
-        replay = game.replay
+    def _send_command(
+        self,
+        command: AgentCommand,
+        *,
+        expected_return_type: Type[T] = None,
+        game: Game,
+        team=None,
+    ) -> T:
 
-        game.replay = None
-        # TODO: make sure we are not sending the actual RNG seed.
         self._connect()
-        request = Request(AgentCommand.ACT, game=game)
-        send_data(request, sockets[self.agent_id], timeout=seconds)
-        seconds = game.get_seconds_left()
-        while seconds is None or seconds > 0:
-            try:
-                response = receive_data(
-                    sockets[self.agent_id],
-                    timeout=(seconds if seconds is not None else None),
-                )
-                if type(response) != Response:
-                    print(f"Invalid response type: {response}")
-                elif response.object is None and type(response.object) == Action:
-                    # FIX: this is never True... ?
-                    print(f"Invalid action type: {type(response.object)}")
-                elif str(response.token) != str(self.token):
-                    print(f"Invalid token: {response.token} != {self.token}")
-                elif str(response.request_id) != str(request.request_id):
-                    print(
-                        f"Invalid request_id: {response.request_id} != {request.request_id}"
-                    )
-                else:
-                    game.replay = replay
-                    return response.object
-            except Exception as e:
-                print(f"Error parsing message from {self.name}: ", e)
-                for proc in game.get_procedure_names():
-                    print(proc)
-            seconds = game.get_seconds_left()
-        game.replay = replay
-        return None
 
-    def new_game(self, game, team):
-        seconds = game.get_seconds_left()
-        replay = game.replay
-        game.replay = None
-        try:
-            self._connect()
-            request = Request(AgentCommand.NEW_GAME, game=game, team=team)
-            send_data(request, sockets[self.agent_id], timeout=seconds)
-            if game.config.time_limits is not None:
-                seconds = game.config.time_limits.end
-            while seconds is None or seconds > 0:
-                try:
-                    response = receive_data(
-                        sockets[self.agent_id],
-                        timeout=(seconds if seconds is not None else None),
-                    )
-                    if type(response) != Response:
-                        print(f"Invalid response type: {response}")
-                    elif str(response.token) != str(self.token):
-                        print(f"Invalid token: {response.token} != {self.token}")
-                    elif str(response.request_id) != str(request.request_id):
-                        print(
-                            f"Invalid request_id: {response.request_id} != {request.request_id}"
-                        )
-                    else:
-                        game.replay = replay
-                        return
-                except Exception as e:
-                    print(f"Error parsing message: ", e)
-                seconds = game.get_seconds_left()
-        except Exception as e:
-            print(f"{self.name} failed to communicate: ", e)
-        game.replay = replay
+        timeout = game.get_seconds_left()
+        with game.hide_agents_and_rng():
+            request = Request(command, game=game, team=team)
+            send_data(request, sockets[self.agent_id], timeout=timeout)
+
+        response = receive_data(sockets[self.agent_id], timeout=timeout)
+
+        assert type(response) == Response, f"'{type(response)}' != '{Response}'"
+        assert str(response.token) == str(self.token)
+        assert str(response.request_id) == str(request.request_id)
+        if expected_return_type is not None: 
+            assert type(response.object) == expected_return_type
+        return response.object  # type: ignore
+
+    def act(self, game) -> Action:
+        return self._send_command(
+            AgentCommand.ACT, expected_return_type=Action, game=game
+        )
+
+    def new_game(self, game, team) -> None:
+        self._send_command(AgentCommand.NEW_GAME, game=game, team=team)
 
     def end_game(self, game):
-        seconds = game.get_seconds_left()
-        replay = game.replay
-        game.replay = None
-        try:
-            self._connect()
-            request = Request(AgentCommand.END_GAME, game=game)
-            send_data(request, sockets[self.agent_id], timeout=seconds)
-            if game.config.time_limits is not None:
-                seconds = game.config.time_limits.init
-            while seconds is None or seconds > 0:
-                try:
-                    response = receive_data(
-                        sockets[self.agent_id],
-                        timeout=(seconds if seconds is not None else None),
-                    )
-                    if type(response) != Response:
-                        print(f"Invalid response type: {response}")
-                    elif str(response.token) != str(self.token):
-                        print(f"Invalid token: {response.token} != {self.token}")
-                    elif str(response.request_id) != str(request.request_id):
-                        print(
-                            f"Invalid request_id: {response.request_id} != {request.request_id}"
-                        )
-                    else:
-                        self._close()
-                        game.replay = replay
-                        return
-                except Exception as e:
-                    print(f"Error parsing message: ", e)
-                seconds = game.get_seconds_left()
-        except Exception as e:
-            print(f"{self.name} failed to communicate: ", e)
-        game.replay = replay
+        self._send_command(AgentCommand.END_GAME, game=game)
+        self._close()
 
     def _close(self):
         sockets[self.agent_id].close()
@@ -212,8 +143,10 @@ class DockerAgent(PythonSocketClient):
     ):
         self.img_name = img_name
         self.command = command
-        # self.container = None
-        api = docker.from_env()
+        try:
+            api = docker.from_env()
+        except Exception:
+            raise Exception("Failed to initialize docker API")
 
         # make sure image is available
         if not docker_image_exists(api, img_name):
@@ -233,7 +166,13 @@ class DockerAgent(PythonSocketClient):
         )
         time.sleep(4)
 
-        super().__init__(img_name, host="127.0.0.1", port=host_port, token=DEFAULT_TOKEN, connection_timeout=4)
+        super().__init__(
+            img_name,
+            host="127.0.0.1",
+            port=host_port,
+            token=DEFAULT_TOKEN,
+            connection_timeout=4,
+        )
 
         # get name of agent
         self._connect()
@@ -249,23 +188,32 @@ def get_free_port() -> int:
         s.bind(("", 0))
         return s.getsockname()[1]
 
+
 # FIX: not needed, agent is handled with composition not inheritence
 class PythonSocketServer(Agent):
-    def __init__(self, agent, port: Optional[int] = DEFAULT_PORT, token: Optional[str] = DEFAULT_TOKEN):
+    socket_: Optional[socket.socket]
+
+    def __init__(
+        self,
+        agent,
+        port: Optional[int] = DEFAULT_PORT,
+        token: Optional[str] = DEFAULT_TOKEN,
+    ):
         super().__init__(agent.name)  # FIX: not needed
         self.agent = agent
         self.port = port
         self.token = token
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((socket.gethostname(), port))
-        self.socket.listen(1)
+        self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket_.bind((socket.gethostname(), port))
+        self.socket_.listen(1)
         print(f"Agent listening on {socket.gethostname()}:{port} using token {token}")
 
     def run(self):
+        assert self.socket_ is not None
         while True:
             try:
                 print("socket accept")
-                socket, client_address = self.socket.accept()
+                socket, _ = self.socket_.accept()
                 print("receive data")
                 request = receive_data(socket)
                 print("data received")
@@ -313,9 +261,9 @@ class PythonSocketServer(Agent):
                 print(e)
 
     def _close(self):
-        if self.socket is not None:
-            self.socket.close()
-        self.socket = None
+        if self.socket_ is not None:
+            self.socket_.close()
+        self.socket_ = None
 
     def new_game(self, game, team):
         self.agent.new_game(game, team)
