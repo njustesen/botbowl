@@ -177,7 +177,6 @@ class DockerAgent(PythonSocketClient):
         assert docker_image_exists(api, img_name), f"Image {img_name} not found"
 
         host_port = get_free_port()
-        assert host_port > 80, f"Invalid port: {host_port}"
         print(f"Using port {host_port}")
         self.container = api.containers.run(
             img_name,
@@ -186,7 +185,6 @@ class DockerAgent(PythonSocketClient):
             auto_remove=True,
             ports={DEFAULT_PORT: host_port},
         )
-        time.sleep(4)
 
         super().__init__(
             img_name,
@@ -195,13 +193,11 @@ class DockerAgent(PythonSocketClient):
             token=DEFAULT_TOKEN,
             connection_timeout=4,
         )
+        time.sleep(1) # weird connection errors can possibly be solved by increasing this
 
-        # get name of agent
         self._connect()
         send_data(Request(AgentCommand.STATE_NAME), sockets[self.agent_id], timeout=5)
         response = receive_data(sockets[self.agent_id], timeout=5)
-        name = response.object
-        assert type(name) == str, f"Invalid name type: {type(name)}"
 
     def __del__(self):
         if self.container is not None:
