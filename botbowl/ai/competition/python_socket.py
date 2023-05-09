@@ -34,11 +34,32 @@ sockets = {}
 
 
 class Request:
+    command: AgentCommand
+    game: Optional[Game]
+    team: Optional[Team]
+    request_id: str
+
     def __init__(self, command, game=None, team=None):
         self.command = command
         self.game = game
         self.team = team
         self.request_id = secrets.token_hex(32)
+
+    def validate(self):
+        if self.command == AgentCommand.ACT:
+            assert isinstance(self.game, Game)
+            assert self.team is None
+        elif self.command == AgentCommand.NEW_GAME:
+            assert isinstance(self.game, Game)
+            assert isinstance(self.team, Team)
+        elif self.command == AgentCommand.END_GAME:
+            assert isinstance(self.game, Game)
+            assert self.team is None
+        elif self.command == AgentCommand.STATE_NAME:
+            assert self.game is None
+            assert self.team is None
+        else:
+            raise AssertionError(f"Unknown command: {self.command}")
 
 
 class Response:
@@ -57,14 +78,14 @@ def send_data(data: Union[Request, Response], socket, timeout=None):
     socket.sendall(msg)
 
 
-def receive_data(socket, timeout=None) -> Response:
+def receive_data(connection, timeout=None) -> Response:
     if timeout is not None and timeout < 0:
         raise Exception("Timeout cannot be lower than 0")
     full_msg = b""
     msglen = None
-    socket.settimeout(timeout)
+    connection.settimeout(timeout)
     while True:
-        msg = socket.recv(4096)
+        msg = connection.recv(4096)
         if msglen is None:
             msglen = int(msg[:HEADERSIZE])
         full_msg += msg
@@ -95,7 +116,6 @@ class PythonSocketClient(Agent):
         game: Game,
         team=None,
     ) -> T:
-
         self._connect()
 
         timeout = game.get_seconds_left()
@@ -108,7 +128,7 @@ class PythonSocketClient(Agent):
         assert type(response) == Response, f"'{type(response)}' != '{Response}'"
         assert str(response.token) == str(self.token)
         assert str(response.request_id) == str(request.request_id)
-        if expected_return_type is not None: 
+        if expected_return_type is not None:
             assert type(response.object) == expected_return_type
         return response.object  # type: ignore
 
@@ -143,6 +163,8 @@ class DockerAgent(PythonSocketClient):
     ):
         self.img_name = img_name
         self.command = command
+        self.container = None
+
         try:
             api = docker.from_env()
         except Exception:
@@ -157,7 +179,7 @@ class DockerAgent(PythonSocketClient):
         host_port = get_free_port()
         assert host_port > 80, f"Invalid port: {host_port}"
         print(f"Using port {host_port}")
-        api.containers.run(
+        self.container = api.containers.run(
             img_name,
             command,
             detach=True,
@@ -181,17 +203,19 @@ class DockerAgent(PythonSocketClient):
         name = response.object
         assert type(name) == str, f"Invalid name type: {type(name)}"
 
+    def __del__(self):
+        if self.container is not None:
+            self.container.kill()
+
 
 def get_free_port() -> int:
-    """Get a port that is not in use"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("", 0))
         return s.getsockname()[1]
 
 
-# FIX: not needed, agent is handled with composition not inheritence
-class PythonSocketServer(Agent):
-    socket_: Optional[socket.socket]
+class PythonSocketServer:
+    socket_: socket.socket
 
     def __init__(
         self,
@@ -199,77 +223,43 @@ class PythonSocketServer(Agent):
         port: Optional[int] = DEFAULT_PORT,
         token: Optional[str] = DEFAULT_TOKEN,
     ):
-        super().__init__(agent.name)  # FIX: not needed
         self.agent = agent
         self.port = port
         self.token = token
-        self.socket_ = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket_.bind((socket.gethostname(), port))
-        self.socket_.listen(1)
-        print(f"Agent listening on {socket.gethostname()}:{port} using token {token}")
 
     def run(self):
-        assert self.socket_ is not None
-        while True:
-            try:
-                print("socket accept")
-                socket, _ = self.socket_.accept()
-                print("receive data")
-                request = receive_data(socket)
-                print("data received")
-                if type(request) is not Request:
-                    raise Exception(f"Unreadable request {request}")
-                if request.command == AgentCommand.ACT:
-                    if request.game is None:
-                        raise Exception(f"No game provided an 'act' request")
-                    action = self.act(request.game)
-                    send_data(
-                        Response(action, self.token, request.request_id),
-                        socket,
-                        timeout=2,
-                    )
-                elif request.command == AgentCommand.STATE_NAME:
-                    name = str(self.agent.name)
-                    send_data(
-                        Response(name, self.token, request.request_id),
-                        socket,
-                        timeout=2,
-                    )
-                elif request.command == AgentCommand.NEW_GAME:
-                    if request.game is None or request.team is None:
-                        raise Exception(
-                            f"No game or team provided an 'new_Game' request"
-                        )
-                    self.new_game(request.game, request.team)
-                    send_data(
-                        Response(None, self.token, request.request_id),
-                        socket,
-                        timeout=2,
-                    )
-                elif request.command == AgentCommand.END_GAME:
-                    if request.game is None:
-                        raise Exception(f"No game provided an 'end_game' request")
-                    self.end_game(request.game)
-                    send_data(
-                        Response(None, self.token, request.request_id),
-                        socket,
-                        timeout=2,
-                    )
-                else:
-                    raise Exception(f"Unknown command {request.command}")
-            except Exception as e:
-                print(e)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s: 
+            s.bind((socket.gethostname(), self.port))
+            s.listen(1)
+            print(f"Agent listening on {socket.gethostname()}:{self.port} using token {self.token}")
+
+            while True:
+                connection, _ = s.accept()
+                with connection:
+                    request = receive_data(connection)
+                    data = self.handle_request(request) # type: ignore
+                    response = Response(data, self.token, request.request_id)
+                    send_data(response, connection, timeout=2)
+
+    def handle_request(self, request: Request) -> Union[Action, str, None]:
+        assert isinstance(request, Request)
+        request.validate()
+        if request.command == AgentCommand.ACT:
+            return self.agent.act(request.game)
+        elif request.command == AgentCommand.STATE_NAME:
+            return str(self.agent.name)
+        elif request.command == AgentCommand.NEW_GAME:
+            self.agent.new_game(request.game, request.team)
+            return None
+        elif request.command == AgentCommand.END_GAME:
+            self.agent.end_game(request.game)
+            return None
+        else:
+            raise Exception(f"Unknown command {request.command}")
 
     def _close(self):
         if self.socket_ is not None:
             self.socket_.close()
-        self.socket_ = None
 
-    def new_game(self, game, team):
-        self.agent.new_game(game, team)
-
-    def act(self, game):
-        return self.agent.act(game)
-
-    def end_game(self, game):
-        self.agent.end_game(game)
+    def __del__(self):
+        self._close()
