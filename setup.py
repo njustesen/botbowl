@@ -4,6 +4,16 @@ import sysconfig
 from distutils.ccompiler import new_compiler
 from distutils.errors import DistutilsPlatformError
 
+# warn user if setup.py is run from a different directory
+dir_of_file = os.path.dirname(__file__)
+cwd = os.getcwd()
+if dir_of_file != cwd:
+    # We should make this warning obsolete..
+    print(f"WARNING: setup.py is being run from a different directory than the install script. This can cause strange errors"
+          f"Current directory='{cwd}', dir of file='{dir_of_file}'")
+
+
+
 try:
     error_msg = None
     from Cython.Build import cythonize
@@ -35,23 +45,24 @@ except DistutilsPlatformError:
 files_to_compile = ["botbowl/core/pathfinding/cython_pathfinding.pyx"]
 
 install_requires_packages = [
-          'numpy',
-          'untangle',
-          'Flask',
-          'gym==0.21.0',
-          'Jinja2',
-          'python-interface',
-          'stopit',
-          'requests',
-          'Cython >= 3.0a7',
-          'pytest',
-          'matplotlib',
-          'more_itertools'
+          'numpy==1.24.3',
+          'untangle==1.2.1',
+          'Flask==2.3.2',
+          'gym==0.26.2',
+          'Jinja2==3.1.2',
+          'docker==6.1.1',
+          'python-interface==1.6.1',
+          'stopit==1.1.2',
+          'requests==2.30.0',
+          'Cython==3.0.0b2',
+          'pytest==7.3.1',
+          'matplotlib==3.7.1',
+          'more_itertools==9.1.0'
 ]
 
 kwargs = {
     'name': 'botbowl',
-    'version': '0.4.0',
+    'version': '1.1.0',
     'include_package_data': True,
     'install_requires': install_requires_packages,
     'packages': find_packages(),
