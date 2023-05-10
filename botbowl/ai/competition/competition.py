@@ -5,8 +5,9 @@ Year: 2019
 ==========================
 This module contains a competition class to handle a competition between two bots.
 """
+import dataclasses
 from itertools import combinations
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 import numpy as np
 from botbowl.core.model import Team
 from botbowl.core.table import CasualtyType
@@ -60,6 +61,7 @@ class TeamResult:
         print(f"Cas inflicted: {self.cas_inflicted}")
         print(f"Killed: {self.killed}")
         print(f"Kills: {self.kills_inflicted}")
+
 
 class GameResult:
     home_agent_name: str
@@ -174,6 +176,38 @@ class CompetitionResults:
         print("- {}: {} (avg. {})".format(self.competitor_b_name, np.sum(self.kills_inflicted[self.competitor_b_name]), np.mean(self.kills_inflicted[self.competitor_b_name])))
         print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
+
+@dataclasses.dataclass
+class AgentSummaryResult:
+    name: str
+    wins: int = 0
+    losses: int = 0
+    draws: int = 0
+    tds_scored: int = 0
+    tds_conceded: int = 0
+
+    def add_comp_result(self, result: CompetitionResults):
+        assert self.name in {result.competitor_a_name, result.competitor_b_name}
+        assert result.crashes == 0
+        self.wins += result.wins[self.name]
+        self.losses += sum(result.wins.values()) - result.wins[self.name]
+        self.draws += result.undecided # ugh.. is this correct?
+        self.tds_scored += sum(result.tds[self.name])
+        self.tds_conceded += sum([sum(tds) for tds in result.tds.values()]) - self.tds_scored
+
+    @staticmethod
+    def get_titles() -> list[str]:
+        return ["Name", "Wins", "Losses", "Draws", "TDs Scored", "TDs Conceded"]
+
+    def get_values(self) -> list[Union[int, str]]:
+        return [self.name, self.wins, self.losses, self.draws, self.tds_scored, self.tds_conceded]
+
+    @staticmethod
+    def csv_header() -> str:
+        return ",".join(AgentSummaryResult.get_titles())
+
+    def csv_row(self) -> str:
+        return ",".join([str(value) for value in self.get_values()])
 
 class TimeoutException(Exception):
     pass
@@ -309,6 +343,15 @@ class MultiAgentCompetition:
         self.results = []
         self.matchups = list(combinations(self.agents, 2))
 
+        names = set()
+        for create_agent in self.agents:
+            agent = create_agent()
+            if agent.name in names:
+                raise ValueError(
+                    f"Agent names must be unique, '{agent.name}' is used more than once"
+                )
+            names.add(agent.name)
+
     def run(self):
         for create_agent_a, create_agent_b in self.matchups:
             agent_a = create_agent_a()
@@ -328,3 +371,17 @@ class MultiAgentCompetition:
             )
             result = competition.run()
             self.results.append(result)
+
+    def summarized_result(self) -> str:
+        agent_summaries: dict[str, AgentSummaryResult] = {}
+        for result in self.results:
+            for agent_name in [result.competitor_a_name, result.competitor_b_name]:
+                agent_summaries.get(agent_name, AgentSummaryResult(agent_name)).add_comp_result(result)
+
+        ordered_summaries = sorted(agent_summaries.values(), key=lambda x: 3*x.wins + x.draws, reverse=True)
+        csv_str = AgentSummaryResult.csv_header() + "\n"
+        csv_str += "\n".join(summary.csv_row() for summary in ordered_summaries)
+        return csv_str
+
+    def verses_result_table(self) -> str:
+        return ""
