@@ -158,11 +158,10 @@ def docker_image_exists(docker_client, img_name: str) -> bool:
 class DockerAgent(PythonSocketClient):
     def __init__(
         self,
+        name: str,
         img_name: str,
         command: Optional[str],
     ):
-        self.img_name = img_name
-        self.command = command
         self.container = None
 
         try:
@@ -187,7 +186,7 @@ class DockerAgent(PythonSocketClient):
         )
 
         super().__init__(
-            img_name,
+            name=name,
             host="127.0.0.1",
             port=host_port,
             token=DEFAULT_TOKEN,
@@ -195,9 +194,6 @@ class DockerAgent(PythonSocketClient):
         )
         time.sleep(1) # weird connection errors can possibly be solved by increasing this
 
-        self._connect()
-        send_data(Request(AgentCommand.STATE_NAME), sockets[self.agent_id], timeout=5)
-        response = receive_data(sockets[self.agent_id], timeout=5)
 
     def __del__(self):
         if self.container is not None:
