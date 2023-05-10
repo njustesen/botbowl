@@ -234,16 +234,23 @@ class Competition:
             results.append(result)
         self.results = CompetitionResults(self.agent_a.name, self.agent_b.name, results)
 
-    def _run_game(self, game):
+    def _run_game(self, game: Game):
+        assert not game.is_started()
+        try: 
+            # if no exceptions are thrown, game will be over when game.init() finishes
+            game.init()
+        except InvalidActionError as e:
+            print(e)
+
+
         while not game.state.game_over:
-            try:
-                if not game.is_started():
-                    game.init()
-                elif game.get_seconds_left() > 0:
+            time_left = game.get_seconds_left()
+            if time_left is None or time_left > 0:
+                try: 
                     action = game.actor.act(game)  # Allow actor to try again
                     game.step(action)
-                else:
-                    game.step(game._forced_action())
-            except InvalidActionError as e:
-                print(e)
-
+                except InvalidActionError as e:
+                    print(e)
+            else:
+                print("Using forced action")
+                game.step(game._forced_action())
