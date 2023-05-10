@@ -51,16 +51,15 @@ class TeamResult:
         self.crashed_loss = crashed and not self.win and not self.draw
 
     def print(self):
-        print("-- {}".format(self.name))
-        print("Result: {}".format("Win" if self.win else ("Draw" if self.draw else "Loss")))
+        print(f"-- {self.name}")
+        print(f"Result: {'Win' if self.win else 'Draw' if self.draw else 'Loss'}")
         if self.crashed_win or self.crashed_loss:
             print("Game crashed")
-        print("TDs: {}".format(self.tds))
-        print("Cas: {}".format(self.cas))
-        print("Cas inflicted: {}".format(self.cas_inflicted))
-        print("Killed: {}".format(self.killed))
-        print("Kills: {}".format(self.kills_inflicted))
-
+        print(f"TDs: {self.tds}")
+        print(f"Cas: {self.cas}")
+        print(f"Cas inflicted: {self.cas_inflicted}")
+        print(f"Killed: {self.killed}")
+        print(f"Kills: {self.kills_inflicted}")
 
 class GameResult:
     home_agent_name: str
@@ -69,6 +68,7 @@ class GameResult:
     home_result: TeamResult
     away_result: TeamResult
     draw: bool
+    crashed: bool
     tds: int
     cas_inflicted: int
     kills: int
@@ -92,12 +92,14 @@ class GameResult:
 
     def print(self):
         print("############ GAME RESULTS ###########")
-        print("Final score:")
-        print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.tds, self.home_result.tds, self.home_agent_name))
-        print("Casualties inflicted:")
-        print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.cas_inflicted, self.home_result.cas_inflicted, self.home_agent_name))
-        print("Kills inflicted:")
-        print("- {} {} - {} {}".format(self.away_agent_name, self.away_result.kills_inflicted, self.home_result.kills_inflicted, self.home_agent_name))
+        away_agent_name = self.away_agent_name
+        home_agent_name = self.home_agent_name
+        away_result = self.away_result
+        home_result = self.home_result
+
+        print(f"Final score:\n- {away_agent_name} {away_result.tds} - {home_result.tds} {home_agent_name}")
+        print(f"Casualties inflicted:\n- {away_agent_name} {away_result.cas_inflicted} - {home_result.cas_inflicted} {home_agent_name}")
+        print(f"Kills inflicted:\n- {away_agent_name} {away_result.kills_inflicted} - {home_result.kills_inflicted} {home_agent_name}")
         print("Result:")
         if self.winner is not None:
             print(f"- Winner: {self.winner.name}")
@@ -112,7 +114,7 @@ class CompetitionResults:
     game_results: list
     competitor_a_name: str
     competitor_b_name: str
-    wins: dict
+    wins: dict[str, int]
     decided: int
     undecided: int
     crashes: int
