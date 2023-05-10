@@ -118,7 +118,12 @@ class Replay:
 
 class TimeLimits:
 
-    def __init__(self, turn, secondary, init, end):
+    turn: int
+    secondary: int
+    init: int
+    end: int
+
+    def __init__(self, turn=120, secondary=5, init=20, end=10):
         self.turn = turn
         self.secondary = secondary
         self.init = init
@@ -150,7 +155,7 @@ class Configuration:
     kick_scatter_distance: str
     offensive_formations: List['Formation']
     defensive_formations: List['Formation']
-    time_limits: Optional[TimeLimits]
+    time_limits: TimeLimits
     pathfinding_enabled: bool
     pathfinding_directly_to_adjacent: bool
 
@@ -172,7 +177,7 @@ class Configuration:
         self.throw_in_dice = "2d6"
         self.offensive_formations = []
         self.defensive_formations = []
-        self.time_limits = None
+        self.time_limits = TimeLimits()
         self.pathfinding_enabled = True
         self.pathfinding_directly_to_adjacent = True
 
@@ -501,8 +506,8 @@ class GameState(Reversible):
     game_over: bool
     available_actions: List['ActionChoice']
     clocks: List[Clock]
-    rerolled_procs: Set['Procedure']
-    player_action_type: Optional[ActionType]
+    rerolled_procs: Set['Procedure'] # type: ignore
+    player_action_type: Optional[PlayerActionType]
 
     def __init__(self, game, home_team, away_team):
         super().__init__(ignored_keys=["clocks"])
@@ -1041,7 +1046,7 @@ class Piece:
     position: 'Square'
 
     def __init__(self, position=None):
-        self.position = position
+        self.position = position # type: ignore
 
     def is_catchable(self):
         return False
@@ -1284,11 +1289,12 @@ class Square:
     def __hash__(self):
         return self.x * 7 + self.y * 13
 
-    def distance(self, other, manhattan=False, flight=False):
+    def distance(self, other, manhattan=False, flight=False) -> int:
         if manhattan:
             return abs(other.x - self.x) + abs(other.y - self.y)
         elif flight:
-            return sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2)
+            # TODO: this argument should be depricated and replaced with a separate function
+            return sqrt((other.x - self.x) ** 2 + (other.y - self.y) ** 2) # type: ignore
         else:
             return max(abs(other.x - self.x), abs(other.y - self.y))
 
