@@ -6,13 +6,27 @@ Year: 2019
 This module contains a competition class to handle a competition between two bots.
 """
 import numpy as np
+from botbowl.core.model import Team, Configuration, RuleSet, TwoPlayerArena
 
 from botbowl.core.table import CasualtyType
 from botbowl.core import Game, InvalidActionError, Agent
 from botbowl.core import load_arena, load_rule_set
 
+from typing import Optional, Any
+
 
 class TeamResult:
+    name: str
+    win: bool
+    draw: bool
+    loss: bool
+    tds: int
+    cas: int
+    cas_inflicted: int
+    killed: int
+    kills_inflicted: int
+    crashed_win: bool
+    crashed_loss: bool
 
     def __init__(self, game, name, team, winner, crashed):
         self.name = name
@@ -38,9 +52,18 @@ class TeamResult:
         print("Cas inflicted: {}".format(self.cas_inflicted))
         print("Killed: {}".format(self.killed))
         print("Kills: {}".format(self.kills_inflicted))
-        
+
 
 class GameResult:
+    home_agent_name: str
+    away_agent_name: str
+    winner: Optional[Agent]
+    home_result: TeamResult
+    away_result: TeamResult
+    draw: bool
+    tds: int
+    cas_inflicted: int
+    kills: int
 
     def __init__(self, game, crashed=False):
         self.home_agent_name = game.home_agent.name
@@ -78,8 +101,20 @@ class GameResult:
 
 
 class CompetitionResults:
+    game_results: list
+    competitor_a_name: str
+    competitor_b_name: str
+    wins: dict
+    decided: int
+    undecided: int
+    crashes: int
+    a_crashes: int
+    b_crashes: int
+    tds: dict[str, list[int]]
+    cas_inflicted: dict[str, list[int]]
+    kills: dict
 
-    def __init__(self, competitor_a_name, competitor_b_name, game_results):
+    def __init__(self, competitor_a_name: str, competitor_b_name: str, game_results: list[GameResult]):
         self.game_results = game_results
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
@@ -130,35 +165,67 @@ class CompetitionResults:
         print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
 
-class TimeoutException(Exception): pass
+class TimeoutException(Exception):
+    pass
 
 
 class Competition:
+    agent_a: Agent
+    agent_b: Agent
+    team_a: Team
+    team_b: Team
+    config: Configuration
+    arena: TwoPlayerArena
+    ruleset: Any
+    n: int
+    results: Optional[CompetitionResults]
+    record: bool
 
-    def __init__(self, agent_a: Agent, agent_b: Agent, team_a, team_b, config, ruleset, arena, n=2, record=False):
+    def __init__(
+        self,
+        agent_a: Agent,
+        agent_b: Agent,
+        team_a: Team,
+        team_b: Team,
+        config: Configuration,
+        ruleset,
+        arena: Optional[TwoPlayerArena],
+        n: int = 2,
+        record=False,
+    ):
         self.agent_a = agent_a
         self.agent_b = agent_b
         self.team_a = team_a
         self.team_b = team_b
         self.config = config
         self.config.competition_mode = True
-        self.arena = load_arena(config.arena)
+        self.arena = load_arena(config.arena) if arena is None else arena
         self.ruleset = load_rule_set(config.ruleset)
         self.n = n
         self.results = None
         self.ruleset = ruleset
-        self.arena = arena
         self.record = record
 
     def run(self):
-        results = []
+        results: list[GameResult] = []
+
         for i in range(self.n):
             crashed = False
             home_agent = self.agent_a if i % 2 == 0 else self.agent_b
             away_agent = self.agent_b if i % 2 == 0 else self.agent_a
             home_team = self.team_a if i % 2 == 0 else self.team_b
             away_team = self.team_b if i % 2 == 0 else self.team_a
-            game = Game(i, home_team, away_team, home_agent, away_agent, self.config, arena=self.arena, ruleset=self.ruleset, record=self.record)
+            game = Game(
+                i,
+                home_team,
+                away_team,
+                home_agent,
+                away_agent,
+                self.config,
+                arena=self.arena,
+                ruleset=self.ruleset,
+                record=self.record,
+            )
             self._run_game(game)
 
             print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
