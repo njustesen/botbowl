@@ -5,11 +5,19 @@ Year: 2019
 ==========================
 This module contains a competition class to handle a competition between two bots.
 """
+from itertools import combinations
+from typing import Callable, Optional
 import numpy as np
-from botbowl.core.model import Team, Configuration, RuleSet, TwoPlayerArena
-
+from botbowl.core.model import Team
 from botbowl.core.table import CasualtyType
-from botbowl.core import Game, InvalidActionError, Agent
+from botbowl.core import (
+    Game,
+    InvalidActionError,
+    Agent,
+    Configuration,
+    RuleSet,
+    TwoPlayerArena,
+)
 from botbowl.core import load_arena, load_rule_set
 
 from typing import Optional, Any
@@ -193,6 +201,7 @@ class Competition:
         n: int = 2,
         record=False,
     ):
+        assert n % 2 == 0, "Number of games must be even"
         self.agent_a = agent_a
         self.agent_b = agent_b
         self.team_a = team_a
@@ -216,7 +225,7 @@ class Competition:
             home_team = self.team_a if i % 2 == 0 else self.team_b
             away_team = self.team_b if i % 2 == 0 else self.team_a
             game = Game(
-                i,
+                str(i),
                 home_team,
                 away_team,
                 home_agent,
@@ -228,25 +237,28 @@ class Competition:
             )
             self._run_game(game)
 
-            print(f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}")
+            print(
+                f"{home_agent.name} {game.state.home_team.state.score} - {game.state.away_team.state.score} {away_agent.name}"
+            )
 
             result = GameResult(game, crashed=crashed)
             results.append(result)
         self.results = CompetitionResults(self.agent_a.name, self.agent_b.name, results)
+        return self.results
 
     def _run_game(self, game: Game):
         assert not game.is_started()
         try: 
-            # if no exceptions are thrown, game will be over when game.init() finishes
+            # game will finish or throw exception 
             game.init()
         except InvalidActionError as e:
             print(e)
-
 
         while not game.state.game_over:
             time_left = game.get_seconds_left()
             if time_left is None or time_left > 0:
                 try: 
+                    assert game.actor is not None
                     action = game.actor.act(game)  # Allow actor to try again
                     game.step(action)
                 except InvalidActionError as e:
@@ -254,3 +266,63 @@ class Competition:
             else:
                 print("Using forced action")
                 game.step(game._forced_action())
+
+
+AgentCreator = Callable[[], Agent]
+
+
+class MultiAgentCompetition:
+    agents: list[AgentCreator]
+    results: list[CompetitionResults]
+    home_team: Team
+    away_team: Team
+    config: Configuration
+    ruleset: Optional[RuleSet]
+    arena: Optional[TwoPlayerArena]
+    record: bool
+    number_of_games: int
+
+    def __init__(
+        self,
+        agents: list[AgentCreator],
+        matchups: list[tuple[AgentCreator, AgentCreator]],
+        home_team: Team,
+        away_team: Team,
+        config: Configuration,
+        ruleset: Optional[RuleSet] = None,
+        arena: Optional[TwoPlayerArena] = None,
+
+        record: bool = False,
+        number_of_games: int = 2,
+    ):
+        self.home_team = home_team
+        self.away_team = away_team
+        self.config = config
+        self.agents = agents
+        self.ruleset = ruleset
+        self.arena = arena
+        self.record = record
+        self.number_of_games = number_of_games
+
+        self.results = []
+        self.matchups = list(combinations(self.agents, 2))
+
+    def run(self):
+        for create_agent_a, create_agent_b in self.matchups:
+            agent_a = create_agent_a()
+            agent_b = create_agent_b()
+
+            print(f"Running {agent_a.name} vs {agent_b.name}")
+            competition = Competition(
+                agent_a,
+                agent_b,
+                self.home_team,
+                self.away_team,
+                self.config,
+                self.ruleset,
+                self.arena,
+                self.number_of_games,
+                self.record,
+            )
+            result = competition.run()
+            self.results.append(result)
