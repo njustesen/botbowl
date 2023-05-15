@@ -219,11 +219,10 @@ class MultiAgentCompetition:
         for agent_summary in agent_summaries.values():
             agent_summary.final_score = self.score_calculator(agent_summary)
 
-        csv_str = AgentSummaryResult.csv_header() + "\n"
-
         ordered_summaries = sorted(
             agent_summaries.values(), key=lambda x: x.final_score, reverse=True
         )
+        csv_str = ordered_summaries[0].csv_header() + "\n"
         csv_str += "\n".join(summary.csv_row() for summary in ordered_summaries)
 
         return csv_str

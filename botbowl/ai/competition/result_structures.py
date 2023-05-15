@@ -129,7 +129,7 @@ class GameResult:
 
         return (
             f"{home_agent_name} vs. {away_agent_name}, {home_result.tds} - {away_result.tds}"
-            + ", cas_inflicted: {home_result.cas_inflicted} - {away_result.cas_inflicted}"
+            + f", cas_inflicted: {home_result.cas_inflicted} - {away_result.cas_inflicted}"
         )
 
 
@@ -157,23 +157,15 @@ class CompetitionResults:
         self.competitor_a_name = competitor_a_name
         self.competitor_b_name = competitor_b_name
         self.wins = {
-            competitor_a_name: np.sum(
-                [
-                    1
-                    if result.winner is not None
-                    and result.winner.name.lower() == competitor_a_name.lower()
-                    else 0
-                    for result in game_results
-                ]
+            competitor_a_name: sum(
+                result.winner is not None
+                and result.winner.name.lower() == competitor_a_name.lower()
+                for result in game_results
             ),
-            competitor_b_name: np.sum(
-                [
-                    1
-                    if result.winner is not None
-                    and result.winner.name.lower() == competitor_b_name.lower()
-                    else 0
-                    for result in game_results
-                ]
+            competitor_b_name: sum(
+                result.winner is not None
+                and result.winner.name.lower() == competitor_b_name.lower()
+                for result in game_results
             ),
         }
         self.decided = self.wins[competitor_a_name] + self.wins[competitor_b_name]
@@ -320,43 +312,35 @@ class AgentSummaryResult:
         assert result.crashes == 0
         self.wins += result.wins[self.name]
         self.losses += sum(result.wins.values()) - result.wins[self.name]
-        self.draws += result.undecided  # ugh.. is this correct?
+        self.draws += result.undecided
 
         tds_scored = sum(result.tds[self.name])
-        tds_total = sum(result.tds[result.competitor_a_name]) + sum(
-            result.tds[result.competitor_b_name]
-        )
+        tds_total = sum(sum(tds) for tds in result.tds.values())
         tds_conceded = tds_total - tds_scored
 
         self.tds_scored += tds_scored
         self.tds_conceded += tds_conceded
 
-    @staticmethod
-    def get_titles() -> list[str]:
-        return [
-            "Name",
-            "Final Score",
-            "Wins",
-            "Losses",
-            "Draws",
-            "TDs Scored",
-            "TDs Conceded",
+    def _csv_header_and_row(self) -> tuple[list[str], list[str]]:
+        csv_header_and_value = [
+            ("Name", self.name),
+            ("Final Score", self.final_score),
+            ("Wins", self.wins),
+            ("Losses", self.losses),
+            ("Draws", self.draws),
+            ("TDs Scored", self.tds_scored),
+            ("TDs Conceded", self.tds_conceded),
         ]
+        return tuple(zip(*csv_header_and_value))  # transpose
 
-    def get_values(self) -> list[Union[float, str]]:
-        return [
-            self.name,
-            self.final_score,
-            self.wins,
-            self.losses,
-            self.draws,
-            self.tds_scored,
-            self.tds_conceded,
-        ]
+    def get_titles(self) -> list[str]:
+        return self._csv_header_and_row()[0]
 
-    @staticmethod
-    def csv_header() -> str:
-        return ",".join(AgentSummaryResult.get_titles())
+    def get_values(self) -> list[str]:
+        return self._csv_header_and_row()[1]
+
+    def csv_header(self) -> str:
+        return ",".join(self.get_titles())
 
     def csv_row(self) -> str:
         return ",".join([str(value) for value in self.get_values()])
