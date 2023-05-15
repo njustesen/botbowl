@@ -6,6 +6,7 @@ Year: 2019
 This module contains a competition class to handle a competition between two bots.
 """
 import dataclasses
+import tabulate
 from itertools import combinations
 from typing import Callable, Optional, Union
 import numpy as np
@@ -21,7 +22,7 @@ from botbowl.core import (
 )
 from botbowl.core import load_arena, load_rule_set
 
-from typing import Optional, Any
+from typing import Optional, Any, List
 
 
 class TeamResult:
@@ -111,9 +112,22 @@ class GameResult:
             print("- Draw")
         print("#####################################")
 
+    def __str__(self):
+        away_agent_name = self.away_agent_name
+        home_agent_name = self.home_agent_name
+        away_result = self.away_result
+        home_result = self.home_result
+        # if home_result.win:
+        #     home_agent_name = f"**{home_agent_name}**"
+        # elif away_result.win:
+        #     away_agent_name = f"**{away_agent_name}**"
+
+        return f"{home_agent_name} vs. {away_agent_name}, {home_result.tds} - {away_result.tds}"+\
+                ", cas_inflicted: {home_result.cas_inflicted} - {away_result.cas_inflicted}"
+
 
 class CompetitionResults:
-    game_results: list
+    game_results: list[GameResult]
     competitor_a_name: str
     competitor_b_name: str
     wins: dict[str, int]
@@ -185,6 +199,7 @@ class AgentSummaryResult:
     draws: int = 0
     tds_scored: int = 0
     tds_conceded: int = 0
+    final_score: float = 0.0
 
     def add_comp_result(self, result: CompetitionResults):
         assert self.name in {result.competitor_a_name, result.competitor_b_name}
@@ -192,15 +207,20 @@ class AgentSummaryResult:
         self.wins += result.wins[self.name]
         self.losses += sum(result.wins.values()) - result.wins[self.name]
         self.draws += result.undecided # ugh.. is this correct?
-        self.tds_scored += sum(result.tds[self.name])
-        self.tds_conceded += sum([sum(tds) for tds in result.tds.values()]) - self.tds_scored
+
+        tds_scored = sum(result.tds[self.name])
+        tds_total = sum(result.tds[result.competitor_a_name]) + sum(result.tds[result.competitor_b_name])
+        tds_conceded = tds_total - tds_scored
+        
+        self.tds_scored += tds_scored  
+        self.tds_conceded += tds_conceded
 
     @staticmethod
     def get_titles() -> list[str]:
-        return ["Name", "Wins", "Losses", "Draws", "TDs Scored", "TDs Conceded"]
+        return ["Name", "Final Score", "Wins", "Losses", "Draws", "TDs Scored", "TDs Conceded"]
 
-    def get_values(self) -> list[Union[int, str]]:
-        return [self.name, self.wins, self.losses, self.draws, self.tds_scored, self.tds_conceded]
+    def get_values(self) -> list[Union[float, str]]:
+        return [self.name, self.final_score, self.wins, self.losses, self.draws, self.tds_scored, self.tds_conceded]
 
     @staticmethod
     def csv_header() -> str:
@@ -306,6 +326,7 @@ class Competition:
 
 AgentCreator = Callable[[], Agent]
 
+default_score_calculator = lambda x: 3*x.wins + x.draws
 
 class MultiAgentCompetition:
     agents: list[AgentCreator]
@@ -317,19 +338,19 @@ class MultiAgentCompetition:
     arena: Optional[TwoPlayerArena]
     record: bool
     number_of_games: int
+    score_calculator: Callable[[AgentSummaryResult], float]
 
     def __init__(
         self,
         agents: list[AgentCreator],
-        matchups: list[tuple[AgentCreator, AgentCreator]],
         home_team: Team,
         away_team: Team,
         config: Configuration,
         ruleset: Optional[RuleSet] = None,
         arena: Optional[TwoPlayerArena] = None,
-
         record: bool = False,
         number_of_games: int = 2,
+        score_calc_func: Optional[Callable[[AgentSummaryResult], float]] = None,
     ):
         self.home_team = home_team
         self.away_team = away_team
@@ -342,6 +363,7 @@ class MultiAgentCompetition:
 
         self.results = []
         self.matchups = list(combinations(self.agents, 2))
+        self.score_calculator = score_calc_func if score_calc_func is not None else default_score_calculator
 
         names = set()
         for create_agent in self.agents:
@@ -372,16 +394,62 @@ class MultiAgentCompetition:
             result = competition.run()
             self.results.append(result)
 
-    def summarized_result(self) -> str:
+    def get_game_results(self) -> list[GameResult]:
+        results = [] 
+        for comp_result in self.results:
+            results.extend(sorted(comp_result.game_results, key=str))
+        return results
+
+    def result_summarized_csv(self) -> str:
         agent_summaries: dict[str, AgentSummaryResult] = {}
         for result in self.results:
             for agent_name in [result.competitor_a_name, result.competitor_b_name]:
-                agent_summaries.get(agent_name, AgentSummaryResult(agent_name)).add_comp_result(result)
+                agent_summary = agent_summaries.get(agent_name, AgentSummaryResult(agent_name))
+                agent_summary.add_comp_result(result)
+                agent_summaries[agent_name] = agent_summary
 
-        ordered_summaries = sorted(agent_summaries.values(), key=lambda x: 3*x.wins + x.draws, reverse=True)
+        for agent_summary in agent_summaries.values():
+            agent_summary.final_score = self.score_calculator(agent_summary)
+
         csv_str = AgentSummaryResult.csv_header() + "\n"
+
+        ordered_summaries = sorted(agent_summaries.values(), key=lambda x: x.final_score, reverse=True)
         csv_str += "\n".join(summary.csv_row() for summary in ordered_summaries)
+
         return csv_str
 
-    def verses_result_table(self) -> str:
-        return ""
+    def print_summarized_result(self):
+        table = [line.split(',') for line in self.result_summarized_csv().split('\n')]
+        print(tabulate.tabulate(table, headers="firstrow", tablefmt="github"))
+        
+
+    def result_versus_csv(self) -> str:
+        num_agents = len(self.agents)
+        matchup_data: List[List[str]] = [["" for _ in range(num_agents)] for _ in range(num_agents)]
+        agent_names = []
+        for result in self.results:
+            name_a = result.competitor_a_name
+            name_b = result.competitor_b_name
+            assert name_a != name_b  
+            if name_a not in agent_names:
+                agent_names.append(name_a)
+            if name_b not in agent_names:
+                agent_names.append(name_b)
+            idx_a = agent_names.index(name_a)
+            idx_b = agent_names.index(name_b)
+
+            result_list = [result.wins[name_a], result.undecided, result.wins[name_b]]
+            result_str = "/".join(str(x) for x in result_list)
+            result_str_reversed = "/".join(str(x) for x in result_list[::-1])
+            matchup_data[idx_a][idx_b] = result_str
+            matchup_data[idx_b][idx_a] = result_str_reversed
+
+        table = [["Bot Names"]+agent_names[:]]
+        table += [[agent_name] + data_row for agent_name, data_row in zip(agent_names, matchup_data)]
+
+        return "\n".join(",".join(row) for row in table)
+
+    def print_versus_result(self):
+        table = [line.split(',') for line in self.result_versus_csv().split('\n')]
+        print(tabulate.tabulate(table, tablefmt="grid"))
+

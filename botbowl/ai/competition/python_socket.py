@@ -159,7 +159,8 @@ class DockerAgent(PythonSocketClient):
     def __init__(
         self,
         name: str,
-        img_name: str,
+        *,
+        image: str,
         command: Optional[str],
     ):
         self.container = None
@@ -170,15 +171,15 @@ class DockerAgent(PythonSocketClient):
             raise Exception("Failed to initialize docker API")
 
         # make sure image is available
-        if not docker_image_exists(api, img_name):
-            print(f"Pulling image {img_name}")
-            api.images.pull(img_name)
-        assert docker_image_exists(api, img_name), f"Image {img_name} not found"
+        if not docker_image_exists(api, image):
+            print(f"Pulling image {image}")
+            api.images.pull(image)
+        assert docker_image_exists(api, image), f"Image {image} not found"
 
         host_port = get_free_port()
         print(f"Using port {host_port}")
         self.container = api.containers.run(
-            img_name,
+            image,
             command,
             detach=True,
             auto_remove=True,
