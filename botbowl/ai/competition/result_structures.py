@@ -3,7 +3,7 @@ import dataclasses
 from botbowl.core import Agent
 from botbowl.core.table import CasualtyType
 import numpy as np
-from typing import Optional, Union
+from typing import Optional, Union, List, Dict, Tuple
 
 
 class TeamResult:
@@ -134,24 +134,24 @@ class GameResult:
 
 
 class CompetitionResults:
-    game_results: list[GameResult]
+    game_results: List[GameResult]
     competitor_a_name: str
     competitor_b_name: str
-    wins: dict[str, int]
+    wins: Dict[str, int]
     decided: int
     undecided: int
     crashes: int
     a_crashes: int
     b_crashes: int
-    tds: dict[str, list[int]]
-    cas_inflicted: dict[str, list[int]]
-    kills: dict
+    tds: Dict[str, List[int]]
+    cas_inflicted: Dict[str, List[int]]
+    kills: Dict
 
     def __init__(
         self,
         competitor_a_name: str,
         competitor_b_name: str,
-        game_results: list[GameResult],
+        game_results: List[GameResult],
     ):
         self.game_results = game_results
         self.competitor_a_name = competitor_a_name
@@ -321,7 +321,7 @@ class AgentSummaryResult:
         self.tds_scored += tds_scored
         self.tds_conceded += tds_conceded
 
-    def _csv_header_and_row(self) -> tuple[list[str], list[str]]:
+    def _csv_header_and_row(self) -> Tuple[List[str], List[str]]:
         csv_header_and_value = [
             ("Name", self.name),
             ("Final Score", self.final_score),
@@ -331,12 +331,12 @@ class AgentSummaryResult:
             ("TDs Scored", self.tds_scored),
             ("TDs Conceded", self.tds_conceded),
         ]
-        return tuple(zip(*csv_header_and_value))  # transpose
+        return Tuple(zip(*csv_header_and_value))  # transpose
 
-    def get_titles(self) -> list[str]:
+    def get_titles(self) -> List[str]:
         return self._csv_header_and_row()[0]
 
-    def get_values(self) -> list[str]:
+    def get_values(self) -> List[str]:
         return self._csv_header_and_row()[1]
 
     def csv_header(self) -> str:

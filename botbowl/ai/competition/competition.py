@@ -69,7 +69,7 @@ class Competition:
         self.record = record
 
     def run(self):
-        results: list[GameResult] = []
+        results: List[GameResult] = []
 
         for i in range(self.n):
             crashed = False
@@ -129,8 +129,8 @@ def default_score_calculator(agent_summary: AgentSummaryResult):
 
 
 class MultiAgentCompetition:
-    agents: list[AgentCreator]
-    results: list[CompetitionResults]
+    agents: List[AgentCreator]
+    results: List[CompetitionResults]
     home_team: Team
     away_team: Team
     config: Configuration
@@ -142,7 +142,7 @@ class MultiAgentCompetition:
 
     def __init__(
         self,
-        agents: list[AgentCreator],
+        agents: List[AgentCreator],
         home_team: Team,
         away_team: Team,
         config: Configuration,
@@ -200,7 +200,7 @@ class MultiAgentCompetition:
             result = competition.run()
             self.results.append(result)
 
-    def get_game_results(self) -> list[GameResult]:
+    def get_game_results(self) -> List[GameResult]:
         results = []
         for comp_result in self.results:
             results.extend(sorted(comp_result.game_results, key=str))
