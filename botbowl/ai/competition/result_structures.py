@@ -331,7 +331,7 @@ class AgentSummaryResult:
             ("TDs Scored", self.tds_scored),
             ("TDs Conceded", self.tds_conceded),
         ]
-        return Tuple(zip(*csv_header_and_value))  # transpose
+        return tuple(zip(*csv_header_and_value))  # transpose
 
     def get_titles(self) -> List[str]:
         return self._csv_header_and_row()[0]
