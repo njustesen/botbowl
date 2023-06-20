@@ -60,18 +60,23 @@ class Replay:
         self.actions[self.idx] = action.to_json() if action is not None else None
         self.idx += 1
 
-    def dump(self, game):
-        replay_id = game.game_id
-        self.reports = game.state.reports
-        name = self.steps[0].game['home_agent']['name'] + "_VS_" + self.steps[0].game['away_agent']['name'] + "_" + str(
-            replay_id)
+    def get_filename(self) -> str: 
+        home_agent = self.steps[0].game['home_agent']['name']
+        away_agent = self.steps[0].game['away_agent']['name']
+        name = f"{home_agent}_VS_{away_agent}_{self.replay_id}"
         directory = get_data_path('replays')
         if not os.path.exists(directory):
             os.mkdir(directory)
         filename = os.path.join(directory, f"{name}.rep")
-        print(f"Saving replay to {filename}")
-        pickle.dump(self, open(filename, "wb"))
-        print(f"Replay saved to {filename}")
+        return filename
+
+    def dump(self, game):
+        self.reports = game.state.reports
+        filename = self.get_filename()
+        print(f"Saving replay to {filename}", end="", flush=True)
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+        print(" - OK")
 
     def next(self):
         if len(self.steps) == 0 or self.idx + 1 >= len(self.steps):
@@ -305,7 +310,7 @@ class Agent:
     human: bool
     agent_id: str
 
-    def __init__(self, name, human=False, agent_id=None):
+    def __init__(self, name: str, human: bool=False, agent_id=None):
         if agent_id is not None:
             self.agent_id = agent_id
         else:

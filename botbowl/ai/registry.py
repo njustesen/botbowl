@@ -5,7 +5,7 @@ Year: 2019
 ==========================
 This module contains enumerations and tables for the rules.
 """
-
+from botbowl.core.model import Agent
 
 class BotRegistry:
 
@@ -17,7 +17,7 @@ class BotRegistry:
             raise Exception('Bot with ID {} already registered.'.format(id.lower()))
         self.bots[id.lower()] = cls
 
-    def make(self, id):
+    def make(self, id) -> Agent:
         if id.lower() not in self.bots:
             raise Exception('Bot with ID {} not registered.'.format(id.lower()))
         return self.bots[id.lower()](id.lower())
@@ -37,7 +37,7 @@ def register_bot(id, cls):
     return registry.register(id, cls)
 
 
-def make_bot(id):
+def make_bot(id) -> Agent:
     return registry.make(id)
 
 
