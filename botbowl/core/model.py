@@ -310,7 +310,7 @@ class Agent:
     human: bool
     agent_id: str
 
-    def __init__(self, name, human=False, agent_id=None):
+    def __init__(self, name: str, human: bool=False, agent_id=None):
         if agent_id is not None:
             self.agent_id = agent_id
         else:

@@ -99,8 +99,8 @@ class Game:
         away_agent = self.away_agent
         rng = self.rng
         replay = self.replay
-        self.away_agent = Agent("away human", human=True) 
-        self.home_agent = Agent("home human", human=True) 
+        self.away_agent = Agent(home_agent.name, human=True) 
+        self.home_agent = Agent(home_agent.name, human=True) 
         self.rng = np.random.RandomState()
         self.replay = None
 
