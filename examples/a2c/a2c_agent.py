@@ -88,6 +88,12 @@ class CNNPolicy(nn.Module):
     def act(self, spatial_inputs, non_spatial_input, action_mask):
         values, action_probs = self.get_action_probs(spatial_inputs, non_spatial_input, action_mask=action_mask)
         actions = action_probs.multinomial(1)
+        # In rare cases, multinomial can  sample an action with p=0, so let's avoid that
+        for i, action in enumerate(actions):
+            correct_action = action
+            while not action_mask[i][correct_action]:
+                correct_action = action_probs[i].multinomial(1)
+            actions[i] = correct_action
         return values, actions
 
     def evaluate_actions(self, spatial_inputs, non_spatial_input, actions, actions_mask):

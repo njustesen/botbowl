@@ -4,6 +4,7 @@ import numpy as np
 from copy import deepcopy
 import time
 from typing import List
+import random
 from examples.hash_example import gamestate_hash
 
 
@@ -125,6 +126,7 @@ class ActionNode(Node):
                     actions.append(Action(action_choice.action_type, position=position))
             else:
                 actions.append(Action(action_choice.action_type))
+        # random.shuffle(actions)
         return actions
 
     def is_fully_expanded(self):
@@ -134,10 +136,10 @@ class ActionNode(Node):
         t = ''.join(['\t' for _ in range(tabs)])
         min_max = 'min' if self.opp() else 'max'
         if len(self.children) == 0:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}/>")
+            print(f"{t}<ActionNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' actions='{len(self.available_actions)}'/>")
         else:
-            print(f"{t}<ActionNode p='{min_max}' visits={self.num_visits()} score={self.score()} actions={len(self.available_actions)}>")
-            for child in self.children:
+            print(f"{t}<ActionNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' actions='{len(self.available_actions)}'>")
+            for child in sorted(self.children, key=lambda c: -c.score()):
                 child.print(tabs+1)
         if len(self.children) > 0:
             print(f'{t}</ActionNode>')
@@ -170,10 +172,10 @@ class ChangeNode(Node):
         t = ''.join(['\t' for _ in range(tabs)])
         min_max = 'min' if self.parent.opp() else 'max'
         if len(self.outcomes) == 0:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'/>")
+            print(f"{t}<ChanceNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' action='{self.action}'/>")
         else:
-            print(f"{t}<ChanceNode p='{min_max}' visits={self.num_visits()} score={self.score()} action='{self.action}'>")
-            for _, child in self.outcomes.items():
+            print(f"{t}<ChanceNode p='{min_max}' visits='{self.num_visits()}' score='{self.score():.6f}' action='{self.action}'>")
+            for _, child in sorted(self.outcomes.items(), key=lambda c: -c[1].score()):
                 child.print(tabs+1)
         if len(self.outcomes) > 0:
             print(f"{t}</ChanceNode>")

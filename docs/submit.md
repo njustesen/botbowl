@@ -1,4 +1,4 @@
-# Submit Your Bot to Bot Bowl III
+# Submit Your Bot to Bot Bowl IV
 
 ## Bots as Servers
 
@@ -20,7 +20,7 @@ Note, that the competition code may change in the coming months.
 
 ## Submission link
 
-Will appear later.
+Submit your bot [here](https://forms.gle/t5YQseRFMP76YVGBA). You can edit your submission up until the deadline if you want to make any changes.
 
 ## Verification
 Within one week after the submission deadline, we will test your bot against the baseline random and contact you to verify that the results are as expected. 

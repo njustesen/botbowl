@@ -17,7 +17,17 @@ Please cite our paper if you use botbowl in your publications.
 Read more about the challenges and achievements in [Papers.md](docs/papers.md)
 
 ## Installation
-[Make sure python 3.6 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
+
+### Quickstart with docker
+A docker image ready for playing in the web framework as well as doing bot development can be found at `mbermell/botbowl:latest`. To start a web server with docker run:
+```shell
+docker run -p 1234:1234 -t mbermell/botbowl
+```
+Go to: http://127.0.0.1:1234/
+
+### Installation with Pip
+
+[Make sure python 3.8 or newer is installed, together with pip.](https://www.makeuseof.com/tag/install-pip-for-python/)
 Then run:
 ```
 pip install git+https://github.com/njustesen/botbowl
