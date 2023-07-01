@@ -1,0 +1,24 @@
+FROM python:3.9
+
+RUN pip install --upgrade pip
+
+WORKDIR /home/botbowl
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+COPY examples/extra_requirements.txt ./
+RUN pip install -r extra_requirements.txt
+
+COPY botbowl/ ./botbowl/
+COPY examples/ ./examples/
+COPY setup.py .
+COPY README.md .
+COPY LICENSE .
+COPY MANIFEST.in .
+
+RUN python setup.py install
+
+
+WORKDIR /home/
+
+CMD ["python", "botbowl/examples/containerized_bot.py"]
