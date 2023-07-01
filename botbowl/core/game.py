@@ -5,6 +5,7 @@ Year: 2018
 ==========================
 This module contains the Game class, which is the main class and interface used to interact with a game in botbowl.
 """
+from contextlib import contextmanager
 import itertools
 
 from botbowl.core.load import *
@@ -83,6 +84,33 @@ class Game:
             'active_other_player_id': self.get_other_active_player_id(),
             'rounds': self.config.rounds,
         }
+
+    @contextmanager
+    def hide_agents_and_rng(self): 
+        """ 
+        Context manager that temporarly sets the agents to None and human=True and provides a new RNG. 
+        Purpose is to not send infomation about agent or rng to other bots during competition_mode
+        Usage: 
+        > with game.hide_agents_and_rng(): 
+        >     data = pickle.dump(game)
+        """
+        home_agent = self.home_agent 
+        away_agent = self.away_agent
+        rng = self.rng
+        replay = self.replay
+        self.away_agent = Agent(home_agent.name, human=True) 
+        self.home_agent = Agent(home_agent.name, human=True) 
+        self.rng = np.random.RandomState()
+        self.replay = None
+
+        try: 
+            yield None 
+        finally:
+            self.home_agent = home_agent 
+            self.away_agent = away_agent
+            self.rng = rng
+            self.replay = replay
+
 
     def enable_forward_model(self) -> None:
         """
