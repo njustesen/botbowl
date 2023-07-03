@@ -9,7 +9,12 @@ In the first week after the submission deadline (August 1st - 8th), authors will
 This is to confirm that we were able to set up and run the bot correctly. 
 If we run into issues running you bot, please be prepared to assist us during this week.
 
-Submission link will appear at least one month before the deadline.
+## How to submit
+You can submit your bot in two ways (pick one): 
+ - OLD WAY - follow instructions in [bot-bowl-submission repository](https://github.com/njustesen/bot-bowl-submission), compress the code to a `.zip` file and upload the file with your submission. 
+ - NEW WAY - build a docker image, compress to a `.tar.gz` and upload with your submission. For more instructions see [docker.md](docker.md)
+
+:point_right: **[Submission form](https://docs.google.com/forms/d/e/1FAIpQLSdESXYodNnElKBXn_nbEJv7f3u5IG_ntiuS7U4rCD_KO3sF-g/viewform)** :point_left:
 
 # Format
 Bot Bowl V has the same format as the previous years but we aim to have a few new tutorials ready for you. 
@@ -28,8 +33,8 @@ Each match uses the following [configurations](https://github.com/njustesen/botb
 - Pathfinding-assistance enabled
 - Only a [fixed human team](https://github.com/njustesen/botbowl/blob/main/botbowl/data/teams/11/human.json) is available
 
-Bots will run for the entire 10-match sequence against it's opponent. This allows it to adapt without having to save anything to the file system in-between matches.
-However, if a bot crashes and is unable to recover, the match sequence will continue and the bot will simply timeout and not do anything during their turns.
+Bots will run inside a docker container for the entire 10-match sequence against its opponent. This allows it to adapt without having to save anything to the file system in-between matches. After the 10-match sequence it is restarted.   
+If a bot crashes and is unable to recover, the system will attempt to restart it while there is still time on the clock if the bot is still irresponsive it will simply timeout and not do anything. 
 
 # Prizes
 
