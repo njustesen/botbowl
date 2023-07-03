@@ -38,22 +38,21 @@ class Game:
     trajectory: Trajectory
     square_shortcut: List[List[Square]]
 
-    def __init__(self, game_id, home_team: Team, away_team: Team, home_agent: Agent, away_agent: Agent,
-                 config: Optional[Configuration] = None,
+    def __init__(self, game_id: str, home_team: Team, away_team: Team, home_agent: Agent, away_agent: Agent,
+                 config: Configuration,
                  arena: Optional[TwoPlayerArena] = None,
                  ruleset: Optional[RuleSet] = None,
                  state: Optional[GameState] = None,
                  seed=None,
                  record: bool = False):
-        assert config is not None or arena is not None
-        assert config is not None or ruleset is not None
+        assert config is not None
         assert home_team.team_id != away_team.team_id
         self.replay = Replay(replay_id=game_id) if record else None
         self.game_id = game_id
         self.home_agent = home_agent
         self.away_agent = away_agent
-        self.arena = load_arena(config.arena) if arena is None else arena
         self.config = config
+        self.arena = load_arena(config.arena) if arena is None else arena
         self.ruleset = load_rule_set(config.ruleset) if ruleset is None else ruleset
         self.state = state if state is not None else GameState(self, deepcopy(home_team), deepcopy(away_team))
         self.rng = np.random.RandomState(seed)
@@ -259,12 +258,11 @@ class Game:
 
         # Agent too slow?
         clock = self.get_agent_clock(self.actor)
-        if clock.is_done():
+        if clock is not None and clock.is_done():
 
             # End the actor's turn
             done = True
-            actor = self.actor
-            clock = self.get_agent_clock(actor)
+            clock = self.get_agent_clock(self.actor)
             while clock in self.state.clocks:
 
                 # Request timout action
@@ -281,7 +279,7 @@ class Game:
                 else:
                     break
 
-        if not clock.is_running():
+        if clock is not None and not clock.is_running():
             clock.resume()
 
     def _end_game(self) -> None:
@@ -349,6 +347,7 @@ class Game:
         """
         Gets action from agent and sets correct player reference.
         """
+        assert self.actor is not None
         action = self.actor.act(self)
         if not type(action) == Action:
             return None
@@ -374,7 +373,7 @@ class Game:
             for action in self.state.available_actions:
                 if action.action_type == action_type:
                     if action_type == ActionType.END_SETUP:
-                        if self.is_setup_legal(self.get_agent_team(self.actor)):
+                        if self.is_setup_legal(self.get_agent_team(self.actor)): # type: ignore
                             return Action(action_type)
                     else:
                         return Action(action_type)
@@ -405,7 +404,7 @@ class Game:
         out = [sq.to_json() for sq in self.state.active_player.state.squares_moved]
         return out
 
-    def _one_step(self, action: Action) -> bool:
+    def _one_step(self, action: Optional[Action]) -> bool:
         """
         Executes one step in the game if it is allowed.
         :param action: Action from agent. Can be None if no action is required.
@@ -533,7 +532,7 @@ class Game:
                 return clock
         return None
 
-    def get_agent_clock(self, agent: Agent) -> Optional[Clock]:
+    def get_agent_clock(self, agent: Optional[Agent]) -> Optional[Clock]:
         """
         Returns the clock belonging to the given agent's team.
         """
@@ -551,7 +550,7 @@ class Game:
                 return True
         return False
 
-    def has_agent_clock(self, agent: Agent) -> bool:
+    def has_agent_clock(self, agent: Optional[Agent]) -> bool:
         """
         Returns true if the given agent's team has a clock.
         """
@@ -594,7 +593,7 @@ class Game:
         clock = Clock(team, self.config.time_limits.turn, is_primary=True)
         self.state.clocks.append(clock)
 
-    def get_seconds_left(self, team: Optional[Team] = None) -> Optional[int]:
+    def get_seconds_left(self, team: Optional[Team] = None) -> Optional[float]:
         '''
         Returns the number of seconds left on the clock for the given team and None if the given team has no clock.
         '''
@@ -616,7 +615,7 @@ class Game:
     #    """
     #    return (not self.state.game_over) and len(self.state.stack.items) > 0
 
-    def get_team_agent(self, team: Team) -> Optional[Agent]:
+    def get_team_agent(self, team: Optional[Team]) -> Optional[Agent]:
         """
         :param team:
         :return: The agent who's controlling the specified team.
@@ -627,7 +626,7 @@ class Game:
             return self.home_agent
         return self.away_agent
 
-    def get_agent_team(self, agent: Agent) -> Optional[Team]:
+    def get_agent_team(self, agent: Optional[Agent]) -> Optional[Team]:
         """
         :param agent: The agent controlling the team
         :return: The team controlled by the specified agent.
@@ -723,12 +722,13 @@ class Game:
         """
         :return: The team who's turn it is next.
         """
+        assert self.state.current_team is not None
         idx = self.state.turn_order.index(self.state.current_team)
         if idx + 1 == len(self.state.turn_order):
             return self.state.turn_order[0]
         return self.state.turn_order[idx + 1]
 
-    def add_or_skip_turn(self, turns: None) -> None:
+    def add_or_skip_turn(self, turns: int) -> None:
         """
         Adds or removes a number of turns from the current half. This method will raise an assertion error if the turn
         counter goes to a negative number.
@@ -909,6 +909,7 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.blitz_available
+        return False
 
     def use_blitz_action(self) -> None:
         """
@@ -933,6 +934,7 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.pass_available
+        return False
 
     def use_pass_action(self) -> None:
         """
@@ -957,6 +959,7 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.handoff_available
+        return False
 
     def use_handoff_action(self) -> None:
         """
@@ -981,6 +984,7 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.foul_available
+        return False
 
     def use_foul_action(self) -> None:
         """
@@ -1005,6 +1009,7 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.blitz
+        return False
 
     def is_quick_snap(self) -> bool:
         """
@@ -1013,8 +1018,9 @@ class Game:
         turn = self.current_turn()
         if turn is not None:
             return turn.quick_snap
+        return False
 
-    def get_players_on_pitch(self, team: Team = None, used=None, up=None) -> List[Player]:
+    def get_players_on_pitch(self, team: Optional[Team] = None, used=None, up=None) -> List[Player]:
         """
         :param team: The team of the players.
         :param used: If specified, filter by ther players used state.
@@ -1127,7 +1133,6 @@ class Game:
                                      put=True)
             self.trajectory.log_state_change(log_entry)
         elif type(piece) is Ball:
-            piece: Ball
             self.state.pitch.balls.append(piece)
         elif type(piece) is Bomb:
             self.state.pitch.bomb = piece
@@ -1148,9 +1153,8 @@ class Game:
                                      put=False)
             self.trajectory.log_state_change(log_entry)
 
-            piece.position = None
+            piece.position = None # type: ignore
         elif type(piece) is Ball:
-            piece: Ball
             self.state.pitch.balls.remove(piece)
         elif type(piece) is Bomb:
             self.state.pitch.bomb = None
@@ -1169,8 +1173,8 @@ class Game:
                     ball.move_to(position)
             self.remove(piece)
             self.put(piece, position)
-        elif piece.is_catchable():
-            piece.move_to(position)
+        elif isinstance(piece, Catchable):
+            piece.move_to(position) 
 
     def shove(self, piece: Union[Catchable, Player], x: int, y: int) -> None:
         """
@@ -1206,7 +1210,7 @@ class Game:
             if ball is not None:
                 self.move(ball, pos_b)
             self.state.pitch.board[pos_b.y][pos_b.x] = piece_a
-        elif type(piece_b) is Catchable:
+        elif isinstance(piece_a, Catchable):
             piece_a.move_to(pos_b)
 
     def get_catch_modifiers(self, catcher: Player, accurate: bool = False, interception: bool = False,
@@ -1407,7 +1411,7 @@ class Game:
             return False
         return True
 
-    def num_casualties(self, team: Team = None) -> int:
+    def num_casualties(self, team: Optional[Team] = None) -> int:
         """
         :param team: If None, return the sum of both teams casualties.
         :return: The number of casualties suffered by team.
@@ -1647,7 +1651,7 @@ class Game:
         """
         :return: the ball carrier if any - otherwise None.
         """
-        ball_position: Square = self.get_ball_position()
+        ball_position = self.get_ball_position()
         if ball_position is None:
             return None
         else:
@@ -1669,6 +1673,8 @@ class Game:
         """
         attacker = self.get_player_at(from_position)
         defender = self.get_player_at(to_position)
+        assert attacker is not None 
+        assert defender is not None
         if defender.has_skill(Skill.SIDE_STEP) and not attacker.has_skill(Skill.GRAB):
             return self.get_adjacent_squares(to_position, out=True, occupied=False)
         squares_to = self.get_adjacent_squares(to_position, out=True)
@@ -1769,7 +1775,7 @@ class Game:
         """
         return self.get_adjacent_players(player.position, player.team, diagonal, down, standing, stunned, skill=skill)
 
-    def get_adjacent_players(self, position: Square, team: Team=None, diagonal=True, down=True, standing=True, stunned=True,
+    def get_adjacent_players(self, position: Square, team: Optional[Team]=None, diagonal=True, down=True, standing=True, stunned=True,
                              skill=None) -> List[Player]:
         """
         Returns a list of adjacent player to the position.
@@ -1872,7 +1878,7 @@ class Game:
         defender_strength += len(self.get_assisting_players(defender, attacker))
         return attacker_strength, defender_strength
 
-    def num_block_dice(self, attacker: Player, defender: Player, blitz: bool = False, dauntless_success: bool = False) -> int:
+    def num_block_dice(self, attacker: Player, defender: Player, blitz: bool = False, dauntless_success: bool = False) -> Optional[int]:
         """
         :param attacker: 
         :param defender: 
@@ -2031,7 +2037,7 @@ class Game:
         ag_roll = max(2, min(6, ag_roll))
         successful_outcomes = 6 - (ag_roll - 1)
         p = successful_outcomes / 6.0
-        if allow_pass_reroll and player.has_skill(Skill.Pass):
+        if allow_pass_reroll and player.has_skill(Skill.PASS):
             p += (1.0 - p) * p
         elif allow_team_reroll and self.can_use_reroll(player.team):
             p += (1.0 - p) * p
@@ -2470,7 +2476,7 @@ class Game:
                     rolls = []
                     leap_positions.append(square)
                     gfis = max(0, (player.state.moves + distance) - player.get_ma())
-                    for gfi in range(gfis):
+                    for _ in range(gfis):
                         rolls.append(gfi_roll)
                     rolls.append(leap_roll)
                     ball_at = self.get_ball_at(square)
