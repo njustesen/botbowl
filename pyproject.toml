@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "botbowl"
+version = "1.2.0"
+description = "TBD"
+authors = ["Neils Justesen <njustesen@gmail.com>"]
+homepage = "https://github.com/njustesen/botbowl"
+repository = "https://github.com/njustesen/botbowl"
+documentation = "https://github.com/njustesen/botbowl"
+readme = "README.md"
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
+
+[tool.poetry.dependencies]
+python = "^3.9.0, <3.10"
+numpy = "^1.25.2"
+flask = "^2.3.3"
+gym = "^0.26.2"
+requests = "^2.31.0"
+more-itertools = "^10.1.0"
+cython = "^3.0.0"
+untangle = "^1.2.1"
+tabulate = "^0.9.0"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/njustesen/common-library/issues"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+
+
+[tool.poetry.group.a2c.dependencies]
+matplotlib = "^3.7.2"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
