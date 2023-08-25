@@ -1,44 +1,36 @@
 ![Bot Bowl V](img/bot-bowl-v.png?raw=true "Bot Bowl V")
 
-Bot Bowl V is the fifth AI competition in Blood Bowl. The results will be announced at the [IEEE Conference of Games 2023](https://2023.ieee-cog.org/). 
-
-# Submission Deadline
-
-The submission deadline for Bot Bowl V is August 1st anywhere on Earth.
-In the first week after the submission deadline (August 1st - 8th), authors will receive an email with the results of 10 matches played against the random baseline. 
-This is to confirm that we could set up and run the bot correctly. 
-If we run into issues running your bot, please be prepared to assist us during this week.
-
-## How to submit
-You can submit your bot in two ways (pick one): 
- - OLD WAY - follow instructions in [bot-bowl-submission repository](https://github.com/njustesen/bot-bowl-submission), compress the code to a `.zip` file, and upload the file with your submission. 
- - NEW WAY - build a docker image, compress to a `.tar.gz`, and upload it with your submission. For more instructions see [docker.md](docker.md)
-
---> **[Submission form](https://docs.google.com/forms/d/e/1FAIpQLSdESXYodNnElKBXn_nbEJv7f3u5IG_ntiuS7U4rCD_KO3sF-g/viewform)** <--
+Bot Bowl V is the fifth AI competition in Blood Bowl and the results was announced at the [IEEE Conference of Games 2023](https://2023.ieee-cog.org/). 
 
 # Format
-Bot Bowl V has the same format as the previous years but we aim to have a few new tutorials ready for you. 
-Group submissions are allowed but each person can only be part of one bot submission.
-Each group must have a team leader that will receive any prize money they win and the lead will be responsible for sharing it with the group.
+Bot Bowl V had the same format as the previous years. 
+Group submissions were allowed but each person can only be part of one bot submission.
 
 ## Round-robin
-In a round-robin tournament, each bot plays 10 matches against each other and the tournament winner will be determined based on the following point system: 3 points for winning, 1 point for a draw, 0 points for a loss. 
-In case of a tie, the bot with the highest score difference, and then inflicted casualties will win.
+In a round-robin tournament, each bot played 10 matches against each other and the tournament winner was determined based on the following point system: 3 points for winning, 1 point for a draw, 0 points for a loss. 
+In case of a tie, the bot with the highest score difference, and then inflicted casualties would win.
 
 ## Match Rules
-Each match uses the following [configurations](https://github.com/njustesen/botbowl/blob/main/botbowl/data/config/bot-bowl.json):
+Each match used the following [configurations](https://github.com/njustesen/botbowl/blob/main/botbowl/data/config/bot-bowl.json):
 
 - The BB2016 ruleset
 - Time limit of 2 minutes per turn and 15 seconds per decision in the opponent's turn
 - Pathfinding-assistance enabled
 - Only a [fixed human team](https://github.com/njustesen/botbowl/blob/main/botbowl/data/teams/11/human.json) is available
 
-Bots will run inside a docker container for the entire 10-match sequence against its opponent. This allows it to adapt without having to save anything to the file system in-between matches. After the 10-match series, it is restarted.   
-If a bot crashes and is unable to recover, the system will attempt to restart it while there is still time on the clock if the bot is still irresponsive it will simply timeout and not do anything. 
-
 # Prizes
 
-We aim to have two prizes similar to last year:
+We had the following two prizes:
 
-- 1st Place Prize will be announced later.
-- $500 Machine Learning Prize sponsored by modl.ai for the most interesting bot that uses machine learning and/or search-based techniques.
+- $250 1st Place Prize sponsored by modl.ai.
+- $250 Machine Learning Prize sponsored by modl.ai for the most interesting bot that uses machine learning and/or search-based techniques.
+
+# Results
+
+Watch the presentation of the results and highlights on [YouTube](https://www.youtube.com/embed/ZWTwlQS3_So?si=T84qEagOSISH3ur8).
+
+<img width="1313" alt="Screenshot 2023-08-25 at 08 32 15" src="https://github.com/njustesen/botbowl/assets/1433421/09ed0a4f-6ac6-49ca-9adf-fb67d8781cc3">
+
+Congratulations to Drefsante by Frederic Bair for winning Bot Bowl V and Treeman by Jonas Busk for winning the ML Prize!
+
+The [replays](https://drive.google.com/drive/folders/1VoJ6wJbDgj0p4L3KOZRVggqTMtRGQbL1?usp=sharing) and per-match [results](https://drive.google.com/drive/folders/173OAty0tduxtDKKqf18Pf_FiW2ciBs7u?usp=sharing) are compatible with [botbowl v1.1.0](https://github.com/njustesen/botbowl/releases/tag/1.1.0).
