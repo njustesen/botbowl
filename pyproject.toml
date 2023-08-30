@@ -9,6 +9,8 @@ documentation = "https://github.com/njustesen/botbowl"
 readme = "README.md"
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent"]
 
+build = 'build.py'
+
 [tool.poetry.dependencies]
 python = "^3.9.0, <3.10"
 numpy = "^1.25.2"
@@ -31,5 +33,5 @@ pytest = "*"
 matplotlib = "^3.7.2"
 
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry>=0.12", "cython"]
+build-backend = "poetry.masonry.api"
