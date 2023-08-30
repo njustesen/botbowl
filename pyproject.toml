@@ -33,5 +33,5 @@ pytest = "*"
 matplotlib = "^3.7.2"
 
 [build-system]
-requires = ["poetry>=0.12", "cython"]
+requires = ["poetry>=0.12", "cython", "setuptools"]
 build-backend = "poetry.masonry.api"
