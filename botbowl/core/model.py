@@ -619,6 +619,11 @@ class Pitch(Reversible):
             'bomb': self.bomb.to_json() if self.bomb else None
         }
 
+def permute_list(l: Optional[list], permutation: np.ndarray):
+    if l is None or len(l) == 0: 
+        return []
+    assert len(l) == len(permutation), f"Length of list {l} does not match length of permutation {permutation}"
+    return [l[i] for i in permutation]
 
 @immutable_after_init
 class ActionChoice:
@@ -634,15 +639,28 @@ class ActionChoice:
 
     def __init__(self, action_type, team, positions=None, players=None, rolls=None, block_dice=None, skill=None,
                  paths=None, disabled=False):
+        
         self.action_type = action_type
-        self.positions = [] if positions is None else positions
-        self.players = [] if players is None else players
         self.team = team
-        self.rolls = [] if rolls is None else rolls
-        self.block_dice = [] if block_dice is None else block_dice
         self.disabled = disabled
         self.skill = skill
-        self.paths = [] if paths is None else paths
+        if positions is not None:
+            permutation_indices = np.random.permutation(len(positions))
+            try: 
+                self.positions =  permute_list(positions, permutation_indices)
+                self.rolls =  permute_list(rolls, permutation_indices)
+                self.block_dice =  permute_list(block_dice, permutation_indices)
+                self.paths =  permute_list(paths, permutation_indices)
+            except AssertionError as e:
+                new_message = str(e) + f" with action type {action_type}"
+                raise type(e)(new_message)
+        else: 
+            self.positions = [] if positions is None else positions
+            self.rolls = [] if rolls is None else rolls
+            self.block_dice = [] if block_dice is None else block_dice
+            self.paths = [] if paths is None else paths
+        self.players = [] if players is None else players
+
 
     def __repr__(self):
         return f"ActionChoice({self.action_type}, len(positions)={len(self.positions)}, " \

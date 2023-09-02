@@ -649,7 +649,11 @@ class Game:
         Calls the current procedure's available_actions() method and sets the game's available actions to the returned
         list.
         """
-        self.state.available_actions = self.state.stack.peek().available_actions()
+        forbidden_actions_types = {ActionType.BLOCK}
+        actions = self.state.stack.peek().available_actions()
+        if actions is not None: 
+            actions = [action for action in actions if action.action_type not in forbidden_actions_types ]
+        self.state.available_actions = actions
 
     def report(self, outcome) -> None:
         """
