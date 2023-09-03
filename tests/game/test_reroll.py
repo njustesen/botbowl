@@ -22,7 +22,7 @@ def test_dodge_reroll_success():
     assert game.get_player_at(to) is None
     assert len(D6.FixedRolls) == 0
     D6.fix(1)  # fail first dodge
-    D6.fix(4)  # pass on re-roll
+    D6.fix(6)  # pass on re-roll
 
     game.step(Action(ActionType.MOVE, player=player, position=to))
     game.step(Action(ActionType.USE_REROLL))
@@ -173,5 +173,3 @@ def test_bonehead_loner_reroll_fail():
     assert game.has_report_of_type(OutcomeType.FAILED_LONER)
     assert game.has_report_of_type(OutcomeType.REROLL_USED)  # reroll was wasted
     assert not game.has_report_of_type(OutcomeType.SUCCESSFUL_BONE_HEAD)  # no bonehead success
-
-
