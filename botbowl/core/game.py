@@ -7,16 +7,28 @@ This module contains the Game class, which is the main class and interface used 
 """
 from contextlib import contextmanager
 import itertools
+from copy import deepcopy
+from typing import Tuple, Union, Any
 
+from botbowl.core.forward_model import Trajectory, MovementStep, Step
 from botbowl.core.load import *
 from botbowl.core.procedure import *
-from botbowl.core.forward_model import Trajectory, MovementStep, Step
-from copy import deepcopy
-from typing import Optional, Tuple, List, Union, Any
 
 
 class InvalidActionError(Exception):
     pass
+
+
+class BoolWithMsg:
+    def __init__(self, evaluate_as, msg=""):
+        self.msg = msg
+        self.evaluate_as = evaluate_as
+
+    def __bool__(self):
+        return self.evaluate_as
+
+    def __repr__(self):
+        return f"BoolWithMsg({self.evaluate_as}, msg='{self.msg}')"
 
 
 class Game:
@@ -301,25 +313,26 @@ class Game:
             self.replay.dump(self)
 
     def _is_action_allowed(self, action: Action) -> bool:
+        """Calls the function below, converts to bool. Left here for legacy reasons"""
+        return bool(self.is_action_allowed(action))
+
+    def is_action_allowed(self, action: Action) -> BoolWithMsg:
         """
         Checks whether the specified action is allowed by comparing to actions in self.state.available_actions.
         :param action:
         :return: True if the specified actions is allowed.
         """
         if action is None:
-            return True
+            return BoolWithMsg(True)
         for action_choice in self.state.available_actions:
             if action.action_type == action_choice.action_type:
                 # Type checking
                 if type(action.action_type) is not ActionType:
-                    print("Illegal action type: ", type(action.action_type))
-                    return False
+                    return BoolWithMsg(False, f"Illegal action type: {type(action.action_type)}")
                 if action.player is not None and not isinstance(action.player, Player):
-                    print("Illegal player type: ", type(action.action_type), action, self.state.stack.peek())
-                    return False
+                    return BoolWithMsg(False, f"Illegal player type: {type(action.action_type)}, {action}, {self.state.stack.peek()}")
                 if action.position is not None and not isinstance(action.position, Square):
-                    print("Illegal position type:", type(action.position), action.action_type.name)
-                    return False
+                    return BoolWithMsg(False, f"Illegal position type: {type(action.position)}, {action.action_type.name}")
                 # Check if player argument is used instead of position argument
                 if len(action_choice.players) == 0 and action.player is not None and action.position is None:
                     action.position = action.player.position
@@ -329,19 +342,18 @@ class Game:
                 # Check player argument
                 if len(action_choice.players) > 1 and action.player not in action_choice.players:
                     if action.player is None:
-                        print("Illegal player: None")
+                        return BoolWithMsg(False, "Illegal player: None")
                     else:
-                        print("Illegal player:", action.player.to_json(), action.action_type.name)
-                    return False
+                        return BoolWithMsg(False, f"Illegal player: {action.player.to_json()}, {action.action_type.name}")
                 # Check position argument
                 if len(action_choice.positions) > 0 and action.position not in action_choice.positions:
                     if action.position is None:
-                        print("Illegal position: None")
+                        return BoolWithMsg(False, "Illegal position: None")
                     else:
-                        print("Illegal position:", action.position.to_json(), action.action_type.name)
-                    return False
-                return True
-        return False
+                        return BoolWithMsg(False, f"Illegal position: {action.position.to_json()}, {action.action_type.name}")
+
+                return BoolWithMsg(True)
+        return BoolWithMsg(False, f"Illegal action type: {action.action_type}")
 
     def _safe_act(self) -> Optional[Action]:
         """
@@ -430,7 +442,7 @@ class Game:
                     return True  # Game needs user input
             else:
                 # Only allowed actions
-                if not self._is_action_allowed(action):
+                if not self.is_action_allowed(action):
 
                     if type(action) is Action:
                         raise InvalidActionError(
@@ -732,7 +744,7 @@ class Game:
         """
         Adds or removes a number of turns from the current half. This method will raise an assertion error if the turn
         counter goes to a negative number.
-        :param turns: The number of turns to add (if positive) or remove (if negative). 
+        :param turns: The number of turns to add (if positive) or remove (if negative).
         """
         for team in self.state.teams:
             team.state.turn += turns
@@ -740,14 +752,14 @@ class Game:
 
     def get_player(self, player_id: str) -> Optional[Player]:
         """
-        :param player_id: 
+        :param player_id:
         :return: Returns the player with player_id
         """
         return self.state.player_by_id[player_id]
 
     def get_player_at(self, position: Square) -> Optional[Player]:
         """
-        :param position: 
+        :param position:
         :return: Returns the player at pos else None.
         """
         return self.state.pitch.board[position.y][position.x]
@@ -804,7 +816,7 @@ class Game:
 
     def get_opp_team(self, team: Team) -> Team:
         """
-        :param team: 
+        :param team:
         :return: The opponent team of team.
         """
         return self.state.home_team if self.state.away_team == team else self.state.away_team
@@ -814,7 +826,7 @@ class Game:
 
     def get_reserves(self, team: Team) -> List[Player]:
         """
-        :param team: 
+        :param team:
         :return: The reserves in the dugout of this team.
         """
         return self.get_dugout(team).reserves
@@ -844,8 +856,7 @@ class Game:
         """
         :return: The top-most Turn procedure in the stack.
         """
-        for i in reversed(range(self.state.stack.size())):
-            proc = self.state.stack.items[i]
+        for proc in reversed(self.state.stack.items):
             if isinstance(proc, Turn):
                 return proc
         return None
