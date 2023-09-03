@@ -7,7 +7,7 @@ This module contains pathfinding functionalities for botbowl.
 """
 from typing import Tuple, List, Optional
 
-from botbowl.core.table import Rules
+from botbowl.core.table import Rules, PlayerActionType
 from botbowl.core.model import Square
 from botbowl.core.forward_model import treat_as_immutable
 from botbowl.core.table import Skill, WeatherType
@@ -557,7 +557,8 @@ def get_safest_path(game, player, position, from_position=None, allow_team_rerol
     """
     if from_position is not None and num_moves_used != 0:
         orig_player, orig_ball = _alter_state(game, player, from_position, num_moves_used)
-    can_handoff = game.is_handoff_available() and game.get_ball_carrier() == player
+    can_handoff = (game.is_handoff_available() or game.get_player_action_type() is PlayerActionType.HANDOFF) and \
+                  game.get_ball_carrier() == player
     finder = Pathfinder(game, player, trr=allow_team_reroll, can_block=blitz, can_handoff=can_handoff)
     path = finder.get_path(target=position)
     if from_position is not None and num_moves_used != 0:

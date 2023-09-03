@@ -604,3 +604,15 @@ def test_pouring_rain_handoff(pf):
     path = first(filter(lambda p: p.get_last_step() == catcher.position, paths))
     assert path.rolls == ([], [])
     assert path.handoff_roll == 4
+
+
+@pytest.mark.parametrize("pf", pathfinding_modules_to_test)
+def test_handoff_path_after_started_handoff_action(pf):
+    game, (carrier, target_player) = get_custom_game_turn(player_positions=[(2, 2), (5, 5)],
+                                                      ball_position=(2, 2))
+
+    game.step(Action(ActionType.START_HANDOFF, position=carrier.position))
+
+    path = pf.get_safest_path(game, carrier, target_player.position, blitz=False)
+
+    assert path is not None
