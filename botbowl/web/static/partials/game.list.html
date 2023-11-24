@@ -20,7 +20,7 @@
                     <td class="text-center">{{game.state.away_team.state.score}} - {{game.state.home_team.state.score}}</td>
                     <td class="text-left"><a href="#/game/play/{{game.game_id}}/{{game.state.home_team.team_id}}" style="width: 100%" class="btn btn-primary btn-team" ng-disabled="!game.home_agent.human"><span class="glyphicon glyphicon-{{game.home_agent.human ? 'user' : ''}}"></span> {{game.state.home_team.name}} ({{game.home_agent.name}})</a></td>
                     <td class="">
-                        <a href="#/game/hotseat/{{game.game_id}}" class="btn btn-default" ng-disabled="!game.home_agent.human || !game.away_agent.human">Hot-seat</a>
+                        <a href="#/game/hotseat/{{game.game_id}}" class="btn btn-default" ng-disabled="!game.home_agent.human && !game.away_agent.human">Hot-seat</a>
                         <a href="#/game/spectate/{{game.game_id}}" class="btn btn-default">Spectate</a>
                         <a href="#" ng-click="deleteGame(game.game_id)" class="btn btn-danger">Delete</a>
                     </td>
