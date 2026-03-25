@@ -264,7 +264,13 @@ class GameScreen:
                 self.ui_state.hover_square in self.ui_state.highlighted_squares):
             self.board_renderer.draw_hover_highlight(surface, self.ui_state.hover_square)
 
-        # Player action dots
+        # Player action panel + dots
+        if self.ui_state.player_dots:
+            rects = [btn.rect for btn in self.ui_state.player_dots]
+            union = rects[0].unionall(rects[1:])
+            panel = union.inflate(8, 8)
+            pygame.draw.rect(surface, (25, 25, 35), panel, border_radius=8)
+            pygame.draw.rect(surface, (70, 70, 100), panel, width=1, border_radius=8)
         for btn in self.ui_state.player_dots:
             btn.draw(surface)
 

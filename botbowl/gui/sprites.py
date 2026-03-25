@@ -129,7 +129,7 @@ def _load_scaled(path: str, size: tuple) -> pygame.Surface:
     key = (path, size)
     if key not in _cache:
         raw = pygame.image.load(path).convert_alpha()
-        _cache[key] = pygame.transform.scale(raw, size)
+        _cache[key] = pygame.transform.smoothscale(raw, size)
     return _cache[key]
 
 
@@ -179,9 +179,8 @@ def get_dugout_surface(side: str, tile_size: int, height: int) -> pygame.Surface
     return _load_scaled(path, (w, height))
 
 
-def get_player_surface(player, is_home: bool, is_active: bool,
-                       size: tuple) -> pygame.Surface:
-    """Return player sprite scaled to size, with fallback colored circle."""
+def get_player_surface(player, is_home: bool, is_active: bool) -> pygame.Surface:
+    """Return player sprite at natural size, with fallback colored circle."""
     race = player.team.race if hasattr(player.team, 'race') else None
     role_name = player.role.name if player.role else None
 
@@ -195,11 +194,11 @@ def get_player_surface(player, is_home: bool, is_active: bool,
         filename = f"{base_icon}1{team_letter}{angle}.gif"
         path = _img_path("iconssmall", filename)
         if os.path.exists(path):
-            return _load_scaled(path, size)
+            return _load(path)
 
     # Fallback: colored circle
     color = (34, 119, 204) if is_home else (204, 119, 34)
-    return _fallback_circle(size, color)
+    return _fallback_circle((30, 30), color)
 
 
 def get_ball_surface(is_carried: bool, size: tuple) -> pygame.Surface:
@@ -302,7 +301,7 @@ def get_block_die_surface(result_name: str, size: tuple) -> pygame.Surface:
     return _die_surface(label, size, bg=bg, fg=fg)
 
 
-def get_state_surface(state_name: str, size: tuple) -> pygame.Surface:
+def get_state_surface(state_name: str) -> pygame.Surface:
     """state_name: stunned, prone, bonehead, hypnotized, reallystupid, wildanimal, takenroot"""
     filename_map = {
         'stunned': 'stunned.gif',
@@ -316,8 +315,8 @@ def get_state_surface(state_name: str, size: tuple) -> pygame.Surface:
     filename = filename_map.get(state_name.lower(), 'prone.gif')
     path = _img_path("player_status", filename)
     if os.path.exists(path):
-        return _load_scaled(path, size)
-    return pygame.Surface(size, pygame.SRCALPHA)
+        return _load(path)
+    return pygame.Surface((0, 0), pygame.SRCALPHA)
 
 
 def get_weather_icon(weather_name: str, size: tuple) -> pygame.Surface:
@@ -345,28 +344,33 @@ def get_team_logo(race: str, size: tuple) -> pygame.Surface:
     return surf
 
 
-def get_action_icon(action_name: str, size: tuple) -> pygame.Surface:
-    """action_name: move, block, blitz, pass, handoff, foul, stab, leap, bomb"""
-    filename_map = {
-        'START_MOVE': 'move.gif',
-        'START_BLOCK': 'block.gif',
-        'START_BLITZ': 'blitz.gif',
-        'START_PASS': 'pass.gif',
-        'START_HANDOFF': 'handoff.gif',
-        'START_FOUL': 'foul.gif',
-        'STAB': 'stab.gif',
-        'LEAP': 'leap.gif',
-        'START_THROW_BOMB': 'bomb.gif',
-        'USE_SKILL': 'use.gif',
-        'DONT_USE_SKILL': 'dont-use.gif',
-        'END_TURN': 'end.gif',
-        'STAND_UP': 'standup.gif',
-    }
-    filename = filename_map.get(action_name, 'move.gif')
+_ACTION_ICON_FILES = {
+    'START_MOVE': 'move.gif',
+    'START_BLOCK': 'block.gif',
+    'START_BLITZ': 'blitz.gif',
+    'START_PASS': 'pass.gif',
+    'START_HANDOFF': 'handoff.gif',
+    'START_FOUL': 'foul.gif',
+    'STAB': 'stab.gif',
+    'LEAP': 'leap.gif',
+    'START_THROW_BOMB': 'bomb.gif',
+    'USE_SKILL': 'use.gif',
+    'DONT_USE_SKILL': 'dont-use.gif',
+    'END_TURN': 'end.gif',
+    'STAND_UP': 'standup.gif',
+}
+
+
+def get_action_icon(action_name: str, size: tuple = None) -> pygame.Surface:
+    """Load an action icon. If size is None, returns the image at its natural size."""
+    filename = _ACTION_ICON_FILES.get(action_name, 'move.gif')
     path = _img_path("icons", "actions", filename)
     if os.path.exists(path):
+        if size is None:
+            return _load(path)
         return _load_scaled(path, size)
-    surf = pygame.Surface(size, pygame.SRCALPHA)
+    fallback_size = size or (25, 25)
+    surf = pygame.Surface(fallback_size, pygame.SRCALPHA)
     surf.fill((160, 160, 160))
     return surf
 

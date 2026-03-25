@@ -139,7 +139,7 @@ def build_action_buttons(available_actions: list, game,
 
 def build_player_action_dots(player, available_actions: list,
                               tile_size: int, pitch_offset: tuple) -> list[Button]:
-    """Build small circular action icon buttons around a selected player's square."""
+    """Build action icon buttons in a horizontal panel above the selected player."""
     if player is None or player.position is None:
         return []
 
@@ -147,39 +147,45 @@ def build_player_action_dots(player, available_actions: list,
     px, py = sq_to_px(sq, tile_size, pitch_offset)
     ts = tile_size
 
-    # Positions around the player square (N, NE, E, SE, S, SW, W, NW)
-    offsets = [
-        (ts // 2, -ts), (ts, -ts), (ts, 0), (ts, ts),
-        (ts // 2, ts), (-ts // 4, ts), (-ts // 4, 0), (-ts // 4, -ts)
+    # Collect actions relevant to this player
+    player_actions = [
+        ac for ac in available_actions
+        if ac.action_type in START_ACTIONS and player in (ac.players or [])
     ]
+    if not player_actions:
+        return []
 
-    dot_size = max(20, ts * 2 // 3)
+    # Load icons at natural size first to determine layout dimensions
+    icons = [spr.get_action_icon(ac.action_type.name) for ac in player_actions]
+    icon_size = max(img.get_height() for img in icons)
+
+    padding = 4
+    gap = 3
+    n = len(player_actions)
+    panel_w = n * icon_size + (n - 1) * gap + 2 * padding
+
+    # Center panel horizontally over the player square
+    panel_x = (px + ts // 2) - panel_w // 2
+
+    # Place above the player square; fall back to below if too close to top edge
+    panel_y_above = py - icon_size - 2 * padding - 4
+    ox, oy = pitch_offset
+    panel_y = panel_y_above if panel_y_above >= oy else py + ts + 4
+
     buttons = []
-    oi = 0
-
-    for ac in available_actions:
+    for i, (ac, icon) in enumerate(zip(player_actions, icons)):
         at = ac.action_type
-        if at not in START_ACTIONS:
-            continue
-        # Check this action applies to the selected player
-        if player not in (ac.players or []):
-            continue
-
-        if oi >= len(offsets):
-            break
-        ox, oy = offsets[oi]
-        bx = px + ox
-        by = py + oy
-        icon = spr.get_action_icon(at.name, (dot_size, dot_size))
+        iw, ih = icon.get_size()
+        bx = panel_x + padding + i * (icon_size + gap) + (icon_size - iw) // 2
+        by = panel_y + padding + (icon_size - ih) // 2
         btn = Button(
-            rect=pygame.Rect(bx, by, dot_size, dot_size),
+            rect=pygame.Rect(panel_x + padding + i * (icon_size + gap), panel_y + padding, icon_size, icon_size),
             action=ac,
             image=icon,
             color=(40, 40, 50),
             tooltip=_action_label(at)
         )
         buttons.append(btn)
-        oi += 1
 
     return buttons
 

@@ -448,10 +448,10 @@ class PlayerInfoRenderer:
         row3_y = row2_y + ROW2_H + 2
 
         # ── Row 1: icon + name/role ───────────────────────────────────────
-        icon_size = ROW1_H - 2
-        sprite = spr.get_player_surface(player, is_home, False, (icon_size, icon_size))
-        surface.blit(sprite, (self.rect.x + 2, row1_y))
-        tx = self.rect.x + icon_size + 6
+        sprite = spr.get_player_surface(player, is_home, False)
+        iw, ih = sprite.get_size()
+        surface.blit(sprite, (self.rect.x + 2, row1_y + (ROW1_H - 2 - ih) // 2))
+        tx = self.rect.x + iw + 6
         surface.blit(
             _font(12, bold=True).render(f'{player.nr}. {player.name}', True, (220, 220, 220)),
             (tx, row1_y + 1))

@@ -56,41 +56,34 @@ class PlayerRenderer:
                         px: int, py: int,
                         is_home: bool, is_active: bool, is_selected: bool,
                         ts: int):
-        size = (ts, ts)
-        sprite = spr.get_player_surface(player, is_home, is_active, size)
-        surface.blit(sprite, (px, py))
+        sprite = spr.get_player_surface(player, is_home, is_active)
+        iw, ih = sprite.get_size()
+        # Center sprite within the tile cell
+        surface.blit(sprite, (px + (ts - iw) // 2, py + (ts - ih) // 2))
 
-        # Used overlay (darken)
+        # Used overlay (darken the full tile)
         if player.state.used and not is_active:
-            overlay = pygame.Surface(size, pygame.SRCALPHA)
+            overlay = pygame.Surface((ts, ts), pygame.SRCALPHA)
             overlay.fill(COLOR_OVERLAY_USED)
             surface.blit(overlay, (px, py))
 
-        # State indicators (top-left overlay)
-        indicator_size = (ts // 2, ts // 2)
+        # State indicators (top-left overlay, natural size)
         if player.state.stunned:
-            ind = spr.get_state_surface('stunned', indicator_size)
-            surface.blit(ind, (px, py))
+            surface.blit(spr.get_state_surface('stunned'), (px, py))
         elif not player.state.up:
-            ind = spr.get_state_surface('prone', indicator_size)
-            surface.blit(ind, (px, py))
+            surface.blit(spr.get_state_surface('prone'), (px, py))
 
-        # Skill-based state indicators
+        # Skill-based state indicators (top-right overlay)
         if hasattr(player.state, 'bone_headed') and player.state.bone_headed:
-            ind = spr.get_state_surface('bonehead', indicator_size)
-            surface.blit(ind, (px + ts // 2, py))
+            surface.blit(spr.get_state_surface('bonehead'), (px + ts // 2, py))
         if hasattr(player.state, 'really_stupid') and player.state.really_stupid:
-            ind = spr.get_state_surface('reallystupid', indicator_size)
-            surface.blit(ind, (px + ts // 2, py))
+            surface.blit(spr.get_state_surface('reallystupid'), (px + ts // 2, py))
         if hasattr(player.state, 'wild_animal') and player.state.wild_animal:
-            ind = spr.get_state_surface('wildanimal', indicator_size)
-            surface.blit(ind, (px + ts // 2, py))
+            surface.blit(spr.get_state_surface('wildanimal'), (px + ts // 2, py))
         if hasattr(player.state, 'taken_root') and player.state.taken_root:
-            ind = spr.get_state_surface('takenroot', indicator_size)
-            surface.blit(ind, (px + ts // 2, py))
+            surface.blit(spr.get_state_surface('takenroot'), (px + ts // 2, py))
         if hasattr(player.state, 'hypnotized') and player.state.hypnotized:
-            ind = spr.get_state_surface('hypnotized', indicator_size)
-            surface.blit(ind, (px + ts // 2, py + ts // 2))
+            surface.blit(spr.get_state_surface('hypnotized'), (px + ts // 2, py + ts // 2))
 
         # Player number label
         font = pygame.font.SysFont('Arial', max(8, ts // 3), bold=True)
@@ -136,7 +129,6 @@ class PlayerRenderer:
         ox, oy = self.pitch_offset
         arena_w = game.arena.width
         arena_h = game.arena.height
-        player_size = (ts, ts)
 
         off_pitch = [p for p in team.players if p.position is None]
         if not off_pitch:
@@ -167,8 +159,9 @@ class PlayerRenderer:
             px = ox + x_tile * ts
             py = oy + y_tile * ts
 
-            sprite = spr.get_player_surface(player, is_home, False, player_size)
-            surface.blit(sprite, (px, py))
+            sprite = spr.get_player_surface(player, is_home, False)
+            iw, ih = sprite.get_size()
+            surface.blit(sprite, (px + (ts - iw) // 2, py + (ts - ih) // 2))
 
             if player is selected_player:
                 pygame.draw.rect(surface, COLOR_BORDER_SELECTED, (px, py, ts, ts), 2)
