@@ -34,9 +34,14 @@ def main():
                         help='Milliseconds to wait between AI steps (default: 50)')
     parser.add_argument('--replay', default=None,
                         help='Load and watch a replay by name')
+    parser.add_argument('--screen', default=None,
+                        choices=['lobby', 'create-mode', 'create-teams'],
+                        help='Navigate directly to a screen: lobby, create-mode, create-teams')
+    parser.add_argument('--screenshot-dir', default=None,
+                        help='Directory to save F12 screenshots (default: current dir)')
     args = parser.parse_args()
 
-    app = App(ai_delay_ms=args.ai_delay)
+    app = App(ai_delay_ms=args.ai_delay, screenshot_dir=args.screenshot_dir)
 
     if args.replay:
         from botbowl.gui.save_load import load_replay
@@ -46,11 +51,19 @@ def main():
             print(f'Replay not found: {args.replay}')
             sys.exit(1)
         app.push_screen(ReplayScreen(app, replay))
+    elif args.screen == 'create-mode':
+        from botbowl.gui.screens.create_game import CreateGameScreen
+        app.push_screen(LobbyScreen(app))
+        app.push_screen(CreateGameScreen(app, step=0))
+    elif args.screen == 'create-teams':
+        from botbowl.gui.screens.create_game import CreateGameScreen
+        app.push_screen(LobbyScreen(app))
+        app.push_screen(CreateGameScreen(app, step=1))
     elif args.home_agent is not None or args.away_agent is not None:
         # Start game directly
         _start_game(app, args)
     else:
-        # Open lobby
+        # Open lobby (default, also handles --screen lobby)
         app.push_screen(LobbyScreen(app))
 
     app.run()

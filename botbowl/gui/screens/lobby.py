@@ -12,8 +12,8 @@ from botbowl.gui.rendering.ui_primitives import (
     COLOR_TEXT_DIM
 )
 
-LOBBY_W = 900
-LOBBY_H = 600
+LOBBY_W = 1080
+LOBBY_H = 700
 
 ROW_H = 36
 HEADER_H = 50
@@ -60,21 +60,24 @@ class LobbyScreen:
 
         # New Game button
         self._new_game_btn = Button(
-            pygame.Rect(self.width - 160 - PADDING, 10, 160, 34),
+            pygame.Rect(self.width - 170 - PADDING, 13, 170, 38),
             label='+ New Game',
             color=COLOR_BTN_NEUTRAL,
             font_size=14
         )
+
+        btn_del_x = self.width - PADDING - 86
+        btn_act_x = btn_del_x - 90
 
         # Saved games section
         self._save_rows: list[tuple] = []  # (name, load_btn, del_btn)
         y_saves = y + 30  # after section header
         for name in self._saves:
             load_btn = Button(
-                pygame.Rect(x_base + 300, y_saves, 80, ROW_H - 6),
+                pygame.Rect(btn_act_x, y_saves, 82, ROW_H - 6),
                 label='Load', color=COLOR_BTN_HOME, font_size=12)
             del_btn = Button(
-                pygame.Rect(x_base + 390, y_saves, 80, ROW_H - 6),
+                pygame.Rect(btn_del_x, y_saves, 82, ROW_H - 6),
                 label='Delete', color=COLOR_BTN_AWAY, font_size=12)
             self._save_rows.append((name, load_btn, del_btn))
             y_saves += ROW_H
@@ -84,10 +87,10 @@ class LobbyScreen:
         self._replay_rows: list[tuple] = []  # (name, play_btn, del_btn)
         for name in self._replays:
             play_btn = Button(
-                pygame.Rect(x_base + 300, y_replays, 80, ROW_H - 6),
+                pygame.Rect(btn_act_x, y_replays, 82, ROW_H - 6),
                 label='Play', color=COLOR_BTN_NEUTRAL, font_size=12)
             del_btn = Button(
-                pygame.Rect(x_base + 390, y_replays, 80, ROW_H - 6),
+                pygame.Rect(btn_del_x, y_replays, 82, ROW_H - 6),
                 label='Delete', color=COLOR_BTN_AWAY, font_size=12)
             self._replay_rows.append((name, play_btn, del_btn))
             y_replays += ROW_H
@@ -164,12 +167,22 @@ class LobbyScreen:
 
         # Title
         title_font = _font(26, bold=True)
-        title = title_font.render('botbowl', True, (200, 200, 240))
+        title = title_font.render('botbowl', True, (210, 215, 245))
         surface.blit(title, (PADDING, 12))
 
         sub_font = _font(12)
-        sub = sub_font.render('Blood Bowl Simulator', True, (120, 120, 140))
-        surface.blit(sub, (PADDING, 40))
+        sub = sub_font.render('Blood Bowl Simulator', True, (100, 105, 130))
+        surface.blit(sub, (PADDING, 42))
+
+        # Accent line under title
+        accent_surf = pygame.Surface((200, 2), pygame.SRCALPHA)
+        for px in range(200):
+            r = int(70 + (210 - 70) * px / 200)
+            g = int(110 + (75 - 110) * px / 200)
+            b = int(210 + (55 - 210) * px / 200)
+            accent_surf.set_at((px, 0), (r, g, b, 200))
+            accent_surf.set_at((px, 1), (r, g, b, 200))
+        surface.blit(accent_surf, (PADDING, 58))
 
         self._new_game_btn.draw(surface)
 
@@ -203,11 +216,11 @@ class LobbyScreen:
                 y += ROW_H
 
     def _draw_section_header(self, surface: pygame.Surface, title: str, y: int):
-        font = _font(14, bold=True)
-        surf = font.render(title, True, (160, 160, 200))
+        font = _font(15, bold=True)
+        surf = font.render(title, True, (155, 160, 200))
         surface.blit(surf, (PADDING, y))
-        pygame.draw.line(surface, (50, 50, 70),
-                         (PADDING, y + 20), (self.width - PADDING, y + 20))
+        pygame.draw.line(surface, (45, 48, 68),
+                         (PADDING, y + 22), (self.width - PADDING, y + 22))
 
     def _draw_row(self, surface: pygame.Surface, name: str,
                   btn1: Button, btn2: Button, y: int):
