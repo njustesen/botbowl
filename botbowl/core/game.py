@@ -559,6 +559,12 @@ class Game:
                 return True
         return False
 
+    def add_opp_clock(self, team: 'Team') -> None:
+        """
+        Adds an opponent clock (competition mode only). No-op outside competition mode.
+        """
+        pass
+
     def pause_clocks(self) -> None:
         """
         Pauses all clocks.
