@@ -110,27 +110,12 @@ class ReplayScreen(GameScreen):
         self._current_step_json = step.game
 
     def _build_replay_controls(self):
-        """Build replay control buttons in the action bar."""
-        bar = self.action_bar_rect
+        """Build replay control buttons in the buttons row of the action bar."""
+        bar = self._btns_rect   # use the buttons sub-rect, not the full action bar
         btn_h = bar.height - 8
-        btn_w = btn_h + 4
-        cx = bar.x + (bar.width - LOG_W) // 2
+        cx = bar.x + bar.width // 2   # centre of the bar
         y = bar.y + 4
 
-        self._btn_prev = Button(
-            pygame.Rect(cx - btn_w * 2 - 8, y, btn_w, btn_h),
-            label='◀', color=COLOR_BTN_DEFAULT, font_size=16)
-        self._btn_play = Button(
-            pygame.Rect(cx - btn_w // 2, y, btn_w + 16, btn_h),
-            label='▶', color=COLOR_BTN_NEUTRAL, font_size=16)
-        self._btn_next = Button(
-            pygame.Rect(cx + btn_w + 8, y, btn_w, btn_h),
-            label='▶▶' if False else '▶', color=COLOR_BTN_DEFAULT, font_size=16)
-        self._btn_next = Button(
-            pygame.Rect(cx + btn_w + 8, y, btn_w, btn_h),
-            label='▶', color=COLOR_BTN_DEFAULT, font_size=16)
-
-        # Actually: prev, play/pause, next
         self._btn_prev = Button(
             pygame.Rect(cx - 80, y, 50, btn_h),
             label='◀ Prev', color=COLOR_BTN_DEFAULT, font_size=12)
@@ -213,14 +198,13 @@ class ReplayScreen(GameScreen):
         for btn in self._replay_buttons:
             btn.draw(surface)
 
-        # Step counter
+        # Step counter (in the buttons row)
         font = pygame.font.SysFont('Arial', 12)
         counter = f'Step {self.step_index + 1} / {self.total_steps}'
         csurf = font.render(counter, True, (180, 180, 180))
-        bar = self.action_bar_rect
+        bar = self._btns_rect
         surface.blit(csurf, (bar.x + 4,
                               bar.y + (bar.height - csurf.get_height()) // 2))
 
 
 # Import after class definition to avoid circular
-from botbowl.gui.screens.game_screen import LOG_W  # noqa: E402

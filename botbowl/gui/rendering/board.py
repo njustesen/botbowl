@@ -152,19 +152,52 @@ class BoardRenderer:
                 pygame.draw.circle(surface, COLOR_GRID_DOT,
                                    (ox + x * ts, oy + y * ts), 1)
 
+    @staticmethod
+    def _prob_color(p: float, alpha: int = 255) -> tuple:
+        """Continuous red→yellow→green color for probability p in [0, 1].
+
+        Returns (R, G, B) when alpha=255, else (R, G, B, A).
+        """
+        p = max(0.0, min(1.0, p))
+        if p <= 0.5:
+            t = p * 2
+            r, g, b = int(200 + t * 10), int(50 + t * 140), int(50 - t * 10)
+        else:
+            t = (p - 0.5) * 2
+            r, g, b = int(210 - t * 160), int(190 + t * 10), int(40 + t * 40)
+        return (r, g, b) if alpha == 255 else (r, g, b, alpha)
+
     def draw_highlights(self, surface: pygame.Surface,
-                        squares: list, color: tuple):
-        """Draw semi-transparent colored overlays on squares."""
+                        squares: list, color: tuple,
+                        probs: dict = None):
+        """Draw semi-transparent colored overlays on squares.
+
+        If *probs* is provided (dict[Square, float]) each square is colored
+        on a continuous red→yellow→green scale by probability.
+        """
         if not squares:
             return
         ts = self.tile_size
         ox, oy = self.pitch_offset
         tmp = pygame.Surface((ts, ts), pygame.SRCALPHA)
-        tmp.fill(color)
         for sq in squares:
+            if probs is not None and sq in probs:
+                sq_color = self._prob_color(probs[sq], alpha=110)
+            else:
+                sq_color = color
+            tmp.fill(sq_color)
             px = ox + sq.x * ts
             py = oy + sq.y * ts
             surface.blit(tmp, (px, py))
+
+    @staticmethod
+    def _roll_color(step_rolls: list) -> tuple:
+        """Return a continuous-scale RGB color for a path node's roll requirements."""
+        if not step_rolls:
+            return COLOR_PATH_DOT
+        max_roll = max(step_rolls)
+        p = (7 - max_roll) / 6
+        return BoardRenderer._prob_color(p)
 
     def draw_path(self, surface: pygame.Surface, path, steps_taken: int = 0):
         """Draw movement path: connecting lines, per-step roll requirements, overall probability."""
@@ -172,8 +205,7 @@ class BoardRenderer:
             return
         ts = self.tile_size
         ox, oy = self.pitch_offset
-        font = pygame.font.SysFont('Arial', max(7, ts // 4), bold=True)
-        prob_font = pygame.font.SysFont('Arial', max(8, ts // 3), bold=True)
+        small_font = pygame.font.SysFont('Arial', max(7, ts // 4), bold=True)
         steps = path.steps
         rolls = path.rolls if (path.rolls is not None) else [[] for _ in steps]
 
@@ -185,42 +217,54 @@ class BoardRenderer:
             p2 = (ox + curr.x * ts + ts // 2, oy + curr.y * ts + ts // 2)
             pygame.draw.line(surface, COLOR_PATH_LINE, p1, p2, 2)
 
-        # Draw step dots with roll info
+        # Draw step dots — color by this step's roll difficulty
         for i, step in enumerate(steps):
             cx = ox + step.x * ts + ts // 2
             cy = oy + step.y * ts + ts // 2
             r = max(6, ts // 5)
 
             step_rolls = rolls[i] if i < len(rolls) else []
-            has_roll = bool(step_rolls)
+            dot_color = self._roll_color(step_rolls)
 
-            dot_color = (220, 120, 60) if has_roll else COLOR_PATH_DOT
             pygame.draw.circle(surface, dot_color, (cx, cy), r)
-            pygame.draw.circle(surface, (80, 60, 0), (cx, cy), r, 1)
+            pygame.draw.circle(surface, (0, 0, 0), (cx, cy), r, 1)
 
-            if has_roll:
-                # Show the highest (hardest) target roll required at this step
+            if step_rolls:
                 label = f'{max(step_rolls)}+'
-                text_color = (255, 80, 80)
             else:
                 label = str(i + 1)
-                text_color = COLOR_PATH_TEXT
-
-            lbl_surf = font.render(label, True, text_color)
+            lbl_surf = small_font.render(label, True, COLOR_PATH_TEXT)
             surface.blit(lbl_surf, (cx - lbl_surf.get_width() // 2,
                                     cy - lbl_surf.get_height() // 2))
 
-        # Show overall probability at the final step
-        if steps and hasattr(path, 'prob') and path.prob is not None and path.prob < 1.0:
-            last = steps[-1]
+        # Overall probability % on the final step — larger, centered on the square
+        if path.prob is not None and steps:
+            final = steps[-1]
             pct = int(round(path.prob * 100))
-            prob_str = f'{pct}%'
-            color = (100, 220, 100) if pct >= 70 else (220, 200, 60) if pct >= 40 else (220, 80, 80)
-            p_surf = prob_font.render(prob_str, True, color)
-            px = ox + last.x * ts + ts - p_surf.get_width() - 1
-            py = oy + last.y * ts + 1
-            # Shadow
-            sh = prob_font.render(prob_str, True, (0, 0, 0))
+            pct_text = f'{pct}%'
+            big_font = pygame.font.SysFont('Arial', max(10, ts // 2), bold=True)
+            prob_rgb = self._prob_color(path.prob)
+            p_surf = big_font.render(pct_text, True, prob_rgb)
+            sh_surf = big_font.render(pct_text, True, (0, 0, 0))
+            fx = ox + final.x * ts + (ts - p_surf.get_width()) // 2
+            fy = oy + final.y * ts + (ts - p_surf.get_height()) // 2
+            surface.blit(sh_surf, (fx + 1, fy + 1))
+            surface.blit(p_surf, (fx, fy))
+
+    def draw_prob_labels(self, surface: pygame.Surface, highlight_probs: dict):
+        """Draw always-visible probability % text centred on each highlighted square."""
+        if not highlight_probs:
+            return
+        ts = self.tile_size
+        ox, oy = self.pitch_offset
+        font = pygame.font.SysFont('Arial', max(10, ts // 2 - 2), bold=True)
+        for sq, prob in highlight_probs.items():
+            pct = int(round(prob * 100))
+            text = f'{pct}%'
+            p_surf = font.render(text, True, (255, 255, 255))
+            sh = font.render(text, True, (0, 0, 0))
+            px = ox + sq.x * ts + (ts - p_surf.get_width()) // 2
+            py = oy + sq.y * ts + (ts - p_surf.get_height()) // 2
             surface.blit(sh, (px + 1, py + 1))
             surface.blit(p_surf, (px, py))
 
@@ -235,16 +279,34 @@ class BoardRenderer:
         tmp.fill(color)
         surface.blit(tmp, (ox + sq.x * ts, oy + sq.y * ts))
 
+    def draw_block_dice_overlays(self, surface: pygame.Surface,
+                                 position_dice_pairs: list):
+        """Draw block dice count badges on each block target square.
+
+        position_dice_pairs: list of (Square, int) where the int is the
+        signed dice count (positive = attacker favoured, negative = defender).
+        """
+        for sq, dice in position_dice_pairs:
+            against = dice < 0
+            self.draw_block_dice_indicator(surface, sq, abs(dice), against)
+
     def draw_block_dice_indicator(self, surface: pygame.Surface,
                                   sq: Square, n_dice: int, against: bool):
-        """Draw a small block dice count indicator on a target square."""
+        """Draw small colored squares indicating block dice count on a target square.
+
+        Red squares = defender has the advantage (rolls more dice).
+        Green squares = attacker has the advantage.
+        """
         ts = self.tile_size
         ox, oy = self.pitch_offset
-        px = ox + sq.x * ts + ts - 14
-        py = oy + sq.y * ts + 2
-        color = (220, 80, 80) if against else (80, 200, 80)
-        sign = '-' if against else '+'
-        font = pygame.font.SysFont('Arial', 10, bold=True)
-        label = f'{sign}{n_dice}d'
-        surf = font.render(label, True, color)
-        surface.blit(surf, (px, py))
+        color = (210, 50, 50) if against else (50, 200, 80)
+        size = max(5, ts // 5)
+        gap = 2
+        total_w = n_dice * (size + gap) - gap
+        # Centre horizontally, place at bottom of square
+        bx = ox + sq.x * ts + (ts - total_w) // 2
+        by = oy + sq.y * ts + ts - size - 3
+        for i in range(n_dice):
+            rect = pygame.Rect(bx + i * (size + gap), by, size, size)
+            pygame.draw.rect(surface, color, rect)
+            pygame.draw.rect(surface, (0, 0, 0), rect, 1)

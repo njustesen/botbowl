@@ -23,6 +23,7 @@ class UIState:
     selected_action_choice: object = None    # ActionChoice or None
     highlighted_squares: list = field(default_factory=list)
     hover_path: object = None               # Path or None (MOVE hover)
+    hover_pass_rolls: object = None         # list[int] or None (PASS hover roll targets)
     hover_square: object = None             # Square or None
     hover_player: object = None             # Player under mouse (for info display)
     pinned_home_player: object = None       # Last clicked home player (sticky info)
@@ -37,6 +38,7 @@ class UIState:
         self.selected_action_choice = None
         self.highlighted_squares = []
         self.hover_path = None
+        self.hover_pass_rolls = None
         self.player_dots = []
         self.special_toggle = None
         # hover_player, hover_square, pinned_*_player persist across selections
@@ -177,18 +179,15 @@ class InputHandler:
                 ui_state.reset_selection()
                 return action
 
-        # C. Check if there's a positional action already selected and sq is valid
+        # C. Check if any positional action covers this square and submit the first match.
+        # Works for single actions (MOVE, PUSH…) and multi-positional (blitz MOVE+BLOCK).
         for available_ac in game.state.available_actions:
             if available_ac.action_type in POSITIONAL_ACTIONS:
                 if sq in (available_ac.positions or []):
-                    # Auto-select if it's the only positional action
-                    positional = [a for a in game.state.available_actions
-                                  if a.action_type in POSITIONAL_ACTIONS]
-                    if len(positional) == 1:
-                        action = Action(available_ac.action_type,
-                                        position=sq, player=ui_state.selected_player)
-                        ui_state.reset_selection()
-                        return action
+                    action = Action(available_ac.action_type,
+                                    position=sq, player=ui_state.selected_player)
+                    ui_state.reset_selection()
+                    return action
 
         # D. Deselect if nothing matched
         ui_state.reset_selection()
@@ -199,6 +198,7 @@ class InputHandler:
                       game.arena.width, game.arena.height)
         ui_state.hover_square = sq
         ui_state.hover_path = None
+        ui_state.hover_pass_rolls = None
 
         # Track player under cursor for info display
         if sq is not None and (0 <= sq.x < game.state.pitch.width and
@@ -207,15 +207,24 @@ class InputHandler:
         else:
             ui_state.hover_player = None
 
-        if (sq is not None and
-                ui_state.selected_action_type == ActionType.MOVE and
-                ui_state.selected_action_choice is not None):
-            # Find path to hovered square
+        if sq is not None and ui_state.selected_action_choice is not None:
             ac = ui_state.selected_action_choice
-            for path in (ac.paths or []):
-                if path.steps and path.steps[-1] == sq:
-                    ui_state.hover_path = path
-                    break
+
+            if ui_state.selected_action_type == ActionType.MOVE:
+                # Find path to hovered square
+                for path in (ac.paths or []):
+                    if path.steps and path.steps[-1] == sq:
+                        ui_state.hover_path = path
+                        break
+
+            elif ui_state.selected_action_type == ActionType.PASS:
+                # Show roll targets for hovered pass destination
+                positions = ac.positions or []
+                if sq in positions:
+                    idx = positions.index(sq)
+                    rolls = ac.rolls or []
+                    if idx < len(rolls):
+                        ui_state.hover_pass_rolls = rolls[idx]
 
     def _handle_key(self, event: pygame.event.Event, ui_state: UIState):
         if event.key == pygame.K_ESCAPE:

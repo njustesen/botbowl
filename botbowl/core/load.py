@@ -73,6 +73,7 @@ def load_rule_set(name, debug=False, all_rules=True):
         race = Race(r.name.cdata, [], (int)(r.rerollValue.cdata), (bool)(r.apothecary.cdata), (bool)(r.stakes.cdata))
         for p in r.positions.position:
             position = Role(p.title.cdata, [race.name], (int)(p.ma.cdata), (int)(p.st.cdata), (int)(p.ag.cdata), (int)(p.av.cdata), [], (int)(p.cost.cdata), parse_sc(p.normal.cdata), parse_sc(p.double.cdata))
+            position.quantity = int(p.quantity.cdata)
             if len(p.skills) > 0:
                 for skill_name in p.skills.skill:
                     position.skills.append(parse_enum(Skill, skill_name.cdata))

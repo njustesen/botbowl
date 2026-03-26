@@ -7,7 +7,8 @@ from typing import Optional
 
 from botbowl.gui import sprites as spr
 from botbowl.gui.assets import get_procedure_label, get_turn_label, prettify
-from botbowl.core.table import Skill, SkillCategory
+from botbowl.core.table import ActionType, Skill, SkillCategory
+from botbowl.gui.fonts import get_font, get_body_font
 
 COLOR_BG = (20, 20, 25)
 COLOR_HOME = (50, 100, 200)
@@ -33,6 +34,15 @@ _CHIP = {
     SkillCategory.Extraordinary: ((40, 40, 40),    (200, 80, 80)),
 }
 _INJURY_CHIP = ((20, 20, 20), (200, 60, 60))   # black bg, red text
+
+# Block dice action types (for context row detection)
+_BLOCK_DICE_AT = {
+    ActionType.SELECT_ATTACKER_DOWN,
+    ActionType.SELECT_DEFENDER_DOWN,
+    ActionType.SELECT_BOTH_DOWN,
+    ActionType.SELECT_PUSH,
+    ActionType.SELECT_DEFENDER_STUMBLES,
+}
 
 # Manual skill → category mapping (BB2016)
 _SKILL_CAT = {
@@ -138,7 +148,7 @@ def _draw_chip(surface: pygame.Surface, text: str, x: int, y: int,
 
 
 def _font(size: int, bold: bool = False) -> pygame.font.Font:
-    return pygame.font.SysFont('Arial', size, bold=bold)
+    return get_body_font(size, bold=bold)
 
 
 class HUDRenderer:
@@ -309,7 +319,9 @@ class HUDRenderer:
         # ── Team info: icon + agent name (row 1) + team name (row 2) ──────
         logo_margin = 4
         logo_size = (center_h - 2 * logo_margin, center_h - 2 * logo_margin)
-        name_f = _font(22, bold=True)
+        max_name_len = max(len(home.name), len(away.name))
+        name_size = max(13, 20 - max(0, max_name_len - 10))
+        name_f = get_font(name_size, bold=True)
         agent_f = _font(13)
         pad = 4
         text_margin = 10  # gap between logo and text column
@@ -405,16 +417,205 @@ class HUDRenderer:
 
 
 class ActionBarRenderer:
-    """Renders the action button bar below the pitch."""
+    """Renders the action button bar (context row + buttons) below the pitch."""
+
+    # Height reserved for the context row within the action bar.
+    CONTEXT_H = 36
 
     def __init__(self, rect: pygame.Rect):
         self.rect = rect
 
-    def draw(self, surface: pygame.Surface, buttons: list):
+    def draw(self, surface: pygame.Surface, buttons: list, game=None):
         pygame.draw.rect(surface, (15, 15, 20), self.rect)
         pygame.draw.rect(surface, (50, 50, 60), self.rect, 1)
+        if game is not None and game.state.available_actions:
+            ctx_rect = pygame.Rect(self.rect.x, self.rect.y,
+                                   self.rect.width, self.CONTEXT_H)
+            self._draw_context_row(surface, ctx_rect, game,
+                                   game.state.available_actions)
         for btn in buttons:
             btn.draw(surface)
+
+    # ── Context row ───────────────────────────────────────────────────────────
+
+    def _draw_context_row(self, surface: pygame.Surface, rect: pygame.Rect,
+                          game, available_actions: list):
+        """Render a one-line context strip for special decision prompts."""
+        action_types = {ac.action_type for ac in available_actions}
+        cy = rect.y + rect.height // 2
+        font_main = _font(13, bold=True)
+        font_dim = _font(12)
+
+        if ActionType.USE_SKILL in action_types or ActionType.DONT_USE_SKILL in action_types:
+            self._ctx_use_skill(surface, rect, cy, font_main, font_dim,
+                                game, available_actions)
+
+        elif ActionType.USE_REROLL in action_types or ActionType.DONT_USE_REROLL in action_types:
+            self._ctx_reroll(surface, rect, cy, font_main, font_dim,
+                             game, available_actions)
+
+        elif (ActionType.USE_APOTHECARY in action_types or
+              ActionType.DONT_USE_APOTHECARY in action_types):
+            self._ctx_apothecary(surface, rect, cy, font_main, font_dim, game)
+
+        elif any(at in action_types for at in _BLOCK_DICE_AT):
+            self._ctx_block_dice(surface, rect, cy, font_main, game, action_types)
+
+        elif ActionType.HEADS in action_types or ActionType.TAILS in action_types:
+            msg = 'Coin toss — winner chooses kick or receive'
+            s = font_main.render(msg, True, (180, 180, 210))
+            surface.blit(s, (rect.centerx - s.get_width() // 2,
+                             cy - s.get_height() // 2))
+
+        elif ActionType.KICK in action_types or ActionType.RECEIVE in action_types:
+            team = game.state.current_team or game.state.home_team
+            is_home = (team == game.state.home_team)
+            tc = COLOR_HOME if is_home else COLOR_AWAY
+            part1 = font_main.render(f'{team.name}  won the toss', True, tc)
+            part2 = font_dim.render('— kick or receive?', True, (160, 160, 170))
+            total_w = part1.get_width() + 8 + part2.get_width()
+            x = rect.centerx - total_w // 2
+            surface.blit(part1, (x, cy - part1.get_height() // 2))
+            surface.blit(part2, (x + part1.get_width() + 8,
+                                 cy - part2.get_height() // 2))
+
+    def _player_sprite(self, player, is_home: bool, max_h: int) -> pygame.Surface:
+        """Return a scaled player sprite that fits within max_h pixels."""
+        sprite = spr.get_player_surface(player, is_home, False)
+        if sprite.get_height() > max_h:
+            scale = max_h / sprite.get_height()
+            sprite = pygame.transform.scale(
+                sprite, (int(sprite.get_width() * scale), max_h))
+        return sprite
+
+    def _blit_player(self, surface, sprite, rect, x, cy):
+        """Blit sprite vertically centred in context row. Returns new x."""
+        sy = cy - sprite.get_height() // 2
+        sy = max(rect.y + 2, min(sy, rect.bottom - sprite.get_height() - 2))
+        surface.blit(sprite, (x, sy))
+        return x + sprite.get_width() + 5
+
+    def _ctx_use_skill(self, surface, rect, cy, font_main, font_dim,
+                       game, available_actions):
+        ac = next((a for a in available_actions
+                   if a.action_type == ActionType.USE_SKILL), None)
+        if ac is None:
+            ac = next((a for a in available_actions
+                       if a.action_type == ActionType.DONT_USE_SKILL), None)
+        if ac is None or not ac.skill or not ac.players:
+            return
+        player = ac.players[0]
+        is_home = player.team == game.state.home_team
+        tc = COLOR_HOME if is_home else COLOR_AWAY
+        sprite = self._player_sprite(player, is_home, rect.height - 6)
+        x = rect.x + 8
+        x = self._blit_player(surface, sprite, rect, x, cy)
+        name_s = font_main.render(f'#{player.nr} {player.name}', True, tc)
+        surface.blit(name_s, (x, cy - name_s.get_height() // 2))
+        x += name_s.get_width() + 8
+        arr = _font(13).render('→', True, (150, 150, 160))
+        surface.blit(arr, (x, cy - arr.get_height() // 2))
+        x += arr.get_width() + 8
+        skill_label = prettify(ac.skill.name)
+        cat = _SKILL_CAT.get(ac.skill)
+        bg, fg = (_CHIP.get(cat, _CHIP[SkillCategory.Extraordinary])
+                  if cat else _CHIP[SkillCategory.Extraordinary])
+        chip_w = _draw_chip(surface, skill_label, x, cy - 9,
+                            _font(11, bold=True), bg, fg)
+        x += chip_w + 10
+        prompt = font_dim.render('— use it?', True, (160, 160, 170))
+        surface.blit(prompt, (x, cy - prompt.get_height() // 2))
+
+    def _ctx_reroll(self, surface, rect, cy, font_main, font_dim,
+                    game, available_actions):
+        ac = next((a for a in available_actions
+                   if a.action_type in (ActionType.USE_REROLL,
+                                        ActionType.DONT_USE_REROLL)), None)
+        player = (ac.players[0] if (ac and ac.players) else None)
+        proc = game.get_procedure()
+        if player is None and hasattr(proc, 'player'):
+            player = proc.player
+        if player is None:
+            return
+        is_home = player.team == game.state.home_team
+        tc = COLOR_HOME if is_home else COLOR_AWAY
+        sprite = self._player_sprite(player, is_home, rect.height - 6)
+        x = rect.x + 8
+        x = self._blit_player(surface, sprite, rect, x, cy)
+        name_s = font_main.render(f'#{player.nr} {player.name}', True, tc)
+        surface.blit(name_s, (x, cy - name_s.get_height() // 2))
+        x += name_s.get_width() + 8
+        # Describe what is being rerolled
+        ctx_name = ''
+        if hasattr(proc, 'context') and proc.context is not None:
+            ctx_name = prettify(type(proc.context).__name__)
+        elif ac and ac.rolls:
+            ctx_name = f'rolled {", ".join(str(r) for r in ac.rolls)}'
+        detail = f'failed a {ctx_name} roll' if ctx_name else 'failed a roll'
+        detail_s = font_dim.render(f'{detail}  —  Re-roll?', True, (160, 160, 170))
+        surface.blit(detail_s, (x, cy - detail_s.get_height() // 2))
+
+    def _ctx_apothecary(self, surface, rect, cy, font_main, font_dim, game):
+        proc = game.get_procedure()
+        player = getattr(proc, 'player', None)
+        outcome = getattr(proc, 'outcome', None)
+        if player is None:
+            return
+        is_home = player.team == game.state.home_team
+        tc = COLOR_HOME if is_home else COLOR_AWAY
+        sprite = self._player_sprite(player, is_home, rect.height - 6)
+        x = rect.x + 8
+        x = self._blit_player(surface, sprite, rect, x, cy)
+        name_s = font_main.render(f'#{player.nr} {player.name}', True, tc)
+        surface.blit(name_s, (x, cy - name_s.get_height() // 2))
+        x += name_s.get_width() + 8
+        if outcome is not None:
+            inj_label = prettify(outcome.name) if hasattr(outcome, 'name') else str(outcome)
+            chip_w = _draw_chip(surface, inj_label, x, cy - 9,
+                                _font(11, bold=True), *_INJURY_CHIP)
+            x += chip_w + 10
+        prompt = font_dim.render('— Use apothecary?', True, (160, 160, 170))
+        surface.blit(prompt, (x, cy - prompt.get_height() // 2))
+
+    def _ctx_block_dice(self, surface, rect, cy, font_main, game, action_types):
+        proc = game.get_procedure()
+        attacker = getattr(proc, 'attacker', None)
+        defender = getattr(proc, 'defender', None)
+        # Walk context chain in case Reroll is on top
+        if attacker is None:
+            p = getattr(proc, 'context', None)
+            while p is not None:
+                attacker = getattr(p, 'attacker', None)
+                defender = getattr(p, 'defender', None)
+                if attacker is not None:
+                    break
+                p = getattr(p, 'context', None)
+        if attacker is None or defender is None:
+            return
+        dice_count = sum(1 for at in action_types if at in _BLOCK_DICE_AT)
+        sh = rect.height - 6
+        is_home_att = attacker.team == game.state.home_team
+        is_home_def = defender.team == game.state.home_team
+        att_color = COLOR_HOME if is_home_att else COLOR_AWAY
+        def_color = COLOR_HOME if is_home_def else COLOR_AWAY
+        sp_att = self._player_sprite(attacker, is_home_att, sh)
+        sp_def = self._player_sprite(defender, is_home_def, sh)
+        x = rect.x + 8
+        x = self._blit_player(surface, sp_att, rect, x, cy)
+        att_s = font_main.render(
+            f'{attacker.name}  ST{attacker.get_st()}', True, att_color)
+        surface.blit(att_s, (x, cy - att_s.get_height() // 2))
+        x += att_s.get_width() + 10
+        vs_s = _font(13).render('vs', True, (130, 130, 140))
+        surface.blit(vs_s, (x, cy - vs_s.get_height() // 2))
+        x += vs_s.get_width() + 10
+        x = self._blit_player(surface, sp_def, rect, x, cy)
+        def_s = font_main.render(
+            f'{defender.name}  ST{defender.get_st()}', True, def_color)
+        surface.blit(def_s, (x, cy - def_s.get_height() // 2))
+        x += def_s.get_width() + 10
+        dice_s = font_main.render(f'—  {dice_count}d', True, (200, 200, 100))
+        surface.blit(dice_s, (x, cy - dice_s.get_height() // 2))
 
 
 class PlayerInfoRenderer:

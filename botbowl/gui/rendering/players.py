@@ -58,14 +58,16 @@ class PlayerRenderer:
                         ts: int):
         sprite = spr.get_player_surface(player, is_home, is_active)
         iw, ih = sprite.get_size()
+        sx = px + (ts - iw) // 2
+        sy = py + (ts - ih) // 2
         # Center sprite within the tile cell
-        surface.blit(sprite, (px + (ts - iw) // 2, py + (ts - ih) // 2))
+        surface.blit(sprite, (sx, sy))
 
-        # Used overlay (darken the full tile)
+        # Used overlay (darken sprite area only, not the whole tile)
         if player.state.used and not is_active:
-            overlay = pygame.Surface((ts, ts), pygame.SRCALPHA)
+            overlay = pygame.Surface((iw, ih), pygame.SRCALPHA)
             overlay.fill(COLOR_OVERLAY_USED)
-            surface.blit(overlay, (px, py))
+            surface.blit(overlay, (sx, sy))
 
         # State indicators (top-left overlay, natural size)
         if player.state.stunned:
@@ -85,15 +87,6 @@ class PlayerRenderer:
         if hasattr(player.state, 'hypnotized') and player.state.hypnotized:
             surface.blit(spr.get_state_surface('hypnotized'), (px + ts // 2, py + ts // 2))
 
-        # Player number label
-        font = pygame.font.SysFont('Arial', max(8, ts // 3), bold=True)
-        nr_surf = font.render(str(player.nr), True, (255, 255, 255))
-        nr_rect = nr_surf.get_rect(bottomright=(px + ts - 2, py + ts - 2))
-        # Shadow
-        shadow = font.render(str(player.nr), True, (0, 0, 0))
-        surface.blit(shadow, (nr_rect.x + 1, nr_rect.y + 1))
-        surface.blit(nr_surf, nr_rect)
-
         # Selection / active border
         if is_selected:
             pygame.draw.rect(surface, COLOR_BORDER_SELECTED,
@@ -111,11 +104,16 @@ class PlayerRenderer:
             # Check if ball is carried (player on that square)
             player = game.state.pitch.board[ball.position.y][ball.position.x]
             is_carried = player is not None
-            ball_size = (ts // 2, ts // 2)
-            ball_surf = spr.get_ball_surface(is_carried, ball_size)
             px, py = sq_to_px(ball.position, ts, self.pitch_offset)
-            # Draw ball offset to bottom-right of square
-            surface.blit(ball_surf, (px + ts // 2, py + ts // 2))
+            if is_carried:
+                # Small ball in corner when carried
+                ball_size = (ts // 2, ts // 2)
+                ball_surf = spr.get_ball_surface(is_carried, ball_size)
+                surface.blit(ball_surf, (px + ts // 2, py + ts // 2))
+            else:
+                # Full-tile ball when on the ground
+                ball_surf = spr.get_ball_surface(is_carried, (ts, ts))
+                surface.blit(ball_surf, (px, py))
 
     def draw_bench_on_board(self, surface: pygame.Surface, game, team,
                             is_home: bool, selected_player=None):

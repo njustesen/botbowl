@@ -1045,6 +1045,7 @@ class Role:
         self.n_skill_sets = n_skill_sets if n_skill_sets is not None else []
         self.d_skill_sets = d_skill_sets if d_skill_sets is not None else []
         self.star_player = star_player
+        self.quantity = 0  # max players of this position allowed per team (set by load_rule_set)
 
 
 class Piece:
@@ -1417,15 +1418,16 @@ class Inducement:
 
 class RuleSet:
 
-    def __init__(self, name, races=[], star_players=[], inducements=[], spp_actions={}, spp_levels={}, improvements={},
+    def __init__(self, name, races=None, star_players=None, inducements=None,
+                 spp_actions=None, spp_levels=None, improvements=None,
                  se_start=0, se_interval=0, se_pace=0):
         self.name = name
-        self.races = races
-        self.star_players = star_players
-        self.inducements = inducements
-        self.spp_actions = spp_actions
-        self.spp_levels = spp_levels
-        self.improvements = improvements
+        self.races = races if races is not None else []
+        self.star_players = star_players if star_players is not None else []
+        self.inducements = inducements if inducements is not None else []
+        self.spp_actions = spp_actions if spp_actions is not None else {}
+        self.spp_levels = spp_levels if spp_levels is not None else {}
+        self.improvements = improvements if improvements is not None else {}
         self.se_start = se_start
         self.se_interval = se_interval
         self.se_pace = se_pace

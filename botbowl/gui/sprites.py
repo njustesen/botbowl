@@ -6,6 +6,7 @@ import os
 import pygame
 
 from botbowl.core.util import get_data_path
+from botbowl.gui.fonts import get_body_font
 
 IMG_ROOT = get_data_path("img")
 
@@ -93,6 +94,75 @@ player_icons = {
     'Vampire': {
         'Vampire': 'vampire',
         'Thrall': 'vthrall',
+    },
+    'Dwarf': {
+        'Blocker': 'dlongbeard',
+        'Runner': 'drunner',
+        'Blitzer': 'dblitzer',
+        'Troll Slayer': 'dslayer',
+        'Deathroller': 'ddeathroller',
+    },
+    'Halfling': {
+        'Halfling': 'halfling',
+        'Treeman': 'treeman',
+    },
+    'Goblin': {
+        'Goblin': 'goblin',
+        'Bombardier': 'gobomber',
+        'Looney': 'gonobbla',
+        'Fanatic': 'gofungus',
+        'Pogoer': 'goscrappa',
+        'Troll': 'troll',
+    },
+    'Ogre': {
+        'Snotling': 'snot',
+        'Ogre': 'ogre',
+    },
+    'Khemri': {
+        'Skeleton': 'kmskeleton',
+        'Thro-Ra': 'kmthrower',
+        'Blitz-Ra': 'kmblitzer',
+        'Tomb Guardian': 'kmmummy',
+    },
+    'Necromantic': {
+        'Zombie': 'nzombie',
+        'Ghoul': 'nghoul',
+        'Wight': 'uwight',
+        'Flesh Golem': 'ngolem',
+        'Necromantic Werewolf': 'nwerewolf',
+    },
+    'Norse': {
+        'Lineman': 'nlineman',
+        'Thrower': 'nthrower',
+        'Catcher': 'ncatcher',
+        'Blitzer': 'nblitzer',
+        'Norse Werewolf': 'nwerewolf',
+    },
+    'Nurgle': {
+        'Rotter': 'rtrotter',
+        'Beast of Nurgle': 'rtbeast',
+    },
+    'Slann': {
+        'Lineman': 'lisilibili',
+        'Catcher': 'lisilibili',
+        'Blitzer': 'lisilibili',
+        'Kroxigor': 'kroxigor',
+    },
+    'Underworld': {
+        'Underworld Goblin': 'goblin',
+        'Skaven Lineman': 'sklineman',
+        'Skaven Thrower': 'skthrower',
+        'Skaven Blitzer': 'skstorm',
+        'Warpstone Troll': 'troll',
+    },
+    'Chaos Pact': {
+        'Marauder': 'nlineman',
+        'Goblin Renegade': 'goblin',
+        'Skaven Renegade': 'sklineman',
+        'Dark Elf Renegade': 'delineman',
+        'Chaos Troll': 'troll',
+        'Chaos Ogre': 'ogre',
+        'Minotaur': 'minotaur',
     },
 }
 
@@ -219,7 +289,7 @@ def _die_surface(label: str, size: tuple, bg: tuple, fg: tuple) -> pygame.Surfac
     surf = pygame.Surface(size, pygame.SRCALPHA)
     pygame.draw.rect(surf, bg, (0, 0, size[0], size[1]), border_radius=3)
     pygame.draw.rect(surf, fg, (0, 0, size[0], size[1]), 1, border_radius=3)
-    font = pygame.font.SysFont('Arial', max(8, size[1] - 5), bold=True)
+    font = get_body_font(max(8, size[1] - 5), bold=True)
     txt = font.render(label, True, fg)
     surf.blit(txt, ((size[0] - txt.get_width()) // 2, (size[1] - txt.get_height()) // 2))
     _cache[key] = surf

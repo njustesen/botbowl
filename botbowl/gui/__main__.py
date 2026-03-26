@@ -2,7 +2,7 @@
 CLI entry point: python -m botbowl.gui
 
 Examples:
-    python -m botbowl.gui                                   # Lobby
+    python -m botbowl.gui                                   # Main menu
     python -m botbowl.gui --home-agent random --away-agent random
     python -m botbowl.gui --home-agent human --away-agent random
     python -m botbowl.gui --home-agent human --away-agent human
@@ -15,7 +15,7 @@ import uuid
 import botbowl
 from botbowl.core.model import Agent
 from botbowl.gui.gui import App
-from botbowl.gui.screens.lobby import LobbyScreen
+from botbowl.gui.screens.lobby import MainMenuScreen
 
 
 def main():
@@ -35,13 +35,20 @@ def main():
     parser.add_argument('--replay', default=None,
                         help='Load and watch a replay by name')
     parser.add_argument('--screen', default=None,
-                        choices=['lobby', 'create-mode', 'create-teams'],
-                        help='Navigate directly to a screen: lobby, create-mode, create-teams')
+                        choices=['menu', 'lobby', 'create-mode', 'create-teams',
+                                 'teams', 'teams-new', 'modal'],
+                        help='Navigate directly to a screen')
     parser.add_argument('--screenshot-dir', default=None,
                         help='Directory to save F12 screenshots (default: current dir)')
+    parser.add_argument('--auto-screenshot', default=None, metavar='PATH',
+                        help='Save a screenshot to PATH after a few frames then quit')
+    parser.add_argument('--auto-screenshot-frames', type=int, default=3,
+                        help='Number of frames to render before auto-screenshot (default: 3)')
     args = parser.parse_args()
 
-    app = App(ai_delay_ms=args.ai_delay, screenshot_dir=args.screenshot_dir)
+    app = App(ai_delay_ms=args.ai_delay, screenshot_dir=args.screenshot_dir,
+              auto_screenshot=args.auto_screenshot,
+              auto_screenshot_frames=args.auto_screenshot_frames)
 
     if args.replay:
         from botbowl.gui.save_load import load_replay
@@ -53,18 +60,30 @@ def main():
         app.push_screen(ReplayScreen(app, replay))
     elif args.screen == 'create-mode':
         from botbowl.gui.screens.create_game import CreateGameScreen
-        app.push_screen(LobbyScreen(app))
+        app.push_screen(MainMenuScreen(app))
         app.push_screen(CreateGameScreen(app, step=0))
     elif args.screen == 'create-teams':
         from botbowl.gui.screens.create_game import CreateGameScreen
-        app.push_screen(LobbyScreen(app))
+        app.push_screen(MainMenuScreen(app))
         app.push_screen(CreateGameScreen(app, step=1))
+    elif args.screen == 'teams':
+        from botbowl.gui.screens.teams import TeamsScreen
+        app.push_screen(MainMenuScreen(app))
+        app.push_screen(TeamsScreen(app))
+    elif args.screen == 'teams-new':
+        from botbowl.gui.screens.teams import TeamsScreen, TeamCreatorScreen
+        app.push_screen(MainMenuScreen(app))
+        app.push_screen(TeamsScreen(app))
+        app.push_screen(TeamCreatorScreen(app, board_size=11))
+    elif args.screen == 'modal':
+        from botbowl.gui.screens._modal_test import ModalTestScreen
+        app.push_screen(ModalTestScreen(app))
     elif args.home_agent is not None or args.away_agent is not None:
         # Start game directly
         _start_game(app, args)
     else:
-        # Open lobby (default, also handles --screen lobby)
-        app.push_screen(LobbyScreen(app))
+        # Open main menu (default, also handles --screen menu/lobby)
+        app.push_screen(MainMenuScreen(app))
 
     app.run()
 
