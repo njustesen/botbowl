@@ -30,8 +30,7 @@ LINE_GAP   = 1      # px between text lines within a card
 CARD_GAP   = 2      # px between cards in scroll panel
 
 
-def _font(size: int = FONT_SIZE, bold: bool = False) -> pygame.font.Font:
-    return pygame.font.SysFont('Arial', size, bold=bold)
+from botbowl.gui.fonts import get_body_font as _font
 
 
 def _wrap_text(font: pygame.font.Font, text: str, max_w: int) -> list[str]:
@@ -83,7 +82,7 @@ class LogPanelRenderer:
 
     def _rebuild_lines(self, reports, game):
         self._lines = []
-        font = _font()
+        font = _font(FONT_SIZE)
         small_font = _font(FONT_SIZE - 1)
         line_h = font.get_height() + LINE_GAP
         card_w = self.rect.width - 8   # 4px margin each side in ScrollPanel
