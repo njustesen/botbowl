@@ -2,6 +2,7 @@
 Player and ball rendering: on-pitch sprites, state overlays, roster columns.
 """
 from __future__ import annotations
+import math
 import pygame
 from typing import Optional
 
@@ -15,7 +16,6 @@ COLOR_EJECTED = (50, 100, 220) # Blue ! for ejected
 
 COLOR_BORDER_ACTIVE = (255, 220, 0)
 COLOR_BORDER_SELECTED = (0, 200, 80)
-COLOR_OVERLAY_USED = (80, 80, 80, 120)
 
 
 class PlayerRenderer:
@@ -60,14 +60,28 @@ class PlayerRenderer:
         iw, ih = sprite.get_size()
         sx = px + (ts - iw) // 2
         sy = py + (ts - ih) // 2
-        # Center sprite within the tile cell
-        surface.blit(sprite, (sx, sy))
 
-        # Used overlay (darken sprite area only, not the whole tile)
+        # Darken used players by multiplying RGB channels (alpha preserved → only icon pixels affected)
         if player.state.used and not is_active:
-            overlay = pygame.Surface((iw, ih), pygame.SRCALPHA)
-            overlay.fill(COLOR_OVERLAY_USED)
-            surface.blit(overlay, (sx, sy))
+            blit_sprite = sprite.copy()
+            dark = pygame.Surface((iw, ih))
+            dark.fill((130, 130, 130))
+            blit_sprite.blit(dark, (0, 0), special_flags=pygame.BLEND_RGB_MULT)
+        else:
+            blit_sprite = sprite
+
+        surface.blit(blit_sprite, (sx, sy))
+
+        # Pulsating white brightness for selected player (alpha preserved → only icon pixels affected)
+        if is_selected and not player.state.used:
+            t = pygame.time.get_ticks()
+            phase = (math.sin(t / 350.0) + 1) / 2  # 0.0 → 1.0, ~1.4s cycle
+            white_amount = int(110 * phase)          # 0 → 110 brightness boost
+            brightened = sprite.copy()
+            white = pygame.Surface((iw, ih))
+            white.fill((white_amount, white_amount, white_amount))
+            brightened.blit(white, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+            surface.blit(brightened, (sx, sy))
 
         # State indicators (top-left overlay, natural size)
         if player.state.stunned:
@@ -87,13 +101,6 @@ class PlayerRenderer:
         if hasattr(player.state, 'hypnotized') and player.state.hypnotized:
             surface.blit(spr.get_state_surface('hypnotized'), (px + ts // 2, py + ts // 2))
 
-        # Selection / active border
-        if is_selected:
-            pygame.draw.rect(surface, COLOR_BORDER_SELECTED,
-                             (px, py, ts, ts), 3)
-        elif is_active:
-            pygame.draw.rect(surface, COLOR_BORDER_ACTIVE,
-                             (px, py, ts, ts), 2)
 
     def draw_ball(self, surface: pygame.Surface, game):
         """Draw the ball on pitch."""
@@ -106,10 +113,9 @@ class PlayerRenderer:
             is_carried = player is not None
             px, py = sq_to_px(ball.position, ts, self.pitch_offset)
             if is_carried:
-                # Small ball in corner when carried
-                ball_size = (ts // 2, ts // 2)
-                ball_surf = spr.get_ball_surface(is_carried, ball_size)
-                surface.blit(ball_surf, (px + ts // 2, py + ts // 2))
+                # Ball overlay at full tile size when carried
+                ball_surf = spr.get_ball_surface(is_carried, (ts, ts))
+                surface.blit(ball_surf, (px, py))
             else:
                 # Full-tile ball when on the ground
                 ball_surf = spr.get_ball_surface(is_carried, (ts, ts))
@@ -160,9 +166,6 @@ class PlayerRenderer:
             sprite = spr.get_player_surface(player, is_home, False)
             iw, ih = sprite.get_size()
             surface.blit(sprite, (px + (ts - iw) // 2, py + (ts - ih) // 2))
-
-            if player is selected_player:
-                pygame.draw.rect(surface, COLOR_BORDER_SELECTED, (px, py, ts, ts), 2)
 
             pid = id(player)
             if pid in ko_set:
