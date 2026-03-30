@@ -122,16 +122,16 @@ class PlayerRenderer:
                 surface.blit(ball_surf, (px, py))
 
     def draw_bench_on_board(self, surface: pygame.Surface, game, team,
-                            is_home: bool, selected_player=None):
+                            is_home: bool, selected_player=None,
+                            show_numbers: bool = False):
         """
-        Draw non-fielded players on the crowd row of the pitch board.
-        Away (is_home=False): row y=0, starting at x=1, going right.
-        Home (is_home=True): row y=arena.height-1, starting at x=arena.width-2, going left.
+        Draw non-fielded players on the crowd column of the pitch board.
+        Away (is_home=False): column x=0, starting at y=1, going down.
+        Home (is_home=True): column x=arena.width-1, starting at y=1, going down.
         Status icons: yellow dot=KO, red!=casualty, blue!=ejected, none=reserve.
         """
         ts = self.tile_size
         ox, oy = self.pitch_offset
-        arena_w = game.arena.width
         arena_h = game.arena.height
 
         off_pitch = [p for p in team.players if p.position is None]
@@ -143,21 +143,13 @@ class PlayerRenderer:
         ej_set = set(id(p) for p in game.get_dungeon(team))
 
         icon_font = pygame.font.SysFont('Arial', 11, bold=True)
-        nr_font = pygame.font.SysFont('Arial', max(7, ts // 4), bold=True)
+        nr_font = pygame.font.SysFont('Arial', max(7, ts // 4), bold=True) if show_numbers else None
 
-        if is_home:
-            y_tile = arena_h - 1
-            x_tile = arena_w - 2
-            dx = -1
-        else:
-            y_tile = 0
-            x_tile = 1
-            dx = 1
+        x_tile = game.arena.width - 1 if is_home else 0
+        y_tile = 1
 
         for player in off_pitch:
-            if is_home and x_tile < 1:
-                break
-            if not is_home and x_tile > arena_w - 2:
+            if y_tile > arena_h - 2:
                 break
 
             px = ox + x_tile * ts
@@ -177,11 +169,11 @@ class PlayerRenderer:
                 icon = icon_font.render('!', True, COLOR_EJECTED)
                 surface.blit(icon, (px + ts - 8, py))
 
-            # Jersey number (bottom-right overlay)
-            nr_surf = nr_font.render(str(player.nr), True, (255, 255, 255))
-            shadow = nr_font.render(str(player.nr), True, (0, 0, 0))
-            nr_rect = nr_surf.get_rect(bottomright=(px + ts - 2, py + ts - 2))
-            surface.blit(shadow, (nr_rect.x + 1, nr_rect.y + 1))
-            surface.blit(nr_surf, nr_rect)
+            if show_numbers:
+                nr_surf = nr_font.render(str(player.nr), True, (255, 255, 255))
+                shadow = nr_font.render(str(player.nr), True, (0, 0, 0))
+                nr_rect = nr_surf.get_rect(bottomright=(px + ts - 2, py + ts - 2))
+                surface.blit(shadow, (nr_rect.x + 1, nr_rect.y + 1))
+                surface.blit(nr_surf, nr_rect)
 
-            x_tile += dx
+            y_tile += 1

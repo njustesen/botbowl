@@ -138,11 +138,13 @@ class InputHandler:
                 ui_state.reset_selection()
                 # Fall through to player selection
 
-        # B. Try to select player on this square
+        # B. Try to select player on this square (pitch or bench column)
         player = game.state.pitch.board[sq.y][sq.x] if (
             0 <= sq.x < game.state.pitch.width and
             0 <= sq.y < game.state.pitch.height
         ) else None
+        if player is None:
+            player = self._get_bench_player(sq, game)
 
         if player is not None:
             # Check if this player can start an action
@@ -227,10 +229,11 @@ class InputHandler:
         ui_state.hover_path = None
         ui_state.hover_pass_rolls = None
 
-        # Track player under cursor for info display
+        # Track player under cursor for info display (pitch or bench)
         if sq is not None and (0 <= sq.x < game.state.pitch.width and
                                 0 <= sq.y < game.state.pitch.height):
-            ui_state.hover_player = game.state.pitch.board[sq.y][sq.x]
+            ui_state.hover_player = (game.state.pitch.board[sq.y][sq.x]
+                                     or self._get_bench_player(sq, game))
         else:
             ui_state.hover_player = None
 
@@ -275,6 +278,22 @@ class InputHandler:
                             break
                 if ui_state.hover_path:
                     break
+
+    def _get_bench_player(self, sq, game):
+        """Return the bench player drawn at this tile (side crowd column), or None."""
+        if sq is None:
+            return None
+        arena_h = game.arena.height
+        if sq.y < 1 or sq.y > arena_h - 2:
+            return None
+        idx = sq.y - 1
+        if sq.x == 0:
+            off_pitch = [p for p in game.state.away_team.players if p.position is None]
+            return off_pitch[idx] if idx < len(off_pitch) else None
+        if sq.x == game.arena.width - 1:
+            off_pitch = [p for p in game.state.home_team.players if p.position is None]
+            return off_pitch[idx] if idx < len(off_pitch) else None
+        return None
 
     def _handle_key(self, event: pygame.event.Event, ui_state: UIState):
         if event.key == pygame.K_ESCAPE:

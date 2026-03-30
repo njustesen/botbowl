@@ -95,7 +95,7 @@ class BoardRenderer:
         except Exception:
             pass
 
-        # Draw crowd border and endzone tiles on top (as solid colored rects)
+        # Draw crowd border, bench columns, and endzone tiles on top (as solid colored rects)
         for y in range(arena.height):
             for x in range(arena.width):
                 tile = arena.board[y][x]
@@ -103,7 +103,7 @@ class BoardRenderer:
                 py = oy + y * ts
                 rect = pygame.Rect(px, py, ts, ts)
 
-                if tile == Tile.CROWD:
+                if tile == Tile.CROWD or x == 0 or x == arena.width - 1:
                     pygame.draw.rect(surface, COLOR_CROWD, rect)
                 elif tile in TwoPlayerArena.home_td_tiles:
                     col = (*COLOR_HOME_TD[:3], 140)

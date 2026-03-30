@@ -51,8 +51,6 @@ def _pass_type_label(from_sq, to_sq) -> str:
     val = Rules.pass_matrix[dy][dx]
     return _PASS_ABBR.get(PassDistance(val), '??')
 HUD_H = 72          # Scoreboard height
-ACTION_BAR_H = 80   # Action bar: 36px context row + 44px buttons
-CONTEXT_H = 36      # Height of the context row inside ACTION_BAR_H
 INFO_H = 155        # Bottom panel height
 INFO_PLAYER_W = 200 # Width of each player info panel (log takes the rest)
 
@@ -321,7 +319,7 @@ class GameScreen:
 
         # Total window size: pitch width only, log moves to bottom center
         total_w = self.pitch_px_w
-        total_h = HUD_H + self.pitch_px_h + ACTION_BAR_H + INFO_H
+        total_h = HUD_H + self.pitch_px_h + INFO_H
 
         # Resize window if needed
         self._resize_display(total_w, total_h)
@@ -334,13 +332,14 @@ class GameScreen:
         # Sub-rects
         self.hud_rect = pygame.Rect(0, 0, total_w, HUD_H)
         self.pitch_rect = pygame.Rect(0, HUD_H, self.pitch_px_w, self.pitch_px_h)
-        bar_y = HUD_H + self.pitch_px_h
-        self.action_bar_rect = pygame.Rect(0, bar_y, total_w, ACTION_BAR_H)
-        # Buttons occupy the lower part of the action bar (below context row)
-        self._btns_rect = pygame.Rect(0, bar_y + CONTEXT_H,
-                                      total_w, ACTION_BAR_H - CONTEXT_H)
+        # Context row overlays the top crowd row (row 0)
+        self.action_bar_rect = pygame.Rect(0, HUD_H, total_w, TILE_SIZE)
+        # Buttons overlay the bottom crowd row (last row)
+        self._btns_rect = pygame.Rect(
+            0, HUD_H + self.pitch_px_h - TILE_SIZE, total_w, TILE_SIZE
+        )
         # Bottom panel: away info | log (remainder) | home info
-        info_y = bar_y + ACTION_BAR_H
+        info_y = HUD_H + self.pitch_px_h
         log_w = total_w - INFO_PLAYER_W * 2
         self.away_info_rect = pygame.Rect(0, info_y, INFO_PLAYER_W, INFO_H)
         self.log_rect = pygame.Rect(INFO_PLAYER_W, info_y, log_w, INFO_H)
@@ -376,6 +375,7 @@ class GameScreen:
         self._pass_receiver_rolls: dict = {}   # Square → List[int] for combined receiver overlay
         self._pass_toggle: Optional[LabeledToggle] = None
         self._show_probs: bool = False         # Hidden setting: True to show % labels
+        self._show_numbers: bool = False       # Hidden setting: True to show jersey numbers on bench
 
         # Kick-off event modal detection state
         self._kickoff_report_base: int = 0          # scan reports from this index for new kickoff outcomes
@@ -779,14 +779,16 @@ class GameScreen:
             self.board_renderer.draw_path(surface, self.ui_state.hover_path,
                                           player_square=player_sq)
 
-        # Bench players on crowd rows (row 0 = away, row height-1 = home)
+        # Bench players on side crowd columns
         self.player_renderer.draw_bench_on_board(
             surface, self.game, self.game.state.away_team, is_home=False,
-            selected_player=self.ui_state.pinned_away_player
+            selected_player=self.ui_state.pinned_away_player,
+            show_numbers=self._show_numbers
         )
         self.player_renderer.draw_bench_on_board(
             surface, self.game, self.game.state.home_team, is_home=True,
-            selected_player=self.ui_state.pinned_home_player
+            selected_player=self.ui_state.pinned_home_player,
+            show_numbers=self._show_numbers
         )
 
         # Players and ball
@@ -881,8 +883,9 @@ class GameScreen:
         # HUD
         self.hud_renderer.draw(surface, self.game)
 
-        # Action bar + context row + buttons
-        self.action_bar_renderer.draw(surface, self.action_buttons, self.game)
+        # Context row (top crowd row) + buttons (bottom crowd row)
+        self.action_bar_renderer.draw(surface, self.action_buttons, self.game,
+                                      btns_rect=self._btns_rect)
 
         # Pass mode labeled toggle (rendered on top of action bar)
         if self._pass_toggle:

@@ -417,22 +417,25 @@ class HUDRenderer:
 
 
 class ActionBarRenderer:
-    """Renders the action button bar (context row + buttons) below the pitch."""
-
-    # Height reserved for the context row within the action bar.
-    CONTEXT_H = 36
+    """Renders context info overlaid on the top crowd row of the pitch."""
 
     def __init__(self, rect: pygame.Rect):
         self.rect = rect
 
-    def draw(self, surface: pygame.Surface, buttons: list, game=None):
-        pygame.draw.rect(surface, (15, 15, 20), self.rect)
-        pygame.draw.rect(surface, (50, 50, 60), self.rect, 1)
+    def _draw_overlay(self, surface: pygame.Surface, rect: pygame.Rect):
+        """Draw a semi-transparent dark background over the given rect."""
+        overlay = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+        overlay.fill((10, 10, 18, 170))
+        surface.blit(overlay, (rect.x, rect.y))
+
+    def draw(self, surface: pygame.Surface, buttons: list, game=None,
+             btns_rect: pygame.Rect = None):
         if game is not None and game.state.available_actions:
-            ctx_rect = pygame.Rect(self.rect.x, self.rect.y,
-                                   self.rect.width, self.CONTEXT_H)
-            self._draw_context_row(surface, ctx_rect, game,
+            self._draw_overlay(surface, self.rect)
+            self._draw_context_row(surface, self.rect, game,
                                    game.state.available_actions)
+        if buttons and btns_rect is not None:
+            self._draw_overlay(surface, btns_rect)
         for btn in buttons:
             btn.draw(surface)
 
@@ -640,8 +643,6 @@ class PlayerInfoRenderer:
         pygame.draw.rect(surface, (50, 50, 60), self.rect, 1)
 
         if player is None:
-            hint = _font(12).render('Click a player', True, (80, 80, 80))
-            surface.blit(hint, (self.rect.x + 8, self.rect.y + 8))
             return
 
         is_home = (player.team == game.state.home_team)
