@@ -26,11 +26,11 @@ def test_config_loader():
 
 def test_team_loader():
     rulesetBB2016 = load_rule_set("BB2016")
-    human_team_2016 = load_team_by_name("Human Team", rulesetBB2016)
+    human_team_2016 = load_team_by_name("Irongate Crusaders", rulesetBB2016)
     assert len(human_team_2016.players) > 0
     assert human_team_2016.players[0].get_ma() > 0
     rulesetExperimental = load_rule_set("LRB5-Experimental")
-    human_team_exp = load_team_by_name("Human Team", rulesetExperimental)
+    human_team_exp = load_team_by_name("Irongate Crusaders", rulesetExperimental)
     assert len(human_team_exp.players) > 0
     assert human_team_exp.players[0].get_ma() > 0
     human_team_exp_2 = load_team_by_filename("human", rulesetExperimental)

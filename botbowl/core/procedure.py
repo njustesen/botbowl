@@ -1550,7 +1550,8 @@ class PitchInvasionRoll(Procedure):
         self.player = player
 
     def step(self, action):
-        roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.PITCH_INVASION_ROLL)
+        roll = DiceRoll([D6(self.game.rng)], roll_type=RollType.PITCH_INVASION_ROLL,
+                        target=6, target_higher=True)
         roll.modifiers = self.game.get_opp_team(self.team).state.fame
         if roll.get_result() >= 6 and roll.get_sum() != 1:
             if self.player.has_skill(Skill.BALL_AND_CHAIN):
