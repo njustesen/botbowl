@@ -411,6 +411,21 @@ class GameScreen:
 
     def _resolve_pending(self):
         """Resolve pending chained actions (player-switching + smart click auto-chain)."""
+        # Step 0: if End Turn was clicked (END_PLAYER_TURN + END_TURN chain)
+        if self.ui_state.pending_end_turn:
+            self.ui_state.pending_end_turn = False
+            self._drain_intermediate()
+            end_turn_ac = next(
+                (a for a in self.game.state.available_actions
+                 if a.action_type == ActionType.END_TURN),
+                None
+            )
+            if end_turn_ac is not None:
+                self.game.step(Action(ActionType.END_TURN))
+                self._scan_kickoff_events()
+                self._drain_intermediate()
+            return
+
         # Step 1: activate pending player after END_PLAYER_TURN
         if self.ui_state.pending_player_select:
             # Drain intermediate procedures — fast_mode=False needs step(None) calls
@@ -462,22 +477,15 @@ class GameScreen:
             self.game.step(Action(formation_ac.action_type))
             self._scan_kickoff_events()
 
-        self.action_buttons = build_action_buttons(
-            self.game.state.available_actions, self.game,
-            self._btns_rect
-        )
         self._board_block_dice = build_board_block_dice(
             self.game.state.available_actions, self.game,
             self.tile_size, self.pitch_offset
         )
-        self.ui_state.player_dots = build_player_action_dots(
-            self.ui_state.selected_player,
-            self.game.state.available_actions,
-            self.tile_size, self.pitch_offset
-        )
+        self.ui_state.player_dots = []
 
-        # Rebuild projected dots and highlighted squares for player-switching preview
-        if self.ui_state.selected_player and not self.ui_state.player_dots:
+        # Compute projected actions for player-switching; use them as icon source
+        icon_action_src = self.game.state.available_actions
+        if self.ui_state.selected_player:
             end_turn_ac = next((a for a in self.game.state.available_actions
                                 if a.action_type == ActionType.END_PLAYER_TURN), None)
             if (end_turn_ac is not None and
@@ -486,6 +494,7 @@ class GameScreen:
                 if (turn_proc is not None and
                         self.ui_state.selected_player.team == turn_proc.team):
                     proj_actions = turn_proc.available_actions()
+                    icon_action_src = proj_actions  # icons come from projected state
                     self.ui_state.projected_player_dots = build_player_action_dots(
                         self.ui_state.selected_player, proj_actions,
                         self.tile_size, self.pitch_offset)
@@ -499,9 +508,32 @@ class GameScreen:
                     self.ui_state.highlighted_squares = []
             else:
                 self.ui_state.projected_player_dots = []
+                self.ui_state.projected_paths = []
+                # Start-of-turn: show movement preview for selected player before
+                # START_MOVE is submitted (START_MOVE available but MOVE not yet).
+                sp = self.ui_state.selected_player
+                if sp is not None:
+                    has_start_move = any(
+                        ac.action_type == ActionType.START_MOVE and sp in (ac.players or [])
+                        for ac in self.game.state.available_actions
+                    )
+                    if has_start_move:
+                        turn_proc = _find_turn_proc(self.game)
+                        if turn_proc is not None:
+                            self.ui_state.projected_paths = _get_projected_paths(
+                                self.game, sp, turn_proc)
+                            self.ui_state.highlighted_squares = _projected_squares_from_paths(
+                                self.ui_state.projected_paths)
 
-        # Auto-highlight positional action squares (skip when in projected mode).
-        if not self.ui_state.selected_action_type and not self.ui_state.projected_player_dots:
+        self.action_buttons = build_action_buttons(
+            self.game.state.available_actions, self.game,
+            self._btns_rect,
+            selected_player=self.ui_state.selected_player,
+            player_action_src=icon_action_src
+        )
+
+        # Auto-highlight positional action squares (skip when in projected/switch mode).
+        if not self.ui_state.selected_action_type and not self.ui_state.projected_paths:
             positional = [ac for ac in self.game.state.available_actions
                           if ac.action_type in POSITIONAL_ACTIONS]
             move_acs = [ac for ac in positional if ac.action_type == ActionType.MOVE]
@@ -993,27 +1025,7 @@ class GameScreen:
                                                     pass_label=plabel,
                                                     rolls=_arrow_rolls)
 
-        # Player action panel + dots
-        if self.ui_state.player_dots:
-            rects = [btn.rect for btn in self.ui_state.player_dots]
-            union = rects[0].unionall(rects[1:])
-            panel = union.inflate(8, 8)
-            pygame.draw.rect(surface, (25, 25, 35), panel, border_radius=8)
-            pygame.draw.rect(surface, (70, 70, 100), panel, width=1, border_radius=8)
-        for btn in self.ui_state.player_dots:
-            btn.draw(surface)
-
-        # Projected player action dots (dimmed — shown when player switching is pending)
-        if self.ui_state.projected_player_dots:
-            rects = [btn.rect for btn in self.ui_state.projected_player_dots]
-            union = rects[0].unionall(rects[1:])
-            panel = union.inflate(8, 8)
-            panel_surf = pygame.Surface(panel.size, pygame.SRCALPHA)
-            pygame.draw.rect(panel_surf, (25, 25, 35, 160), panel_surf.get_rect(), border_radius=8)
-            pygame.draw.rect(panel_surf, (70, 70, 100, 160), panel_surf.get_rect(), width=1, border_radius=8)
-            surface.blit(panel_surf, panel.topleft)
-        for btn in self.ui_state.projected_player_dots:
-            btn.draw(surface)
+        # projected_player_dots are kept for smart-inference logic but not rendered
 
         # HUD
         self.hud_renderer.draw(surface, self.game)

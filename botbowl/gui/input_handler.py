@@ -12,7 +12,7 @@ from botbowl.core.table import ActionType
 from botbowl.core.pathfinding import Pathfinder
 from botbowl.gui.rendering.board import px_to_sq
 from botbowl.gui.rendering.buttons import (
-    POSITIONAL_ACTIONS, START_ACTIONS, build_player_action_dots
+    POSITIONAL_ACTIONS, START_ACTIONS, BAR_ICON_ACTIONS, build_player_action_dots
 )
 
 
@@ -39,6 +39,7 @@ class UIState:
     pending_start_action_type: object = None  # START_* to submit after pending_player_select
     pending_position: object = None         # Square to auto-submit positional action
     pending_positional_type: object = None  # MOVE/BLOCK/FOUL ActionType for auto-submit
+    pending_end_turn: bool = False          # After END_PLAYER_TURN, also submit END_TURN
 
     def reset_selection(self):
         self.selected_player = None
@@ -185,35 +186,38 @@ class InputHandler:
         # 1. Check action bar buttons
         for btn in action_buttons:
             if btn.is_clicked(pos):
-                ui_state.reset_selection()
                 ac = btn.action
-                # For actions with no player/position selection needed
-                return Action(ac.action_type,
-                              position=None, player=None)
-
-        # 2. Check player action dots (START_* actions)
-        for btn in player_dots:
-            if btn.is_clicked(pos):
-                ac = btn.action
-                # If the START action has players to select, set highlight mode
-                # and wait for position/player click
-                if ac.action_type in START_ACTIONS:
-                    ui_state.selected_action_type = ac.action_type
-                    ui_state.selected_action_choice = ac
-                    # For player-start actions we need to select a player first
-                    # but since we clicked on a player dot from selected player,
-                    # the player is already selected — use it if it's in ac.players
-                    if (ui_state.selected_player and
+                if ac.action_type in BAR_ICON_ACTIONS:
+                    # Icon buttons for START_* actions — need a player to submit with
+                    if ui_state.projected_player_dots:
+                        # Player-switching mode: end current player's turn, then activate
+                        ui_state.pending_player_select = ui_state.selected_player
+                        ui_state.pending_start_action_type = ac.action_type
+                        ui_state.reset_selection()
+                        return Action(ActionType.END_PLAYER_TURN)
+                    elif (ui_state.selected_player and
                             ui_state.selected_player in (ac.players or [])):
-                        # Submit START_* action immediately with the selected player
                         player = ui_state.selected_player
                         ui_state.reset_selection()
                         return Action(ac.action_type, player=player)
-                    # Otherwise wait for player selection
-                    ui_state.highlighted_squares = [sq for sq in (ac.positions or []) if sq is not None]
-                return None
+                    elif len(ac.players or []) == 1:
+                        ui_state.reset_selection()
+                        return Action(ac.action_type, player=ac.players[0])
+                    else:
+                        # Highlight eligible players for manual selection
+                        ui_state.selected_action_type = ac.action_type
+                        ui_state.selected_action_choice = ac
+                        ui_state.highlighted_squares = [
+                            p.position for p in (ac.players or []) if p.position is not None
+                        ]
+                        return None
+                else:
+                    if ac.action_type == ActionType.END_PLAYER_TURN:
+                        ui_state.pending_end_turn = True
+                    ui_state.reset_selection()
+                    return Action(ac.action_type, position=None, player=None)
 
-        # 3. Check projected player dots (player-switching: clicking a dot ends current
+        # 2. Check projected player dots (player-switching: clicking a dot ends current
         #    player's turn and starts the new player's action)
         for btn in ui_state.projected_player_dots:
             if btn.is_clicked(pos):
@@ -222,7 +226,7 @@ class InputHandler:
                 ui_state.reset_selection()
                 return Action(ActionType.END_PLAYER_TURN)
 
-        # 4. Check board click
+        # 3. Check board click
         sq = px_to_sq(pos, self.tile_size, self.pitch_offset,
                       game.arena.width, game.arena.height)
         if sq is None:
@@ -287,10 +291,6 @@ class InputHandler:
                     ui_state.pinned_home_player = player
                 else:
                     ui_state.pinned_away_player = player
-                ui_state.player_dots = build_player_action_dots(
-                    player, game.state.available_actions,
-                    self.tile_size, self.pitch_offset
-                )
                 ui_state.highlighted_squares = []
                 return None
 

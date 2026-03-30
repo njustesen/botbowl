@@ -42,10 +42,7 @@ class PlayerRenderer:
                     continue
                 is_home = (player.team == home_team)
                 is_active = (player is active)
-                # Show selection border for: action-selected player OR either pinned player
-                is_selected = (player is selected_player or
-                               player is pinned_home or
-                               player is pinned_away)
+                is_selected = (player is selected_player)
 
                 sq = player.position
                 px, py = sq_to_px(sq, ts, self.pitch_offset)

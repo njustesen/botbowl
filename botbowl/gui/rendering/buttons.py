@@ -48,6 +48,20 @@ START_ACTIONS = {
     ActionType.START_THROW_BOMB,
 }
 
+# START actions shown as icon buttons in the action bar
+# Move and Block are always inferred by smart-click, so excluded
+BAR_ICON_ACTIONS = START_ACTIONS - {ActionType.START_MOVE, ActionType.START_BLOCK}
+
+# Buttons that are not tied to a specific team — rendered centered in the bar
+NEUTRAL_BAR_ACTIONS = {
+    ActionType.HEADS,
+    ActionType.TAILS,
+    ActionType.KICK,
+    ActionType.RECEIVE,
+    ActionType.CONTINUE,
+    ActionType.START_GAME,
+}
+
 # Formation actions — auto-triggered, hidden from the action bar
 FORMATION_ACTIONS = {
     ActionType.SETUP_FORMATION_WEDGE,
@@ -167,56 +181,107 @@ def _btn_color(action_type, game) -> tuple:
 
 
 def build_action_buttons(available_actions: list, game,
-                         bar_rect: pygame.Rect) -> list[Button]:
-    """Build action bar buttons for the current available actions."""
-    buttons = []
+                         bar_rect: pygame.Rect,
+                         selected_player=None,
+                         player_action_src=None) -> list[Button]:
+    """Build action bar buttons for the current available actions.
+
+    Includes square icon buttons for available START_* actions (except START_MOVE/BLOCK)
+    filtered to the selected_player, followed by text buttons for other actions.
+    player_action_src: if provided, use this list for icon buttons instead of available_actions
+    (used during player-switching to show projected actions for the inactive player).
+    """
     btn_h = bar_rect.height - 4
     btn_gap = 8
     y = bar_rect.y + (bar_rect.height - btn_h) // 2
 
-    home_team = game.state.home_team
-    away_team = game.state.away_team
+    icon_src = player_action_src if player_action_src is not None else available_actions
 
+    # --- Icon buttons for START_* actions (except START_MOVE, START_BLOCK) ---
+    icon_buttons = []
+    seen_start_types = set()
+    icon_px = btn_h - 8  # icon size with padding
+    for ac in icon_src:
+        at = ac.action_type
+        if at not in BAR_ICON_ACTIONS:
+            continue
+        if at in seen_start_types:
+            continue
+        if selected_player is not None and selected_player not in (ac.players or []):
+            continue
+        seen_start_types.add(at)
+        raw_icon = spr.get_action_icon(at.name)
+        scaled_icon = pygame.transform.smoothscale(raw_icon, (icon_px, icon_px))
+        btn = Button(
+            rect=pygame.Rect(0, y, btn_h, btn_h),
+            action=ac,
+            image=scaled_icon,
+            color=(40, 40, 50),
+            tooltip=_action_label(at),
+            glow_on_hover=True,
+        )
+        icon_buttons.append(btn)
+
+    # --- Text buttons: neutral (centered) vs team-side ---
+    neutral_text_btns = []
+    team_text_btns = []
     for ac in available_actions:
         at = ac.action_type
-
-        # Skip purely positional actions — handled by board clicks
         if at in POSITIONAL_ACTIONS:
             continue
-        # Skip START_* actions — handled by player_dot clicks
         if at in START_ACTIONS:
             continue
-        # Skip formation actions — auto-triggered, not shown as buttons
         if at in FORMATION_ACTIONS:
             continue
-
         if at in BLOCK_DICE_ACTIONS:
-            # Block dice are shown on the board — skip action bar buttons
             continue
+        # END_PLAYER_TURN is shown — clicking it also auto-chains END_TURN
+        label = _action_label(at, game)
+        text_w = get_font(14, bold=True).size(label)[0]
+        btn_w = text_w + 48
+        btn = Button(
+            rect=pygame.Rect(0, y, btn_w, btn_h),
+            label=label,
+            action=ac,
+            bg_image=get_button_image('default'),
+            font_size=14,
+            tooltip=prettify(at.name)
+        )
+        if at in NEUTRAL_BAR_ACTIONS:
+            neutral_text_btns.append(btn)
         else:
-            label = _action_label(at, game)
-            text_w = get_font(14, bold=True).size(label)[0]
-            btn_w = text_w + 48
-            btn = Button(
-                rect=pygame.Rect(0, y, btn_w, btn_h),
-                label=label,
-                action=ac,
-                bg_image=get_button_image('default'),
-                font_size=14,
-                tooltip=prettify(at.name)
-            )
+            team_text_btns.append(btn)
 
-        buttons.append(btn)
+    # --- Layout ---
+    # Center: icon buttons + neutral text buttons
+    # Side: team-related text buttons (left=away, right=home)
+    margin = 12
+    current_team = game.state.current_team if game is not None else None
+    is_home = (current_team is not None and
+               game is not None and
+               current_team == game.state.home_team)
 
-    # Center the button group horizontally in the bar
-    if buttons:
-        total_w = sum(b.rect.width for b in buttons) + btn_gap * (len(buttons) - 1)
-        x = bar_rect.centerx - total_w // 2
-        for b in buttons:
+    center_btns = icon_buttons + neutral_text_btns
+    if center_btns:
+        cw = sum(b.rect.width for b in center_btns) + btn_gap * (len(center_btns) - 1)
+        x = bar_rect.centerx - cw // 2
+        for b in center_btns:
             b.rect.x = x
             x += b.rect.width + btn_gap
 
-    return buttons
+    if team_text_btns:
+        if is_home:
+            x = bar_rect.right - margin
+            for b in reversed(team_text_btns):
+                b.rect.right = x
+                x -= b.rect.width + btn_gap
+        else:
+            x = bar_rect.left + margin
+            for b in team_text_btns:
+                b.rect.x = x
+                x += b.rect.width + btn_gap
+
+    return center_btns + team_text_btns
 
 
 def build_player_action_dots(player, available_actions: list,
@@ -229,10 +294,10 @@ def build_player_action_dots(player, available_actions: list,
     px, py = sq_to_px(sq, tile_size, pitch_offset)
     ts = tile_size
 
-    # Collect actions relevant to this player
+    # Collect actions relevant to this player (Move is always inferred — not shown)
     player_actions = [
         ac for ac in available_actions
-        if ac.action_type in START_ACTIONS and player in (ac.players or [])
+        if ac.action_type in BAR_ICON_ACTIONS and player in (ac.players or [])
     ]
     if not player_actions:
         return []
@@ -283,7 +348,7 @@ def _action_label(action_type: ActionType, game=None) -> str:
     label_map = {
         ActionType.START_GAME: 'Start Game',
         ActionType.END_TURN: end_turn_label,
-        ActionType.END_PLAYER_TURN: 'End Player Turn',
+        ActionType.END_PLAYER_TURN: 'End Turn',
         ActionType.END_SETUP: 'End Setup',
         ActionType.USE_REROLL: 'Re-roll',
         ActionType.DONT_USE_REROLL: "Don't Re-roll",
