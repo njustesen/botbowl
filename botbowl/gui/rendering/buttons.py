@@ -15,6 +15,7 @@ from botbowl.gui.rendering.ui_primitives import (
     COLOR_BTN_NEUTRAL, get_button_image
 )
 from botbowl.gui.rendering.board import sq_to_px
+from botbowl.gui.rendering.hud import COLOR_HOME, COLOR_AWAY
 
 # Action types that are handled by clicking on pitch squares (positional)
 POSITIONAL_ACTIONS = {
@@ -73,6 +74,85 @@ _BLOCK_DIE_NAMES = {
 }
 
 
+def _get_block_favor(game):
+    """Return (favor_team, defender) from the active Block procedure, or (None, None)."""
+    proc = game.get_procedure()
+    while proc is not None:
+        if hasattr(proc, 'favor') and proc.favor is not None:
+            return proc.favor, getattr(proc, 'defender', None)
+        proc = getattr(proc, 'context', None)
+    return None, None
+
+
+def _color_tint_surface(base: pygame.Surface, color: tuple) -> pygame.Surface:
+    """Return a copy of base tinted with a solid team color, keeping die symbols visible."""
+    result = base.copy()
+    overlay = pygame.Surface(base.get_size(), pygame.SRCALPHA)
+    overlay.fill((*color, 150))
+    result.blit(overlay, (0, 0))
+    return result
+
+
+def build_board_block_dice(available_actions: list, game,
+                           tile_size: int, pitch_offset: tuple) -> list[Button]:
+    """Build board-positioned die-selection buttons shown above the attacker after a block roll.
+
+    Returns a list of Buttons whose rects are placed on the board (one square above the attacker).
+    Returns empty list when no block die selection is pending.
+    """
+    block_actions = [ac for ac in available_actions if ac.action_type in BLOCK_DICE_ACTIONS]
+    if not block_actions:
+        return []
+
+    favor_team, defender = _get_block_favor(game)
+    # Determine stripe color if defender is choosing
+    stripe_color = None
+    if favor_team is not None and defender is not None and favor_team == defender.team:
+        is_home_def = (defender.team == game.state.home_team)
+        stripe_color = COLOR_HOME if is_home_def else COLOR_AWAY
+
+    # Find attacker position from Block proc
+    proc = game.get_procedure()
+    attacker = None
+    while proc is not None:
+        attacker = getattr(proc, 'attacker', None)
+        if attacker is not None and attacker.position is not None:
+            break
+        proc = getattr(proc, 'context', None)
+    if attacker is None or attacker.position is None:
+        return []
+
+    n = len(block_actions)
+    ts = tile_size
+    ox, oy = pitch_offset
+    die_size = max(ts - 2, 28)
+    gap = 4
+    total_w = n * die_size + (n - 1) * gap
+
+    # One square above the attacker, shifted up an extra half tile
+    above_y = max(0, attacker.position.y - 1)
+    # Centre horizontally on the attacker's column
+    start_x = ox + attacker.position.x * ts + (ts - total_w) // 2
+    btn_y = oy + above_y * ts + (ts - die_size) // 2 - ts // 2
+
+    buttons = []
+    for i, ac in enumerate(block_actions):
+        die_name = _BLOCK_DIE_NAMES[ac.action_type]
+        die_img = spr.get_block_die_surface(die_name, (die_size, die_size))
+        if stripe_color is not None:
+            die_img = _color_tint_surface(die_img, stripe_color)
+        btn = Button(
+            rect=pygame.Rect(start_x + i * (die_size + gap), btn_y, die_size, die_size),
+            action=ac,
+            image=die_img,
+            tooltip=prettify(ac.action_type.name),
+            glow_on_hover=(n > 1),
+            draw_shadow=True,
+        )
+        buttons.append(btn)
+    return buttons
+
+
 def _btn_color(action_type, game) -> tuple:
     """Determine button color based on action team."""
     # Check which team this action belongs to
@@ -111,17 +191,8 @@ def build_action_buttons(available_actions: list, game,
             continue
 
         if at in BLOCK_DICE_ACTIONS:
-            # Show die image button
-            die_name = _BLOCK_DIE_NAMES[at]
-            die_size = (btn_h, btn_h)
-            die_img = spr.get_block_die_surface(die_name, die_size)
-            btn = Button(
-                rect=pygame.Rect(0, y, btn_h + 4, btn_h),
-                action=ac,
-                image=die_img,
-                bg_image=get_button_image('default'),
-                tooltip=prettify(at.name)
-            )
+            # Block dice are shown on the board — skip action bar buttons
+            continue
         else:
             label = _action_label(at, game)
             text_w = get_font(14, bold=True).size(label)[0]

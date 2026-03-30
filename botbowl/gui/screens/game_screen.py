@@ -15,8 +15,8 @@ from botbowl.gui.rendering.players import PlayerRenderer
 from botbowl.gui.rendering.hud import HUDRenderer, ActionBarRenderer, PlayerInfoRenderer
 from botbowl.gui.rendering.log_panel import LogPanelRenderer
 from botbowl.gui.rendering.buttons import (
-    build_action_buttons, build_player_action_dots, POSITIONAL_ACTIONS, START_ACTIONS,
-    FORMATION_ACTIONS
+    build_action_buttons, build_player_action_dots, build_board_block_dice,
+    POSITIONAL_ACTIONS, START_ACTIONS, FORMATION_ACTIONS
 )
 from botbowl.gui.rendering.ui_primitives import (
     Button, Modal, TextInput, LabeledToggle, KickoffEventBody,
@@ -368,7 +368,8 @@ class GameScreen:
         # Probability/dice overlay data rebuilt each frame in _rebuild_buttons
         self._highlight_probs: dict = {}     # Square → float (MOVE / PASS)
         self._highlight_rolls: dict = {}     # Square → List[int] (MOVE / PASS)
-        self._block_dice_pairs: list = []    # [(Square, int)] for BLOCK
+        self._block_dice_pairs: list = []    # [(Square, int)] for BLOCK (legacy, kept for compat)
+        self._board_block_dice: list = []    # Board-positioned die-selection buttons (post-roll)
         self._pass_squares: list = []          # all PASS target squares (toggle-ON view)
         self._pass_receiver_squares: list = []  # PASS targets with a friendly receiver (overlay)
         self._pass_probs: dict = {}            # Square → float for pass overlay / labels
@@ -411,6 +412,10 @@ class GameScreen:
         self.action_buttons = build_action_buttons(
             self.game.state.available_actions, self.game,
             self._btns_rect
+        )
+        self._board_block_dice = build_board_block_dice(
+            self.game.state.available_actions, self.game,
+            self.tile_size, self.pitch_offset
         )
         self.ui_state.player_dots = build_player_action_dots(
             self.ui_state.selected_player,
@@ -702,6 +707,8 @@ class GameScreen:
                     event, self.game, self.ui_state,
                     self.action_buttons, self.ui_state.player_dots
                 )
+            for btn in self._board_block_dice:
+                btn.update_hover(event.pos)
             return
 
         if self.spectating or self.game.state.game_over:
@@ -719,6 +726,17 @@ class GameScreen:
                 self.ui_state.selected_action_choice = None
                 self._rebuild_buttons()
                 return
+
+            # Check board block dice clicks (post-roll die selection on the board)
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for btn in self._board_block_dice:
+                    if btn.is_clicked(event.pos):
+                        ac = btn.action
+                        self.game.step(Action(ac.action_type))
+                        self._scan_kickoff_events()
+                        self.ui_state.reset_selection()
+                        self._rebuild_buttons()
+                        return
 
             # Check bench clicks first (for PLACE_PLAYER and info display)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -799,10 +817,9 @@ class GameScreen:
         )
         self.player_renderer.draw_ball(surface, self.game)
 
-        # Block dice badges drawn after players so they appear on top
-        if self._block_dice_pairs:
-            self.board_renderer.draw_block_dice_overlays(
-                surface, self._block_dice_pairs)
+        # Board block dice (post-roll die selection) drawn after players, above attacker
+        for btn in self._board_block_dice:
+            btn.draw(surface)
 
         # Hover highlight on valid target squares
         if (self.ui_state.hover_square is not None and

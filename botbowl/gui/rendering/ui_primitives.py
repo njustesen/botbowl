@@ -130,7 +130,9 @@ class Button:
                  action: Any = None, image: Optional[pygame.Surface] = None,
                  color: tuple = COLOR_BTN_DEFAULT, disabled: bool = False,
                  font_size: int = 14, tooltip: str = '',
-                 bg_image: Optional[pygame.Surface] = None):
+                 bg_image: Optional[pygame.Surface] = None,
+                 glow_on_hover: bool = False,
+                 draw_shadow: bool = False):
         self.rect = rect
         self.label = label
         self.action = action
@@ -140,6 +142,8 @@ class Button:
         self.font_size = font_size
         self.tooltip = tooltip
         self.bg_image = bg_image
+        self.glow_on_hover = glow_on_hover
+        self.draw_shadow = draw_shadow
         self.focused = False   # keyboard focus — shows orange highlight image
         self._hovered = False
         self._scaled_bg: dict = {}  # keyed by (variant, w, h)
@@ -152,6 +156,25 @@ class Button:
         return self._scaled_bg[key]
 
     def draw(self, surface: pygame.Surface):
+        if self.draw_shadow:
+            pad = 6
+            sh = pygame.Surface((self.rect.width + pad * 2, self.rect.height + pad * 2), pygame.SRCALPHA)
+            pygame.draw.rect(sh, (0, 0, 0, 80), sh.get_rect(), border_radius=6)
+            surface.blit(sh, (self.rect.x - pad, self.rect.y - pad))
+
+        if self._hovered and self.glow_on_hover and not self.disabled:
+            pad = 8
+            glow_surf = pygame.Surface(
+                (self.rect.width + pad * 2, self.rect.height + pad * 2),
+                pygame.SRCALPHA)
+            for i, alpha in enumerate([35, 65, 110]):
+                expand = i
+                gr = pygame.Rect(pad - expand, pad - expand,
+                                 self.rect.width + expand * 2,
+                                 self.rect.height + expand * 2)
+                pygame.draw.rect(glow_surf, (255, 220, 80, alpha), gr, border_radius=4)
+            surface.blit(glow_surf, (self.rect.x - pad, self.rect.y - pad))
+
         if self.bg_image is not None:
             # Image-backed button — image never changes regardless of focus/hover
             scaled = self._get_scaled_bg(self.bg_image)

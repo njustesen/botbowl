@@ -130,6 +130,9 @@ class InputHandler:
         # A. If we have a selected action type and this square is a valid target
         if at is not None and ac is not None:
             if sq in (ac.positions or []):
+                # PLACE_PLAYER requires a bench player to be selected first
+                if at == ActionType.PLACE_PLAYER and ui_state.selected_player is None:
+                    return None
                 action = Action(at, position=sq, player=ui_state.selected_player)
                 ui_state.reset_selection()
                 return action
