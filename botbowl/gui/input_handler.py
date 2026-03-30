@@ -29,8 +29,8 @@ class UIState:
     pinned_home_player: object = None       # Last clicked home player (sticky info)
     pinned_away_player: object = None       # Last clicked away player (sticky info)
     player_dots: list = field(default_factory=list)
-    grid_mode: str = 'none'                 # 'none', 'full', 'dots'
-    special_toggle: object = None           # ActionType or None
+    special_toggle: object = None           # 'pass' when pass-targets toggle is ON
+    pass_mode_pass_ac: object = None        # PASS ActionChoice when MOVE+PASS combined
 
     def reset_selection(self):
         self.selected_player = None
@@ -40,7 +40,9 @@ class UIState:
         self.hover_path = None
         self.hover_pass_rolls = None
         self.player_dots = []
-        self.special_toggle = None
+        # special_toggle and pass_mode_pass_ac intentionally NOT reset here —
+        # they persist across MOVE steps during a pass sequence and are cleared
+        # by _rebuild_buttons() when pass mode ends.
         # hover_player, hover_square, pinned_*_player persist across selections
 
 
@@ -128,12 +130,7 @@ class InputHandler:
         # A. If we have a selected action type and this square is a valid target
         if at is not None and ac is not None:
             if sq in (ac.positions or []):
-                player = ui_state.selected_player
-                # If this action requires a player but none is selected, skip
-                if player is None and ac.players:
-                    ui_state.reset_selection()
-                    return None
-                action = Action(at, position=sq, player=player)
+                action = Action(at, position=sq, player=ui_state.selected_player)
                 ui_state.reset_selection()
                 return action
             else:
@@ -148,25 +145,38 @@ class InputHandler:
         ) else None
 
         if player is not None:
-            # Always update selected_player when clicking a player (for action + sticky info)
-            ui_state.selected_player = player
-            # Pin to the appropriate team panel
-            if player.team == game.state.home_team:
-                ui_state.pinned_home_player = player
-            else:
-                ui_state.pinned_away_player = player
-
             # Check if this player can start an action
             start_actions = [a for a in game.state.available_actions
                              if a.action_type in START_ACTIONS
                              and player in (a.players or [])]
             if start_actions:
+                ui_state.selected_player = player
+                if player.team == game.state.home_team:
+                    ui_state.pinned_home_player = player
+                else:
+                    ui_state.pinned_away_player = player
                 ui_state.player_dots = build_player_action_dots(
                     player, game.state.available_actions,
                     self.tile_size, self.pitch_offset
                 )
                 ui_state.highlighted_squares = []
                 return None
+
+            # Player-only actions (e.g. SELECT_PLAYER for touchback) — no position needed
+            player_only = [a for a in game.state.available_actions
+                           if a.action_type not in START_ACTIONS
+                           and player in (a.players or [])
+                           and not a.positions]
+            if player_only:
+                ac = player_only[0]
+                ui_state.selected_player = player
+                if player.team == game.state.home_team:
+                    ui_state.pinned_home_player = player
+                else:
+                    ui_state.pinned_away_player = player
+                action = Action(ac.action_type, player=player)
+                ui_state.reset_selection()
+                return action
 
             # If player has a single direct action (like STAND_UP with position)
             direct = [a for a in game.state.available_actions
@@ -175,15 +185,32 @@ class InputHandler:
                       and sq in (a.positions or [])]
             if direct:
                 ac = direct[0]
+                ui_state.selected_player = player
+                if player.team == game.state.home_team:
+                    ui_state.pinned_home_player = player
+                else:
+                    ui_state.pinned_away_player = player
                 action = Action(ac.action_type, position=sq, player=player)
                 ui_state.reset_selection()
                 return action
 
+            # No action for this player — just update info panels (sticky display only)
+            if player.team == game.state.home_team:
+                ui_state.pinned_home_player = player
+            else:
+                ui_state.pinned_away_player = player
+
         # C. Check if any positional action covers this square and submit the first match.
         # Works for single actions (MOVE, PUSH…) and multi-positional (blitz MOVE+BLOCK).
+        # selected_player is only set here if it was explicitly chosen (section B no longer
+        # corrupts it by setting it to enemies that fall through without a matching action).
         for available_ac in game.state.available_actions:
             if available_ac.action_type in POSITIONAL_ACTIONS:
                 if sq in (available_ac.positions or []):
+                    # PLACE_PLAYER requires a specific bench player to be selected first
+                    if (available_ac.action_type == ActionType.PLACE_PLAYER
+                            and ui_state.selected_player is None):
+                        continue
                     action = Action(available_ac.action_type,
                                     position=sq, player=ui_state.selected_player)
                     ui_state.reset_selection()
@@ -217,6 +244,16 @@ class InputHandler:
                         ui_state.hover_path = path
                         break
 
+                # Combined pass mode with toggle ON: show pass prob near cursor
+                if (ui_state.pass_mode_pass_ac is not None and
+                        ui_state.special_toggle == 'pass'):
+                    pass_positions = ui_state.pass_mode_pass_ac.positions or []
+                    if sq in pass_positions:
+                        idx = pass_positions.index(sq)
+                        rolls = ui_state.pass_mode_pass_ac.rolls or []
+                        if idx < len(rolls):
+                            ui_state.hover_pass_rolls = rolls[idx]
+
             elif ui_state.selected_action_type == ActionType.PASS:
                 # Show roll targets for hovered pass destination
                 positions = ac.positions or []
@@ -226,13 +263,22 @@ class InputHandler:
                     if idx < len(rolls):
                         ui_state.hover_pass_rolls = rolls[idx]
 
+        elif sq is not None and ui_state.selected_action_choice is None:
+            # Multi-positional mode (blitz/foul): show path preview from any action with paths
+            _PATH_TYPES = (ActionType.MOVE, ActionType.BLOCK, ActionType.FOUL,
+                           ActionType.STAB, ActionType.HANDOFF)
+            for ac in game.state.available_actions:
+                if ac.action_type in _PATH_TYPES:
+                    for path in (ac.paths or []):
+                        if path.steps and path.steps[-1] == sq:
+                            ui_state.hover_path = path
+                            break
+                if ui_state.hover_path:
+                    break
+
     def _handle_key(self, event: pygame.event.Event, ui_state: UIState):
         if event.key == pygame.K_ESCAPE:
             ui_state.reset_selection()
-        elif event.key == pygame.K_g:
-            modes = ['none', 'full', 'dots']
-            idx = modes.index(ui_state.grid_mode)
-            ui_state.grid_mode = modes[(idx + 1) % len(modes)]
 
     def select_action_type(self, action_type: ActionType,
                             game, ui_state: UIState):

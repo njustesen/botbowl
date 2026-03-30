@@ -9,9 +9,10 @@ from typing import Optional
 from botbowl.core.table import ActionType
 from botbowl.gui.assets import prettify
 from botbowl.gui import sprites as spr
+from botbowl.gui.fonts import get_font
 from botbowl.gui.rendering.ui_primitives import (
     Button, COLOR_BTN_HOME, COLOR_BTN_AWAY, COLOR_BTN_DEFAULT,
-    COLOR_BTN_NEUTRAL
+    COLOR_BTN_NEUTRAL, get_button_image
 )
 from botbowl.gui.rendering.board import sq_to_px
 
@@ -44,6 +45,14 @@ START_ACTIONS = {
     ActionType.START_HANDOFF,
     ActionType.START_FOUL,
     ActionType.START_THROW_BOMB,
+}
+
+# Formation actions — auto-triggered, hidden from the action bar
+FORMATION_ACTIONS = {
+    ActionType.SETUP_FORMATION_WEDGE,
+    ActionType.SETUP_FORMATION_LINE,
+    ActionType.SETUP_FORMATION_ZONE,
+    ActionType.SETUP_FORMATION_SPREAD,
 }
 
 # Block dice result actions
@@ -81,10 +90,9 @@ def build_action_buttons(available_actions: list, game,
                          bar_rect: pygame.Rect) -> list[Button]:
     """Build action bar buttons for the current available actions."""
     buttons = []
-    btn_h = bar_rect.height - 8
-    x = bar_rect.x + 4
-    y = bar_rect.y + 4
-    btn_gap = 4
+    btn_h = bar_rect.height - 4
+    btn_gap = 8
+    y = bar_rect.y + (bar_rect.height - btn_h) // 2
 
     home_team = game.state.home_team
     away_team = game.state.away_team
@@ -98,14 +106,9 @@ def build_action_buttons(available_actions: list, game,
         # Skip START_* actions — handled by player_dot clicks
         if at in START_ACTIONS:
             continue
-
-        # Determine color
-        if ac.team == home_team:
-            color = COLOR_BTN_HOME
-        elif ac.team == away_team:
-            color = COLOR_BTN_AWAY
-        else:
-            color = COLOR_BTN_NEUTRAL
+        # Skip formation actions — auto-triggered, not shown as buttons
+        if at in FORMATION_ACTIONS:
+            continue
 
         if at in BLOCK_DICE_ACTIONS:
             # Show die image button
@@ -113,26 +116,34 @@ def build_action_buttons(available_actions: list, game,
             die_size = (btn_h, btn_h)
             die_img = spr.get_block_die_surface(die_name, die_size)
             btn = Button(
-                rect=pygame.Rect(x, y, btn_h + 4, btn_h),
+                rect=pygame.Rect(0, y, btn_h + 4, btn_h),
                 action=ac,
                 image=die_img,
-                color=color,
+                bg_image=get_button_image('default'),
                 tooltip=prettify(at.name)
             )
         else:
-            label = _action_label(at)
-            btn_w = max(60, len(label) * 8 + 16)
+            label = _action_label(at, game)
+            text_w = get_font(14, bold=True).size(label)[0]
+            btn_w = text_w + 48
             btn = Button(
-                rect=pygame.Rect(x, y, btn_w, btn_h),
+                rect=pygame.Rect(0, y, btn_w, btn_h),
                 label=label,
                 action=ac,
-                color=color,
-                font_size=12,
+                bg_image=get_button_image('default'),
+                font_size=14,
                 tooltip=prettify(at.name)
             )
 
         buttons.append(btn)
-        x += btn.rect.width + btn_gap
+
+    # Center the button group horizontally in the bar
+    if buttons:
+        total_w = sum(b.rect.width for b in buttons) + btn_gap * (len(buttons) - 1)
+        x = bar_rect.centerx - total_w // 2
+        for b in buttons:
+            b.rect.x = x
+            x += b.rect.width + btn_gap
 
     return buttons
 
@@ -190,10 +201,17 @@ def build_player_action_dots(player, available_actions: list,
     return buttons
 
 
-def _action_label(action_type: ActionType) -> str:
+def _action_label(action_type: ActionType, game=None) -> str:
+    end_turn_label = 'End Turn'
+    if game is not None and action_type == ActionType.END_TURN:
+        if game.is_quick_snap():
+            end_turn_label = 'End Quick Snap'
+        elif game.is_blitz():
+            end_turn_label = 'End Blitz'
+
     label_map = {
         ActionType.START_GAME: 'Start Game',
-        ActionType.END_TURN: 'End Turn',
+        ActionType.END_TURN: end_turn_label,
         ActionType.END_PLAYER_TURN: 'End Player Turn',
         ActionType.END_SETUP: 'End Setup',
         ActionType.USE_REROLL: 'Re-roll',

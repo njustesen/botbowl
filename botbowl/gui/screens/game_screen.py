@@ -7,7 +7,7 @@ import pygame
 from typing import Optional
 
 from botbowl.core.model import Action
-from botbowl.core.table import ActionType
+from botbowl.core.table import ActionType, Rules, PassDistance, OutcomeType
 from botbowl.gui.fonts import get_font, get_body_font
 from botbowl.gui.input_handler import InputHandler, UIState
 from botbowl.gui.rendering.board import BoardRenderer, sq_to_px, highlight_color_for_action
@@ -15,45 +15,289 @@ from botbowl.gui.rendering.players import PlayerRenderer
 from botbowl.gui.rendering.hud import HUDRenderer, ActionBarRenderer, PlayerInfoRenderer
 from botbowl.gui.rendering.log_panel import LogPanelRenderer
 from botbowl.gui.rendering.buttons import (
-    build_action_buttons, build_player_action_dots, POSITIONAL_ACTIONS, START_ACTIONS
+    build_action_buttons, build_player_action_dots, POSITIONAL_ACTIONS, START_ACTIONS,
+    FORMATION_ACTIONS
 )
 from botbowl.gui.rendering.ui_primitives import (
-    Button, Modal, TextInput,
+    Button, Modal, TextInput, LabeledToggle, KickoffEventBody,
     COLOR_BTN_NEUTRAL, COLOR_BTN_DEFAULT
 )
 from botbowl.gui.save_load import save_game, save_exists, list_saves
 from botbowl.gui.assets import prettify
+from botbowl.gui.sprites import get_action_icon
 
 TILE_SIZE = 30
+
+_BLOCK_CURSOR_TYPES = {ActionType.BLOCK, ActionType.STAB, ActionType.HYPNOTIC_GAZE}
+_FOUL_CURSOR_TYPES = {ActionType.FOUL}
+_HANDOFF_CURSOR_TYPES = {ActionType.HANDOFF}
+_COMBAT_TYPES = _BLOCK_CURSOR_TYPES | _FOUL_CURSOR_TYPES
+
+_PASS_ABBR = {
+    PassDistance.QUICK_PASS: 'QP',
+    PassDistance.SHORT_PASS: 'SP',
+    PassDistance.LONG_PASS:  'LP',
+    PassDistance.LONG_BOMB:  'LB',
+    PassDistance.HAIL_MARY:  'HM',
+}
+
+
+def _pass_type_label(from_sq, to_sq) -> str:
+    """Return abbreviated pass-type label using botbowl's pass_matrix."""
+    dy = abs(from_sq.y - to_sq.y)
+    dx = abs(from_sq.x - to_sq.x)
+    if dy >= len(Rules.pass_matrix) or dx >= len(Rules.pass_matrix[0]):
+        return 'HM'
+    val = Rules.pass_matrix[dy][dx]
+    return _PASS_ABBR.get(PassDistance(val), '??')
 HUD_H = 72          # Scoreboard height
 ACTION_BAR_H = 80   # Action bar: 36px context row + 44px buttons
 CONTEXT_H = 36      # Height of the context row inside ACTION_BAR_H
 INFO_H = 155        # Bottom panel height
 INFO_PLAYER_W = 200 # Width of each player info panel (log takes the rest)
 
-# Kick-off event procedure class names → (title, one-line description)
-_KICKOFF_EVENTS: dict[str, tuple[str, str]] = {
-    'GetTheRef':         ('Get the Ref!',
-                          'Both teams receive +1 Bribe for this drive.'),
-    'Riot':              ('Riot!',
-                          'The crowd riots — the turn marker moves ±1.'),
-    'HighKick':          ('High Kick!',
-                          'One receiver may run under the ball before it lands.'),
-    'CheeringFans':      ('Cheering Fans!',
-                          'The team with the most fans gains a bonus reroll.'),
-    'BrilliantCoaching': ('Brilliant Coaching!',
-                          'The team with the most coaches gains a bonus reroll.'),
-    'ThrowARock':        ('Throw a Rock!',
-                          'An angry fan knocks out a random player on each team.'),
-    'PitchInvasion':     ('Pitch Invasion!',
-                          'Fans invade — random players on each team are pushed back.'),
-    'Blitz':             ('Blitz!',
-                          'The kicking team gets a free move before kick-off.'),
-    'QuickSnap':         ('Quick Snap!',
-                          'The receiving team gets a free move before kick-off.'),
-    'PerfectDefence':    ('Perfect Defence!',
-                          'The kicking team may reset their defensive formation.'),
+# Maps OutcomeType → (display title, description shown in modal)
+_KICKOFF_INFO: dict = {
+    OutcomeType.KICKOFF_GET_THE_REF:        (
+        'Get the Ref!',
+        'The fans drag the referee into the stands after one too many bad calls. '
+        'His trembling replacement has no intention of making enemies. '
+        'Both teams gain +1 Bribe for this game.'),
+    OutcomeType.KICKOFF_RIOT:               (
+        'Riot!',
+        'A brawl erupts on the pitch! Roll D6: on 1-3 both teams lose a turn, on 4-6 both gain one.'),
+    OutcomeType.KICKOFF_PERFECT_DEFENSE:    (
+        'Perfect Defence!',
+        'The kicking team may reorganise their defensive formation.'),
+    OutcomeType.KICKOFF_HIGH_KICK:          (
+        'High Kick!',
+        ''),   # overwritten dynamically in _show_kickoff_modal
+    OutcomeType.KICKOFF_CHEERING_FANS:      (
+        'Cheering Fans!',
+        'Both teams roll D3 + Cheerleaders + Fame. '
+        'The higher total earns a bonus Re-Roll this half.'),
+    OutcomeType.KICKOFF_CHANGING_WHEATHER:  (
+        'Changing Weather!',
+        ''),   # overwritten dynamically in _show_kickoff_modal
+    OutcomeType.KICKOFF_BRILLIANT_COACHING: (
+        'Brilliant Coaching!',
+        'Inspired tactics! Both teams roll D3 + Coaches + Fame. '
+        'The higher total earns a bonus Re-Roll this half.'),
+    OutcomeType.KICKOFF_QUICK_SNAP:         (
+        'Quick Snap!',
+        'The offence surges forward before the whistle! Every receiving player may move one '
+        'square for free, ignoring tackle zones.'),
+    OutcomeType.KICKOFF_BLITZ:              (
+        'Blitz!',
+        'The defence charges in before the kick-off! The kicking team gets a free bonus turn. '
+        'Players in tackle zones may not act; any turnover ends the turn immediately.'),
+    OutcomeType.KICKOFF_THROW_A_ROCK:       (
+        'Throw a Rock!',
+        'An enraged fan hurls a rock! Both teams roll D3 + Fame. The lower score has a random '
+        'player struck — no armour roll needed. Ties mean both teams suffer.'),
+    OutcomeType.KICKOFF_PITCH_INVASION:     (
+        'Pitch Invasion!',
+        'Fans storm the pitch! For each opposing player, roll D6 + enemy Fame. '
+        'On 6+ the player is Stunned (Ball & Chain carriers are KO\'d). A natural 1 always fails.'),
 }
+
+# Weather name, dynamic description, and rules effect text
+_WEATHER_INFO: dict = {
+    OutcomeType.WEATHER_SWELTERING_HEAT: (
+        'Sweltering Heat',
+        'The scorching heat is unbearable! Players coming off the pitch risk heatstroke.',
+        'At the end of each drive, players in reserves roll D6 — on a 1 they\'re KO\'d.'),
+    OutcomeType.WEATHER_VERY_SUNNY:      (
+        'Very Sunny',
+        'The sun is blazing! Glare makes it harder to track the ball.',
+        '-1 to all Pass rolls.'),
+    OutcomeType.WEATHER_NICE:            (
+        'Nice',
+        'The weather clears up — perfect playing conditions.',
+        'No weather effects.'),
+    OutcomeType.WEATHER_POURING_RAIN:    (
+        'Pouring Rain',
+        'It\'s pouring with rain! The ball is soaked and slippery.',
+        '-1 to Catch and Pick-up rolls.'),
+    OutcomeType.WEATHER_BLIZZARD:        (
+        'Blizzard',
+        'A blizzard sweeps across the pitch! Visibility is near zero.',
+        'Only Quick and Short Passes allowed. Go For It rolls are harder.'),
+}
+
+
+def _high_kick_description(game) -> str:
+    """Return a description for High Kick that reflects whether it can actually be used."""
+    try:
+        receiving_team = game.get_receiving_team()
+        balls = game.state.pitch.balls
+        if balls:
+            ball = balls[0]
+            if (ball.position is not None
+                    and game.is_team_side(ball.position, receiving_team)
+                    and game.get_player_at(ball.position) is None):
+                return ('The ball soars sky-high! '
+                        'Move one unmarked receiver to the landing square for free.')
+        return ('The ball soars sky-high! '
+                'But the landing square is already occupied or out of reach — High Kick has no effect.')
+    except Exception:
+        return ('The ball soars sky-high! '
+                'Move one unmarked receiver to the landing square for free.')
+
+
+def _weather_dynamic_description(sub_outcomes: list, game) -> str:
+    """Build a dynamic description for the Changing Weather kickoff event."""
+    for o in sub_outcomes:
+        info = _WEATHER_INFO.get(o.outcome_type)
+        if info:
+            wname, wdesc, _ = info
+            if o.outcome_type == OutcomeType.WEATHER_NICE and getattr(game.state, 'gentle_gust', False):
+                return 'The weather stays Nice — a gentle gust scatters the ball one extra square.'
+            return wdesc
+    return 'The weather has changed!'
+
+# Procedure class name to wait for before showing the modal (None = show immediately).
+# We wait for the sub-procedure to finish so we can collect its outcome rolls.
+_KICKOFF_WAIT_PROC: dict = {
+    OutcomeType.KICKOFF_GET_THE_REF:        'GetTheRef',
+    OutcomeType.KICKOFF_RIOT:               'Riot',
+    OutcomeType.KICKOFF_HIGH_KICK:          None,   # HighKick awaits human input — show now
+    OutcomeType.KICKOFF_CHEERING_FANS:      'CheeringFans',
+    OutcomeType.KICKOFF_CHANGING_WHEATHER:  'WeatherTable',
+    OutcomeType.KICKOFF_BRILLIANT_COACHING: 'BrilliantCoaching',
+    OutcomeType.KICKOFF_QUICK_SNAP:         None,   # no sub-rolls; free turn follows
+    OutcomeType.KICKOFF_BLITZ:              None,   # no sub-rolls; free turn follows
+    OutcomeType.KICKOFF_THROW_A_ROCK:       'ThrowARock',
+    OutcomeType.KICKOFF_PITCH_INVASION:     'PitchInvasionRoll',
+    OutcomeType.KICKOFF_PERFECT_DEFENSE:    None,   # Setup (human action) follows
+}
+
+
+def _team_label(team, game) -> str:
+    return team.name if team is not None else '?'
+
+
+def _team_color(team, game) -> tuple:
+    """Return the home/away text color for a team (bright, readable on dark background)."""
+    if team is None:
+        return (245, 242, 235)
+    if team == game.state.home_team:
+        return (180, 220, 255)   # light sky blue
+    return (255, 200, 140)       # light orange
+
+
+def _format_kickoff_sub_rows(ot: OutcomeType, sub_outcomes: list, game) -> list:
+    """Return colour-prefixed display strings for kickoff event sub-roll outcomes.
+
+    Prefix '+' → green (gain), '-' → red (loss), ' ' → neutral.
+    """
+    rows = []
+
+    if ot == OutcomeType.KICKOFF_GET_THE_REF:
+        pass  # effect is stated in the description; no sub-row needed
+
+    elif ot == OutcomeType.KICKOFF_RIOT:
+        for o in sub_outcomes:
+            if o.outcome_type == OutcomeType.TURN_ADDED:
+                if o.rolls:
+                    rows.append(f' [{o.rolls[0].get_sum()}]  \u2192  Both teams gain a turn.')
+                else:
+                    rows.append(f' No roll \u2014 it\'s turn 8, so both teams gain a turn.')
+            elif o.outcome_type == OutcomeType.TURN_SKIPPED:
+                if o.rolls:
+                    rows.append(f' [{o.rolls[0].get_sum()}]  \u2192  Both teams lose a turn.')
+                else:
+                    rows.append(f' No roll \u2014 it\'s turn 1, so both teams lose a turn.')
+
+    elif ot in (OutcomeType.KICKOFF_CHEERING_FANS, OutcomeType.KICKOFF_BRILLIANT_COACHING):
+        roll_ot = (OutcomeType.CHEERING_FANS_ROLL
+                   if ot == OutcomeType.KICKOFF_CHEERING_FANS
+                   else OutcomeType.BRILLIANT_COACHING_ROLL)
+        _neutral = (245, 242, 235)
+        roll_outcomes = [o for o in sub_outcomes
+                         if o.outcome_type == roll_ot and o.team is not None]
+        reroll_teams = [o.team for o in sub_outcomes
+                        if o.outcome_type == OutcomeType.EXTRA_REROLL and o.team is not None]
+        for o in roll_outcomes:
+            d = o.rolls[0].get_sum() if o.rolls else '?'
+            mod = o.rolls[0].modifiers if o.rolls else 0
+            total = o.rolls[0].get_result() if o.rolls else '?'
+            tc = _team_color(o.team, game)
+            rows.append([
+                (_team_label(o.team, game), tc),
+                (f': [{d}] + {mod} = {total}', _neutral),
+            ])
+        if len(reroll_teams) >= 2:
+            rows.append(f' Both teams gain +1 Re-Roll this half.')
+        elif len(reroll_teams) == 1:
+            tc = _team_color(reroll_teams[0], game)
+            rows.append([
+                (_team_label(reroll_teams[0], game), tc),
+                (' gains +1 Re-Roll this half.', _neutral),
+            ])
+
+    elif ot == OutcomeType.KICKOFF_CHANGING_WHEATHER:
+        for o in sub_outcomes:
+            info = _WEATHER_INFO.get(o.outcome_type)
+            if info is not None:
+                wname, _, weffect = info
+                if o.rolls:
+                    vals = o.rolls[0].get_values()
+                    d_str = f'[{vals[0]}][{vals[1]}]  \u2192 '
+                else:
+                    d_str = '\u2192 '
+                rows.append(f' {d_str}{wname}')
+                if o.outcome_type != OutcomeType.WEATHER_NICE:
+                    rows.append(f'   {weffect}')
+
+    elif ot == OutcomeType.KICKOFF_THROW_A_ROCK:
+        _neutral = (245, 242, 235)
+        for o in sub_outcomes:
+            if o.outcome_type == OutcomeType.THROW_A_ROCK_ROLL and o.team is not None:
+                d = o.rolls[0].get_sum() if o.rolls else '?'
+                mod = o.rolls[0].modifiers if o.rolls else 0
+                total = o.rolls[0].get_result() if o.rolls else '?'
+                tc = _team_color(o.team, game)
+                rows.append([
+                    (_team_label(o.team, game), tc),
+                    (f': [{d}] + {mod} = {total}', _neutral),
+                ])
+        for o in sub_outcomes:
+            if o.outcome_type == OutcomeType.HIT_BY_ROCK and o.player is not None:
+                t = o.player.team if o.player.team else None
+                tc = _team_color(t, game)
+                lbl = _team_label(t, game) if t is not None else '?'
+                rows.append([
+                    (f'Player #{o.player.nr} (', _neutral),
+                    (lbl, tc),
+                    (') hit by a rock!', _neutral),
+                ])
+
+    elif ot == OutcomeType.KICKOFF_PITCH_INVASION:
+        _neutral = (245, 242, 235)
+        for team in (game.state.home_team, game.state.away_team):
+            team_outcomes = [o for o in sub_outcomes
+                             if o.outcome_type in (OutcomeType.STUNNED, OutcomeType.KNOCKED_OUT,
+                                                   OutcomeType.PLAYER_READY)
+                             and (o.team == team
+                                  or (o.player and getattr(o.player, 'team', None) == team))]
+            if not team_outcomes:
+                continue
+            stunned = sum(1 for o in team_outcomes if o.outcome_type == OutcomeType.STUNNED)
+            koed = sum(1 for o in team_outcomes if o.outcome_type == OutcomeType.KNOCKED_OUT)
+            parts = []
+            if stunned:
+                parts.append(f'{stunned} stunned')
+            if koed:
+                parts.append(f'{koed} KO\'d')
+            effect = ', '.join(parts) if parts else 'unaffected'
+            tc = _team_color(team, game)
+            rows.append([
+                (_team_label(team, game), tc),
+                (f': {effect}', _neutral),
+            ])
+
+    return rows
 
 
 class GameScreen:
@@ -117,19 +361,32 @@ class GameScreen:
         self.ui_state = UIState()
         self.action_buttons: list[Button] = []
         self._modal: Optional[Modal] = None
-        self._modal_type: str = ''   # 'save' or 'quit'
+        self._modal_type: str = ''   # 'save', 'quit', or 'kickoff'
         self._save_input: Optional[TextInput] = None
         self._save_error: str = ''
         self._game_over_displayed = False
 
         # Probability/dice overlay data rebuilt each frame in _rebuild_buttons
         self._highlight_probs: dict = {}     # Square → float (MOVE / PASS)
+        self._highlight_rolls: dict = {}     # Square → List[int] (MOVE / PASS)
         self._block_dice_pairs: list = []    # [(Square, int)] for BLOCK
+        self._pass_squares: list = []          # all PASS target squares (toggle-ON view)
+        self._pass_receiver_squares: list = []  # PASS targets with a friendly receiver (overlay)
+        self._pass_probs: dict = {}            # Square → float for pass overlay / labels
+        self._pass_receiver_rolls: dict = {}   # Square → List[int] for combined receiver overlay
+        self._pass_toggle: Optional[LabeledToggle] = None
+        self._show_probs: bool = False         # Hidden setting: True to show % labels
 
-        # Kick-off event toast
-        self._toast: Optional[tuple[str, str]] = None   # (title, body)
-        self._toast_start_ms: int = 0
-        self._last_proc_class: str = ''
+        # Kick-off event modal detection state
+        self._kickoff_report_base: int = 0          # scan reports from this index for new kickoff outcomes
+        self._kickoff_modal_pending: Optional[dict] = None   # {kickoff_outcome, sub_start, wait_proc}
+
+        # Cursor state ('arrow' | 'pass' | 'block' | 'foul' | 'handoff')
+        self._cursor_state: str = 'arrow'
+        self._pass_cursor: Optional[pygame.cursors.Cursor] = None
+        self._block_cursor: Optional[pygame.cursors.Cursor] = None
+        self._foul_cursor: Optional[pygame.cursors.Cursor] = None
+        self._handoff_cursor: Optional[pygame.cursors.Cursor] = None
 
         # Initial button build
         self._rebuild_buttons()
@@ -140,6 +397,17 @@ class GameScreen:
             pygame.display.set_mode((w, h))
 
     def _rebuild_buttons(self):
+        # Auto-trigger the first available formation action (hidden from UI)
+        formation_ac = next(
+            (ac for ac in self.game.state.available_actions
+             if ac.action_type in FORMATION_ACTIONS),
+            None
+        )
+        if formation_ac is not None:
+            from botbowl.core.model import Action
+            self.game.step(Action(formation_ac.action_type))
+            self._scan_kickoff_events()
+
         self.action_buttons = build_action_buttons(
             self.game.state.available_actions, self.game,
             self._btns_rect
@@ -151,26 +419,94 @@ class GameScreen:
         )
 
         # Auto-highlight positional action squares.
-        # Single action: fully select it. Multiple (e.g. blitz MOVE+BLOCK): show all squares.
         if not self.ui_state.selected_action_type:
             positional = [ac for ac in self.game.state.available_actions
                           if ac.action_type in POSITIONAL_ACTIONS]
-            if len(positional) == 1:
-                ac = positional[0]
-                self.ui_state.selected_action_type = ac.action_type
-                self.ui_state.selected_action_choice = ac
-                self.ui_state.highlighted_squares = [sq for sq in (ac.positions or []) if sq is not None]
-            elif len(positional) > 1:
-                all_sqs: set = set()
-                for pac in positional:
-                    for sq in (pac.positions or []):
-                        if sq is not None:
-                            all_sqs.add(sq)
-                self.ui_state.highlighted_squares = list(all_sqs)
-                # selected_action_type / choice stay None; input_handler section C picks the right one
+            move_acs = [ac for ac in positional if ac.action_type == ActionType.MOVE]
+            pass_acs = [ac for ac in positional if ac.action_type == ActionType.PASS]
 
-        # Build probability map and block dice overlays for current selection
+            if move_acs and pass_acs:
+                # Combined pass mode: passer can move first, then throw.
+                move_ac = move_acs[0]
+                pass_ac = pass_acs[0]
+                self.ui_state.pass_mode_pass_ac = pass_ac
+
+                # Build pass squares and probability map (used for overlay and hover)
+                self._pass_squares = [sq for sq in (pass_ac.positions or []) if sq is not None]
+                self._pass_receiver_squares = []   # only squares with a friendly receiver (2+ rolls)
+                self._pass_probs = {}
+                self._pass_receiver_rolls = {}
+                for i, sq in enumerate(pass_ac.positions or []):
+                    if sq is None:
+                        continue
+                    rolls = (pass_ac.rolls or [])
+                    if i < len(rolls):
+                        p = 1.0
+                        for r in rolls[i]:
+                            p *= (7 - r) / 6
+                        self._pass_probs[sq] = p
+                        if len(rolls[i]) >= 2:
+                            self._pass_receiver_squares.append(sq)
+                            self._pass_receiver_rolls[sq] = list(rolls[i])
+
+                if self.ui_state.special_toggle == 'pass':
+                    # Toggle ON: show only pass targets
+                    self.ui_state.selected_action_type = ActionType.PASS
+                    self.ui_state.selected_action_choice = pass_ac
+                    self.ui_state.highlighted_squares = self._pass_squares[:]
+                else:
+                    # Toggle OFF (default): show movement paths with pass overlay
+                    self.ui_state.selected_action_type = ActionType.MOVE
+                    self.ui_state.selected_action_choice = move_ac
+                    self.ui_state.highlighted_squares = [
+                        path.steps[-1] for path in (move_ac.paths or []) if path.steps
+                    ]
+
+                # Build "Pass Mode:" labeled toggle anchored to right of action bar
+                toggle_h = 20
+                tx = self._btns_rect.right - 38 - 80   # approx: toggle_w=38 + label ~80px
+                ty = self._btns_rect.centery - toggle_h // 2 - 1
+                self._pass_toggle = LabeledToggle(
+                    x=tx, y=ty,
+                    label='Pass Mode:',
+                    state=(self.ui_state.special_toggle == 'pass'),
+                    font_size=13,
+                    toggle_w=38, toggle_h=toggle_h,
+                )
+
+            else:
+                # Not combined pass mode — clear pass mode state
+                self.ui_state.pass_mode_pass_ac = None
+                self.ui_state.special_toggle = None
+                self._pass_squares = []
+                self._pass_receiver_squares = []
+                self._pass_probs = {}
+                self._pass_receiver_rolls = {}
+                self._pass_toggle = None
+
+                if len(positional) == 1:
+                    ac = positional[0]
+                    self.ui_state.selected_action_type = ac.action_type
+                    self.ui_state.selected_action_choice = ac
+                    if ac.positions:
+                        self.ui_state.highlighted_squares = [sq for sq in ac.positions if sq is not None]
+                    else:
+                        # Player-only action (e.g. SELECT_PLAYER for touchback)
+                        self.ui_state.highlighted_squares = [
+                            p.position for p in (ac.players or []) if p.position is not None
+                        ]
+                elif len(positional) > 1:
+                    all_sqs: set = set()
+                    for pac in positional:
+                        for sq in (pac.positions or []):
+                            if sq is not None:
+                                all_sqs.add(sq)
+                    self.ui_state.highlighted_squares = list(all_sqs)
+                    # selected_action_type/choice stay None; input_handler section C picks action
+
+        # Build probability map, roll map, and block dice overlays for current selection
         self._highlight_probs = {}
+        self._highlight_rolls = {}
         self._block_dice_pairs = []
         ac = self.ui_state.selected_action_choice
         at = self.ui_state.selected_action_type
@@ -179,6 +515,8 @@ class GameScreen:
                 for path in (ac.paths or []):
                     if path.steps:
                         self._highlight_probs[path.steps[-1]] = path.prob
+                    if path.steps and path.rolls:
+                        self._highlight_rolls[path.steps[-1]] = list(path.rolls[-1])
             elif at == ActionType.PASS:
                 for i, sq in enumerate(ac.positions or []):
                     if sq is None:
@@ -189,6 +527,8 @@ class GameScreen:
                         for r in rolls[i]:
                             p *= (7 - r) / 6
                         self._highlight_probs[sq] = p
+                        if rolls[i]:
+                            self._highlight_rolls[sq] = list(rolls[i])
             elif at == ActionType.BLOCK:
                 positions = ac.positions or []
                 dice = ac.block_dice or []
@@ -196,7 +536,7 @@ class GameScreen:
                     if sq is not None and i < len(dice):
                         self._block_dice_pairs.append((sq, dice[i]))
         else:
-            # Multi-positional mode: still build block dice from the BLOCK action if present
+            # Multi-positional mode: build block dice + MOVE probs from component actions
             positional = [a for a in self.game.state.available_actions
                           if a.action_type in POSITIONAL_ACTIONS]
             block_ac = next((a for a in positional if a.action_type == ActionType.BLOCK), None)
@@ -204,6 +544,14 @@ class GameScreen:
                 for i, sq in enumerate(block_ac.positions or []):
                     if sq is not None and i < len(block_ac.block_dice or []):
                         self._block_dice_pairs.append((sq, block_ac.block_dice[i]))
+            for pac in positional:
+                if pac.action_type in (ActionType.MOVE, ActionType.BLOCK,
+                                       ActionType.FOUL, ActionType.STAB, ActionType.HANDOFF):
+                    for path in (pac.paths or []):
+                        if path.steps:
+                            self._highlight_probs[path.steps[-1]] = path.prob
+                        if path.steps and path.rolls:
+                            self._highlight_rolls[path.steps[-1]] = list(path.rolls[-1])
 
     def is_human_turn(self) -> bool:
         if self.spectating:
@@ -211,18 +559,79 @@ class GameScreen:
         actor = self.game.actor
         return actor is not None and actor.human
 
-    def _check_kickoff_toast(self):
-        """Detect when a kick-off event procedure starts and show an announcement."""
-        proc = self.game.get_procedure()
-        proc_class = type(proc).__name__ if proc else ''
-        if proc_class != self._last_proc_class:
-            if proc_class in _KICKOFF_EVENTS:
-                self._toast = _KICKOFF_EVENTS[proc_class]
-                self._toast_start_ms = pygame.time.get_ticks()
-            self._last_proc_class = proc_class
+    def _scan_kickoff_events(self):
+        """Scan game reports for new kickoff outcomes and show a modal when the event resolves."""
+        reports = self.game.state.reports
+        new = reports[self._kickoff_report_base:]
+
+        # Detect a new kickoff outcome in reports we haven't seen yet
+        if not self._kickoff_modal_pending:
+            for i, outcome in enumerate(new):
+                if outcome.outcome_type in _KICKOFF_WAIT_PROC:
+                    self._kickoff_modal_pending = {
+                        'kickoff_outcome': outcome,
+                        'sub_start': self._kickoff_report_base + i + 1,
+                        'wait_proc': _KICKOFF_WAIT_PROC[outcome.outcome_type],
+                    }
+                    break
+
+        self._kickoff_report_base = len(reports)
+
+        # Try to show the modal if one is pending and no other modal is open
+        if self._kickoff_modal_pending and not self._modal:
+            wait_proc = self._kickoff_modal_pending['wait_proc']
+            if wait_proc is None:
+                self._show_kickoff_modal()
+            else:
+                proc = self.game.get_procedure()
+                proc_class = type(proc).__name__ if proc else ''
+                if proc_class != wait_proc:
+                    self._show_kickoff_modal()
+
+    def _show_kickoff_modal(self):
+        """Build and open the kickoff event modal with dice visualisation and sub-roll results."""
+        data = self._kickoff_modal_pending
+        self._kickoff_modal_pending = None
+
+        kickoff_outcome = data['kickoff_outcome']
+        sub_outcomes = self.game.state.reports[data['sub_start']:]
+
+        ot = kickoff_outcome.outcome_type
+        name, description = _KICKOFF_INFO[ot]
+        if ot == OutcomeType.KICKOFF_CHANGING_WHEATHER:
+            description = _weather_dynamic_description(sub_outcomes, self.game)
+        elif ot == OutcomeType.KICKOFF_HIGH_KICK:
+            description = _high_kick_description(self.game)
+        die_values = kickoff_outcome.rolls[0].get_values() if kickoff_outcome.rolls else []
+
+        sub_rows = _format_kickoff_sub_rows(ot, sub_outcomes, self.game)
+
+        modal_w = 520 if sub_rows else 500
+        modal_h = 420 + len(sub_rows) * 28
+        modal_h = min(modal_h, self.height - 40)  # never overflow screen
+        mx = (self.width - modal_w) // 2
+        my = (self.height - modal_h) // 2
+        content_top = my + int(modal_h * 0.24)
+        body_y = content_top + 32
+        btn_ratio = 0.76
+        button_y = my + int(modal_h * btn_ratio)
+        margin = 50
+        body_rect = pygame.Rect(mx + margin, body_y, modal_w - margin * 2, button_y - 10 - body_y)
+
+        body = KickoffEventBody(body_rect, description, die_values, sub_rows)
+        self._modal = Modal(
+            (self.width, self.height), name, body,
+            ok_label='OK', size=(modal_w, modal_h),
+            ok_only=True, btn_y_ratio=btn_ratio
+        )
+        self._modal_type = 'kickoff'
 
     def update(self):
         if self.game.state.game_over:
+            return
+
+        # Pause game advancement while a kickoff event modal is being shown
+        if self._modal and self._modal_type == 'kickoff':
             return
 
         # Advance intermediate procedures that require no action (fast_mode=False).
@@ -230,7 +639,7 @@ class GameScreen:
         # call step(None) repeatedly until available_actions is non-empty or game is over.
         if not self.game.state.available_actions:
             self.game.step(None)
-            self._check_kickoff_toast()
+            self._scan_kickoff_events()
             self._rebuild_buttons()
             return
 
@@ -247,7 +656,7 @@ class GameScreen:
                         ac = self.game.state.available_actions[0]
                         fallback = Action(ac.action_type)
                         self.game.step(fallback)
-                self._check_kickoff_toast()
+                self._scan_kickoff_events()
                 self._rebuild_buttons()
                 if self.ai_delay_ms > 0:
                     pygame.time.wait(self.ai_delay_ms)
@@ -259,17 +668,16 @@ class GameScreen:
             if result == 'ok':
                 if self._modal_type == 'quit':
                     self._modal = None
+                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
                     self.app.pop_to_root()
                     return
+                elif self._modal_type == 'kickoff':
+                    self._modal = None
                 else:
                     self._handle_save_ok()
             elif result == 'cancel':
                 self._modal = None
             return
-
-        # Dismiss kick-off toast on any click
-        if self._toast and event.type == pygame.MOUSEBUTTONDOWN:
-            self._toast = None
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s and not self.spectating:
@@ -301,6 +709,17 @@ class GameScreen:
 
         # Human input (clicks / keys)
         if self.is_human_turn():
+            # Check pass mode toggle (non-game-action, just switches UI mode)
+            if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and
+                    self._pass_toggle and self._pass_toggle.is_clicked(event.pos)):
+                self.ui_state.special_toggle = (
+                    None if self.ui_state.special_toggle == 'pass' else 'pass'
+                )
+                self.ui_state.selected_action_type = None
+                self.ui_state.selected_action_choice = None
+                self._rebuild_buttons()
+                return
+
             # Check bench clicks first (for PLACE_PLAYER and info display)
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 bench_player = self._get_bench_player_at(event.pos)
@@ -322,7 +741,7 @@ class GameScreen:
             )
             if action is not None:
                 self.game.step(action)
-                self._check_kickoff_toast()
+                self._scan_kickoff_events()
                 self.ui_state.reset_selection()
                 self._rebuild_buttons()
 
@@ -331,8 +750,7 @@ class GameScreen:
 
         # Board
         weather = self.game.state.weather.name if self.game.state.weather else 'NICE'
-        self.board_renderer.draw_board(surface, self.game, weather,
-                                       self.ui_state.grid_mode)
+        self.board_renderer.draw_board(surface, self.game, weather)
 
         # Highlights (probability-colored for MOVE and PASS)
         if self.ui_state.highlighted_squares:
@@ -343,15 +761,23 @@ class GameScreen:
                                                 self.ui_state.highlighted_squares,
                                                 color, probs=probs)
 
-        # Path hover (MOVE)
-        if self.ui_state.hover_path:
-            self.board_renderer.draw_path(surface, self.ui_state.hover_path)
+        # Combined pass mode: show receiver squares as blue overlay on top of movement tiles
+        if (self._pass_receiver_squares and
+                self.ui_state.pass_mode_pass_ac is not None and
+                self.ui_state.special_toggle != 'pass'):
+            receiver_probs = {sq: self._pass_probs[sq]
+                              for sq in self._pass_receiver_squares if sq in self._pass_probs}
+            self.board_renderer.draw_highlights(surface, self._pass_receiver_squares,
+                                                (60, 60, 220, 80),
+                                                probs=receiver_probs if receiver_probs else None)
 
-        # Pass roll hover detail
-        if (self.ui_state.hover_pass_rolls and
-                self.ui_state.hover_square is not None):
-            self._draw_pass_hover(surface, self.ui_state.hover_square,
-                                  self.ui_state.hover_pass_rolls)
+
+        # Path hover (MOVE) — drawn before players so line is under player sprite
+        if self.ui_state.hover_path:
+            sp = self.ui_state.selected_player or self.game.get_active_player()
+            player_sq = sp.position if sp else None
+            self.board_renderer.draw_path(surface, self.ui_state.hover_path,
+                                          player_square=player_sq)
 
         # Bench players on crowd rows (row 0 = away, row height-1 = home)
         self.player_renderer.draw_bench_on_board(
@@ -381,6 +807,67 @@ class GameScreen:
                 self.ui_state.hover_square in self.ui_state.highlighted_squares):
             self.board_renderer.draw_hover_highlight(surface, self.ui_state.hover_square)
 
+        # Dice roll labels (on by default)
+        at = self.ui_state.selected_action_type
+        if self._highlight_rolls and at in (ActionType.MOVE, ActionType.PASS):
+            self.board_renderer.draw_roll_labels(surface, self._highlight_rolls)
+        if (self._pass_receiver_rolls and
+                self.ui_state.pass_mode_pass_ac is not None and
+                self.ui_state.special_toggle != 'pass'):
+            self.board_renderer.draw_roll_labels(surface, self._pass_receiver_rolls)
+
+        # Probability % text (hidden setting, off by default)
+        if self._show_probs:
+            if self.ui_state.selected_action_type == ActionType.PASS and self._highlight_probs:
+                self.board_renderer.draw_prob_labels(surface, self._highlight_probs)
+            elif (self._pass_receiver_squares and
+                    self.ui_state.pass_mode_pass_ac is not None and
+                    self.ui_state.special_toggle != 'pass'):
+                receiver_probs = {sq: self._pass_probs[sq]
+                                  for sq in self._pass_receiver_squares if sq in self._pass_probs}
+                self.board_renderer.draw_prob_labels(surface, receiver_probs)
+
+        # Pass arrow: rotated rectangle from passer → hovered pass target.
+        # Shown in toggle-ON / standalone PASS mode (hover_pass_rolls is set) AND
+        # in toggle-OFF mode when hovering a receiver square.
+        _arrow_rolls = None
+        _arrow_prob  = 1.0
+        _arrow_sq    = self.ui_state.hover_square
+
+        if self.ui_state.hover_pass_rolls and _arrow_sq:
+            # Toggle ON or standalone PASS mode
+            _arrow_rolls = self.ui_state.hover_pass_rolls
+            for r in _arrow_rolls:
+                _arrow_prob *= (7 - r) / 6
+        elif (_arrow_sq is not None and
+              _arrow_sq in self._pass_receiver_squares and
+              self.ui_state.pass_mode_pass_ac is not None and
+              self.ui_state.special_toggle != 'pass'):
+            # Toggle OFF: hovering a friendly receiver square
+            _arrow_prob = self._pass_probs.get(_arrow_sq, 1.0)
+            pass_positions = self.ui_state.pass_mode_pass_ac.positions or []
+            if _arrow_sq in pass_positions:
+                idx = pass_positions.index(_arrow_sq)
+                all_rolls = self.ui_state.pass_mode_pass_ac.rolls or []
+                if idx < len(all_rolls):
+                    _arrow_rolls = all_rolls[idx]
+        else:
+            _arrow_sq = None  # nothing to draw
+
+        if _arrow_sq is not None:
+            passer = self.ui_state.selected_player or self.game.get_active_player()
+            if passer and passer.position:
+                ts = self.tile_size
+                ox, oy = self.pitch_offset
+                p1 = sq_to_px(passer.position, ts, (ox, oy))
+                p1 = (p1[0] + ts // 2, p1[1] + ts // 2)
+                p2 = sq_to_px(_arrow_sq, ts, (ox, oy))
+                p2 = (p2[0] + ts // 2, p2[1] + ts // 2)
+                plabel = _pass_type_label(passer.position, _arrow_sq)
+                self.board_renderer.draw_pass_arrow(surface, p1, p2, _arrow_prob,
+                                                    pass_label=plabel,
+                                                    rolls=_arrow_rolls)
+
         # Player action panel + dots
         if self.ui_state.player_dots:
             rects = [btn.rect for btn in self.ui_state.player_dots]
@@ -396,6 +883,10 @@ class GameScreen:
 
         # Action bar + context row + buttons
         self.action_bar_renderer.draw(surface, self.action_buttons, self.game)
+
+        # Pass mode labeled toggle (rendered on top of action bar)
+        if self._pass_toggle:
+            self._pass_toggle.draw(surface)
 
         # Split player info: away on left, home on right.
         # Hover always takes precedence for that team's panel; falls back to pinned player.
@@ -418,13 +909,74 @@ class GameScreen:
             surface.blit(lbl, (self._btns_rect.x + 4,
                                 self._btns_rect.y + (self._btns_rect.height - lbl.get_height()) // 2))
 
-        # Kick-off event toast
-        if self._toast:
-            self._draw_toast(surface)
-
         # Game over overlay
         if self.game.state.game_over:
             self._draw_game_over(surface)
+
+        # Path/pass probability label near cursor (hidden setting, off by default)
+        if self._show_probs:
+            if self.ui_state.hover_path:
+                self.board_renderer.draw_path_prob(
+                    surface, self.ui_state.hover_path, pygame.mouse.get_pos())
+            if self.ui_state.hover_pass_rolls:
+                self.board_renderer.draw_pass_prob(
+                    surface, self.ui_state.hover_pass_rolls, pygame.mouse.get_pos())
+
+        # Cursor: ball when hovering a pass target, crosshair when hovering a combat target
+        hover_sq = self.ui_state.hover_square
+        want_ball = bool(self.ui_state.hover_pass_rolls) or (
+            self.ui_state.hover_square in self._pass_receiver_squares and
+            self.ui_state.pass_mode_pass_ac is not None and
+            self.ui_state.special_toggle != 'pass'
+        )
+        want_block = want_foul = want_handoff = False
+        if not want_ball and hover_sq is not None and hover_sq in self.ui_state.highlighted_squares:
+            at = self.ui_state.selected_action_type
+            if at in _BLOCK_CURSOR_TYPES:
+                want_block = True
+            elif at in _FOUL_CURSOR_TYPES:
+                want_foul = True
+            elif at in _HANDOFF_CURSOR_TYPES:
+                want_handoff = True
+            elif at is None:
+                for ac in self.game.state.available_actions:
+                    if ac.action_type in _BLOCK_CURSOR_TYPES and hover_sq in (ac.positions or []):
+                        want_block = True
+                        break
+                    if ac.action_type in _FOUL_CURSOR_TYPES and hover_sq in (ac.positions or []):
+                        want_foul = True
+                        break
+                    if ac.action_type in _HANDOFF_CURSOR_TYPES and hover_sq in (ac.positions or []):
+                        want_handoff = True
+                        break
+        new_cursor = ('pass' if want_ball else
+                      'block' if want_block else
+                      'foul' if want_foul else
+                      'handoff' if want_handoff else 'arrow')
+        if new_cursor != self._cursor_state:
+            self._cursor_state = new_cursor
+            if new_cursor == 'pass':
+                if self._pass_cursor is None:
+                    self._pass_cursor = pygame.cursors.Cursor(
+                        (8, 8), get_action_icon('START_PASS', (16, 16)))
+                pygame.mouse.set_cursor(self._pass_cursor)
+            elif new_cursor == 'block':
+                if self._block_cursor is None:
+                    self._block_cursor = pygame.cursors.Cursor(
+                        (8, 8), get_action_icon('START_BLOCK', (16, 16)))
+                pygame.mouse.set_cursor(self._block_cursor)
+            elif new_cursor == 'foul':
+                if self._foul_cursor is None:
+                    self._foul_cursor = pygame.cursors.Cursor(
+                        (8, 8), get_action_icon('START_FOUL', (16, 16)))
+                pygame.mouse.set_cursor(self._foul_cursor)
+            elif new_cursor == 'handoff':
+                if self._handoff_cursor is None:
+                    self._handoff_cursor = pygame.cursors.Cursor(
+                        (8, 8), get_action_icon('START_HANDOFF', (16, 16)))
+                pygame.mouse.set_cursor(self._handoff_cursor)
+            else:
+                pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
         # Modal
         if self._modal:
@@ -454,80 +1006,6 @@ class GameScreen:
         surface.blit(msg_surf, (cx - msg_surf.get_width() // 2, cy - 50))
         surface.blit(score_surf, (cx - score_surf.get_width() // 2, cy))
         surface.blit(esc_surf, (cx - esc_surf.get_width() // 2, cy + 40))
-
-    def _draw_toast(self, surface: pygame.Surface):
-        """Render and auto-expire the kick-off event announcement banner."""
-        _TOAST_DURATION_MS = 4000
-        if self._toast is None:
-            return
-        elapsed = pygame.time.get_ticks() - self._toast_start_ms
-        if elapsed >= _TOAST_DURATION_MS:
-            self._toast = None
-            return
-
-        title, body = self._toast
-        title_surf = get_font(20, bold=True).render(title, True, (255, 220, 80))
-        body_surf = get_body_font(14).render(body, True, (200, 200, 210))
-
-        pad = 16
-        toast_w = max(title_surf.get_width(), body_surf.get_width()) + pad * 2
-        toast_h = title_surf.get_height() + body_surf.get_height() + 10 + pad * 2
-        tx = self.width // 2 - toast_w // 2
-        ty = self.pitch_rect.y + 18
-
-        # Fade out in last second
-        alpha = 255
-        if elapsed > _TOAST_DURATION_MS - 1000:
-            alpha = int(255 * (_TOAST_DURATION_MS - elapsed) / 1000)
-
-        bg = pygame.Surface((toast_w, toast_h), pygame.SRCALPHA)
-        bg.fill((18, 18, 28, min(alpha, 210)))
-        pygame.draw.rect(bg, (100, 100, 180, min(alpha, 255)),
-                         pygame.Rect(0, 0, toast_w, toast_h), 2, border_radius=4)
-        surface.blit(bg, (tx, ty))
-
-        title_surf.set_alpha(alpha)
-        body_surf.set_alpha(alpha)
-        surface.blit(title_surf,
-                     (tx + toast_w // 2 - title_surf.get_width() // 2, ty + pad))
-        surface.blit(body_surf,
-                     (tx + toast_w // 2 - body_surf.get_width() // 2,
-                      ty + pad + title_surf.get_height() + 8))
-
-    def _draw_pass_hover(self, surface: pygame.Surface, sq, rolls: list):
-        """Render a small tooltip near the hovered PASS target square."""
-        if not rolls:
-            return
-        ts = self.tile_size
-        ox, oy = self.pitch_offset
-        px = ox + sq.x * ts
-        py = oy + sq.y * ts
-
-        labels = []
-        if len(rolls) >= 1:
-            labels.append(f'Pass: {rolls[0]}+')
-        if len(rolls) >= 2:
-            labels.append(f'Catch: {rolls[1]}+')
-        p = 1.0
-        for r in rolls:
-            p *= (7 - r) / 6
-        pct = int(round(p * 100))
-        text = '  '.join(labels) + f'  ({pct}%)'
-
-        font = get_body_font(11)
-        surf = font.render(text, True, (220, 220, 100))
-
-        bx = px + ts // 2 - surf.get_width() // 2
-        by = py - surf.get_height() - 6
-        # Clamp within pitch area
-        bx = max(ox, min(bx, ox + self.pitch_px_w - surf.get_width()))
-        by = max(oy + 2, by)
-
-        bg = pygame.Surface((surf.get_width() + 8, surf.get_height() + 4),
-                            pygame.SRCALPHA)
-        bg.fill((10, 10, 20, 210))
-        surface.blit(bg, (bx - 4, by - 2))
-        surface.blit(surf, (bx, by))
 
     def _get_bench_player_at(self, pos: tuple):
         """Return the bench player at screen pos (crowd rows on the board), or None."""

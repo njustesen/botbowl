@@ -26,8 +26,8 @@ def main():
                         help='Away agent: "human" or a bot name (e.g. "random")')
     parser.add_argument('--home-team', default='human',
                         help='Home team filename (default: human)')
-    parser.add_argument('--away-team', default='human',
-                        help='Away team filename (default: human)')
+    parser.add_argument('--away-team', default='orc',
+                        help='Away team filename (default: orc)')
     parser.add_argument('--config', default='bot-bowl',
                         help='Game config name (default: bot-bowl)')
     parser.add_argument('--ai-delay', type=int, default=50,
@@ -44,6 +44,11 @@ def main():
                         help='Save a screenshot to PATH after a few frames then quit')
     parser.add_argument('--auto-screenshot-frames', type=int, default=3,
                         help='Number of frames to render before auto-screenshot (default: 3)')
+    # parser.add_argument('--debug-kickoff', default=None, metavar='EVENT',
+    #                     help='Force a specific kickoff event every kickoff. '
+    #                          'Use a 2d6 sum (2-12) or a name: '
+    #                          'ref, riot, defence, high-kick, fans, weather, '
+    #                          'coaching, snap, blitz, rock, invasion')
     args = parser.parse_args()
 
     app = App(ai_delay_ms=args.ai_delay, screenshot_dir=args.screenshot_dir,
@@ -88,8 +93,60 @@ def main():
     app.run()
 
 
+_KICKOFF_NAME_TO_SUM = {
+    'ref': 2, 'get-the-ref': 2,
+    'riot': 3,
+    'defence': 4, 'defense': 4, 'perfect-defence': 4, 'perfect-defense': 4,
+    'high-kick': 5, 'kick': 5,
+    'fans': 6, 'cheering': 6, 'cheering-fans': 6,
+    'weather': 7, 'changing-weather': 7,
+    'coaching': 8, 'brilliant-coaching': 8,
+    'snap': 9, 'quick-snap': 9,
+    'blitz': 10,
+    'rock': 11, 'throw-a-rock': 11,
+    'invasion': 12, 'pitch-invasion': 12,
+}
+
+
+def _patch_kickoff_for_debug(value: str):
+    """Monkey-patch KickoffTable so every kickoff rolls the specified result."""
+    from botbowl.core.procedure import KickoffTable
+    from botbowl.core.model import D6
+
+    if value.isdigit():
+        desired_sum = int(value)
+    else:
+        desired_sum = _KICKOFF_NAME_TO_SUM.get(value.lower())
+        if desired_sum is None:
+            print(f'[debug-kickoff] Unknown event "{value}". '
+                  f'Valid: {", ".join(_KICKOFF_NAME_TO_SUM)}')
+            return
+
+    if not 2 <= desired_sum <= 12:
+        print(f'[debug-kickoff] Sum must be 2-12, got {desired_sum}')
+        return
+
+    # Two D6 values that sum to desired_sum, both in [1, 6]
+    a = min(desired_sum - 1, 6)
+    b = desired_sum - a
+
+    original_step = KickoffTable.step
+
+    def _debug_step(self, action):
+        D6.FixedRolls.insert(0, b)
+        D6.FixedRolls.insert(0, a)
+        return original_step(self, action)
+
+    KickoffTable.step = _debug_step
+    print(f'[debug-kickoff] Kickoff sum locked to {desired_sum} ({a}+{b}) '
+          f'for every kickoff this session.')
+
+
 def _start_game(app, args):
     """Start a game directly from CLI args."""
+    # if getattr(args, 'debug_kickoff', None):
+    #     _patch_kickoff_for_debug(args.debug_kickoff)
+
     config_name = args.config
     config = botbowl.load_config(config_name)
     config.competition_mode = False

@@ -467,16 +467,27 @@ class ActionBarRenderer:
             surface.blit(s, (rect.centerx - s.get_width() // 2,
                              cy - s.get_height() // 2))
 
+        elif ActionType.PLACE_BALL in action_types:
+            team = game.state.current_team or game.state.home_team
+            is_home = (team == game.state.home_team)
+            tc = COLOR_HOME if is_home else COLOR_AWAY
+            part1 = font_main.render(team.name, True, tc)
+            part2 = font_dim.render('  — click to place the ball in the opponent\'s half', True, (160, 160, 170))
+            total_w = part1.get_width() + part2.get_width()
+            x = rect.centerx - total_w // 2
+            surface.blit(part1, (x, cy - part1.get_height() // 2))
+            surface.blit(part2, (x + part1.get_width(), cy - part2.get_height() // 2))
+
         elif ActionType.KICK in action_types or ActionType.RECEIVE in action_types:
             team = game.state.current_team or game.state.home_team
             is_home = (team == game.state.home_team)
             tc = COLOR_HOME if is_home else COLOR_AWAY
-            part1 = font_main.render(f'{team.name}  won the toss', True, tc)
-            part2 = font_dim.render('— kick or receive?', True, (160, 160, 170))
-            total_w = part1.get_width() + 8 + part2.get_width()
+            part1 = font_main.render(team.name, True, tc)
+            part2 = font_dim.render('  won the toss — kick or receive?', True, (160, 160, 170))
+            total_w = part1.get_width() + part2.get_width()
             x = rect.centerx - total_w // 2
             surface.blit(part1, (x, cy - part1.get_height() // 2))
-            surface.blit(part2, (x + part1.get_width() + 8,
+            surface.blit(part2, (x + part1.get_width(),
                                  cy - part2.get_height() // 2))
 
     def _player_sprite(self, player, is_home: bool, max_h: int) -> pygame.Surface:

@@ -97,6 +97,32 @@ def draw_bordered_rect(surface: pygame.Surface, bg: tuple, border: tuple,
     pygame.draw.rect(surface, bg, inner, border_radius=max(0, radius - border_w))
 
 
+_PIP_POS = {
+    1: [(0.5,  0.5)],
+    2: [(0.3,  0.3),  (0.7,  0.7)],
+    3: [(0.3,  0.3),  (0.5,  0.5),  (0.7,  0.7)],
+    4: [(0.3,  0.3),  (0.7,  0.3),  (0.3,  0.7),  (0.7,  0.7)],
+    5: [(0.3,  0.3),  (0.7,  0.3),  (0.5,  0.5),  (0.3,  0.7),  (0.7,  0.7)],
+    6: [(0.3, 0.25),  (0.7, 0.25),  (0.3,  0.5),  (0.7,  0.5),  (0.3, 0.75), (0.7, 0.75)],
+}
+
+
+def draw_die(surface: pygame.Surface, x: int, y: int, size: int, value: int,
+             bg_color: tuple = (36, 34, 44), pip_color: tuple = (240, 240, 240),
+             border_color: tuple = (165, 140, 72)):
+    """Draw a single die face at pixel position (x, y) with the given square size and pip value (1-6)."""
+    rect = pygame.Rect(x, y, size, size)
+    br = max(3, size // 7)
+    pygame.draw.rect(surface, border_color, rect, border_radius=br)
+    inner = rect.inflate(-3, -3)
+    pygame.draw.rect(surface, bg_color, inner, border_radius=max(2, br - 1))
+    pip_r = max(2, size // 9)
+    for px, py in _PIP_POS.get(max(1, min(6, value)), []):
+        cx = int(x + px * size)
+        cy = int(y + py * size)
+        pygame.draw.circle(surface, pip_color, (cx, cy), pip_r)
+
+
 class Button:
     """A clickable button with optional image or bg_image background."""
 
@@ -265,7 +291,8 @@ class Modal:
     def __init__(self, screen_size: tuple, title: str, body_widget,
                  ok_label: str = 'OK', cancel_label: str = 'Cancel',
                  size: tuple = (360, 250), description: str = '',
-                 ok_variant: str = 'default'):
+                 ok_variant: str = 'default', ok_only: bool = False,
+                 btn_y_ratio: float = 0.66):
         w, h = size
         x = (screen_size[0] - w) // 2
         y = (screen_size[1] - h) // 2
@@ -274,23 +301,28 @@ class Modal:
         self.description = description
         self.body_widget = body_widget
         self.error_message = ''
+        self.ok_only = ok_only
 
-        # Buttons — centered horizontally, near bottom of inner frame area
         btn_w, btn_h = 130, 42
-        gap = 10
-        total_btn_w = btn_w * 2 + gap
-        cancel_x = self.rect.centerx - total_btn_w // 2
-        ok_x = cancel_x + btn_w + gap
-        btn_y = self.rect.y + int(self.rect.height * 0.66)
+        btn_y = self.rect.y + int(self.rect.height * btn_y_ratio)
+
+        if ok_only:
+            ok_x = self.rect.centerx - btn_w // 2
+            self.cancel_button = None
+        else:
+            gap = 10
+            total_btn_w = btn_w * 2 + gap
+            cancel_x = self.rect.centerx - total_btn_w // 2
+            ok_x = cancel_x + btn_w + gap
+            self.cancel_button = Button(
+                pygame.Rect(cancel_x, btn_y, btn_w, btn_h),
+                label=cancel_label, font_size=14,
+                bg_image=get_button_image())
 
         self.ok_button = Button(
             pygame.Rect(ok_x, btn_y, btn_w, btn_h),
             label=ok_label, font_size=14,
             bg_image=get_button_image(ok_variant))
-        self.cancel_button = Button(
-            pygame.Rect(cancel_x, btn_y, btn_w, btn_h),
-            label=cancel_label, font_size=14,
-            bg_image=get_button_image())
 
     def draw(self, surface: pygame.Surface):
         # Dim overlay
@@ -336,7 +368,8 @@ class Modal:
             surface.blit(err_surf, (self.rect.centerx - err_surf.get_width() // 2, err_y))
 
         self.ok_button.draw(surface)
-        self.cancel_button.draw(surface)
+        if self.cancel_button is not None:
+            self.cancel_button.draw(surface)
 
     def handle_event(self, event: pygame.event.Event) -> Optional[str]:
         """Returns 'ok', 'cancel', or None."""
@@ -344,15 +377,267 @@ class Modal:
             self.body_widget.handle_event(event)
         mouse = pygame.mouse.get_pos()
         self.ok_button.update_hover(mouse)
-        self.cancel_button.update_hover(mouse)
+        if self.cancel_button is not None:
+            self.cancel_button.update_hover(mouse)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.ok_button.is_clicked(event.pos):
                 return 'ok'
-            if self.cancel_button.is_clicked(event.pos):
+            if self.cancel_button is not None and self.cancel_button.is_clicked(event.pos):
                 return 'cancel'
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 return 'ok'
             if event.key == pygame.K_ESCAPE:
-                return 'cancel'
+                return 'cancel' if not self.ok_only else 'ok'
         return None
+
+
+class LabeledToggle:
+    """A text label followed by a sliding pill toggle switch.
+
+    Renders as:  "Label text  [  ○  ]"
+    The toggle pill slides the knob right (ON) or left (OFF).
+    """
+
+    COLOR_ON  = (50, 120, 220)
+    COLOR_OFF = (60, 65, 80)
+    COLOR_KNOB = (230, 230, 235)
+    COLOR_LABEL = (210, 210, 220)
+
+    def __init__(self, x: int, y: int, label: str,
+                 state: bool = False,
+                 font_size: int = 13,
+                 toggle_w: int = 38, toggle_h: int = 20):
+        self.label = label
+        self.state = state
+        self.font_size = font_size
+        self.toggle_w = toggle_w
+        self.toggle_h = toggle_h
+        self._x = x
+        self._y = y
+        self._toggle_rect: Optional[pygame.Rect] = None   # set on first draw
+
+    def draw(self, surface: pygame.Surface) -> pygame.Rect:
+        """Draw and return the bounding rect of the whole element."""
+        font = get_body_font(self.font_size)
+        lbl = font.render(self.label, True, self.COLOR_LABEL)
+
+        # Vertical centre everything
+        total_h = max(lbl.get_height(), self.toggle_h)
+        lbl_y = self._y + (total_h - lbl.get_height()) // 2
+
+        # Label
+        surface.blit(lbl, (self._x, lbl_y))
+
+        # Toggle pill
+        gap = 6
+        tx = self._x + lbl.get_width() + gap
+        ty = self._y + (total_h - self.toggle_h) // 2
+        pill = pygame.Rect(tx, ty, self.toggle_w, self.toggle_h)
+        self._toggle_rect = pill
+
+        radius = self.toggle_h // 2
+        bg_color = self.COLOR_ON if self.state else self.COLOR_OFF
+        pygame.draw.rect(surface, bg_color, pill, border_radius=radius)
+
+        # Knob
+        knob_r = radius - 2
+        if self.state:
+            kx = pill.right - knob_r - 2
+        else:
+            kx = pill.left + knob_r + 2
+        ky = pill.centery
+        pygame.draw.circle(surface, self.COLOR_KNOB, (kx, ky), knob_r)
+
+        return pygame.Rect(self._x, self._y, lbl.get_width() + gap + self.toggle_w, total_h)
+
+    def is_clicked(self, pos: tuple) -> bool:
+        if self._toggle_rect is None:
+            return False
+        return self._toggle_rect.collidepoint(pos)
+
+    def update_hover(self, pos: tuple):
+        pass  # no hover state needed for a toggle
+
+
+def _wrap_text(text: str, font: pygame.font.Font, max_w: int) -> list:
+    """Word-wrap text into lines that fit within max_w pixels."""
+    words = text.split()
+    lines = []
+    current = ''
+    for word in words:
+        candidate = (current + ' ' + word).strip()
+        if font.size(candidate)[0] <= max_w:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or ['']
+
+
+class KickoffEventBody:
+    """Body widget for kickoff event modals.
+
+    Renders (from top to bottom inside ``rect``):
+    - Description text (word-wrapped)
+    - The main kickoff 2d6 dice visualisation
+    - A divider and sub-roll result rows (scrollable via mouse-wheel)
+
+    Sub-row strings may carry a one-char colour prefix:
+      '+' → green (gain), '-' → red (loss), anything else → neutral grey.
+    """
+
+    _COLOR_GAIN    = (100, 220, 120)
+    _COLOR_LOSS    = (220, 100, 100)
+    _COLOR_NEUTRAL = (245, 242, 235)
+    _COLOR_DIV     = (80, 80, 100)
+    _COLOR_SUM     = (220, 200, 120)
+    _COLOR_PLUS    = (160, 150, 120)
+    _ROW_H         = 28   # pixels per sub-row line (tall enough for inline dice)
+    _DIE_SIZE      = 44
+    _SUB_DIE_SIZE  = 22   # die size for inline sub-row dice
+    _SUB_FONT_SZ   = 14   # font size for sub-row text
+    _DESC_FONT_SZ  = 15
+
+    def __init__(self, rect: pygame.Rect, description: str,
+                 die_values: list, sub_rows: list):
+        self.rect = rect
+        self.description = description
+        self.die_values = [max(1, min(6, v)) for v in die_values]
+        self.sub_rows = sub_rows
+
+    def draw(self, surface: pygame.Surface):
+        x, y = self.rect.x, self.rect.y
+        w = self.rect.width
+        clip_bottom = self.rect.bottom
+        desc_margin_h = 12   # extra horizontal margin inside description text
+        desc_margin_v = 6    # extra vertical gap around description block
+
+        # Dice row first
+        y += desc_margin_v
+        if self.die_values and y + self._DIE_SIZE <= clip_bottom:
+            self._draw_dice_row(surface, x, y, w)
+        y += self._DIE_SIZE + 16  # extra gap before description
+
+        # Description below the dice — bright white with 1px drop shadow
+        desc_font = get_body_font(self._DESC_FONT_SZ)
+        lines = _wrap_text(self.description, desc_font, w - desc_margin_h * 2)
+        for line in lines:
+            if y >= clip_bottom:
+                break
+            shadow = desc_font.render(line, True, (0, 0, 0))
+            surf   = desc_font.render(line, True, (245, 242, 235))
+            bx = x + (w - surf.get_width()) // 2
+            surface.blit(shadow, (bx + 1, y + 1))
+            surface.blit(surf,   (bx, y))
+            y += surf.get_height() + 3
+        y += desc_margin_v + 4
+
+        # Sub-rows — no scrolling, all rows rendered in order
+        if self.sub_rows and y < clip_bottom:
+            pygame.draw.line(surface, self._COLOR_DIV,
+                             (x + 8, y), (x + w - 8, y), 1)
+            y += 8
+            center_x = x + w // 2
+            for row in self.sub_rows:
+                if y + self._ROW_H > clip_bottom:
+                    break
+                # Normalise to segments list: list[tuple[str, tuple]]
+                if isinstance(row, list):
+                    segments = row
+                else:
+                    text = row[1:] if row and row[0] in ('+', '-', ' ') else row
+                    segments = [(text.strip(), self._COLOR_NEUTRAL)]
+                self._render_sub_row_with_dice(surface, 0, y, segments,
+                                               center_x=center_x)
+                y += self._ROW_H
+
+    def _draw_dice_row(self, surface: pygame.Surface, x: int, y: int, w: int):
+        """Draw the die faces centered horizontally, with '+' between each die."""
+        ds = self._DIE_SIZE
+        plus_font = get_font(16, bold=True)
+        plus_w = plus_font.size('+')[0]
+        gap = 4  # space between die edge and '+' sign
+
+        n = len(self.die_values)
+        total_w = n * ds + max(0, n - 1) * (gap + plus_w + gap)
+
+        cx = x + (w - total_w) // 2
+
+        for i, val in enumerate(self.die_values):
+            if i > 0:
+                plus_surf = plus_font.render('+', True, self._COLOR_PLUS)
+                py = y + (ds - plus_surf.get_height()) // 2
+                surface.blit(plus_surf, (cx, py))
+                cx += plus_w + gap
+            draw_die(surface, cx, y, ds, val)
+            cx += ds
+            if i < n - 1:
+                cx += gap
+
+    def _measure_sub_row(self, segments: list) -> int:
+        """Return total pixel width of a segments list (die tokens count as _SUB_DIE_SIZE).
+        Segments is list[tuple[str, color_tuple]]."""
+        font = get_body_font(self._SUB_FONT_SZ)
+        total = 0
+        for text, _color in segments:
+            i = 0
+            while i < len(text):
+                if text[i] == '[':
+                    j = text.find(']', i + 1)
+                    if j != -1 and text[i + 1:j].isdigit():
+                        total += self._SUB_DIE_SIZE + 3
+                        i = j + 1
+                        continue
+                j = text.find('[', i)
+                part = text[i:] if j == -1 else text[i:j]
+                if part:
+                    total += font.size(part)[0]
+                i = j if j != -1 else len(text)
+        return total
+
+    def _render_sub_row_with_dice(self, surface: pygame.Surface,
+                                   x: int, y: int,
+                                   segments: list,
+                                   center_x: int = None):
+        """Render a sub-row from segments list[tuple[str, color]], replacing [N] tokens
+        with drawn die face graphics. If center_x is given, the row is centered."""
+        font = get_body_font(self._SUB_FONT_SZ)
+        ds = self._SUB_DIE_SIZE
+        row_h = self._ROW_H
+        if center_x is not None:
+            cx = center_x - self._measure_sub_row(segments) // 2
+        else:
+            cx = x
+        for text, color in segments:
+            i = 0
+            while i < len(text):
+                if text[i] == '[':
+                    j = text.find(']', i + 1)
+                    if j != -1 and text[i + 1:j].isdigit():
+                        val = int(text[i + 1:j])
+                        dy = y + (row_h - ds) // 2
+                        draw_die(surface, cx, dy, ds, val)
+                        cx += ds + 3
+                        i = j + 1
+                        continue
+                # Regular text up to next '[' or end of string
+                j = text.find('[', i)
+                part = text[i:] if j == -1 else text[i:j]
+                if part:
+                    # Outline: draw dark tinted shadow in all 4 diagonal directions
+                    sc = (max(0, color[0] // 5), max(0, color[1] // 5), max(0, color[2] // 5))
+                    shadow = font.render(part, True, sc)
+                    surf   = font.render(part, True, color)
+                    ty = y + (row_h - surf.get_height()) // 2
+                    for ox, oy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+                        surface.blit(shadow, (cx + ox, ty + oy))
+                    surface.blit(surf,   (cx, ty))
+                    cx += surf.get_width()
+                i = j if j != -1 else len(text)
+
+    def handle_event(self, event: pygame.event.Event):
+        pass  # no scrolling — modal is sized to fit all rows
