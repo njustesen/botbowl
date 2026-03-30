@@ -9,7 +9,8 @@ from typing import Optional
 from botbowl.core.model import Action
 from botbowl.core.table import ActionType, Rules, PassDistance, OutcomeType
 from botbowl.gui.fonts import get_font, get_body_font
-from botbowl.gui.input_handler import InputHandler, UIState
+from botbowl.gui.input_handler import (InputHandler, UIState, _find_turn_proc,
+                                        _get_projected_paths, _projected_squares_from_paths)
 from botbowl.gui.rendering.board import BoardRenderer, sq_to_px, highlight_color_for_action
 from botbowl.gui.rendering.players import PlayerRenderer
 from botbowl.gui.rendering.hud import HUDRenderer, ActionBarRenderer, PlayerInfoRenderer
@@ -49,7 +50,10 @@ def _pass_type_label(from_sq, to_sq) -> str:
     if dy >= len(Rules.pass_matrix) or dx >= len(Rules.pass_matrix[0]):
         return 'HM'
     val = Rules.pass_matrix[dy][dx]
-    return _PASS_ABBR.get(PassDistance(val), '??')
+    try:
+        return _PASS_ABBR.get(PassDistance(val), '??')
+    except ValueError:
+        return 'HM'
 HUD_H = 72          # Scoreboard height
 INFO_H = 155        # Bottom panel height
 INFO_PLAYER_W = 200 # Width of each player info panel (log takes the rest)
@@ -397,6 +401,55 @@ class GameScreen:
         if current is None or current.get_size() != (w, h):
             pygame.display.set_mode((w, h))
 
+    def _drain_intermediate(self, limit=50):
+        """Advance the game through intermediate states (fast_mode=False) until actions appear."""
+        for _ in range(limit):
+            if self.game.state.available_actions or self.game.state.game_over:
+                break
+            self.game.step(None)
+            self._scan_kickoff_events()
+
+    def _resolve_pending(self):
+        """Resolve pending chained actions (player-switching + smart click auto-chain)."""
+        # Step 1: activate pending player after END_PLAYER_TURN
+        if self.ui_state.pending_player_select:
+            # Drain intermediate procedures — fast_mode=False needs step(None) calls
+            self._drain_intermediate()
+
+            player = self.ui_state.pending_player_select
+            start_type = self.ui_state.pending_start_action_type
+            self.ui_state.pending_player_select = None
+            self.ui_state.pending_start_action_type = None
+            for ac in self.game.state.available_actions:
+                if ac.action_type == start_type and player in (ac.players or []):
+                    self.game.step(Action(start_type, player=player))
+                    self._scan_kickoff_events()
+                    self._drain_intermediate()
+                    self.ui_state.selected_player = player
+                    break
+            else:
+                # Fallback: pre-select player if they're available for any START action
+                for ac in self.game.state.available_actions:
+                    if ac.action_type in START_ACTIONS and player in (ac.players or []):
+                        self.ui_state.selected_player = player
+                        break
+
+        # Step 2: auto-submit positional action (after START_* becomes active)
+        if self.ui_state.pending_position is not None:
+            pos_type = self.ui_state.pending_positional_type
+            sq = self.ui_state.pending_position
+            self.ui_state.pending_position = None
+            self.ui_state.pending_positional_type = None
+            if pos_type is not None:
+                for ac in self.game.state.available_actions:
+                    if ac.action_type == pos_type and sq in (ac.positions or []):
+                        self.game.step(Action(pos_type, position=sq,
+                                              player=self.ui_state.selected_player))
+                        self._scan_kickoff_events()
+                        self._drain_intermediate()
+                        break
+                # If sq not reachable, silently skip — normal highlights are shown
+
     def _rebuild_buttons(self):
         # Auto-trigger the first available formation action (hidden from UI)
         formation_ac = next(
@@ -423,8 +476,32 @@ class GameScreen:
             self.tile_size, self.pitch_offset
         )
 
-        # Auto-highlight positional action squares.
-        if not self.ui_state.selected_action_type:
+        # Rebuild projected dots and highlighted squares for player-switching preview
+        if self.ui_state.selected_player and not self.ui_state.player_dots:
+            end_turn_ac = next((a for a in self.game.state.available_actions
+                                if a.action_type == ActionType.END_PLAYER_TURN), None)
+            if (end_turn_ac is not None and
+                    self.ui_state.selected_player != self.game.state.active_player):
+                turn_proc = _find_turn_proc(self.game)
+                if (turn_proc is not None and
+                        self.ui_state.selected_player.team == turn_proc.team):
+                    proj_actions = turn_proc.available_actions()
+                    self.ui_state.projected_player_dots = build_player_action_dots(
+                        self.ui_state.selected_player, proj_actions,
+                        self.tile_size, self.pitch_offset)
+                    self.ui_state.projected_paths = _get_projected_paths(
+                        self.game, self.ui_state.selected_player, turn_proc)
+                    self.ui_state.highlighted_squares = _projected_squares_from_paths(
+                        self.ui_state.projected_paths)
+                else:
+                    self.ui_state.projected_player_dots = []
+                    self.ui_state.projected_paths = []
+                    self.ui_state.highlighted_squares = []
+            else:
+                self.ui_state.projected_player_dots = []
+
+        # Auto-highlight positional action squares (skip when in projected mode).
+        if not self.ui_state.selected_action_type and not self.ui_state.projected_player_dots:
             positional = [ac for ac in self.game.state.available_actions
                           if ac.action_type in POSITIONAL_ACTIONS]
             move_acs = [ac for ac in positional if ac.action_type == ActionType.MOVE]
@@ -534,12 +611,28 @@ class GameScreen:
                         self._highlight_probs[sq] = p
                         if rolls[i]:
                             self._highlight_rolls[sq] = list(rolls[i])
+            elif at == ActionType.HANDOFF:
+                for path in (ac.paths or []):
+                    if path.steps:
+                        self._highlight_probs[path.steps[-1]] = path.prob
+                    if path.steps and path.rolls:
+                        self._highlight_rolls[path.steps[-1]] = list(path.rolls[-1])
             elif at == ActionType.BLOCK:
                 positions = ac.positions or []
                 dice = ac.block_dice or []
                 for i, sq in enumerate(positions):
                     if sq is not None and i < len(dice):
                         self._block_dice_pairs.append((sq, dice[i]))
+        elif self.ui_state.projected_paths:
+            # Projected mode: build overlays from Pathfinder paths of the projected player
+            for path in self.ui_state.projected_paths:
+                if path.steps:
+                    sq = path.steps[-1]
+                    self._highlight_probs[sq] = path.prob
+                    if path.rolls:
+                        self._highlight_rolls[sq] = list(path.rolls[-1])
+                    if path.block_dice is not None:
+                        self._block_dice_pairs.append((sq, path.block_dice))
         else:
             # Multi-positional mode: build block dice + MOVE probs from component actions
             positional = [a for a in self.game.state.available_actions
@@ -761,6 +854,10 @@ class GameScreen:
                 self.game.step(action)
                 self._scan_kickoff_events()
                 self.ui_state.reset_selection()
+                self._resolve_pending()
+                self._rebuild_buttons()
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # Player switched (projected mode) or selection changed — rebuild overlays
                 self._rebuild_buttons()
 
     def draw(self, surface: pygame.Surface):
@@ -773,7 +870,12 @@ class GameScreen:
         # Highlights (probability-colored for MOVE and PASS)
         if self.ui_state.highlighted_squares:
             at = self.ui_state.selected_action_type
-            color = highlight_color_for_action(at) if at else (0, 200, 0, 100)
+            if at:
+                color = highlight_color_for_action(at)
+            elif self.ui_state.projected_paths:
+                color = highlight_color_for_action(ActionType.MOVE)  # projected: MOVE-style tint
+            else:
+                color = (0, 200, 0, 100)
             probs = self._highlight_probs if self._highlight_probs else None
             self.board_renderer.draw_highlights(surface,
                                                 self.ui_state.highlighted_squares,
@@ -826,9 +928,13 @@ class GameScreen:
                 self.ui_state.hover_square in self.ui_state.highlighted_squares):
             self.board_renderer.draw_hover_highlight(surface, self.ui_state.hover_square)
 
+        # Block dice count badges on blitz/block target squares
+        if self._block_dice_pairs:
+            self.board_renderer.draw_block_dice_overlays(surface, self._block_dice_pairs)
+
         # Dice roll labels (on by default)
         at = self.ui_state.selected_action_type
-        if self._highlight_rolls and at in (ActionType.MOVE, ActionType.PASS):
+        if self._highlight_rolls:
             self.board_renderer.draw_roll_labels(surface, self._highlight_rolls)
         if (self._pass_receiver_rolls and
                 self.ui_state.pass_mode_pass_ac is not None and
@@ -897,6 +1003,18 @@ class GameScreen:
         for btn in self.ui_state.player_dots:
             btn.draw(surface)
 
+        # Projected player action dots (dimmed — shown when player switching is pending)
+        if self.ui_state.projected_player_dots:
+            rects = [btn.rect for btn in self.ui_state.projected_player_dots]
+            union = rects[0].unionall(rects[1:])
+            panel = union.inflate(8, 8)
+            panel_surf = pygame.Surface(panel.size, pygame.SRCALPHA)
+            pygame.draw.rect(panel_surf, (25, 25, 35, 160), panel_surf.get_rect(), border_radius=8)
+            pygame.draw.rect(panel_surf, (70, 70, 100, 160), panel_surf.get_rect(), width=1, border_radius=8)
+            surface.blit(panel_surf, panel.topleft)
+        for btn in self.ui_state.projected_player_dots:
+            btn.draw(surface)
+
         # HUD
         self.hud_renderer.draw(surface, self.game)
 
@@ -958,6 +1076,12 @@ class GameScreen:
                 want_foul = True
             elif at in _HANDOFF_CURSOR_TYPES:
                 want_handoff = True
+            elif at is None and self.ui_state.projected_paths:
+                # Projected mode: show block cursor over blitz target squares
+                for path in self.ui_state.projected_paths:
+                    if path.steps and path.steps[-1] == hover_sq and path.block_dice is not None:
+                        want_block = True
+                        break
             elif at is None:
                 for ac in self.game.state.available_actions:
                     if ac.action_type in _BLOCK_CURSOR_TYPES and hover_sq in (ac.positions or []):
